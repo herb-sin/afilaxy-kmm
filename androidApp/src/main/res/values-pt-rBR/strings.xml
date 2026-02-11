@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Afilaxy</string>
+    
+    <!-- Permissões -->
+    <string name="permission_location_title">Permissão de Localização</string>
+    <string name="permission_location_message">O Afilaxy precisa acessar sua localização para conectar você a pessoas próximas em emergências de asma.</string>
+    <string name="permission_location_rationale">Para funcionar corretamente, o Afilaxy precisa da sua localização para encontrar helpers próximos.</string>
+    <string name="permission_allow">Permitir</string>
+    <string name="permission_deny">Negar</string>
+    <string name="permission_settings">Configurações</string>
+    
+    <!-- Botões gerais -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancelar</string>
+    <string name="yes">Sim</string>
+    <string name="no">Não</string>
+    <string name="loading">Carregando...</string>
+    <string name="error">Erro</string>
+    <string name="success">Sucesso</string>
+</resources>
