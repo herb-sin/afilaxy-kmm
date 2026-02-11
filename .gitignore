@@ -1,0 +1,59 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+captures/
+.externalNativeBuild
+.cxx
+local.properties
+*.iml
+.idea/
+*.hprof
+
+# iOS
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+Pods/
+Podfile.lock
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Keystore
+*.jks
+*.keystore
+keystore.properties
+
+# macOS
+.DS_Store
+
+# Kotlin
+*.kotlin_module

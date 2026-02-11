@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Afilaxy</string>
+    
+    <!-- Firebase (placeholder - serão lidos do google-services.json) -->
+    <string name="firebase_api_key" translatable="false">placeholder</string>
+    <string name="firebase_project_id" translatable="false">placeholder</string>
+    
+    <!-- Login -->
+    <string name="login_title">Bem-vindo ao Afilaxy</string>
+    <string name="login_email">Email</string>
+    <string name="login_password">Senha</string>
+    <string name="login_button">Entrar</string>
+    <string name="login_register">Criar conta</string>
+    <string name="login_error">Erro ao fazer login</string>
+    <string name="login_loading">Entrando…</string>
+    
+    <!-- Register -->
+    <string name="register_title">Criar Conta</string>
+    <string name="register_name">Nome completo</string>
+    <string name="register_email">Email</string>
+    <string name="register_password">Senha</string>
+    <string name="register_confirm_password">Confirmar senha</string>
+    <string name="register_button">Criar Conta</string>
+    <string name="register_back_to_login">Já tem uma conta? Fazer login</string>
+    <string name="register_password_min">A senha deve ter no mínimo 6 caracteres</string>
+    <string name="register_passwords_dont_match">As senhas não coincidem</string>
+    
+    <!-- Home -->
+    <string name="home_title">Afilaxy</string>
+    <string name="home_emergency_button">Preciso de Ajuda!</string>
+    <string name="home_helper_mode">Modo Ajudante</string>
+    <string name="home_helper_active">Você está disponível para ajudar</string>
+    <string name="home_helper_inactive">Ative para ajudar outras pessoas</string>
+    <string name="home_logout">Sair</string>
+    
+    <!-- Emergency -->
+    <string name="emergency_title">Emergência</string>
+    <string name="emergency_create">Criar Emergência</string>
+    <string name="emergency_cancel">Cancelar Emergência</string>
+    <string name="emergency_searching">Procurando ajudantes próximos…</string>
+    <string name="emergency_no_helpers">Nenhum ajudante disponível no momento</string>
+    <string name="emergency_distance">%1$s km de distância</string>
+    <string name="emergency_accept">Aceitar</string>
+    <string name="emergency_active">Emergência Ativa</string>
+    <string name="emergency_waiting">Aguardando ajudante…</string>
+    
+    <!-- Chat -->
+    <string name="chat_title">Chat</string>
+    <string name="chat_type_message">Digite uma mensagem…</string>
+    <string name="chat_send">Enviar</string>
+    <string name="chat_empty">Nenhuma mensagem ainda</string>
+    
+    <!-- Common -->
+    <string name="error_generic">Ocorreu um erro</string>
+    <string name="loading">Carregando…</string>
+    <string name="back">Voltar</string>
+    
+    <!-- Notifications -->
+    <string name="notification_new_emergency_title">Nova Emergência Próxima!</string>
+    <string name="notification_new_emergency_body">Há uma emergência próxima a você</string>
+    <string name="notification_helper_accepted_title">Helper Aceitou!</string>
+    <string name="notification_helper_accepted_body">Um helper aceitou sua emergência</string>
+    <string name="notification_new_message_title">Nova Mensagem</string>
+    <string name="notification_emergency_resolved_title">Emergência Resolvida</string>
+    <string name="notification_emergency_resolved_body">A emergência foi resolvida com sucesso</string>
+</resources>

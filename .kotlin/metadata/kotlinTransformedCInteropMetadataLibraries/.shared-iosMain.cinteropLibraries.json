@@ -1,0 +1,32 @@
+[
+  {
+    "moduleId": "dev.gitlive:firebase-auth:1.11.1",
+    "file": "/home/afilaxy/Projetos/afilaxy-kmm/.kotlin/metadata/kotlinTransformedCInteropMetadataLibraries/dev.gitlive-firebase-auth-1.11.1-iosMain-cinterop/dev.gitlive_firebase-auth-cinterop-FirebaseAuth-NM6I6w.klib",
+    "sourceSetName": "iosMain"
+  },
+  {
+    "moduleId": "dev.gitlive:firebase-firestore:1.11.1",
+    "file": "/home/afilaxy/Projetos/afilaxy-kmm/.kotlin/metadata/kotlinTransformedCInteropMetadataLibraries/dev.gitlive-firebase-firestore-1.11.1-iosMain-cinterop/dev.gitlive_firebase-firestore-cinterop-FirebaseFirestoreInternal-Qr457A.klib",
+    "sourceSetName": "iosMain"
+  },
+  {
+    "moduleId": "dev.gitlive:firebase-firestore:1.11.1",
+    "file": "/home/afilaxy/Projetos/afilaxy-kmm/.kotlin/metadata/kotlinTransformedCInteropMetadataLibraries/dev.gitlive-firebase-firestore-1.11.1-iosMain-cinterop/dev.gitlive_firebase-firestore-cinterop-FirebaseFirestore-Qr457A.klib",
+    "sourceSetName": "iosMain"
+  },
+  {
+    "moduleId": "com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16",
+    "file": "/home/afilaxy/Projetos/afilaxy-kmm/.kotlin/metadata/kotlinTransformedCInteropMetadataLibraries/com.rickclephas.kmm-kmm-viewmodel-core-1.0.0-ALPHA-16-iosMain-cinterop/com.rickclephas.kmm_kmm-viewmodel-core-cinterop-KMMViewModelCoreObjC-YcTepw.klib",
+    "sourceSetName": "iosMain"
+  },
+  {
+    "moduleId": "org.jetbrains.kotlinx:atomicfu:0.21.0",
+    "file": "/home/afilaxy/Projetos/afilaxy-kmm/.kotlin/metadata/kotlinTransformedCInteropMetadataLibraries/org.jetbrains.kotlinx-atomicfu-0.21.0-nativeMain-cinterop/org.jetbrains.kotlinx_atomicfu-cinterop-interop-Uv6OuA.klib",
+    "sourceSetName": "nativeMain"
+  },
+  {
+    "moduleId": "dev.gitlive:firebase-app:1.11.1",
+    "file": "/home/afilaxy/Projetos/afilaxy-kmm/.kotlin/metadata/kotlinTransformedCInteropMetadataLibraries/dev.gitlive-firebase-app-1.11.1-iosMain-cinterop/dev.gitlive_firebase-app-cinterop-FirebaseCore-cZO-RA.klib",
+    "sourceSetName": "iosMain"
+  }
+]
