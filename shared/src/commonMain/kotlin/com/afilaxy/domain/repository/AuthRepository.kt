@@ -8,6 +8,7 @@ interface AuthRepository {
     suspend fun register(email: String, password: String, name: String): Result<User>
     suspend fun logout()
     suspend fun getCurrentUser(): User?
+    fun getCurrentUserId(): String?
     suspend fun updateFcmToken(token: String)
     suspend fun updateUserLocation(latitude: Double, longitude: Double)
     fun observeAuthState(): Flow<User?>

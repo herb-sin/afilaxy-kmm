@@ -59,7 +59,7 @@ fun AboutScreen(navController: NavController) {
             }
             
             item {
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
             
             item {
@@ -121,7 +121,7 @@ fun AboutScreen(navController: NavController) {
             }
             
             item {
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
             
             item {

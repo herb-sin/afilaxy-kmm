@@ -104,7 +104,7 @@ fun TermsScreen(navController: NavController) {
             }
             
             item {
-                Divider()
+                HorizontalDivider()
             }
             
             item {

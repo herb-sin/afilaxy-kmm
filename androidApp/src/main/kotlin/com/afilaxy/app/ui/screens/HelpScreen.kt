@@ -73,7 +73,7 @@ fun HelpScreen(navController: NavController) {
             }
             
             item {
-                Divider()
+                HorizontalDivider()
             }
             
             item {

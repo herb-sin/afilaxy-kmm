@@ -22,7 +22,10 @@ class ChatViewModel(
     private val authRepository: com.afilaxy.domain.repository.AuthRepository
 ) : KMMViewModel() {
     
-    private val _state = MutableStateFlow(ChatState(emergencyId = emergencyId))
+    private val _state = MutableStateFlow(ChatState(
+        emergencyId = emergencyId,
+        currentUserId = authRepository.getCurrentUserId()
+    ))
     val state: StateFlow<ChatState> = _state.asStateFlow()
     
     init {

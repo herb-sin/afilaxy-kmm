@@ -118,7 +118,7 @@ fun PrivacyScreen(navController: NavController) {
             }
             
             item {
-                Divider()
+                HorizontalDivider()
             }
             
             item {
