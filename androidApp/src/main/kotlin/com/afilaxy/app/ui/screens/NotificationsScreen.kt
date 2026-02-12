@@ -76,7 +76,7 @@ fun NotificationsScreen(navController: NavController) {
             ) {
                 items(notifications) { notification ->
                     NotificationCard(notification)
-                    Divider()
+                    HorizontalDivider()
                 }
             }
         }

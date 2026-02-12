@@ -18,7 +18,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
-import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.chat.ChatViewModel
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -33,11 +32,9 @@ fun ChatScreen(
     emergencyId: String,
     onNavigateBack: () -> Unit,
     onNavigateToRating: (String, String) -> Unit = { _, _ -> },
-    viewModel: ChatViewModel = koinViewModel { parametersOf(emergencyId) },
-    authViewModel: AuthViewModel = koinViewModel()
+    viewModel: ChatViewModel = koinViewModel { parametersOf(emergencyId) }
 ) {
     val state by viewModel.state.collectAsState()
-    val authState by authViewModel.state.collectAsState()
     val listState = rememberLazyListState()
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
@@ -141,7 +138,7 @@ fun ChatScreen(
                     ) { message ->
                         MessageBubble(
                             message = message,
-                            currentUserId = authState.user?.uid
+                            currentUserId = state.currentUserId
                         )
                     }
                 }

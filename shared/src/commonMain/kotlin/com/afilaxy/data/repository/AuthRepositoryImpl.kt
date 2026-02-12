@@ -84,7 +84,12 @@ class AuthRepositoryImpl(
     }
     
     override suspend fun logout() {
-        auth.signOut()
+        try {
+            auth.signOut()
+        } catch (e: Exception) {
+            // Log error but don't throw - logout should always succeed
+            println("Error during logout: ${e.message}")
+        }
     }
     
     override suspend fun getCurrentUser(): User? {
@@ -106,6 +111,10 @@ class AuthRepositoryImpl(
         } catch (e: Exception) {
             null
         }
+    }
+    
+    override fun getCurrentUserId(): String? {
+        return auth.currentUser?.uid
     }
     
     override suspend fun updateFcmToken(token: String) {

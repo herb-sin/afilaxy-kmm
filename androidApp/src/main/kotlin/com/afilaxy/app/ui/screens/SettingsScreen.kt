@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,7 +49,7 @@ fun SettingsScreen(
                 onClick = { navController.navigate(AppRoutes.PROFILE) }
             )
             
-            Divider()
+            HorizontalDivider()
             
             SettingsItem(
                 icon = Icons.Default.Notifications,
@@ -56,7 +57,7 @@ fun SettingsScreen(
                 onClick = { navController.navigate(AppRoutes.NOTIFICATIONS) }
             )
             
-            Divider()
+            HorizontalDivider()
             
             SettingsItem(
                 icon = Icons.Default.Info,
@@ -64,7 +65,7 @@ fun SettingsScreen(
                 onClick = { navController.navigate(AppRoutes.HELP) }
             )
             
-            Divider()
+            HorizontalDivider()
             
             SettingsItem(
                 icon = Icons.Default.Info,
@@ -72,7 +73,7 @@ fun SettingsScreen(
                 onClick = { navController.navigate(AppRoutes.ABOUT) }
             )
             
-            Divider()
+            HorizontalDivider()
             
             SettingsItem(
                 icon = Icons.Default.Lock,
@@ -80,7 +81,7 @@ fun SettingsScreen(
                 onClick = { navController.navigate(AppRoutes.TERMS) }
             )
             
-            Divider()
+            HorizontalDivider()
             
             SettingsItem(
                 icon = Icons.Default.Lock,
@@ -88,10 +89,10 @@ fun SettingsScreen(
                 onClick = { navController.navigate(AppRoutes.PRIVACY) }
             )
             
-            Divider()
+            HorizontalDivider()
             
             SettingsItem(
-                icon = Icons.Default.ExitToApp,
+                icon = Icons.AutoMirrored.Filled.ExitToApp,
                 title = "Sair",
                 onClick = { showLogoutDialog = true }
             )
