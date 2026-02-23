@@ -8,8 +8,11 @@ plugins {
 kotlin {
     androidTarget {
         compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
             }
         }
     }
@@ -43,8 +46,8 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 
                 // Firebase KMM (apenas essenciais para MVP)
-                implementation("dev.gitlive:firebase-auth:1.11.1")
-                implementation("dev.gitlive:firebase-firestore:1.11.1")
+                implementation("dev.gitlive:firebase-auth:2.1.0")
+                implementation("dev.gitlive:firebase-firestore:2.1.0")
                 
                 // Settings (SharedPreferences substitute)
                 implementation("com.russhwolf:multiplatform-settings:1.1.1")

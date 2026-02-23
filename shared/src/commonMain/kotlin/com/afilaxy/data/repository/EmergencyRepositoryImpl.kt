@@ -209,38 +209,29 @@ class EmergencyRepositoryImpl(
 
     override suspend fun getActiveEmergency(): Result<String?> {
         return try {
-            val userId = auth.currentUser?.uid 
+            val userId = auth.currentUser?.uid
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
             val currentTime = getCurrentTimeMillis()
-            
-            // Buscar como requester
-            val requesterQuery = firestore.collection("emergency_requests").get()
-            
+
+            // Filtros no servidor — reduz leituras do Firestore ao mínimo necessário
+            val requesterQuery = firestore.collection("emergency_requests")
+                .where { ("requesterId" equalTo userId) and ("active" equalTo true) }
+                .get()
+
             for (doc in requesterQuery.documents) {
-                val requesterId = doc.get<String>("requesterId") ?: ""
-                val active = doc.get<Boolean>("active") ?: false
-                if (requesterId == userId && active) {
-                    val expiresAt = doc.get<Long>("expiresAt") ?: 0
-                    if (expiresAt > currentTime) {
-                        return Result.success(doc.id)
-                    }
-                }
+                val expiresAt = doc.get<Long>("expiresAt") ?: 0L
+                if (expiresAt > currentTime) return Result.success(doc.id)
             }
-            
-            // Buscar como helper
-            val helperQuery = firestore.collection("emergency_requests").get()
-            
+
+            val helperQuery = firestore.collection("emergency_requests")
+                .where { ("helperId" equalTo userId) and ("active" equalTo true) }
+                .get()
+
             for (doc in helperQuery.documents) {
-                val helperId = doc.get<String>("helperId") ?: ""
-                val active = doc.get<Boolean>("active") ?: false
-                if (helperId == userId && active) {
-                    val expiresAt = doc.get<Long>("expiresAt") ?: 0
-                    if (expiresAt > currentTime) {
-                        return Result.success(doc.id)
-                    }
-                }
+                val expiresAt = doc.get<Long>("expiresAt") ?: 0L
+                if (expiresAt > currentTime) return Result.success(doc.id)
             }
-            
+
             Result.success(null)
         } catch (e: Exception) {
             Result.failure(e)
@@ -249,19 +240,26 @@ class EmergencyRepositoryImpl(
 
     override suspend fun clearUserEmergencies(): Result<Boolean> {
         return try {
-            val userId = auth.currentUser?.uid 
+            val userId = auth.currentUser?.uid
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
-            
-            val query = firestore.collection("emergency_requests").get()
-            
-            for (doc in query.documents) {
-                val requesterId = doc.get<String>("requesterId") ?: ""
-                val active = doc.get<Boolean>("active") ?: false
-                if (requesterId == userId && active) {
-                    doc.reference.update("active" to false, "status" to "cancelled")
-                }
+
+            // Filtrar no servidor — apenas emergências ativas do usuário
+            val requesterDocs = firestore.collection("emergency_requests")
+                .where { ("requesterId" equalTo userId) and ("active" equalTo true) }
+                .get()
+
+            for (doc in requesterDocs.documents) {
+                doc.reference.update("active" to false, "status" to "cancelled")
             }
-            
+
+            val helperDocs = firestore.collection("emergency_requests")
+                .where { ("helperId" equalTo userId) and ("active" equalTo true) }
+                .get()
+
+            for (doc in helperDocs.documents) {
+                doc.reference.update("active" to false, "status" to "cancelled")
+            }
+
             Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)
@@ -295,7 +293,7 @@ class EmergencyRepositoryImpl(
                 val isActive = doc.get<Boolean>("isActive") ?: false
                 if (!isActive) continue
                 
-                val geoPoint = doc.get<GeoPoint>("location")
+                val geoPoint = doc.get<GeoPoint?>("location")
                 if (geoPoint != null) {
                     val distance = calculateDistance(
                         latitude, longitude,

@@ -1,5 +1,11 @@
 package com.afilaxy.app.ui.screens
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,10 +27,14 @@ import com.afilaxy.app.R
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToEmergency: () -> Unit,
@@ -35,13 +47,36 @@ fun HomeScreen(
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
     var showLocationPermission by remember { mutableStateOf(false) }
     var pendingHelperMode by remember { mutableStateOf(false) }
+    var showPermissionsRationale by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
-    
+
+    // Permissões de localização + notificações (Android 13+)
+    val requiredPermissions = remember {
+        buildList {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+    val permissionsState = rememberMultiplePermissionsState(permissions = requiredPermissions)
+    val missingPermissions = permissionsState.permissions.filter { !it.status.isGranted }
+    val hasAllPermissions = missingPermissions.isEmpty()
+
+    // Ao entrar na tela, verificar se alguma permissão está pendente
+    LaunchedEffect(Unit) {
+        if (!hasAllPermissions) {
+            showPermissionsRationale = true
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -61,7 +96,7 @@ fun HomeScreen(
                         icon = { Icon(Icons.Default.Person, null) },
                         label = { Text("Perfil") },
                         selected = false,
-                        onClick = { 
+                        onClick = {
                             onNavigateToProfile()
                             scope.launch { drawerState.close() }
                         }
@@ -70,7 +105,7 @@ fun HomeScreen(
                         icon = { Icon(Icons.Default.Settings, null) },
                         label = { Text("Configurações") },
                         selected = false,
-                        onClick = { 
+                        onClick = {
                             onNavigateToSettings()
                             scope.launch { drawerState.close() }
                         }
@@ -79,7 +114,7 @@ fun HomeScreen(
                         icon = { Icon(Icons.Default.Favorite, null) },
                         label = { Text("Comunidade") },
                         selected = false,
-                        onClick = { 
+                        onClick = {
                             onNavigateToCommunity()
                             scope.launch { drawerState.close() }
                         }
@@ -88,7 +123,7 @@ fun HomeScreen(
                         icon = { Icon(Icons.Default.FavoriteBorder, null) },
                         label = { Text("Autocuidado") },
                         selected = false,
-                        onClick = { 
+                        onClick = {
                             onNavigateToAutocuidado()
                             scope.launch { drawerState.close() }
                         }
@@ -109,7 +144,7 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { 
+                    title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("🆘")
                             Spacer(modifier = Modifier.width(8.dp))
@@ -144,14 +179,75 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+
+                // Banner de aviso de permissões (persistente enquanto faltarem permissões)
+                AnimatedVisibility(visible = !hasAllPermissions) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = buildPermissionWarningText(missingPermissions.map { it.permission }),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            TextButton(
+                                onClick = {
+                                    val anyPermanentlyDenied = missingPermissions.none {
+                                        it.status.isGranted
+                                    } && permissionsState.permissions.none {
+                                        com.google.accompanist.permissions.shouldShowRationale(it)
+                                    }
+                                    if (anyPermanentlyDenied) {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.fromParts("package", context.packageName, null)
+                                            }
+                                        )
+                                    } else {
+                                        permissionsState.launchMultiplePermissionRequest()
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    "Corrigir",
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Text(
                     "Sistema de Emergência",
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center
                 )
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
-                
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -171,9 +267,9 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                if (state.isHelperMode) 
-                                    "Você está disponível para ajudar" 
-                                else 
+                                if (state.isHelperMode)
+                                    "Você está disponível para ajudar"
+                                else
                                     "Ative para receber pedidos",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -192,9 +288,9 @@ fun HomeScreen(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
-                
+
                 Button(
                     onClick = onNavigateToEmergency,
                     modifier = Modifier
@@ -209,18 +305,18 @@ fun HomeScreen(
                         style = MaterialTheme.typography.titleLarge
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Button(
                     onClick = onNavigateToHistory,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("📋 Histórico")
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 if (state.error != null) {
                     Text(
                         text = state.error ?: "",
@@ -229,7 +325,7 @@ fun HomeScreen(
                         textAlign = TextAlign.Center
                     )
                 }
-                
+
                 if (showLocationPermission) {
                     RequestLocationPermission(
                         onPermissionGranted = {
@@ -247,5 +343,63 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    // Diálogo inicial de permissões ao entrar no app
+    if (showPermissionsRationale) {
+        val isPermanentlyDenied = missingPermissions.isNotEmpty() &&
+            permissionsState.permissions.none {
+                com.google.accompanist.permissions.shouldShowRationale(it)
+            } && missingPermissions.isNotEmpty()
+
+        AlertDialog(
+            onDismissRequest = { showPermissionsRationale = false },
+            icon = { Icon(Icons.Default.Lock, contentDescription = null) },
+            title = { Text("Permissões Necessárias") },
+            text = {
+                Text(
+                    "Para usar o Afilaxy com segurança, precisamos de:\n\n" +
+                    "📍 Localização — para encontrar emergências próximas\n" +
+                    "🔔 Notificações — para avisar quando alguém precisar de ajuda\n\n" +
+                    if (isPermanentlyDenied)
+                        "Algumas permissões foram negadas anteriormente. Toque em \"Configurações\" para ativá-las manualmente."
+                    else "",
+                    textAlign = TextAlign.Start
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionsRationale = false
+                    if (isPermanentlyDenied) {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                        )
+                    } else {
+                        permissionsState.launchMultiplePermissionRequest()
+                    }
+                }) {
+                    Text(if (isPermanentlyDenied) "Abrir Configurações" else "Permitir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionsRationale = false }) {
+                    Text("Agora não")
+                }
+            }
+        )
+    }
+}
+
+/** Gera o texto do banner com base nas permissões ausentes. */
+private fun buildPermissionWarningText(missingPermissions: List<String>): String {
+    val hasLocation = missingPermissions.any { it.contains("LOCATION") }
+    val hasNotification = missingPermissions.any { it.contains("POST_NOTIFICATIONS") }
+    return when {
+        hasLocation && hasNotification -> "Localização e notificações desativadas. O app pode não funcionar corretamente."
+        hasLocation -> "Localização desativada. Você não conseguirá criar emergências."
+        hasNotification -> "Notificações desativadas. Você não receberá alertas de emergência."
+        else -> "Algumas permissões estão faltando."
     }
 }
