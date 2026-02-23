@@ -19,7 +19,10 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(viewModel.messages, id: \.timestamp) { message in
-                            MessageBubble(message: message)
+                            MessageBubble(
+                                message: message,
+                                currentUserId: viewModel.currentUserId
+                            )
                         }
                     }
                     .padding()
@@ -76,26 +79,31 @@ struct ChatView: View {
 
 struct MessageBubble: View {
     let message: ChatMessage
+    let currentUserId: String?
+    
+    var isFromCurrentUser: Bool {
+        message.senderId == currentUserId
+    }
     
     var body: some View {
         HStack {
-            if message.isFromCurrentUser {
+            if isFromCurrentUser {
                 Spacer()
             }
             
-            VStack(alignment: message.isFromCurrentUser ? .trailing : .leading, spacing: 4) {
+            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
                 Text(message.senderName)
                     .font(.caption)
                     .foregroundColor(.gray)
                 
                 Text(message.message)
                     .padding(12)
-                    .background(message.isFromCurrentUser ? Color.red : Color(.systemGray5))
-                    .foregroundColor(message.isFromCurrentUser ? .white : .primary)
+                    .background(isFromCurrentUser ? Color.red : Color(.systemGray5))
+                    .foregroundColor(isFromCurrentUser ? .white : .primary)
                     .cornerRadius(16)
             }
             
-            if !message.isFromCurrentUser {
+            if !isFromCurrentUser {
                 Spacer()
             }
         }
@@ -107,6 +115,7 @@ class ObservableChatViewModel: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var message = ""
     @Published var isLoading = false
+    @Published var currentUserId: String?
     
     init(emergencyId: String) {
         viewModel = ViewModelProvider.shared.getChatViewModel(emergencyId: emergencyId)
@@ -120,6 +129,7 @@ class ObservableChatViewModel: ObservableObject {
                 self?.messages = state.messages
                 self?.message = state.message
                 self?.isLoading = state.isLoading
+                self?.currentUserId = state.currentUserId
             }
         }
     }
@@ -133,9 +143,3 @@ class ObservableChatViewModel: ObservableObject {
     }
 }
 
-extension ChatMessage {
-    var isFromCurrentUser: Bool {
-        // TODO: Compare with current user ID
-        return false
-    }
-}
