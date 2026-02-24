@@ -87,10 +87,11 @@ struct LoginView: View {
         // Simular sucesso após delay (em produção, observar state)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             isLoading = false
-            if viewModel.state.value.error == nil {
+            let state = viewModel.state.value as? LoginState
+            if state?.error == nil {
                 onLoginSuccess()
             } else {
-                error = viewModel.state.value.error
+                error = state?.error
             }
         }
     }
