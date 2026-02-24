@@ -90,7 +90,8 @@ workflows:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
             JAVA_HOME="$JAVA_HOME" \
-            clean build
+            PATH="$PATH" \
+            build
 
       - name: Export IPA
         script: |
