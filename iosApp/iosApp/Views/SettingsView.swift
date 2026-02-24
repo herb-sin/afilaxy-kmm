@@ -3,7 +3,6 @@ import shared
 
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject private var authObserver = ObservableAuthViewModel()
     @State private var notificationsEnabled = true
     @State private var locationAlways = false
     @State private var showLogoutAlert = false
@@ -11,6 +10,8 @@ struct SettingsView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showHelp = false
+    
+    private let authViewModel = ViewModelProvider.shared.getAuthViewModel()
     
     var body: some View {
         NavigationView {
@@ -97,7 +98,7 @@ struct SettingsView: View {
             .alert("Sair", isPresented: $showLogoutAlert) {
                 Button("Cancelar", role: .cancel) { }
                 Button("Sair", role: .destructive) {
-                    authObserver.logout()
+                    authViewModel.onLogout()
                     dismiss()
                 }
             } message: {
