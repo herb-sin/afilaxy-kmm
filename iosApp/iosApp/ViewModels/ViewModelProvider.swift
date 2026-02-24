@@ -15,9 +15,8 @@ class ViewModelProvider {
     }
     
     func getChatViewModel(emergencyId: String) -> ChatViewModel {
-        return koin.get(qualifier: nil, parameters: {
-            return Koin_coreParametersHolder()
-        }) as! ChatViewModel
+        // Simplificado: sem parâmetros por enquanto
+        return koin.get(qualifier: nil, parameters: nil) as! ChatViewModel
     }
     
     func getAuthViewModel() -> AuthViewModel {

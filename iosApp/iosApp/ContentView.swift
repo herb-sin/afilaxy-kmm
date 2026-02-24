@@ -22,7 +22,7 @@ struct ContentView: View {
     private func checkAuth() {
         let viewModel = ViewModelProvider.shared.getAuthViewModel()
         viewModel.checkAuthState()
-        // Simplificado: verificar se há usuário
-        isAuthenticated = viewModel.state.value.user != nil
+        // Simplificado: sempre false no início
+        isAuthenticated = false
     }
 }
