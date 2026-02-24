@@ -2,41 +2,27 @@ import SwiftUI
 import shared
 
 struct ContentView: View {
-    @StateObject private var authObserver = ObservableAuthViewModel()
+    @State private var isAuthenticated = false
     
     var body: some View {
         Group {
-            if authObserver.isAuthenticated {
+            if isAuthenticated {
                 HomeView()
             } else {
-                LoginView()
+                LoginView(onLoginSuccess: {
+                    isAuthenticated = true
+                })
             }
         }
         .onAppear {
-            authObserver.checkAuth()
-        }
-    }
-}
-
-class ObservableAuthViewModel: ObservableObject {
-    private let viewModel: AuthViewModel
-    @Published var isAuthenticated = false
-    
-    init() {
-        viewModel = ViewModelProvider.shared.getAuthViewModel()
-        observeState()
-    }
-    
-    private func observeState() {
-        viewModel.state.watch { [weak self] state in
-            guard let state = state as? AuthState else { return }
-            DispatchQueue.main.async {
-                self?.isAuthenticated = state.user != nil
-            }
+            checkAuth()
         }
     }
     
-    func checkAuth() {
+    private func checkAuth() {
+        let viewModel = ViewModelProvider.shared.getAuthViewModel()
         viewModel.checkAuthState()
+        // Simplificado: verificar se há usuário
+        isAuthenticated = viewModel.state.value.user != nil
     }
 }
