@@ -73,7 +73,7 @@ struct EmergencyView: View {
             }
             .fullScreenCover(isPresented: $showRequest) {
                 if let emergencyId = viewModel.emergencyId {
-                    EmergencyRequestView(emergencyId: emergencyId)
+                    EmergencyRequestView(emergencyId: emergencyId, viewModel: viewModel)
                 }
             }
         }
@@ -86,6 +86,7 @@ class ObservableEmergencyViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     @Published var emergencyId: String?
+    @Published var emergencyStatus: String?
     
     init() {
         viewModel = ViewModelProvider.shared.getEmergencyViewModel()
@@ -100,6 +101,7 @@ class ObservableEmergencyViewModel: ObservableObject {
                 self?.isLoading = state.isLoading
                 self?.error = state.error
                 self?.emergencyId = state.activeEmergencyId
+                self?.emergencyStatus = state.emergencyStatus
             }
         }
     }
@@ -114,5 +116,9 @@ class ObservableEmergencyViewModel: ObservableObject {
     
     func cancelEmergency() {
         viewModel.onCancelEmergency()
+    }
+    
+    func observeEmergencyStatus(_ emergencyId: String) {
+        viewModel.observeEmergencyStatus(emergencyId: emergencyId)
     }
 }

@@ -2,7 +2,6 @@ import SwiftUI
 import shared
 
 struct HomeView: View {
-    @StateObject private var authObserver = ObservableAuthViewModel()
     @State private var showEmergency = false
     @State private var showProfile = false
     @State private var showSettings = false
@@ -77,19 +76,6 @@ struct HomeView: View {
                 SettingsView()
             }
         }
-    }
-}
-
-class ObservableAuthViewModel: ObservableObject {
-    private let viewModel: AuthViewModel
-    @Published var isAuthenticated = false
-    
-    init() {
-        viewModel = ViewModelProvider.shared.getAuthViewModel()
-    }
-    
-    func logout() {
-        viewModel.logout()
     }
 }
 
