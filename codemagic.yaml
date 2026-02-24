@@ -11,13 +11,9 @@ workflows:
         DEVELOPMENT_TEAM: "3V3X7CDR22"
       xcode: latest
       cocoapods: default
+      java: 17
 
     scripts:
-      - name: Set up Kotlin Multiplatform shared framework
-        script: |
-          cd $CM_BUILD_DIR
-          ./gradlew :shared:assembleDebugXCFramework
-
       - name: Install XcodeGen
         script: |
           brew install xcodegen
@@ -27,7 +23,7 @@ workflows:
           cd $CM_BUILD_DIR/iosApp
           DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM xcodegen generate
 
-      - name: Install CocoaPods dependencies
+      - name: Install CocoaPods dependencies (compiles shared KMM framework)
         script: |
           cd $CM_BUILD_DIR/iosApp
           pod install --repo-update
