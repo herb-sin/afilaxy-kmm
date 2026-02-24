@@ -3,7 +3,6 @@ import shared
 
 struct HomeView: View {
     @State private var showEmergency = false
-    @State private var showProfile = false
     @State private var showSettings = false
     @State private var isHelperMode = false
     
@@ -43,10 +42,6 @@ struct HomeView: View {
                 
                 // Menu Grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    MenuCard(icon: "person.fill", title: "Perfil") {
-                        showProfile = true
-                    }
-                    
                     MenuCard(icon: "clock.fill", title: "Histórico") {
                         // TODO: Navigate to history
                     }
@@ -58,6 +53,10 @@ struct HomeView: View {
                     MenuCard(icon: "gearshape.fill", title: "Configurações") {
                         showSettings = true
                     }
+                    
+                    MenuCard(icon: "info.circle", title: "Sobre") {
+                        // TODO: Navigate to about
+                    }
                 }
                 .padding(.horizontal, 32)
                 
@@ -68,9 +67,6 @@ struct HomeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showEmergency) {
                 EmergencyView()
-            }
-            .sheet(isPresented: $showProfile) {
-                ProfileView()
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
