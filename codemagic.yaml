@@ -9,6 +9,9 @@ workflows:
         XCODE_SCHEME: "iosApp"
         BUNDLE_ID: "com.afilaxy.app"
         DEVELOPMENT_TEAM: "3V3X7CDR22"
+        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
       xcode: latest
       cocoapods: default
       java: 17
