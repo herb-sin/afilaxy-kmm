@@ -42,18 +42,21 @@ workflows:
           echo "Testing Gradle:"
           ./gradlew --version
 
-      - name: Generate Dummy Framework
+      - name: Build KMM Framework for iOS
         script: |
           cd $CM_BUILD_DIR
           export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
           export PATH="$JAVA_HOME/bin:$PATH"
-          ./gradlew :shared:generateDummyFramework
+          # Build framework para todas as arquiteturas iOS
+          ./gradlew :shared:assembleSharedReleaseXCFramework
 
       - name: Install CocoaPods dependencies
         script: |
           cd $CM_BUILD_DIR/iosApp
           export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
           export PATH="$JAVA_HOME/bin:$PATH"
+          # Desabilitar script phase do CocoaPods
+          export OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
           pod install --repo-update
 
       - name: Set up keychain and fetch certificates
@@ -78,17 +81,12 @@ workflows:
         script: |
           xcode-project use-profiles
           cd $CM_BUILD_DIR/iosApp
-          # Exportar JAVA_HOME e PATH globalmente
+          # Exportar variáveis e desabilitar script do CocoaPods
           export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
           export PATH="$JAVA_HOME/bin:$PATH"
+          export OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
           
-          # Verificar se Gradle está acessível
-          echo "Testing Gradle access:"
-          cd $CM_BUILD_DIR
-          ./gradlew --version
-          
-          # Build com logs detalhados
-          cd $CM_BUILD_DIR/iosApp
+          # Build sem verbose
           xcodebuild \
             -workspace iosApp.xcworkspace \
             -scheme "$XCODE_SCHEME" \
@@ -97,10 +95,8 @@ workflows:
             -destination 'generic/platform=iOS' \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
-            JAVA_HOME="$JAVA_HOME" \
-            PATH="$PATH" \
-            -verbose \
-            build 2>&1 | tee xcodebuild.log
+            OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES \
+            build
 
       - name: Export IPA
         script: |
