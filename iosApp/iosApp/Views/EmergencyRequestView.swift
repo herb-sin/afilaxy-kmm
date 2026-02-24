@@ -4,8 +4,13 @@ import shared
 struct EmergencyRequestView: View {
     @Environment(\.dismiss) var dismiss
     let emergencyId: String
-    @StateObject private var viewModel = ObservableEmergencyViewModel()
+    @StateObject private var viewModel: ObservableEmergencyViewModel
     @State private var showChat = false
+    
+    init(emergencyId: String, viewModel: ObservableEmergencyViewModel) {
+        self.emergencyId = emergencyId
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
     
     var body: some View {
         VStack(spacing: 32) {
@@ -53,48 +58,5 @@ struct EmergencyRequestView: View {
         .onAppear {
             viewModel.observeEmergencyStatus(emergencyId)
         }
-    }
-}
-
-class ObservableEmergencyViewModel: ObservableObject {
-    private let viewModel: EmergencyViewModel
-    @Published var description = ""
-    @Published var isLoading = false
-    @Published var error: String?
-    @Published var emergencyId: String?
-    @Published var emergencyStatus: String?
-    
-    init() {
-        viewModel = ViewModelProvider.shared.getEmergencyViewModel()
-        observeState()
-    }
-    
-    private func observeState() {
-        viewModel.state.watch { [weak self] state in
-            guard let state = state as? EmergencyState else { return }
-            DispatchQueue.main.async {
-                self?.description = state.description_
-                self?.isLoading = state.isLoading
-                self?.error = state.error
-                self?.emergencyId = state.activeEmergencyId
-                self?.emergencyStatus = state.emergencyStatus
-            }
-        }
-    }
-    
-    func onDescriptionChange(_ description: String) {
-        viewModel.onDescriptionChange(description: description)
-    }
-    
-    func createEmergency() {
-        viewModel.onCreateEmergency()
-    }
-    
-    func cancelEmergency() {
-        viewModel.onCancelEmergency()
-    }
-    
-    func observeEmergencyStatus(_ emergencyId: String) {
-        viewModel.observeEmergencyStatus(emergencyId: emergencyId)
     }
 }
