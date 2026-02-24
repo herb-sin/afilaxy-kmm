@@ -78,9 +78,17 @@ workflows:
         script: |
           xcode-project use-profiles
           cd $CM_BUILD_DIR/iosApp
-          # Exportar JAVA_HOME para que o script do CocoaPods 'Build shared' encontre o Gradle
+          # Exportar JAVA_HOME e PATH globalmente
           export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
           export PATH="$JAVA_HOME/bin:$PATH"
+          
+          # Verificar se Gradle está acessível
+          echo "Testing Gradle access:"
+          cd $CM_BUILD_DIR
+          ./gradlew --version
+          
+          # Build com logs detalhados
+          cd $CM_BUILD_DIR/iosApp
           xcodebuild \
             -workspace iosApp.xcworkspace \
             -scheme "$XCODE_SCHEME" \
@@ -91,7 +99,8 @@ workflows:
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
             JAVA_HOME="$JAVA_HOME" \
             PATH="$PATH" \
-            build
+            -verbose \
+            build 2>&1 | tee xcodebuild.log
 
       - name: Export IPA
         script: |
@@ -102,3 +111,4 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - iosApp/xcodebuild.log
