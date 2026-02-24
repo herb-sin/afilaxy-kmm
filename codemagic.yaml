@@ -11,7 +11,7 @@ workflows:
         XCODE_SCHEME: "iosApp"
         BUNDLE_ID: "com.afilaxy.app"
         DEVELOPMENT_TEAM: "3V3X7CDR22"
-      xcode: 15.4
+      xcode: 15.0
       cocoapods: default
       java: 17
 
