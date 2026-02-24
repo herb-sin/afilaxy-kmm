@@ -49,6 +49,8 @@ workflows:
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --certificate-key "$CERT_KEY" \
+            --strict-match-identifier \
+            --delete-stale-profiles \
             --create
           keychain add-certificates
 
