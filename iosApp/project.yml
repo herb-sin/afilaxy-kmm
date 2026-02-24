@@ -1,6 +1,6 @@
 name: iosApp
 options:
-  bundleIdPrefix: com.afilaxy
+  bundleIdPrefix: br.com.afilaxy
   deploymentTarget:
     iOS: "15.0"
   xcodeVersion: "15"
@@ -24,7 +24,7 @@ targets:
       path: iosApp/Info.plist
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.afilaxy.app
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.afilaxy.app
         INFOPLIST_FILE: iosApp/Info.plist
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "15.0"
