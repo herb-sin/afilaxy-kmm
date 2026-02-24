@@ -40,9 +40,9 @@ workflows:
           keychain initialize
           # Decodificar base64 → PEM e exportar como env var
           export APP_STORE_CONNECT_PRIVATE_KEY=$(echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 --decode)
-          # Gerar chave privada para o certificado de desenvolvimento
-          openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -out /tmp/cert_key.p8
-          CERT_KEY=$(cat /tmp/cert_key.p8)
+          # Gerar chave RSA 2048 (exigido pela Apple para certificados iOS)
+          openssl genrsa -out /tmp/cert_key.pem 2048
+          CERT_KEY=$(cat /tmp/cert_key.pem)
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_DEVELOPMENT \
