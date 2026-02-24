@@ -47,8 +47,8 @@ workflows:
           cd $CM_BUILD_DIR
           export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
           export PATH="$JAVA_HOME/bin:$PATH"
-          # Build framework para todas as arquiteturas iOS
-          ./gradlew :shared:assembleSharedReleaseXCFramework
+          # Build framework para iOS usando CocoaPods task
+          ./gradlew :shared:podInstall
 
       - name: Install CocoaPods dependencies
         script: |
