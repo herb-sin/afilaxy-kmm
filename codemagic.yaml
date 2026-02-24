@@ -38,15 +38,13 @@ workflows:
       - name: Set up keychain and fetch certificates
         script: |
           keychain initialize
-          # Decodificar base64 → PEM e salvar em arquivo
-          echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 --decode > /tmp/auth_key.p8
-          chmod 600 /tmp/auth_key.p8
+          # Decodificar base64 → PEM e exportar como env var para o CLI ler automaticamente
+          export APP_STORE_CONNECT_PRIVATE_KEY=$(echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 --decode)
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_DEVELOPMENT \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --private-key @/tmp/auth_key.p8 \
             --create
           keychain add-certificates
 
