@@ -23,7 +23,12 @@ workflows:
           cd $CM_BUILD_DIR/iosApp
           DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM xcodegen generate
 
-      - name: Install CocoaPods dependencies (compiles shared KMM framework)
+      - name: Generate dummy KMM framework (required before pod install)
+        script: |
+          cd $CM_BUILD_DIR
+          ./gradlew :shared:generateDummyFramework
+
+      - name: Install CocoaPods dependencies
         script: |
           cd $CM_BUILD_DIR/iosApp
           pod install --repo-update
