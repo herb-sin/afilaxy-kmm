@@ -33,9 +33,10 @@ actual class LocationRepositoryImpl : LocationRepository {
                     ) {
                         val clLocation = didUpdateLocations.lastOrNull() as? CLLocation
                         if (clLocation != null) {
+                            val coord = clLocation.coordinate
                             val location = Location(
-                                latitude = clLocation.coordinate.useContents { latitude },
-                                longitude = clLocation.coordinate.useContents { longitude },
+                                latitude = coord.latitude,
+                                longitude = coord.longitude,
                                 address = "",
                                 timestamp = (clLocation.timestamp.timeIntervalSince1970 * 1000).toLong(),
                                 accuracy = clLocation.horizontalAccuracy.toFloat()
