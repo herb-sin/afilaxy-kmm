@@ -1,6 +1,7 @@
 package com.afilaxy.data.repository
 
 import com.afilaxy.domain.model.Location
+import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.LocationRepository
 
 /**
@@ -16,7 +17,7 @@ actual class LocationRepositoryImpl : LocationRepository {
             latitude = -23.5505,
             longitude = -46.6333,
             address = "São Paulo, SP",
-            timestamp = System.currentTimeMillis(),
+            timestamp = getCurrentTimeMillis(),
             accuracy = 10.0f
         )
     }
