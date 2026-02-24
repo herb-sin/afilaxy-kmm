@@ -11,7 +11,7 @@ workflows:
         XCODE_SCHEME: "iosApp"
         BUNDLE_ID: "com.afilaxy.app"
         DEVELOPMENT_TEAM: "3V3X7CDR22"
-      xcode: latest
+      xcode: 15.4
       cocoapods: default
       java: 17
 
@@ -25,14 +25,23 @@ workflows:
           cd $CM_BUILD_DIR/iosApp
           DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM xcodegen generate
 
+      - name: Make gradlew executable
+        script: |
+          cd $CM_BUILD_DIR
+          chmod +x gradlew
+
       - name: Generate dummy KMM framework (required before pod install)
         script: |
           cd $CM_BUILD_DIR
+          export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
+          export PATH="$JAVA_HOME/bin:$PATH"
           ./gradlew :shared:generateDummyFramework
 
       - name: Install CocoaPods dependencies
         script: |
           cd $CM_BUILD_DIR/iosApp
+          export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
+          export PATH="$JAVA_HOME/bin:$PATH"
           pod install --repo-update
 
       - name: Set up keychain and fetch certificates
@@ -57,6 +66,9 @@ workflows:
         script: |
           xcode-project use-profiles
           cd $CM_BUILD_DIR/iosApp
+          # Exportar JAVA_HOME para que o script do CocoaPods 'Build shared' encontre o Gradle
+          export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
+          export PATH="$JAVA_HOME/bin:$PATH"
           xcodebuild \
             -workspace iosApp.xcworkspace \
             -scheme "$XCODE_SCHEME" \
@@ -65,6 +77,7 @@ workflows:
             -destination 'generic/platform=iOS' \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
+            JAVA_HOME="$JAVA_HOME" \
             clean build
 
       - name: Export IPA

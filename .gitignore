@@ -45,6 +45,10 @@ Podfile.lock
 
 # Firebase
 google-services.json
+GoogleService-Info.plist
+
+# Environment
+.env
 
 # Keystore
 *.jks
