@@ -2,12 +2,13 @@ package com.afilaxy.di
 
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
-import org.koin.core.context.GlobalContext
+
+private var koinInstance: Koin? = null
 
 fun doInitKoin() {
-    startKoin {
+    koinInstance = startKoin {
         modules(sharedModule(), platformModule())
-    }
+    }.koin
 }
 
-fun getKoin(): Koin = GlobalContext.getOrNull() ?: error("Koin not initialized")
+fun getKoin(): Koin = koinInstance ?: error("Koin not initialized. Call doInitKoin() first.")
