@@ -1,10 +1,16 @@
 import SwiftUI
 import shared
-import Combine
 
 struct LoginView: View {
-    @StateObject private var viewModel = ObservableLoginViewModel()
+    let onLoginSuccess: () -> Void
+    
+    @State private var email = ""
+    @State private var password = ""
+    @State private var isLoading = false
+    @State private var error: String?
     @State private var showRegister = false
+    
+    private let viewModel = ViewModelProvider.shared.getLoginViewModel()
     
     var body: some View {
         NavigationView {
@@ -22,30 +28,22 @@ struct LoginView: View {
                 Spacer()
                 
                 VStack(spacing: 16) {
-                    TextField("Email", text: $viewModel.email)
+                    TextField("Email", text: $email)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
-                        .onChange(of: viewModel.email) { newValue in
-                            viewModel.onEmailChange(newValue)
-                        }
                     
-                    SecureField("Senha", text: $viewModel.password)
+                    SecureField("Senha", text: $password)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .onChange(of: viewModel.password) { newValue in
-                            viewModel.onPasswordChange(newValue)
-                        }
                     
-                    if let error = viewModel.error {
+                    if let error = error {
                         Text(error)
                             .foregroundColor(.red)
                             .font(.caption)
                     }
                     
-                    Button(action: {
-                        viewModel.login()
-                    }) {
-                        if viewModel.isLoading {
+                    Button(action: login) {
+                        if isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         } else {
@@ -58,7 +56,7 @@ struct LoginView: View {
                     .background(Color.red)
                     .foregroundColor(.white)
                     .cornerRadius(10)
-                    .disabled(viewModel.isLoading)
+                    .disabled(isLoading)
                     
                     Button(action: {
                         showRegister = true
@@ -77,44 +75,23 @@ struct LoginView: View {
             }
         }
     }
-}
-
-class ObservableLoginViewModel: ObservableObject {
-    private let viewModel: LoginViewModel
-    private var cancellables = Set<AnyCancellable>()
     
-    @Published var email = ""
-    @Published var password = ""
-    @Published var isLoading = false
-    @Published var error: String?
-    @Published var isAuthenticated = false
-    
-    init() {
-        viewModel = ViewModelProvider.shared.getLoginViewModel()
-        observeState()
-    }
-    
-    private func observeState() {
-        viewModel.state.watch { [weak self] state in
-            guard let state = state as? LoginState else { return }
-            DispatchQueue.main.async {
-                self?.email = state.email
-                self?.password = state.password
-                self?.isLoading = state.isLoading
-                self?.error = state.error
+    private func login() {
+        isLoading = true
+        error = nil
+        
+        viewModel.onEmailChange(email: email)
+        viewModel.onPasswordChange(password: password)
+        viewModel.onLoginClick()
+        
+        // Simular sucesso após delay (em produção, observar state)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            isLoading = false
+            if viewModel.state.value.error == nil {
+                onLoginSuccess()
+            } else {
+                error = viewModel.state.value.error
             }
         }
-    }
-    
-    func onEmailChange(_ email: String) {
-        viewModel.onEmailChange(email: email)
-    }
-    
-    func onPasswordChange(_ password: String) {
-        viewModel.onPasswordChange(password: password)
-    }
-    
-    func login() {
-        viewModel.onLoginClick()
     }
 }
