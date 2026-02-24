@@ -42,12 +42,13 @@ workflows:
           export APP_STORE_CONNECT_PRIVATE_KEY=$(echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 --decode)
           # Gerar chave privada para o certificado de desenvolvimento
           openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -out /tmp/cert_key.p8
+          CERT_KEY=$(cat /tmp/cert_key.p8)
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_DEVELOPMENT \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --certificate-key @/tmp/cert_key.p8 \
+            --certificate-key "$CERT_KEY" \
             --create
           keychain add-certificates
 
