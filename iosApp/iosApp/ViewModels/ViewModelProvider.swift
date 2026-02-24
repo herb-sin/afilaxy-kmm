@@ -7,22 +7,24 @@ class ViewModelProvider {
     private let koin = KoinHelperKt.getKoin()
     
     func getLoginViewModel() -> LoginViewModel {
-        return koin.get(objCClass: LoginViewModel.self) as! LoginViewModel
+        return koin.get() as! LoginViewModel
     }
     
     func getEmergencyViewModel() -> EmergencyViewModel {
-        return koin.get(objCClass: EmergencyViewModel.self) as! EmergencyViewModel
+        return koin.get() as! EmergencyViewModel
     }
     
     func getChatViewModel(emergencyId: String) -> ChatViewModel {
-        return koin.get(objCClass: ChatViewModel.self, parameter: emergencyId) as! ChatViewModel
+        return koin.get(parameters: { _ in
+            return Koin_coreParametersHolder(values: [emergencyId])
+        }) as! ChatViewModel
     }
     
     func getAuthViewModel() -> AuthViewModel {
-        return koin.get(objCClass: AuthViewModel.self) as! AuthViewModel
+        return koin.get() as! AuthViewModel
     }
     
     func getProfileViewModel() -> ProfileViewModel {
-        return koin.get(objCClass: ProfileViewModel.self) as! ProfileViewModel
+        return koin.get() as! ProfileViewModel
     }
 }
