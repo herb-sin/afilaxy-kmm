@@ -86,7 +86,8 @@ workflows:
           export PATH="$JAVA_HOME/bin:$PATH"
           export OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
           
-          # Build sem verbose
+          # Build e capturar erros Swift
+          set +e
           xcodebuild \
             -workspace iosApp.xcworkspace \
             -scheme "$XCODE_SCHEME" \
@@ -96,7 +97,16 @@ workflows:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
             OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES \
-            build
+            build 2>&1 | tee build.log
+          
+          BUILD_STATUS=${PIPESTATUS[0]}
+          
+          if [ $BUILD_STATUS -ne 0 ]; then
+            echo "\n=== BUILD FAILED ==="
+            echo "\n=== Swift Compilation Errors ==="
+            grep -A 5 "error:" build.log || echo "No specific errors found"
+            exit $BUILD_STATUS
+          fi
 
       - name: Export IPA
         script: |
@@ -107,4 +117,4 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - iosApp/xcodebuild.log
+      - iosApp/build.log
