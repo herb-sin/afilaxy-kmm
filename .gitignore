@@ -57,3 +57,4 @@ keystore.properties
 
 # Kotlin
 *.kotlin_module
+iosApp/iosApp/GoogleService-Info.plist
