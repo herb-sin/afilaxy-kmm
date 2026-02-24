@@ -5,13 +5,10 @@ workflows:
     instance_type: mac_mini_m1
 
     environment:
-      ios_signing:
-        distribution_type: development
-        bundle_identifier: com.afilaxy.app
       vars:
-        XCODE_PROJECT: "iosApp/iosApp.xcodeproj"
         XCODE_SCHEME: "iosApp"
         BUNDLE_ID: "com.afilaxy.app"
+        DEVELOPMENT_TEAM: "3V3X7CDR22"
       xcode: latest
       cocoapods: default
 
@@ -28,12 +25,21 @@ workflows:
       - name: Generate Xcode project
         script: |
           cd $CM_BUILD_DIR/iosApp
-          xcodegen generate
+          DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM xcodegen generate
 
       - name: Install CocoaPods dependencies
         script: |
           cd $CM_BUILD_DIR/iosApp
           pod install --repo-update
+
+      - name: Set up keychain and fetch certificates
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files \
+            "$BUNDLE_ID" \
+            --type IOS_APP_DEVELOPMENT \
+            --create
+          keychain add-certificates
 
       - name: Build iOS app
         script: |
@@ -45,12 +51,16 @@ workflows:
             -configuration Debug \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
             clean build
+
+      - name: Export IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/iosApp/iosApp.xcworkspace" \
+            --scheme "$XCODE_SCHEME"
 
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
-
