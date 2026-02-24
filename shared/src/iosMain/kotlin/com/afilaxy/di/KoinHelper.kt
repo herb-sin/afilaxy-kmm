@@ -2,6 +2,7 @@ package com.afilaxy.di
 
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
+import org.koin.core.context.GlobalContext
 
 fun doInitKoin() {
     startKoin {
@@ -9,4 +10,4 @@ fun doInitKoin() {
     }
 }
 
-fun getKoin(): Koin = org.koin.core.context.GlobalContext.get()
+fun getKoin(): Koin = GlobalContext.getOrNull() ?: error("Koin not initialized")
