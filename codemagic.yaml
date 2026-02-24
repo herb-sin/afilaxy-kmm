@@ -38,7 +38,7 @@ workflows:
       - name: Set up keychain and fetch certificates
         script: |
           keychain initialize
-          # Decodificar a chave privada base64 para arquivo PEM
+          # Decodificar base64 → PEM e salvar em arquivo
           echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 --decode > /tmp/auth_key.p8
           chmod 600 /tmp/auth_key.p8
           app-store-connect fetch-signing-files \
