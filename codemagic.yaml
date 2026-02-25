@@ -103,22 +103,22 @@ workflows:
       - name: Export IPA
         script: |
           # Criar exportOptions.plist
-          cat > /tmp/exportOptions.plist <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>app-store</string>
-    <key>teamID</key>
-    <string>$DEVELOPMENT_TEAM</string>
-    <key>uploadSymbols</key>
-    <true/>
-    <key>uploadBitcode</key>
-    <false/>
-</dict>
-</plist>
-EOF
+          cat > /tmp/exportOptions.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>$DEVELOPMENT_TEAM</string>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>uploadBitcode</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
           
           # Export IPA
           mkdir -p "$CM_BUILD_DIR/build/ios/ipa"
