@@ -88,28 +88,13 @@ workflows:
           /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist
 
-      - name: Build and Archive iOS app
+      - name: Build and Export IPA
         script: |
           xcode-project use-profiles
-          cd $CM_BUILD_DIR/iosApp
-          export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
-          export PATH="$JAVA_HOME/bin:$PATH"
-          export OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
-          
-          xcodebuild archive \
-            -workspace iosApp.xcworkspace \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath "$CM_BUILD_DIR/build/ios/archive/iosApp.xcarchive" \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
-            OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
-
-      - name: Export IPA
-        script: |
           xcode-project build-ipa \
-            --archive "$CM_BUILD_DIR/build/ios/archive/iosApp.xcarchive"
+            --workspace "$CM_BUILD_DIR/iosApp/iosApp.xcworkspace" \
+            --scheme "$XCODE_SCHEME" \
+            --config Release
 
     artifacts:
       - build/ios/ipa/*.ipa
