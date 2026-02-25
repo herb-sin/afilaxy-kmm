@@ -24,6 +24,9 @@ workflows:
         script: |
           cd $CM_BUILD_DIR/iosApp
           DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM xcodegen generate
+          # Forçar versão no projeto gerado
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" iosApp/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 16" iosApp/Info.plist
 
       - name: Make gradlew executable
         script: |
