@@ -24,9 +24,15 @@ workflows:
         script: |
           cd $CM_BUILD_DIR/iosApp
           DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM xcodegen generate
-          # Forçar versão no projeto gerado
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" iosApp/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 16" iosApp/Info.plist
+
+      - name: Set version in Info.plist
+        script: |
+          cd $CM_BUILD_DIR/iosApp/iosApp
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 16" Info.plist
+          echo "Version set:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist
 
       - name: Make gradlew executable
         script: |
@@ -85,8 +91,15 @@ workflows:
       - name: Build and Export IPA
         script: |
           xcode-project use-profiles
+          cd $CM_BUILD_DIR/iosApp
+          # Verificar versão antes do build
+          echo "=== Versão no Info.plist antes do build ==="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" iosApp/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" iosApp/Info.plist
+          
+          cd $CM_BUILD_DIR/iosApp
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/iosApp/iosApp.xcworkspace" \
+            --workspace "iosApp.xcworkspace" \
             --scheme "$XCODE_SCHEME" \
             --config Release
 
