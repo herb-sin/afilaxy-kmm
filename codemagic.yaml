@@ -98,6 +98,8 @@ workflows:
             -destination 'generic/platform=iOS' \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
+            MARKETING_VERSION=2.1.0 \
+            CURRENT_PROJECT_VERSION=16 \
             OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES \
             build 2>&1 | tee build.log
           
