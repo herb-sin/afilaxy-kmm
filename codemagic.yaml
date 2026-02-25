@@ -79,6 +79,15 @@ workflows:
             --create
           keychain add-certificates
 
+      - name: Set version in Info.plist
+        script: |
+          cd $CM_BUILD_DIR/iosApp/iosApp
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 16" Info.plist
+          echo "Version set in Info.plist:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist
+
       - name: Build and Archive iOS app
         script: |
           xcode-project use-profiles
@@ -87,7 +96,6 @@ workflows:
           export PATH="$JAVA_HOME/bin:$PATH"
           export OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
           
-          # Archive com versão explícita
           xcodebuild archive \
             -workspace iosApp.xcworkspace \
             -scheme "$XCODE_SCHEME" \
@@ -96,36 +104,12 @@ workflows:
             -archivePath "$CM_BUILD_DIR/build/ios/archive/iosApp.xcarchive" \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
-            MARKETING_VERSION=2.1.0 \
-            CURRENT_PROJECT_VERSION=16 \
             OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
 
       - name: Export IPA
         script: |
-          # Criar exportOptions.plist
-          cat > /tmp/exportOptions.plist <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>$DEVELOPMENT_TEAM</string>
-              <key>uploadSymbols</key>
-              <true/>
-              <key>uploadBitcode</key>
-              <false/>
-          </dict>
-          </plist>
-          EOF
-          
-          # Export IPA
-          mkdir -p "$CM_BUILD_DIR/build/ios/ipa"
-          xcodebuild -exportArchive \
-            -archivePath "$CM_BUILD_DIR/build/ios/archive/iosApp.xcarchive" \
-            -exportPath "$CM_BUILD_DIR/build/ios/ipa" \
-            -exportOptionsPlist /tmp/exportOptions.plist
+          xcode-project build-ipa \
+            --archive "$CM_BUILD_DIR/build/ios/archive/iosApp.xcarchive"
 
     artifacts:
       - build/ios/ipa/*.ipa
