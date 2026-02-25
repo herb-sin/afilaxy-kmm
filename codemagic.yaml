@@ -47,11 +47,11 @@ workflows:
           cd $CM_BUILD_DIR
           export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
           export PATH="$JAVA_HOME/bin:$PATH"
-          # Compilar framework para Debug e arquitetura arm64
+          # Compilar framework para Release
           ./gradlew :shared:syncFramework \
             -Pkotlin.native.cocoapods.platform=iphoneos \
             -Pkotlin.native.cocoapods.archs=arm64 \
-            -Pkotlin.native.cocoapods.configuration=Debug
+            -Pkotlin.native.cocoapods.configuration=Release
 
       - name: Install CocoaPods dependencies
         script: |
@@ -71,12 +71,11 @@ workflows:
           CERT_KEY=$(echo "$CERTIFICATE_PRIVATE_KEY" | base64 --decode)
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
-            --type IOS_APP_DEVELOPMENT \
+            --type IOS_APP_STORE \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --certificate-key "$CERT_KEY" \
             --strict-match-identifier \
-            --delete-stale-profiles \
             --create
           keychain add-certificates
 
@@ -89,12 +88,12 @@ workflows:
           export PATH="$JAVA_HOME/bin:$PATH"
           export OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
           
-          # Build e capturar erros Swift
+          # Build para Release (App Store)
           set +e
           xcodebuild \
             -workspace iosApp.xcworkspace \
             -scheme "$XCODE_SCHEME" \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             CODE_SIGN_STYLE=Manual \
