@@ -79,15 +79,6 @@ workflows:
             --create
           keychain add-certificates
 
-      - name: Set version in Info.plist
-        script: |
-          cd $CM_BUILD_DIR/iosApp/iosApp
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 16" Info.plist
-          echo "Version set in Info.plist:"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist
-          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist
-
       - name: Build and Export IPA
         script: |
           xcode-project use-profiles
