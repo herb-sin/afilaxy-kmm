@@ -18,6 +18,7 @@ targets:
       - path: iosApp
     resources:
       - path: iosApp/iosApp/GoogleService-Info.plist
+      - path: iosApp/iosApp/LaunchScreen.storyboard
       - path: iosApp/Assets.xcassets
         optional: true
     info:
@@ -33,7 +34,6 @@ targets:
         MARKETING_VERSION: "2.1.0"
         CURRENT_PROJECT_VERSION: "16"
         TARGETED_DEVICE_FAMILY: "1"
-
 schemes:
   iosApp:
     build:
