@@ -32,6 +32,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "2.1.0"
         CURRENT_PROJECT_VERSION: "16"
+        TARGETED_DEVICE_FAMILY: "1"
 
 schemes:
   iosApp:
