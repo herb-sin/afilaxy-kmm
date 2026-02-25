@@ -79,44 +79,53 @@ workflows:
             --create
           keychain add-certificates
 
-      - name: Build iOS app
+      - name: Build and Archive iOS app
         script: |
           xcode-project use-profiles
           cd $CM_BUILD_DIR/iosApp
-          # Exportar variáveis e desabilitar script do CocoaPods
           export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || /usr/libexec/java_home)
           export PATH="$JAVA_HOME/bin:$PATH"
           export OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
           
-          # Build para Release (App Store)
-          set +e
-          xcodebuild \
+          # Archive com versão explícita
+          xcodebuild archive \
             -workspace iosApp.xcworkspace \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
             -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
+            -archivePath "$CM_BUILD_DIR/build/ios/archive/iosApp.xcarchive" \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
             MARKETING_VERSION=2.1.0 \
             CURRENT_PROJECT_VERSION=16 \
-            OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES \
-            build 2>&1 | tee build.log
-          
-          BUILD_STATUS=${PIPESTATUS[0]}
-          
-          if [ $BUILD_STATUS -ne 0 ]; then
-            echo "\n=== BUILD FAILED ==="
-            echo "\n=== Swift Compilation Errors ==="
-            grep -A 5 "error:" build.log || echo "No specific errors found"
-            exit $BUILD_STATUS
-          fi
+            OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES
 
       - name: Export IPA
         script: |
-          xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/iosApp/iosApp.xcworkspace" \
-            --scheme "$XCODE_SCHEME"
+          # Criar exportOptions.plist
+          cat > /tmp/exportOptions.plist <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>$DEVELOPMENT_TEAM</string>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>uploadBitcode</key>
+    <false/>
+</dict>
+</plist>
+EOF
+          
+          # Export IPA
+          mkdir -p "$CM_BUILD_DIR/build/ios/ipa"
+          xcodebuild -exportArchive \
+            -archivePath "$CM_BUILD_DIR/build/ios/archive/iosApp.xcarchive" \
+            -exportPath "$CM_BUILD_DIR/build/ios/ipa" \
+            -exportOptionsPlist /tmp/exportOptions.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
