@@ -3,6 +3,7 @@ package com.afilaxy.di
 import com.afilaxy.data.repository.AuthRepositoryImpl
 import com.afilaxy.data.repository.ChatRepositoryImpl
 import com.afilaxy.data.repository.EmergencyRepositoryImpl
+import com.afilaxy.data.repository.HealthProfessionalRepositoryImpl
 import com.afilaxy.data.repository.LocationRepositoryImpl
 import com.afilaxy.data.repository.NotificationRepositoryImpl
 import com.afilaxy.data.repository.PreferencesRepositoryImpl
@@ -10,6 +11,7 @@ import com.afilaxy.data.repository.ProfileRepositoryImpl
 import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.ChatRepository
 import com.afilaxy.domain.repository.EmergencyRepository
+import com.afilaxy.domain.repository.HealthProfessionalRepository
 import com.afilaxy.domain.repository.LocationRepository
 import com.afilaxy.domain.repository.NotificationRepository
 import com.afilaxy.domain.repository.PreferencesRepository
@@ -19,6 +21,7 @@ import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
+import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.russhwolf.settings.Settings
 import dev.gitlive.firebase.Firebase
@@ -43,6 +46,7 @@ fun sharedModule(): Module = module {
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
     single<NotificationRepository> { NotificationRepositoryImpl(get()) }
+    single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get()) }
     
     // ViewModels
     factory { AuthViewModel(get()) }
@@ -51,6 +55,7 @@ fun sharedModule(): Module = module {
     factory { EmergencyViewModel(get(), get(), get()) }
     factory { ProfileViewModel(get(), get()) }
     factory { HistoryViewModel(get(), get()) }
+    factory { ProfessionalListViewModel(get()) }
 }
 
 /**
