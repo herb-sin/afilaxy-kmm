@@ -5,6 +5,218 @@ import * as geofireCommon from 'geofire-common';
 // Inicializar Firebase Admin
 admin.initializeApp();
 
+// ============================================
+// STRIPE WEBHOOK - MVP PROFISSIONAIS
+// ============================================
+
+/**
+ * Cloud Function para criar sessão de checkout do Stripe
+ * Chamada pelo portal web de profissionais
+ */
+export const createCheckoutSession = functions.https.onCall(async (data, context) => {
+    const stripe = require('stripe')(functions.config().stripe?.secret_key);
+    
+    const { priceId, email, metadata } = data;
+
+    if (!priceId || !email || !metadata) {
+        throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
+    }
+
+    try {
+        // Criar ou buscar profissional no Firestore
+        const professionalsRef = admin.firestore().collection('health_professionals');
+        const existingProf = await professionalsRef.where('email', '==', email).limit(1).get();
+        
+        let professionalId: string;
+        
+        if (existingProf.empty) {
+            // Criar novo profissional
+            const newProf = await professionalsRef.add({
+                name: metadata.name,
+                email: email,
+                crm: metadata.crm,
+                specialty: 'PNEUMOLOGIST', // Padrão, pode ser atualizado depois
+                subscriptionPlan: 'NONE',
+                subscriptionExpiry: 0,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            professionalId = newProf.id;
+        } else {
+            professionalId = existingProf.docs[0].id;
+        }
+
+        // Criar sessão de checkout no Stripe
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price: priceId,
+                quantity: 1
+            }],
+            mode: 'subscription',
+            success_url: `${functions.config().app?.url || 'https://afilaxy.com'}/professional/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${functions.config().app?.url || 'https://afilaxy.com'}/professional/cancel`,
+            customer_email: email,
+            metadata: {
+                professionalId,
+                planType: metadata.planType,
+                name: metadata.name,
+                crm: metadata.crm
+            }
+        });
+
+        console.log(`✅ Checkout session created for ${email}: ${session.id}`);
+
+        return { sessionId: session.id };
+    } catch (error: any) {
+        console.error('Error creating checkout session:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+
+/**
+ * Webhook do Stripe para processar eventos de pagamento
+ * Atualiza subscriptionPlan e subscriptionExpiry no Firestore
+ */
+export const stripeWebhook = functions.https.onRequest(async (req, res) => {
+    const stripe = require('stripe')(functions.config().stripe?.secret_key);
+    const endpointSecret = functions.config().stripe?.webhook_secret;
+
+    const sig = req.headers['stripe-signature'];
+
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    } catch (err: any) {
+        console.error('Webhook signature verification failed:', err.message);
+        res.status(400).send(`Webhook Error: ${err.message}`);
+        return;
+    }
+
+    console.log('Stripe event received:', event.type);
+
+    // Processar evento de checkout completo
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const professionalId = session.metadata?.professionalId;
+        const planType = session.metadata?.planType;
+
+        if (!professionalId || !planType) {
+            console.error('Missing metadata in checkout session');
+            res.status(400).send('Missing metadata');
+            return;
+        }
+
+        try {
+            // Calcular data de expiração (30 dias)
+            const expiryDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
+
+            // Atualizar Firestore
+            await admin.firestore()
+                .collection('health_professionals')
+                .doc(professionalId)
+                .update({
+                    subscriptionPlan: planType.toUpperCase(),
+                    subscriptionExpiry: expiryDate,
+                    stripeCustomerId: session.customer,
+                    stripeSubscriptionId: session.subscription,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+            console.log(`✅ Subscription updated for ${professionalId}: ${planType}`);
+            res.json({ received: true });
+        } catch (error) {
+            console.error('Error updating subscription:', error);
+            res.status(500).send('Internal error');
+        }
+    }
+    // Processar cancelamento de assinatura
+    else if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object;
+        const customerId = subscription.customer;
+
+        try {
+            // Buscar profissional pelo stripeCustomerId
+            const snapshot = await admin.firestore()
+                .collection('health_professionals')
+                .where('stripeCustomerId', '==', customerId)
+                .limit(1)
+                .get();
+
+            if (!snapshot.empty) {
+                const doc = snapshot.docs[0];
+                await doc.ref.update({
+                    subscriptionPlan: 'NONE',
+                    subscriptionExpiry: 0,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                console.log(`✅ Subscription cancelled for ${doc.id}`);
+            }
+
+            res.json({ received: true });
+        } catch (error) {
+            console.error('Error cancelling subscription:', error);
+            res.status(500).send('Internal error');
+        }
+    }
+    else {
+        console.log(`Unhandled event type: ${event.type}`);
+        res.json({ received: true });
+    }
+});
+
+/**
+ * Cron job diário para verificar assinaturas expiradas
+ * Executa todo dia às 00:00 UTC
+ */
+export const checkExpiredSubscriptions = functions.pubsub
+    .schedule('0 0 * * *')
+    .timeZone('America/Sao_Paulo')
+    .onRun(async (context) => {
+        console.log('Checking expired subscriptions...');
+
+        try {
+            const now = Date.now();
+
+            // Buscar profissionais com assinatura expirada
+            const snapshot = await admin.firestore()
+                .collection('health_professionals')
+                .where('subscriptionExpiry', '<', now)
+                .where('subscriptionPlan', '!=', 'NONE')
+                .get();
+
+            if (snapshot.empty) {
+                console.log('No expired subscriptions found');
+                return null;
+            }
+
+            const batch = admin.firestore().batch();
+            let count = 0;
+
+            snapshot.docs.forEach((doc) => {
+                batch.update(doc.ref, {
+                    subscriptionPlan: 'NONE',
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                count++;
+                console.log(`Expiring subscription for ${doc.id}`);
+            });
+
+            await batch.commit();
+            console.log(`✅ ${count} subscriptions expired`);
+
+            return null;
+        } catch (error) {
+            console.error('Error checking expired subscriptions:', error);
+            return null;
+        }
+    });
+
+// ============================================
+// FUNÇÕES EXISTENTES (EMERGÊNCIAS)
+// ============================================
+
 /**
  * Trigger quando uma emergência é criada
  * Envia notificação apenas para helpers próximos (5km)

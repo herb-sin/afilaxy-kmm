@@ -16,6 +16,7 @@ object AppRoutes {
     const val ABOUT = "about"
     const val COMMUNITY = "community"
     const val AUTOCUIDADO = "autocuidado"
+    const val PROFESSIONALS = "professionals"
     const val MAP = "map"
     const val NOTIFICATIONS = "notifications"
     const val HELP = "help"

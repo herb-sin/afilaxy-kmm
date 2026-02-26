@@ -43,6 +43,7 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToCommunity: () -> Unit = {},
     onNavigateToAutocuidado: () -> Unit = {},
+    onNavigateToProfessionals: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
@@ -300,6 +301,17 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("📋 Histórico")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = onNavigateToProfessionals,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.MedicalServices, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("👨‍⚕️ Profissionais")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
