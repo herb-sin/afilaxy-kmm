@@ -215,20 +215,7 @@ fun HomeScreen(
                             }
                             TextButton(
                                 onClick = {
-                                    val anyPermanentlyDenied = missingPermissions.none {
-                                        it.status.isGranted
-                                    } && permissionsState.permissions.none {
-                                        com.google.accompanist.permissions.shouldShowRationale(it)
-                                    }
-                                    if (anyPermanentlyDenied) {
-                                        context.startActivity(
-                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.fromParts("package", context.packageName, null)
-                                            }
-                                        )
-                                    } else {
-                                        permissionsState.launchMultiplePermissionRequest()
-                                    }
+                                    permissionsState.launchMultiplePermissionRequest()
                                 }
                             ) {
                                 Text(
@@ -347,11 +334,6 @@ fun HomeScreen(
 
     // Diálogo inicial de permissões ao entrar no app
     if (showPermissionsRationale) {
-        val isPermanentlyDenied = missingPermissions.isNotEmpty() &&
-            permissionsState.permissions.none {
-                com.google.accompanist.permissions.shouldShowRationale(it)
-            } && missingPermissions.isNotEmpty()
-
         AlertDialog(
             onDismissRequest = { showPermissionsRationale = false },
             icon = { Icon(Icons.Default.Lock, contentDescription = null) },
@@ -360,27 +342,16 @@ fun HomeScreen(
                 Text(
                     "Para usar o Afilaxy com segurança, precisamos de:\n\n" +
                     "📍 Localização — para encontrar emergências próximas\n" +
-                    "🔔 Notificações — para avisar quando alguém precisar de ajuda\n\n" +
-                    if (isPermanentlyDenied)
-                        "Algumas permissões foram negadas anteriormente. Toque em \"Configurações\" para ativá-las manualmente."
-                    else "",
+                    "🔔 Notificações — para avisar quando alguém precisar de ajuda",
                     textAlign = TextAlign.Start
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     showPermissionsRationale = false
-                    if (isPermanentlyDenied) {
-                        context.startActivity(
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", context.packageName, null)
-                            }
-                        )
-                    } else {
-                        permissionsState.launchMultiplePermissionRequest()
-                    }
+                    permissionsState.launchMultiplePermissionRequest()
                 }) {
-                    Text(if (isPermanentlyDenied) "Abrir Configurações" else "Permitir")
+                    Text("Permitir")
                 }
             },
             dismissButton = {
