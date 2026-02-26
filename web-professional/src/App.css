@@ -1,0 +1,270 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 5px;
+}
+
+.header p {
+  opacity: 0.9;
+}
+
+/* Hero */
+.hero {
+  background: white;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.hero h2 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #666;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Form */
+.form-section {
+  padding: 40px 20px;
+  background: #f9f9f9;
+}
+
+.form-card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 500px;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.form-card h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.form-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.form-card input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Plans */
+.plans {
+  padding: 60px 20px;
+  background: white;
+}
+
+.plans h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 50px;
+  color: #333;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.plan-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 40px 30px;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.plan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.plan-card.popular {
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+}
+
+.badge {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 5px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.plan-card h3 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.price {
+  margin-bottom: 30px;
+}
+
+.currency {
+  font-size: 1.5rem;
+  vertical-align: top;
+  color: #666;
+}
+
+.amount {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.period {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.features {
+  list-style: none;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.features li {
+  padding: 10px 0;
+  color: #555;
+  font-size: 1rem;
+}
+
+button.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+}
+
+button.secondary {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+}
+
+button.secondary:hover {
+  background: #667eea;
+  color: white;
+}
+
+/* Benefits */
+.benefits {
+  padding: 60px 20px;
+  background: #f9f9f9;
+}
+
+.benefits h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 50px;
+  color: #333;
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.benefit {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.benefit h3 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.benefit p {
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Footer */
+.footer {
+  background: #333;
+  color: white;
+  padding: 30px 20px;
+  text-align: center;
+  margin-top: auto;
+}
+
+.footer p {
+  margin: 5px 0;
+  opacity: 0.9;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero h2 {
+    font-size: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .plans h2, .benefits h2 {
+    font-size: 2rem;
+  }
+  
+  .plans-grid {
+    grid-template-columns: 1fr;
+  }
+}

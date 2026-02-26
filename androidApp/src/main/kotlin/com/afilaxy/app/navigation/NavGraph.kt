@@ -76,7 +76,8 @@ fun NavGraph(startDestination: String? = null) {
                 onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
                 onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
                 onNavigateToCommunity = { navController.navigate(AppRoutes.COMMUNITY) },
-                onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) }
+                onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
+                onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) }
             )
         }
         
@@ -162,6 +163,12 @@ fun NavGraph(startDestination: String? = null) {
 
         composable(AppRoutes.AUTOCUIDADO) {
             AutocuidadoScreen(navController = navController)
+        }
+
+        composable(AppRoutes.PROFESSIONALS) {
+            ProfessionalListScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(AppRoutes.MAP) {
