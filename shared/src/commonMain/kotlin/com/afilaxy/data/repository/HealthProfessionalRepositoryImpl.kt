@@ -19,12 +19,12 @@ class HealthProfessionalRepositoryImpl(
             .where { "subscriptionExpiry" greaterThan System.currentTimeMillis() }
             .get()
             .documents
-            .mapNotNull { it.data() }
+            .mapNotNull { it.data<HealthProfessional>() }
             .sortedByDescending { calculatePriority(it) }
     }
     
     override suspend fun getById(id: String): HealthProfessional? {
-        return collection.document(id).get().data()
+        return collection.document(id).get().data<HealthProfessional>()
     }
     
     override suspend fun findBySpecialty(specialty: Specialty): List<HealthProfessional> {
@@ -35,7 +35,7 @@ class HealthProfessionalRepositoryImpl(
             }
             .get()
             .documents
-            .mapNotNull { it.data() }
+            .mapNotNull { it.data<HealthProfessional>() }
             .sortedByDescending { calculatePriority(it) }
     }
     
