@@ -1,0 +1,98 @@
+[
+  {
+    "name": "UBS Aparecida",
+    "address": "Av. Ana Costa, 340 - Aparecida, Santos - SP",
+    "location": {
+      "latitude": -23.9605,
+      "longitude": -46.3267
+    },
+    "phone": "(13) 3288-4100",
+    "openingHours": "Segunda a Sexta: 7h às 19h",
+    "hasAsthmaProgram": true,
+    "hasFreeMedication": true
+  },
+  {
+    "name": "UBS Gonzaga",
+    "address": "Av. Conselheiro Nébias, 635 - Boqueirão, Santos - SP",
+    "location": {
+      "latitude": -23.9661,
+      "longitude": -46.3344
+    },
+    "phone": "(13) 3288-4200",
+    "openingHours": "Segunda a Sexta: 7h às 19h",
+    "hasAsthmaProgram": true,
+    "hasFreeMedication": true
+  },
+  {
+    "name": "UBS Embaré",
+    "address": "Rua Silva Jardim, 90 - Embaré, Santos - SP",
+    "location": {
+      "latitude": -23.9533,
+      "longitude": -46.3289
+    },
+    "phone": "(13) 3288-4300",
+    "openingHours": "Segunda a Sexta: 7h às 19h",
+    "hasAsthmaProgram": true,
+    "hasFreeMedication": true
+  },
+  {
+    "name": "UBS Ponta da Praia",
+    "address": "Av. Bartolomeu de Gusmão, 1 - Ponta da Praia, Santos - SP",
+    "location": {
+      "latitude": -23.9889,
+      "longitude": -46.2989
+    },
+    "phone": "(13) 3288-4400",
+    "openingHours": "Segunda a Sexta: 7h às 17h",
+    "hasAsthmaProgram": false,
+    "hasFreeMedication": true
+  },
+  {
+    "name": "UBS Campo Grande",
+    "address": "Rua Carvalho de Mendonça, 144 - Campo Grande, Santos - SP",
+    "location": {
+      "latitude": -23.9456,
+      "longitude": -46.3378
+    },
+    "phone": "(13) 3288-4500",
+    "openingHours": "Segunda a Sexta: 7h às 19h",
+    "hasAsthmaProgram": true,
+    "hasFreeMedication": true
+  },
+  {
+    "name": "UBS Vila Mathias",
+    "address": "Rua Dr. Tolentino Filgueiras, 151 - Vila Mathias, Santos - SP",
+    "location": {
+      "latitude": -23.9378,
+      "longitude": -46.3256
+    },
+    "phone": "(13) 3288-4600",
+    "openingHours": "Segunda a Sexta: 7h às 19h",
+    "hasAsthmaProgram": true,
+    "hasFreeMedication": true
+  },
+  {
+    "name": "UBS Macuco",
+    "address": "Rua Euclides da Cunha, 40 - Macuco, Santos - SP",
+    "location": {
+      "latitude": -23.9344,
+      "longitude": -46.3156
+    },
+    "phone": "(13) 3288-4700",
+    "openingHours": "Segunda a Sexta: 7h às 17h",
+    "hasAsthmaProgram": false,
+    "hasFreeMedication": true
+  },
+  {
+    "name": "UBS José Menino",
+    "address": "Av. Washington Luís, 255 - José Menino, Santos - SP",
+    "location": {
+      "latitude": -23.9722,
+      "longitude": -46.3422
+    },
+    "phone": "(13) 3288-4800",
+    "openingHours": "Segunda a Sexta: 7h às 19h",
+    "hasAsthmaProgram": true,
+    "hasFreeMedication": true
+  }
+]

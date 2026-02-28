@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidString(value, minLen, maxLen) {
+      return value is string && value.size() >= minLen && value.size() <= maxLen;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) 
+        && isValidString(request.resource.data.name, 2, 100)
+        && isValidString(request.resource.data.email, 5, 100);
+      allow update: if isOwner(userId)
+        && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Emergencies collection
+    match /emergencies/{emergencyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.location != null
+        && request.resource.data.location.latitude is number
+        && request.resource.data.location.longitude is number
+        && request.resource.data.status in ['active', 'pending']
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAuthenticated()
+        && (isOwner(resource.data.userId) || request.auth.uid == resource.data.helperId)
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // Chat messages
+    match /emergencies/{emergencyId}/messages/{messageId} {
+      allow read: if isAuthenticated()
+        && (request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.userId
+            || request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.helperId);
+      allow create: if isAuthenticated()
+        && (request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.userId
+            || request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.helperId)
+        && request.resource.data.senderId == request.auth.uid
+        && isValidString(request.resource.data.text, 1, 1000)
+        && request.resource.data.timestamp == request.time;
+      allow update, delete: if false;
+    }
+    
+    // Professionals collection
+    match /professionals/{professionalId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(professionalId)
+        && isValidString(request.resource.data.name, 2, 100)
+        && isValidString(request.resource.data.specialty, 2, 50)
+        && request.resource.data.subscriptionStatus in ['active', 'inactive', 'trial'];
+      allow update: if isOwner(professionalId);
+      allow delete: if isOwner(professionalId);
+    }
+    
+    // UBS (Health Centers) - read-only for users
+    match /ubs/{ubsId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only admin can write via Functions
+    }
+    
+    // Educational content
+    match /education/{contentId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only admin can write
+    }
+    
+    // User ratings
+    match /ratings/{ratingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

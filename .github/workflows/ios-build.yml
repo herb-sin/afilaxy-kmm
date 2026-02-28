@@ -1,0 +1,116 @@
+name: iOS Build & Export IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      export_method:
+        description: 'Export method (ad-hoc, app-store, development)'
+        required: true
+        default: 'ad-hoc'
+        type: choice
+        options:
+          - ad-hoc
+          - app-store
+          - development
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Injeta o GoogleService-Info.plist a partir do Secret (base64)
+      - name: Inject GoogleService-Info.plist
+        run: |
+          echo "${{ secrets.FIREBASE_GOOGLE_SERVICE_PLIST }}" | base64 --decode \
+            > iosApp/iosApp/GoogleService-Info.plist
+
+      # Injeta o google-services.json para o módulo Android (necessário para o KMM shared)
+      - name: Inject google-services.json
+        run: |
+          echo "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}" | base64 --decode \
+            > androidApp/google-services.json
+
+      # Compila o framework KMM para iOS (arm64 para device real)
+      - name: Build KMM shared framework
+        run: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon
+
+      # Instala os pods do iOS
+      - name: Install CocoaPods
+        run: |
+          cd iosApp
+          pod install --repo-update
+
+      # Importa o certificado de distribuição Apple (P12 em base64)
+      - name: Import Apple Distribution Certificate
+        uses: apple-actions/import-codesign-certs@v2
+        with:
+          p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_P12 }}
+          p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+
+      # Baixa o Provisioning Profile via App Store Connect API
+      - name: Download Provisioning Profile
+        uses: apple-actions/download-provisioning-profiles@v1
+        with:
+          bundle-id: 'com.afilaxy.app'
+          issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_KEY }}
+
+      # Atualiza o ExportOptions.plist com o método de export correto
+      - name: Set export method
+        run: |
+          METHOD="${{ github.event.inputs.export_method || 'ad-hoc' }}"
+          /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
+
+      # Arquiva o app
+      - name: Archive iOS App
+        run: |
+          xcodebuild \
+            -workspace iosApp/iosApp.xcworkspace \
+            -scheme iosApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            archive
+
+      # Exporta o IPA
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -exportOptionsPlist iosApp/ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/ipa
+
+      # Faz upload do IPA como artefato do Actions
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: iosApp-${{ github.sha }}.ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 30
+
+      # (Opcional) Envia para TestFlight quando for app-store
+      - name: Upload to TestFlight
+        if: ${{ github.event.inputs.export_method == 'app-store' || github.ref == 'refs/heads/main' }}
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ runner.temp }}/ipa/*.ipa
+          issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_KEY }}
