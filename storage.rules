@@ -1,0 +1,49 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidSize(maxSizeMB) {
+      return request.resource.size < maxSizeMB * 1024 * 1024;
+    }
+    
+    // User profile images
+    match /users/{userId}/profile/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) 
+        && isImage() 
+        && isValidSize(5);
+    }
+    
+    // Professional profile images
+    match /professionals/{professionalId}/profile/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(professionalId) 
+        && isImage() 
+        && isValidSize(5);
+    }
+    
+    // Educational content images
+    match /education/{contentId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only admin via Functions
+    }
+    
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

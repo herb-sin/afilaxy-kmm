@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Método de distribuição: ad-hoc | app-store | development -->
+    <!-- Alterado automaticamente pelo workflow iOS no GitHub Actions -->
+    <key>method</key>
+    <string>ad-hoc</string>
+
+    <!-- Bundle ID do app -->
+    <key>teamID</key>
+    <string>$(DEVELOPMENT_TEAM)</string>
+
+    <!-- Gerenciamento de signing -->
+    <key>signingStyle</key>
+    <string>manual</string>
+
+    <!-- Compila para dispositivos reais (não simulador) -->
+    <key>destination</key>
+    <string>export</string>
+
+    <!-- Comprime símbolos de debug no IPA -->
+    <key>stripSwiftSymbols</key>
+    <true/>
+
+    <!-- Thinning: none = universal, <device-model> = específico -->
+    <key>thinning</key>
+    <string>&lt;none&gt;</string>
+
+    <!-- Inclui símbolos para crash reporting -->
+    <key>uploadSymbols</key>
+    <true/>
+</dict>
+</plist>
