@@ -281,7 +281,7 @@ fun ProfessionalCard(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = professional.whatsapp != null
             ) {
-                Icon(Icons.Default.WhatsApp, contentDescription = null)
+                Icon(Icons.Default.Phone, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Entrar em Contato")
             }
