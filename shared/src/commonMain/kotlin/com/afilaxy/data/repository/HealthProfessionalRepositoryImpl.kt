@@ -33,7 +33,7 @@ class HealthProfessionalRepositoryImpl(
         return collection
             .where { 
                 "specialty" equalTo specialty.name
-                "subscriptionExpiry" greaterThan System.currentTimeMillis()
+                "subscriptionExpiry" greaterThan getCurrentTimeMillis()
             }
             .get()
             .documents
