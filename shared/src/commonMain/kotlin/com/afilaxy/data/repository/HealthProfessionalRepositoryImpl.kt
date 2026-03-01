@@ -4,9 +4,11 @@ import com.afilaxy.domain.model.HealthProfessional
 import com.afilaxy.domain.model.Location
 import com.afilaxy.domain.model.Specialty
 import com.afilaxy.domain.model.SubscriptionPlan
+import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.HealthProfessionalRepository
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.where
+import kotlin.math.*
 
 class HealthProfessionalRepositoryImpl(
     private val firestore: FirebaseFirestore
@@ -16,7 +18,7 @@ class HealthProfessionalRepositoryImpl(
     
     override suspend fun getAll(): List<HealthProfessional> {
         return collection
-            .where { "subscriptionExpiry" greaterThan System.currentTimeMillis() }
+            .where { "subscriptionExpiry" greaterThan getCurrentTimeMillis() }
             .get()
             .documents
             .mapNotNull { it.data<HealthProfessional>() }
@@ -67,12 +69,14 @@ class HealthProfessionalRepositoryImpl(
     private fun calculateDistance(loc1: Location, loc2: Location): Double {
         // Fórmula Haversine
         val earthRadius = 6371.0 // km
-        val dLat = Math.toRadians(loc2.latitude - loc1.latitude)
-        val dLon = Math.toRadians(loc2.longitude - loc1.longitude)
-        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(Math.toRadians(loc1.latitude)) * Math.cos(Math.toRadians(loc2.latitude)) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2)
-        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        val dLat = (loc2.latitude - loc1.latitude).toRadians()
+        val dLon = (loc2.longitude - loc1.longitude).toRadians()
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(loc1.latitude.toRadians()) * cos(loc2.latitude.toRadians()) *
+                sin(dLon / 2) * sin(dLon / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return earthRadius * c
     }
+
+    private fun Double.toRadians() = this * PI / 180.0
 }

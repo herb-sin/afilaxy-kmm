@@ -72,12 +72,14 @@ class UBSRepositoryImpl(
     
     private fun calculateDistance(loc1: Location, loc2: Location): Double {
         val earthRadius = 6371.0 // km
-        val dLat = Math.toRadians(loc2.latitude - loc1.latitude)
-        val dLon = Math.toRadians(loc2.longitude - loc1.longitude)
+        val dLat = (loc2.latitude - loc1.latitude).toRadians()
+        val dLon = (loc2.longitude - loc1.longitude).toRadians()
         val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(loc1.latitude)) * cos(Math.toRadians(loc2.latitude)) *
+                cos(loc1.latitude.toRadians()) * cos(loc2.latitude.toRadians()) *
                 sin(dLon / 2) * sin(dLon / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return earthRadius * c
     }
+
+    private fun Double.toRadians() = this * PI / 180.0
 }

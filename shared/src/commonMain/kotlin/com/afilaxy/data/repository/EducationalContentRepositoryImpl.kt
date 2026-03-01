@@ -2,6 +2,7 @@ package com.afilaxy.data.repository
 
 import com.afilaxy.domain.model.ContentCategory
 import com.afilaxy.domain.model.EducationalContent
+import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.EducationalContentRepository
 
 class EducationalContentRepositoryImpl : EducationalContentRepository {
@@ -45,7 +46,7 @@ class EducationalContentRepositoryImpl : EducationalContentRepository {
             """.trimIndent(),
             author = "Dr. João Silva - Pneumologista",
             readTimeMinutes = 5,
-            createdAt = System.currentTimeMillis()
+            createdAt = getCurrentTimeMillis()
         ),
         EducationalContent(
             id = "2",
@@ -86,7 +87,7 @@ class EducationalContentRepositoryImpl : EducationalContentRepository {
             """.trimIndent(),
             author = "Dra. Maria Santos - Pneumologista",
             readTimeMinutes = 7,
-            createdAt = System.currentTimeMillis()
+            createdAt = getCurrentTimeMillis()
         ),
         EducationalContent(
             id = "3",
@@ -131,7 +132,7 @@ class EducationalContentRepositoryImpl : EducationalContentRepository {
             """.trimIndent(),
             author = "Equipe Afilaxy",
             readTimeMinutes = 6,
-            createdAt = System.currentTimeMillis()
+            createdAt = getCurrentTimeMillis()
         ),
         EducationalContent(
             id = "4",
@@ -178,7 +179,7 @@ class EducationalContentRepositoryImpl : EducationalContentRepository {
             """.trimIndent(),
             author = "Dr. Carlos Mendes - Alergista",
             readTimeMinutes = 8,
-            createdAt = System.currentTimeMillis()
+            createdAt = getCurrentTimeMillis()
         )
     )
     
