@@ -47,7 +47,7 @@ jobs:
 
       # Compila o framework KMM para iOS (arm64 para device real)
       - name: Build KMM shared framework
-        run: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon
+        run: ./gradlew :shared:linkPodReleaseFrameworkIosArm64 --no-daemon
 
       # Instala o XcodeGen para gerar o .xcodeproj a partir do project.yml
       - name: Install XcodeGen
