@@ -94,20 +94,8 @@ class AuthRepositoryImpl(
     
     override suspend fun getCurrentUser(): User? {
         val firebaseUser = auth.currentUser ?: return null
-        
         return try {
-            val userDoc = firestore
-                .collection("users")
-                .document(firebaseUser.uid)
-                .get()
-            
-            User(
-                uid = firebaseUser.uid,
-                email = firebaseUser.email ?: "",
-                name = userDoc.get<String?>("name") ?: firebaseUser.displayName,
-                fcmToken = userDoc.get<String?>("fcmToken"),
-                isHelper = userDoc.get<Boolean?>("isHelper") ?: false
-            )
+            mapFirebaseUser(firebaseUser)
         } catch (e: Exception) {
             null
         }
@@ -134,18 +122,7 @@ class AuthRepositoryImpl(
         return auth.authStateChanged.map { firebaseUser ->
             if (firebaseUser != null) {
                 try {
-                    val userDoc = firestore
-                        .collection("users")
-                        .document(firebaseUser.uid)
-                        .get()
-                    
-                    User(
-                        uid = firebaseUser.uid,
-                        email = firebaseUser.email ?: "",
-                        name = userDoc.get<String?>("name") ?: firebaseUser.displayName,
-                        fcmToken = userDoc.get<String?>("fcmToken"),
-                        isHelper = userDoc.get<Boolean?>("isHelper") ?: false
-                    )
+                    mapFirebaseUser(firebaseUser)
                 } catch (e: Exception) {
                     null
                 }
@@ -169,6 +146,24 @@ class AuthRepositoryImpl(
         } catch (e: Exception) {
             // Silently fail
         }
+    }
+    
+    /**
+     * Mapeia FirebaseUser + documento Firestore para o modelo User do domínio.
+     * Método centralizado para evitar duplicação em login, getCurrentUser e observeAuthState.
+     */
+    private suspend fun mapFirebaseUser(firebaseUser: dev.gitlive.firebase.auth.FirebaseUser): User {
+        val userDoc = firestore
+            .collection("users")
+            .document(firebaseUser.uid)
+            .get()
+        return User(
+            uid = firebaseUser.uid,
+            email = firebaseUser.email ?: "",
+            name = userDoc.get<String?>("name") ?: firebaseUser.displayName,
+            fcmToken = userDoc.get<String?>("fcmToken"),
+            isHelper = userDoc.get<Boolean?>("isHelper") ?: false
+        )
     }
     
     /**

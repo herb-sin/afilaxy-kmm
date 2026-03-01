@@ -62,19 +62,20 @@ class ChatRepositoryImpl(
     
     override suspend fun clearChat(emergencyId: String): Result<Unit> {
         return try {
-            // Get all messages
             val messagesRef = firestore
                 .collection("emergency_chats")
                 .document(emergencyId)
                 .collection("messages")
-            
+
             val snapshot = messagesRef.get()
-            
-            // Delete each message
-            snapshot.documents.forEach { doc ->
-                doc.reference.delete()
+
+            // Deletar em lote — operação atômica mais eficiente que deletes individuais
+            if (snapshot.documents.isNotEmpty()) {
+                firestore.batch().apply {
+                    snapshot.documents.forEach { doc -> delete(doc.reference) }
+                }.commit()
             }
-            
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

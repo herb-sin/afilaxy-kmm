@@ -233,7 +233,7 @@ class EmergencyViewModel(
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             
-            emergencyRepository.updateEmergencyStatus(emergencyId, "resolved")
+            emergencyRepository.updateEmergencyStatus(emergencyId, EmergencyStatus.RESOLVED)
                 .onSuccess {
                     _state.update { 
                         it.copy(

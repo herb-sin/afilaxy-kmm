@@ -49,7 +49,17 @@ jobs:
       - name: Build KMM shared framework
         run: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon
 
-      # Instala os pods do iOS
+      # Instala o XcodeGen para gerar o .xcodeproj a partir do project.yml
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # Gera o .xcodeproj a partir do project.yml (deve vir antes do pod install)
+      - name: Generate Xcode project
+        run: |
+          cd iosApp
+          xcodegen generate
+
+      # Instala os pods do iOS (depende do .xcodeproj já existir)
       - name: Install CocoaPods
         run: |
           cd iosApp
@@ -64,20 +74,22 @@ jobs:
 
       # Baixa o Provisioning Profile via App Store Connect API
       - name: Download Provisioning Profile
+        id: provisioning
         uses: apple-actions/download-provisioning-profiles@v1
         with:
-          bundle-id: 'com.afilaxy.app'
+          bundle-id: 'br.com.afilaxy.app'
           issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
           api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPLE_API_KEY }}
 
-      # Atualiza o ExportOptions.plist com o método de export correto
-      - name: Set export method
+      # Injeta método de export e Team ID real no ExportOptions.plist
+      - name: Configure ExportOptions.plist
         run: |
           METHOD="${{ github.event.inputs.export_method || 'ad-hoc' }}"
           /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Set :teamID ${{ secrets.APPLE_TEAM_ID }}" iosApp/ExportOptions.plist
 
-      # Arquiva o app
+      # Arquiva o app com signing manual explícito
       - name: Archive iOS App
         run: |
           xcodebuild \
@@ -87,6 +99,8 @@ jobs:
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ steps.provisioning.outputs.profiles }}" \
             archive
 
       # Exporta o IPA
@@ -105,9 +119,9 @@ jobs:
           path: ${{ runner.temp }}/ipa/*.ipa
           retention-days: 30
 
-      # (Opcional) Envia para TestFlight quando for app-store
+      # (Opcional) Envia para TestFlight apenas quando acionado manualmente com export_method=app-store
       - name: Upload to TestFlight
-        if: ${{ github.event.inputs.export_method == 'app-store' || github.ref == 'refs/heads/main' }}
+        if: ${{ github.event.inputs.export_method == 'app-store' }}
         uses: apple-actions/upload-testflight-build@v1
         with:
           app-path: ${{ runner.temp }}/ipa/*.ipa

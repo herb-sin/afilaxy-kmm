@@ -7,9 +7,9 @@
     <key>method</key>
     <string>ad-hoc</string>
 
-    <!-- Bundle ID do app -->
+    <!-- Team ID — injetado pelo workflow via PlistBuddy usando secret APPLE_TEAM_ID -->
     <key>teamID</key>
-    <string>$(DEVELOPMENT_TEAM)</string>
+    <string>REPLACE_BY_CI</string>
 
     <!-- Gerenciamento de signing -->
     <key>signingStyle</key>

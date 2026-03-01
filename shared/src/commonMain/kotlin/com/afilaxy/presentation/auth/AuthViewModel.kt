@@ -2,6 +2,7 @@ package com.afilaxy.presentation.auth
 
 import com.afilaxy.domain.model.User
 import com.afilaxy.domain.repository.AuthRepository
+import com.afilaxy.domain.validation.Validator
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,8 +112,8 @@ class AuthViewModel(
             return
         }
         
-        if (password.length < 6) {
-            _state.update { it.copy(error = "A senha deve ter no mínimo 6 caracteres") }
+        if (!Validator.isValidPassword(password)) {
+            _state.update { it.copy(error = "A senha deve ter no mínimo 8 caracteres, 1 letra maiúscula e 1 número") }
             return
         }
         

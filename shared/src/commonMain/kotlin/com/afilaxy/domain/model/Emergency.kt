@@ -33,9 +33,14 @@ data class Emergency(
 }
 
 @Serializable
-enum class EmergencyStatus {
-    ACTIVE,
-    HELPER_RESPONDING,
-    RESOLVED,
-    CANCELLED
+enum class EmergencyStatus(val dbValue: String) {
+    ACTIVE("waiting"),
+    HELPER_RESPONDING("matched"),
+    RESOLVED("resolved"),
+    CANCELLED("cancelled");
+
+    companion object {
+        fun fromDb(value: String): EmergencyStatus =
+            entries.firstOrNull { it.dbValue == value } ?: ACTIVE
+    }
 }
