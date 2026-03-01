@@ -1,6 +1,7 @@
 package com.afilaxy.domain.repository
 
 import com.afilaxy.domain.model.Emergency
+import com.afilaxy.domain.model.EmergencyStatus
 import com.afilaxy.domain.model.Helper
 import com.afilaxy.domain.model.Location
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +17,7 @@ interface EmergencyRepository {
     suspend fun clearUserEmergencies(): Result<Boolean>
     suspend fun isHelperActive(): Result<Boolean>
     suspend fun findNearbyHelpers(location: Location, radiusKm: Double): Result<List<Helper>>
-    suspend fun updateEmergencyStatus(emergencyId: String, status: String): Result<Unit>
+    suspend fun updateEmergencyStatus(emergencyId: String, status: EmergencyStatus): Result<Unit>
     suspend fun finishEmergency(emergencyId: String): Result<Boolean>
     suspend fun getUserEmergencyHistory(userId: String): Result<List<com.afilaxy.domain.model.EmergencyHistory>>
     fun observeEmergencyStatus(emergencyId: String): Flow<String?>

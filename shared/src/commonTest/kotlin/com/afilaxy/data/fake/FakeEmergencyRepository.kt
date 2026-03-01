@@ -2,6 +2,7 @@ package com.afilaxy.data.fake
 
 import com.afilaxy.domain.model.EmergencyHistory
 import com.afilaxy.domain.model.Emergency
+import com.afilaxy.domain.model.EmergencyStatus
 import com.afilaxy.domain.model.Helper
 import com.afilaxy.domain.model.Location
 import com.afilaxy.domain.repository.EmergencyRepository
@@ -83,8 +84,8 @@ class FakeEmergencyRepository(
         else Result.failure(Exception("Erro ao buscar helpers"))
     }
 
-    override suspend fun updateEmergencyStatus(emergencyId: String, status: String): Result<Unit> {
-        statusFlow.value = status
+    override suspend fun updateEmergencyStatus(emergencyId: String, status: EmergencyStatus): Result<Unit> {
+        statusFlow.value = status.dbValue
         return if (shouldSucceed) Result.success(Unit)
         else Result.failure(Exception("Erro ao atualizar status"))
     }

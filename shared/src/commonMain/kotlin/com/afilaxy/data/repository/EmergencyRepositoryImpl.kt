@@ -71,12 +71,12 @@ class EmergencyRepositoryImpl(
         requesterName: String
     ) {
         try {
-            // Buscar helpers ativos
-            val helpers = firestore.collection("helpers").get()
+            // Filtrar apenas helpers ativos diretamente no servidor
+            val helpers = firestore.collection("helpers")
+                .where { "isActive" equalTo true }
+                .get()
             
             for (doc in helpers.documents) {
-                val isActive = doc.get<Boolean>("isActive") ?: false
-                if (!isActive) continue
                 
                 val helperId = doc.get<String>("id") ?: continue
                 
@@ -103,6 +103,19 @@ class EmergencyRepositoryImpl(
 
     override suspend fun cancelEmergency(emergencyId: String): Result<Boolean> {
         return try {
+            val userId = auth.currentUser?.uid
+                ?: return Result.failure(IllegalStateException("User not authenticated"))
+
+            // Verificar ownership antes de cancelar
+            val doc = firestore.collection("emergency_requests").document(emergencyId).get()
+            if (!doc.exists) {
+                return Result.failure(IllegalStateException("Emergência não encontrada"))
+            }
+            val requesterId = doc.get<String?>("requesterId")
+            if (requesterId != userId) {
+                return Result.failure(IllegalStateException("Não autorizado: apenas o solicitante pode cancelar a emergência"))
+            }
+
             firestore.collection("emergency_requests")
                 .document(emergencyId)
                 .update(
@@ -323,24 +336,22 @@ class EmergencyRepositoryImpl(
         }
     }
 
-    override suspend fun updateEmergencyStatus(emergencyId: String, status: String): Result<Unit> {
+    override suspend fun updateEmergencyStatus(emergencyId: String, status: EmergencyStatus): Result<Unit> {
         return try {
-            val statusStr = status
-            
-            val updates = if (status == "resolved") {
+            val updates = if (status == EmergencyStatus.RESOLVED) {
                 mapOf(
-                    "status" to statusStr,
+                    "status" to status.dbValue,
                     "active" to false,
                     "resolvedAt" to getCurrentTimeMillis()
                 )
             } else {
-                mapOf("status" to statusStr)
+                mapOf("status" to status.dbValue)
             }
-            
+
             firestore.collection("emergency_requests")
                 .document(emergencyId)
                 .update(updates)
-            
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -348,36 +359,44 @@ class EmergencyRepositoryImpl(
     }
 
     override suspend fun finishEmergency(emergencyId: String): Result<Boolean> {
-        return updateEmergencyStatus(emergencyId, "resolved").map { true }
+        return updateEmergencyStatus(emergencyId, EmergencyStatus.RESOLVED).map { true }
     }
     
     override suspend fun getUserEmergencyHistory(userId: String): Result<List<com.afilaxy.domain.model.EmergencyHistory>> {
         return try {
-            val snapshot = firestore.collection("emergency_requests").get()
-            
-            val history = snapshot.documents.mapNotNull { doc ->
+            // Filtrar requester no servidor — evita leitura de dados de outros usuários
+            val requesterSnapshot = firestore.collection("emergency_requests")
+                .where { ("requesterId" equalTo userId) and ("active" equalTo false) }
+                .get()
+
+            // Filtrar helper no servidor separadamente (Firestore não suporta OR em campos distintos num único where)
+            val helperSnapshot = firestore.collection("emergency_requests")
+                .where { ("helperId" equalTo userId) and ("active" equalTo false) }
+                .get()
+
+            val allDocs = (requesterSnapshot.documents + helperSnapshot.documents)
+                .distinctBy { it.id } // evitar duplicatas se o usuário for requester e helper
+
+            val history = allDocs.mapNotNull { doc ->
                 val requesterId = doc.get<String>("requesterId") ?: ""
                 val helperId = doc.get<String?>("helperId")
                 val status = doc.get<String>("status") ?: ""
-                val active = doc.get<Boolean>("active") ?: false
-                
-                if ((requesterId == userId || helperId == userId) && !active) {
-                    com.afilaxy.domain.model.EmergencyHistory(
-                        id = doc.id,
-                        requesterId = requesterId,
-                        requesterName = doc.get("requesterName") ?: "",
-                        helperId = helperId,
-                        helperName = doc.get("helperName"),
-                        latitude = doc.get("latitude") ?: 0.0,
-                        longitude = doc.get("longitude") ?: 0.0,
-                        status = status,
-                        timestamp = doc.get("timestamp") ?: 0L,
-                        resolvedAt = doc.get("resolvedAt"),
-                        cancelledAt = if (status == "cancelled") doc.get("timestamp") else null
-                    )
-                } else null
+
+                com.afilaxy.domain.model.EmergencyHistory(
+                    id = doc.id,
+                    requesterId = requesterId,
+                    requesterName = doc.get("requesterName") ?: "",
+                    helperId = helperId,
+                    helperName = doc.get("helperName"),
+                    latitude = doc.get("latitude") ?: 0.0,
+                    longitude = doc.get("longitude") ?: 0.0,
+                    status = status,
+                    timestamp = doc.get("timestamp") ?: 0L,
+                    resolvedAt = doc.get("resolvedAt"),
+                    cancelledAt = if (status == "cancelled") doc.get("timestamp") else null
+                )
             }.sortedByDescending { it.timestamp }
-            
+
             Result.success(history)
         } catch (e: Exception) {
             Result.failure(e)
