@@ -45,9 +45,10 @@ jobs:
           echo "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}" | base64 --decode \
             > androidApp/google-services.json
 
-      # Compila o framework KMM para iOS (arm64 para device real)
-      - name: Build KMM shared framework
-        run: ./gradlew :shared:linkPodReleaseFrameworkIosArm64 --no-daemon
+      # Gera o framework dummy do KMM — necessário para o pod install ler o shared.podspec.
+      # O framework real é compilado pelo xcodebuild archive via integração CocoaPods.
+      - name: Generate KMM dummy framework
+        run: ./gradlew :shared:generateDummyFramework --no-daemon -Pkotlin.native.ignoreDisabledTargets=true
 
       # Instala o XcodeGen para gerar o .xcodeproj a partir do project.yml
       - name: Install XcodeGen
