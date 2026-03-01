@@ -90,7 +90,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :teamID ${{ secrets.APPLE_TEAM_ID }}" iosApp/ExportOptions.plist
 
-      # Arquiva o app com signing manual explícito
+      # Arquiva o app — perfis já instalados no keychain pelo step anterior
       - name: Archive iOS App
         run: |
           xcodebuild \
@@ -99,9 +99,9 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-            CODE_SIGN_STYLE=Manual \
+            -allowProvisioningUpdates \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            PROVISIONING_PROFILE_SPECIFIER="${{ steps.provisioning.outputs.profiles }}" \
+            CODE_SIGN_STYLE=Automatic \
             archive
 
       # Exporta o IPA
