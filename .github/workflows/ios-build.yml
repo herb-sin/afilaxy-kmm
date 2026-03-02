@@ -124,17 +124,38 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             archive
 
-      # Exporta o IPA — usa API key auth para resolver o profile de export
+      # Lê o UUID do perfil que foi embutido pelo archive no embedded.mobileprovision.
+      # Isso garante que usamos exatamente o mesmo perfil no export sem precisar
+      # de API key (que ativa Cloud Signing — feature enterprise não disponível).
+      - name: Extract embedded profile UUID from archive
+        id: embedded
+        run: |
+          EMBEDDED="$RUNNER_TEMP/iosApp.xcarchive/Products/Applications/iosApp.app/embedded.mobileprovision"
+          UUID=$(security cms -D -i "$EMBEDDED" 2>/dev/null \
+            | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
+          echo "Embedded profile UUID: $UUID"
+          echo "UUID=$UUID" >> "$GITHUB_OUTPUT"
+
+      # Exporta o IPA com signingStyle=manual usando o UUID do profile embutido.
+      # Não usa -allowProvisioningUpdates (ativa Cloud Signing incorretamente).
+      # O profile já está instalado em disco pela action download-provisioning-profiles.
       - name: Export IPA
         run: |
+          # Injeta o UUID do profile e muda signingStyle para manual no ExportOptions
+          /usr/libexec/PlistBuddy \
+            -c "Set :signingStyle manual" \
+            -c "Add :provisioningProfiles dict" \
+            -c "Add :provisioningProfiles:br.com.afilaxy.app string ${{ steps.embedded.outputs.UUID }}" \
+            iosApp/ExportOptions.plist 2>/dev/null || \
+          /usr/libexec/PlistBuddy \
+            -c "Set :signingStyle manual" \
+            -c "Set :provisioningProfiles:br.com.afilaxy.app ${{ steps.embedded.outputs.UUID }}" \
+            iosApp/ExportOptions.plist
+
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             -exportOptionsPlist iosApp/ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/ipa \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
-            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
+            -exportPath $RUNNER_TEMP/ipa
 
       # Faz upload do IPA como artefato do Actions
       - name: Upload IPA
