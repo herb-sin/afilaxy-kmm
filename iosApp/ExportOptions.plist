@@ -5,7 +5,7 @@
     <!-- Método de distribuição: ad-hoc | app-store | development -->
     <!-- Alterado automaticamente pelo workflow iOS no GitHub Actions -->
     <key>method</key>
-    <string>ad-hoc</string>
+    <string>release-testing</string>
 
     <!-- Team ID — injetado pelo workflow via PlistBuddy usando secret APPLE_TEAM_ID -->
     <key>teamID</key>
@@ -13,7 +13,7 @@
 
     <!-- Gerenciamento de signing -->
     <key>signingStyle</key>
-    <string>manual</string>
+    <string>automatic</string>
 
     <!-- Compila para dispositivos reais (não simulador) -->
     <key>destination</key>
