@@ -90,8 +90,10 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :teamID ${{ secrets.APPLE_TEAM_ID }}" iosApp/ExportOptions.plist
 
-      # Arquiva o app — perfis já instalados no keychain pelo step anterior
-      # PROVISIONING_PROFILE_SPECIFIER é exportado automaticamente pela action download-provisioning-profiles
+      # Arquiva o app
+      # download-provisioning-profiles instala os perfis em ~/Library/MobileDevice/Provisioning Profiles/
+      # Com CODE_SIGN_STYLE=Automatic (sem -allowProvisioningUpdates), o Xcode resolve
+      # o certificado do keychain + o perfil em disco localmente, sem contatar a Apple.
       - name: Archive iOS App
         run: |
           xcodebuild \
@@ -101,8 +103,7 @@ jobs:
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_SPECIFIER" \
+            CODE_SIGN_STYLE=Automatic \
             archive
 
       # Exporta o IPA
