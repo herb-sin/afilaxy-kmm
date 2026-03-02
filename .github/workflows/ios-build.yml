@@ -206,9 +206,15 @@ jobs:
       # (Opcional) Envia para TestFlight apenas quando acionado manualmente com export_method=app-store
       - name: Upload to TestFlight
         if: ${{ github.event.inputs.export_method == 'app-store' || github.event.inputs.export_method == 'app-store-connect' }}
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-path: ${{ runner.temp }}/ipa/*.ipa
-          issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
-          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
-          api-private-key: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          IPA_PATH=$(find "$RUNNER_TEMP/ipa" -name "*.ipa" -type f | head -n 1)
+          if [[ -z "$IPA_PATH" ]]; then
+            echo "Erro: IPA não encontrado"
+            exit 1
+          fi
+          echo "Uploading IPA: $IPA_PATH"
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "${{ secrets.APPLE_API_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}"
