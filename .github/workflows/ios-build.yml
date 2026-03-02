@@ -125,6 +125,7 @@ jobs:
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
             PROVISIONING_PROFILE="${{ steps.profile.outputs.PROFILE_UUID }}" \
             archive
 
