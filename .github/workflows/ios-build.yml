@@ -217,4 +217,5 @@ jobs:
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "${{ secrets.APPLE_API_KEY_ID }}" \
-            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}"
+            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}" \
+            --apiKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
