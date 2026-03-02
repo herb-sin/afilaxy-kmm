@@ -5,7 +5,7 @@
     <!-- Método de distribuição: ad-hoc | app-store | development -->
     <!-- Alterado automaticamente pelo workflow iOS no GitHub Actions -->
     <key>method</key>
-    <string>release-testing</string>
+    <string>app-store</string>
 
     <!-- Team ID — injetado pelo workflow via PlistBuddy usando secret APPLE_TEAM_ID -->
     <key>teamID</key>

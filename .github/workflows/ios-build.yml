@@ -88,9 +88,9 @@ jobs:
       - name: Configure ExportOptions.plist
         run: |
           INPUT_METHOD="${{ github.event.inputs.export_method || 'ad-hoc' }}"
-          # Compatibilidade: traduz ad-hoc para release-testing (nome atual)
+          # ad-hoc → app-store: só existe profile App Store no Apple Developer Portal
           if [[ "$INPUT_METHOD" == "ad-hoc" ]]; then
-            METHOD="release-testing"
+            METHOD="app-store"
           else
             METHOD="$INPUT_METHOD"
           fi
@@ -124,17 +124,13 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             archive
 
-      # Exporta o IPA — usa a mesma autenticação do archive para resolver o perfil no export
+      # Exporta o IPA — o archive já embarcou o profile correto no passo anterior
       - name: Export IPA
         run: |
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             -exportOptionsPlist iosApp/ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/ipa \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
-            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
+            -exportPath $RUNNER_TEMP/ipa
 
       # Faz upload do IPA como artefato do Actions
       - name: Upload IPA
