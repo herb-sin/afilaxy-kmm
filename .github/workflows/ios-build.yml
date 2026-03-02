@@ -124,38 +124,40 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             archive
 
-      # Lê o UUID do perfil que foi embutido pelo archive no embedded.mobileprovision.
-      # Isso garante que usamos exatamente o mesmo perfil no export sem precisar
-      # de API key (que ativa Cloud Signing — feature enterprise não disponível).
-      - name: Extract embedded profile UUID from archive
-        id: embedded
-        run: |
-          EMBEDDED="$RUNNER_TEMP/iosApp.xcarchive/Products/Applications/iosApp.app/embedded.mobileprovision"
-          UUID=$(security cms -D -i "$EMBEDDED" 2>/dev/null \
-            | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
-          echo "Embedded profile UUID: $UUID"
-          echo "UUID=$UUID" >> "$GITHUB_OUTPUT"
-
-      # Exporta o IPA com signingStyle=manual usando o UUID do profile embutido.
-      # Não usa -allowProvisioningUpdates (ativa Cloud Signing incorretamente).
-      # O profile já está instalado em disco pela action download-provisioning-profiles.
+      # Exporta o IPA usando signingStyle=manual com o UUID escaneado dos perfis instalados.
+      # O archive com -allowProvisioningUpdates atualiza/baixa o perfil correto para disco.
+      # Não usa -allowProvisioningUpdates no export (ativaria Cloud Signing — enterprise only).
       - name: Export IPA
         run: |
-          # Injeta o UUID do profile e muda signingStyle para manual no ExportOptions
+          # Escaneia perfis instalados pós-archive para encontrar o UUID do App Store profile
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_UUID=""
+          echo "=== Perfis instalados pós-archive ==="
+          for file in "$PROFILES_DIR"/*.mobileprovision; do
+            plist=$(security cms -D -i "$file" 2>/dev/null) || continue
+            entitlement=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /dev/stdin 2>/dev/null || true)
+            uuid=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null || true)
+            echo "  UUID=$uuid  Entitlement=$entitlement"
+            if [[ "$entitlement" == *"br.com.afilaxy.app" ]]; then
+              PROFILE_UUID="$uuid"
+            fi
+          done
+          echo "Usando PROFILE_UUID=$PROFILE_UUID"
+
+          # Atualiza ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Set :signingStyle manual" iosApp/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" iosApp/ExportOptions.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy \
-            -c "Set :signingStyle manual" \
-            -c "Add :provisioningProfiles dict" \
-            -c "Add :provisioningProfiles:br.com.afilaxy.app string ${{ steps.embedded.outputs.UUID }}" \
+            -c "Set :provisioningProfiles:br.com.afilaxy.app $PROFILE_UUID" \
             iosApp/ExportOptions.plist 2>/dev/null || \
           /usr/libexec/PlistBuddy \
-            -c "Set :signingStyle manual" \
-            -c "Set :provisioningProfiles:br.com.afilaxy.app ${{ steps.embedded.outputs.UUID }}" \
+            -c "Add :provisioningProfiles:br.com.afilaxy.app string $PROFILE_UUID" \
             iosApp/ExportOptions.plist
 
           xcodebuild -exportArchive \
-            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -archivePath "$RUNNER_TEMP/iosApp.xcarchive" \
             -exportOptionsPlist iosApp/ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/ipa
+            -exportPath "$RUNNER_TEMP/ipa"
 
       # Faz upload do IPA como artefato do Actions
       - name: Upload IPA
