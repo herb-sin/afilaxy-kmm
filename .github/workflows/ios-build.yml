@@ -129,7 +129,14 @@ jobs:
       # Não usa -allowProvisioningUpdates no export (ativaria Cloud Signing — enterprise only).
       - name: Export IPA
         run: |
-          # Escaneia perfis instalados pós-archive para encontrar o UUID do App Store profile
+          # Lê o método configurado no ExportOptions.plist para escolher o tipo de profile correto
+          EXPORT_METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" iosApp/ExportOptions.plist)
+          echo "Export method: $EXPORT_METHOD"
+
+          # Escaneia perfis instalados pós-archive, filtrando pelo tipo correto:
+          #   app-store-connect → sem ProvisionedDevices + get-task-allow=false
+          #   release-testing   → com ProvisionedDevices
+          #   development       → get-task-allow=true
           PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           PROFILE_UUID=""
           echo "=== Perfis instalados pós-archive ==="
@@ -137,11 +144,40 @@ jobs:
             plist=$(security cms -D -i "$file" 2>/dev/null) || continue
             entitlement=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /dev/stdin 2>/dev/null || true)
             uuid=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null || true)
-            echo "  UUID=$uuid  Entitlement=$entitlement"
-            if [[ "$entitlement" == *"br.com.afilaxy.app" ]]; then
-              PROFILE_UUID="$uuid"
-            fi
+            hasDevices=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" /dev/stdin 2>/dev/null && echo "yes" || echo "no")
+            getTaskAllow=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:get-task-allow" /dev/stdin 2>/dev/null || echo "false")
+            echo "  UUID=$uuid  Entitlement=$entitlement  hasDevices=$hasDevices  getTaskAllow=$getTaskAllow"
+
+            [[ "$entitlement" != *"br.com.afilaxy.app" ]] && continue
+
+            case "$EXPORT_METHOD" in
+              app-store-connect)
+                # Seleciona perfil App Store: sem devices, não é development
+                if [[ "$hasDevices" == "no" && "$getTaskAllow" != "true" ]]; then
+                  PROFILE_UUID="$uuid"
+                  break
+                fi
+                ;;
+              release-testing)
+                # Seleciona perfil Ad Hoc: tem devices registrados
+                if [[ "$hasDevices" == "yes" ]]; then
+                  PROFILE_UUID="$uuid"
+                  break
+                fi
+                ;;
+              development)
+                if [[ "$getTaskAllow" == "true" ]]; then
+                  PROFILE_UUID="$uuid"
+                  break
+                fi
+                ;;
+            esac
           done
+
+          if [[ -z "$PROFILE_UUID" ]]; then
+            echo "ERRO: Nenhum profile compatível com o método '$EXPORT_METHOD' encontrado."
+            exit 1
+          fi
           echo "Usando PROFILE_UUID=$PROFILE_UUID"
 
           # Atualiza ExportOptions.plist
