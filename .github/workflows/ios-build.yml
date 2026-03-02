@@ -90,31 +90,17 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :teamID ${{ secrets.APPLE_TEAM_ID }}" iosApp/ExportOptions.plist
 
-      # Localiza a UUID do perfil de distribuição instalado pela action download-provisioning-profiles
-      # A action instala os perfis em ~/Library/MobileDevice/Provisioning Profiles/
-      # mas NÃO exporta uma env var — extraímos a UUID via PlistBuddy diretamente dos arquivos
-      - name: Find Provisioning Profile UUID
-        id: profile
+      # Escreve a API key do App Store Connect em arquivo para autenticação do xcodebuild
+      - name: Write Apple API Key file
         run: |
-          PROFILE_UUID=""
-          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          for file in "$PROFILES_DIR"/*.mobileprovision; do
-            plist=$(security cms -D -i "$file" 2>/dev/null) || continue
-            entitlement=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /dev/stdin 2>/dev/null || true)
-            if [[ "$entitlement" == *"br.com.afilaxy.app" ]]; then
-              uuid=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null || true)
-              echo "Found profile: UUID=$uuid  Entitlement=$entitlement"
-              PROFILE_UUID="$uuid"
-            fi
-          done
-          if [[ -z "$PROFILE_UUID" ]]; then
-            echo "ERROR: No matching provisioning profile found for br.com.afilaxy.app"
-            ls -la "$PROFILES_DIR" || true
-            exit 1
-          fi
-          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_OUTPUT"
+          mkdir -p /tmp/apple_api_keys
+          echo "${{ secrets.APPLE_API_KEY }}" \
+            > "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
 
-      # Arquiva o app com CODE_SIGN_STYLE=Manual e a UUID do perfil instalado
+      # Arquiva usando Automatic signing com autenticação via API key.
+      # -allowProvisioningUpdates + -authenticationKey* permite que o Xcode:
+      #   1. Associe o certificado do keychain ao perfil correto automaticamente
+      #   2. Baixe/crie o perfil se necessário, sem poluir os targets dos Pods
       - name: Archive iOS App
         run: |
           xcodebuild \
@@ -123,10 +109,12 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE="${{ steps.profile.outputs.PROFILE_UUID }}" \
+            CODE_SIGN_STYLE=Automatic \
             archive
 
       # Exporta o IPA
