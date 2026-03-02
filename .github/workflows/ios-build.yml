@@ -84,16 +84,16 @@ jobs:
           api-private-key: ${{ secrets.APPLE_API_KEY }}
 
       # Injeta método de export e Team ID real no ExportOptions.plist
-      # Nota: 'ad-hoc' foi renomeado para 'release-testing' no Xcode 16+
+      # Mapeamento para nomes atuais do Xcode 16+
       - name: Configure ExportOptions.plist
         run: |
-          INPUT_METHOD="${{ github.event.inputs.export_method || 'ad-hoc' }}"
-          # ad-hoc → app-store: só existe profile App Store no Apple Developer Portal
-          if [[ "$INPUT_METHOD" == "ad-hoc" ]]; then
-            METHOD="app-store"
-          else
-            METHOD="$INPUT_METHOD"
-          fi
+          INPUT_METHOD="${{ github.event.inputs.export_method || 'app-store' }}"
+          case "$INPUT_METHOD" in
+            ad-hoc)      METHOD="release-testing" ;;
+            app-store)   METHOD="app-store-connect" ;;
+            development) METHOD="development" ;;
+            *)           METHOD="$INPUT_METHOD" ;;
+          esac
           /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :teamID ${{ secrets.APPLE_TEAM_ID }}" iosApp/ExportOptions.plist
 
@@ -124,13 +124,17 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             archive
 
-      # Exporta o IPA — o archive já embarcou o profile correto no passo anterior
+      # Exporta o IPA — usa API key auth para resolver o profile de export
       - name: Export IPA
         run: |
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             -exportOptionsPlist iosApp/ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/ipa
+            -exportPath $RUNNER_TEMP/ipa \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
 
       # Faz upload do IPA como artefato do Actions
       - name: Upload IPA
@@ -142,7 +146,7 @@ jobs:
 
       # (Opcional) Envia para TestFlight apenas quando acionado manualmente com export_method=app-store
       - name: Upload to TestFlight
-        if: ${{ github.event.inputs.export_method == 'app-store' }}
+        if: ${{ github.event.inputs.export_method == 'app-store' || github.event.inputs.export_method == 'app-store-connect' }}
         uses: apple-actions/upload-testflight-build@v1
         with:
           app-path: ${{ runner.temp }}/ipa/*.ipa
