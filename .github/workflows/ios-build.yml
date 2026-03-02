@@ -90,10 +90,31 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :teamID ${{ secrets.APPLE_TEAM_ID }}" iosApp/ExportOptions.plist
 
-      # Arquiva o app
-      # download-provisioning-profiles instala os perfis em ~/Library/MobileDevice/Provisioning Profiles/
-      # Com CODE_SIGN_STYLE=Automatic (sem -allowProvisioningUpdates), o Xcode resolve
-      # o certificado do keychain + o perfil em disco localmente, sem contatar a Apple.
+      # Localiza a UUID do perfil de distribuição instalado pela action download-provisioning-profiles
+      # A action instala os perfis em ~/Library/MobileDevice/Provisioning Profiles/
+      # mas NÃO exporta uma env var — extraímos a UUID via PlistBuddy diretamente dos arquivos
+      - name: Find Provisioning Profile UUID
+        id: profile
+        run: |
+          PROFILE_UUID=""
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          for file in "$PROFILES_DIR"/*.mobileprovision; do
+            plist=$(security cms -D -i "$file" 2>/dev/null) || continue
+            entitlement=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /dev/stdin 2>/dev/null || true)
+            if [[ "$entitlement" == *"br.com.afilaxy.app" ]]; then
+              uuid=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null || true)
+              echo "Found profile: UUID=$uuid  Entitlement=$entitlement"
+              PROFILE_UUID="$uuid"
+            fi
+          done
+          if [[ -z "$PROFILE_UUID" ]]; then
+            echo "ERROR: No matching provisioning profile found for br.com.afilaxy.app"
+            ls -la "$PROFILES_DIR" || true
+            exit 1
+          fi
+          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_OUTPUT"
+
+      # Arquiva o app com CODE_SIGN_STYLE=Manual e a UUID do perfil instalado
       - name: Archive iOS App
         run: |
           xcodebuild \
@@ -103,7 +124,8 @@ jobs:
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE="${{ steps.profile.outputs.PROFILE_UUID }}" \
             archive
 
       # Exporta o IPA
