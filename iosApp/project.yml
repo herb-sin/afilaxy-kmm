@@ -22,7 +22,7 @@ targets:
       - path: iosApp/Assets.xcassets
         optional: true
     info:
-      path: iosApp/iosApp/Info.plist
+      path: iosApp/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: br.com.afilaxy.app
