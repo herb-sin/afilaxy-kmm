@@ -205,7 +205,7 @@ jobs:
 
       # (Opcional) Envia para TestFlight apenas quando acionado manualmente com export_method=app-store
       - name: Upload to TestFlight
-        if: ${{ github.event.inputs.export_method == 'app-store' || github.event.inputs.export_method == 'app-store-connect' }}
+        if: ${{ github.event.inputs.export_method == 'app-store' }}
         run: |
           IPA_PATH=$(find "$RUNNER_TEMP/ipa" -name "*.ipa" -type f | head -n 1)
           if [[ -z "$IPA_PATH" ]]; then
