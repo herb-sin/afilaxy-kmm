@@ -46,13 +46,6 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Precisamos da sua localização para conectar você com helpers próximos durante emergências.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
