@@ -213,9 +213,14 @@ jobs:
             exit 1
           fi
           echo "Uploading IPA: $IPA_PATH"
+          
+          # Copiar API key para diretório padrão do altool
+          mkdir -p ~/.appstoreconnect/private_keys
+          cp "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
+             ~/.appstoreconnect/private_keys/
+          
           xcrun altool --upload-app \
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "${{ secrets.APPLE_API_KEY_ID }}" \
-            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}" \
-            --apiKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
+            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}"
