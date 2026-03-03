@@ -25,14 +25,14 @@ targets:
       path: iosApp/Info.plist
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: br.com.afilaxy.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.afilaxy.app
         INFOPLIST_FILE: iosApp/Info.plist
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         DEVELOPMENT_TEAM: "$(DEVELOPMENT_TEAM)"
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "2.1.0"
-        CURRENT_PROJECT_VERSION: "18"
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
 schemes:
   iosApp:
