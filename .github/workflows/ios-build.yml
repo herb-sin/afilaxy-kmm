@@ -58,7 +58,11 @@ jobs:
       - name: Generate Xcode project
         run: |
           cd iosApp
+          # Remove projeto antigo para forçar regeneração
+          rm -rf iosApp.xcodeproj
           xcodegen generate
+          # Verifica versão gerada
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" iosApp/Info.plist
 
       # Instala os pods do iOS (depende do .xcodeproj já existir)
       - name: Install CocoaPods
@@ -203,10 +207,17 @@ jobs:
           path: ${{ runner.temp }}/ipa/*.ipa
           retention-days: 30
 
-      # (Opcional) Envia para TestFlight apenas quando acionado manualmente com export_method=app-store
+      # Envia para TestFlight quando o método for app-store-connect
       - name: Upload to TestFlight
-        if: ${{ github.event.inputs.export_method == 'app-store' }}
         run: |
+          # Verifica o método configurado
+          EXPORT_METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" iosApp/ExportOptions.plist)
+          
+          if [[ "$EXPORT_METHOD" != "app-store-connect" ]]; then
+            echo "Pulando upload para TestFlight (método: $EXPORT_METHOD)"
+            exit 0
+          fi
+          
           IPA_PATH=$(find "$RUNNER_TEMP/ipa" -name "*.ipa" -type f | head -n 1)
           if [[ -z "$IPA_PATH" ]]; then
             echo "Erro: IPA não encontrado"
