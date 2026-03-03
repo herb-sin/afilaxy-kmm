@@ -82,7 +82,7 @@ jobs:
         id: provisioning
         uses: apple-actions/download-provisioning-profiles@v1
         with:
-          bundle-id: 'br.com.afilaxy.app'
+          bundle-id: 'com.afilaxy.app'
           issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
           api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPLE_API_KEY }}
@@ -152,7 +152,7 @@ jobs:
             getTaskAllow=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:get-task-allow" /dev/stdin 2>/dev/null || echo "false")
             echo "  UUID=$uuid  Entitlement=$entitlement  hasDevices=$hasDevices  getTaskAllow=$getTaskAllow"
 
-            [[ "$entitlement" != *"br.com.afilaxy.app" ]] && continue
+            [[ "$entitlement" != *"com.afilaxy.app" ]] && continue
 
             case "$EXPORT_METHOD" in
               app-store-connect)
@@ -188,10 +188,10 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :signingStyle manual" iosApp/ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" iosApp/ExportOptions.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy \
-            -c "Set :provisioningProfiles:br.com.afilaxy.app $PROFILE_UUID" \
+            -c "Set :provisioningProfiles:com.afilaxy.app $PROFILE_UUID" \
             iosApp/ExportOptions.plist 2>/dev/null || \
           /usr/libexec/PlistBuddy \
-            -c "Add :provisioningProfiles:br.com.afilaxy.app string $PROFILE_UUID" \
+            -c "Add :provisioningProfiles:com.afilaxy.app string $PROFILE_UUID" \
             iosApp/ExportOptions.plist
 
           xcodebuild -exportArchive \
