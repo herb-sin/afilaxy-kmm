@@ -22,7 +22,7 @@ targets:
       - path: iosApp/Assets.xcassets
         optional: true
     info:
-      path: iosApp/Info.plist
+      path: iosApp/iosApp/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: br.com.afilaxy.app
@@ -31,8 +31,8 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         DEVELOPMENT_TEAM: "$(DEVELOPMENT_TEAM)"
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "2.2.0"
-        CURRENT_PROJECT_VERSION: "17"
+        MARKETING_VERSION: "2.1.0"
+        CURRENT_PROJECT_VERSION: "18"
         TARGETED_DEVICE_FAMILY: "1,2"
 schemes:
   iosApp:
