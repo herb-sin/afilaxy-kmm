@@ -2,6 +2,8 @@ import SwiftUI
 import shared
 
 struct HomeView: View {
+    let onLogout: () -> Void
+    
     @State private var showEmergency = false
     @State private var showSettings = false
     @State private var isHelperMode = false
@@ -65,6 +67,13 @@ struct HomeView: View {
             .padding(.top, 32)
             .navigationTitle("Afilaxy")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: onLogout) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                    }
+                }
+            }
             .sheet(isPresented: $showEmergency) {
                 EmergencyView()
             }
