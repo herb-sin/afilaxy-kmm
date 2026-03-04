@@ -72,6 +72,7 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd iosApp
+          pod cache clean --all
           pod install --repo-update
 
       # Importa o certificado de distribuição Apple (P12 em base64)
