@@ -61,8 +61,12 @@ jobs:
           # Remove projeto antigo para forçar regeneração
           rm -rf iosApp.xcodeproj
           xcodegen generate
+          # Força versão correta no Info.plist gerado
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" iosApp/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 2" iosApp/Info.plist
           # Verifica versão gerada
-          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" iosApp/Info.plist
+          echo "Version: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' iosApp/Info.plist)"
+          echo "Build: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' iosApp/Info.plist)"
 
       # Instala os pods do iOS (depende do .xcodeproj já existir)
       - name: Install CocoaPods
