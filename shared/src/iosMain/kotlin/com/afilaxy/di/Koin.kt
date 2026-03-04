@@ -9,12 +9,10 @@ import platform.Foundation.NSUserDefaults
 
 actual fun platformModule() = module {
     single<Settings> {
-        val context: Context = get()
-        val sharedPreferences = context.getSharedPreferences("afilaxy_prefs", Context.MODE_PRIVATE)
-        SharedPreferencesSettings(sharedPreferences)
+        NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults)
     }
     
     single<LocationRepository> {
-        LocationRepositoryImpl(get())
+        LocationRepositoryImpl()
     }
 }
