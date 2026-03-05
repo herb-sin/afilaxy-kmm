@@ -63,7 +63,7 @@ jobs:
           xcodegen generate
           # Força versão correta no Info.plist gerado
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" iosApp/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 8" iosApp/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 9" iosApp/Info.plist
           # Verifica versão gerada
           echo "Version: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' iosApp/Info.plist)"
           echo "Build: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' iosApp/Info.plist)"
@@ -216,7 +216,6 @@ jobs:
 
       # Envia para TestFlight quando o método for app-store-connect
       - name: Upload to TestFlight
-        if: false  # Desabilitado temporariamente - limite de certificados
         run: |
           # Verifica o método configurado
           EXPORT_METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" iosApp/ExportOptions.plist)
