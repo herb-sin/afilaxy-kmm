@@ -47,6 +47,7 @@ fun sharedModule(): Module = module {
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
     single<NotificationRepository> { NotificationRepositoryImpl(get()) }
     single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get()) }
+    // LocationRepository é injetado no platformModule()
     
     // ViewModels
     factory { AuthViewModel(get()) }
