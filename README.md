@@ -6,7 +6,7 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg)](https://kotlinlang.org)
 [![KMM](https://img.shields.io/badge/KMM-Ready-brightgreen.svg)](https://kotlinlang.org/docs/multiplatform.html)
 
-Plataforma de Health Equity que usa a urgência da crise de asma como porta de entrada para reinserir pacientes no tratamento preventivo do SUS.
+O socorro emergencial pela medicação de resgate da Asma (beta-agonista de curta duração) será porta de entrada para Engajamento e Adesão ao Tratamento. Através da coleta de Real World Evidence, o app registra pacientes em crise para conectá-los à rede de apoio e à medicina preventiva com finalidade de reduzir internações, transformando a urgência individual em dados para otimizar a governança da Asma no sistema de saúde.
 
 ---
 
