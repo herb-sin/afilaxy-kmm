@@ -61,3 +61,6 @@ keystore.properties
 # Kotlin
 *.kotlin_module
 .kotlin/
+*.key
+*.p12
+*.pem
