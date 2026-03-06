@@ -4,28 +4,23 @@ import shared
 class ViewModelProvider {
     static let shared = ViewModelProvider()
     
-    private var koin: Koin {
-        return KoinHelperKt.getKoin()
-    }
-    
     func getLoginViewModel() -> LoginViewModel {
-        return koin.get(qualifier: nil, parameters: nil) as! LoginViewModel
+        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! LoginViewModel
     }
     
     func getEmergencyViewModel() -> EmergencyViewModel {
-        return koin.get(qualifier: nil, parameters: nil) as! EmergencyViewModel
+        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! EmergencyViewModel
     }
     
     func getChatViewModel(emergencyId: String) -> ChatViewModel {
-        // Simplificado: sem parâmetros por enquanto
-        return koin.get(qualifier: nil, parameters: nil) as! ChatViewModel
+        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ChatViewModel
     }
     
     func getAuthViewModel() -> AuthViewModel {
-        return koin.get(qualifier: nil, parameters: nil) as! AuthViewModel
+        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! AuthViewModel
     }
     
     func getProfileViewModel() -> ProfileViewModel {
-        return koin.get(qualifier: nil, parameters: nil) as! ProfileViewModel
+        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfileViewModel
     }
 }
