@@ -7,7 +7,7 @@ struct EmergencyView: View {
     @State private var isLoading = false
     @State private var error: String?
     
-    private let viewModel = ViewModelProvider.shared.getEmergencyViewModel()
+    @State private var viewModel: EmergencyViewModel? = nil
     
     var body: some View {
         NavigationView {
@@ -57,6 +57,11 @@ struct EmergencyView: View {
             .padding(32)
             .navigationTitle("Emergência")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if viewModel == nil {
+                    viewModel = ViewModelProvider.shared.getEmergencyViewModel()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancelar") {
@@ -68,12 +73,12 @@ struct EmergencyView: View {
     }
     
     private func createEmergency() {
+        guard let vm = viewModel else { return }
         isLoading = true
         error = nil
         
-        viewModel.onCreateEmergency()
+        vm.onCreateEmergency()
         
-        // Simular sucesso
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             isLoading = false
             dismiss()

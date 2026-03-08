@@ -16,6 +16,9 @@ import com.afilaxy.domain.repository.LocationRepository
 import com.afilaxy.domain.repository.NotificationRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.domain.repository.ProfileRepository
+import com.afilaxy.domain.usecase.CreateEmergencyUseCase
+import com.afilaxy.domain.usecase.FindHelpersUseCase
+import com.afilaxy.domain.usecase.SendChatMessageUseCase
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
@@ -42,18 +45,23 @@ fun sharedModule(): Module = module {
     // Repositories
     single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get()) }
-    single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get(), get()) }
+    single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
     single<NotificationRepository> { NotificationRepositoryImpl(get()) }
     single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get()) }
     // LocationRepository é injetado no platformModule()
     
+    // Use Cases
+    factory { CreateEmergencyUseCase(get()) }
+    factory { FindHelpersUseCase(get()) }
+    factory { SendChatMessageUseCase(get()) }
+
     // ViewModels
     factory { AuthViewModel(get()) }
     factory { LoginViewModel(get()) }
     factory { (emergencyId: String) -> ChatViewModel(emergencyId, get(), get()) }
-    factory { EmergencyViewModel(get(), get(), get()) }
+    factory { EmergencyViewModel(get(), get(), get(), get()) }
     factory { ProfileViewModel(get(), get()) }
     factory { HistoryViewModel(get(), get()) }
     factory { ProfessionalListViewModel(get()) }

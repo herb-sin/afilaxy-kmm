@@ -17,13 +17,19 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(userId);
       allow create: if isOwner(userId) 
         && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.email, 5, 100);
       allow update: if isOwner(userId)
         && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role);
       allow delete: if isOwner(userId);
+    }
+    
+    // Public helper profiles (name only) for nearby search
+    match /helpers/{helperId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(helperId);
     }
     
     // Emergencies collection

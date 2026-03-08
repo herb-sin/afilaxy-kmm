@@ -1,13 +1,11 @@
 package com.afilaxy.presentation.emergency
 
-import kotlinx.serialization.Serializable
 import com.afilaxy.domain.model.Emergency
 import com.afilaxy.domain.model.Helper
 
 /**
  * Estado da tela de Emergência
  */
-@Serializable
 data class EmergencyState(
     val currentEmergency: Emergency? = null,
     val emergencyId: String? = null,

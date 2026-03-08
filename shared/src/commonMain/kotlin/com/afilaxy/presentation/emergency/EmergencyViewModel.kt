@@ -1,6 +1,7 @@
 package com.afilaxy.presentation.emergency
 
 import com.afilaxy.domain.model.EmergencyStatus
+import com.afilaxy.domain.usecase.CreateEmergencyUseCase
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.LocationRepository
 import com.afilaxy.domain.repository.NotificationRepository
@@ -18,7 +19,8 @@ import kotlinx.coroutines.launch
 class EmergencyViewModel(
     private val emergencyRepository: EmergencyRepository,
     private val locationRepository: LocationRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val createEmergencyUseCase: CreateEmergencyUseCase
 ) : KMMViewModel() {
     
     private val _state = MutableStateFlow(EmergencyState())
@@ -79,8 +81,14 @@ class EmergencyViewModel(
                 )
             }
             
-            // Criar emergência
-            emergencyRepository.createEmergency(location.latitude, location.longitude)
+            // Criar emergência via use case (inclui validação de coordenadas)
+            val emergency = com.afilaxy.domain.model.Emergency.create(
+                id = "",
+                userId = "",
+                userName = "",
+                location = location
+            )
+            createEmergencyUseCase.execute(emergency)
                 .onSuccess { emergencyId ->
                     _state.update { 
                         it.copy(
@@ -93,13 +101,6 @@ class EmergencyViewModel(
                     
                     // Observar status da emergência
                     observeEmergencyStatus(emergencyId)
-                    
-                    // Notificar helpers próximos
-                    notificationRepository.notifyNearbyHelpers(
-                        emergencyId,
-                        location.latitude,
-                        location.longitude
-                    )
                     
                     // Buscar helpers próximos
                     findNearbyHelpers()

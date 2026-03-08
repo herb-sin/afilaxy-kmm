@@ -29,14 +29,9 @@ class UBSMapViewModel(
             
             try {
                 val currentLocation = locationRepository.getCurrentLocation()
-                println("[UBSMapViewModel] Localização atual: $currentLocation")
                 
                 if (currentLocation != null) {
                     val nearbyUBS = ubsRepository.getNearby(currentLocation, radiusKm = 50.0)
-                    println("[UBSMapViewModel] UBS encontradas: ${nearbyUBS.size}")
-                    nearbyUBS.forEach { ubs ->
-                        println("[UBSMapViewModel] ${ubs.name} - ${ubs.distanceKm} km")
-                    }
                     
                     _state.value = _state.value.copy(
                         ubsList = nearbyUBS,
@@ -50,8 +45,6 @@ class UBSMapViewModel(
                     )
                 }
             } catch (e: Exception) {
-                println("[UBSMapViewModel] Erro: ${e.message}")
-                e.printStackTrace()
                 _state.value = _state.value.copy(
                     isLoading = false,
                     error = e.message ?: "Erro ao carregar UBS próximas"

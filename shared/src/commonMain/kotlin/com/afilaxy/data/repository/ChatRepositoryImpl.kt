@@ -40,6 +40,7 @@ class ChatRepositoryImpl(
             .collection("emergency_chats")
             .document(emergencyId)
             .collection("messages")
+            .orderBy("timestamp")
             .snapshots
             .map { snapshot ->
                 snapshot.documents.mapNotNull { doc ->
@@ -54,9 +55,9 @@ class ChatRepositoryImpl(
                             isFromHelper = (doc.get("isFromHelper") as? Boolean) ?: false
                         )
                     } catch (e: Exception) {
-                        null // Skip invalid documents
+                        null
                     }
-                }.sortedBy { it.timestamp } // Sort manually by timestamp
+                }
             }
     }
     

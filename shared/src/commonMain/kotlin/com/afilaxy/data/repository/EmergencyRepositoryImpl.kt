@@ -5,7 +5,6 @@ import com.afilaxy.domain.model.EmergencyStatus
 import com.afilaxy.domain.model.Helper
 import com.afilaxy.domain.model.Location
 import com.afilaxy.domain.model.getCurrentTimeMillis
-import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.EmergencyRepository
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
@@ -16,8 +15,7 @@ import kotlin.math.*
 
 class EmergencyRepositoryImpl(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth,
-    private val authRepository: AuthRepository
+    private val auth: FirebaseAuth
 ) : EmergencyRepository {
 
     override suspend fun createEmergency(emergency: Emergency): Result<String> {
@@ -52,11 +50,9 @@ class EmergencyRepositoryImpl(
                 "expiresAt" to (currentTime + 600000) // 10 min
             )
             
+            // Criar emergência
             val docRef = firestore.collection("emergency_requests")
                 .add(emergencyData)
-            
-            // Notificar helpers próximos
-            notifyNearbyHelpers(docRef.id, latitude, longitude, userName)
             
             Result.success(docRef.id)
         } catch (e: Exception) {
@@ -64,43 +60,6 @@ class EmergencyRepositoryImpl(
         }
     }
     
-    private suspend fun notifyNearbyHelpers(
-        emergencyId: String,
-        latitude: Double,
-        longitude: Double,
-        requesterName: String
-    ) {
-        try {
-            // Filtrar apenas helpers ativos diretamente no servidor
-            val helpers = firestore.collection("helpers")
-                .where { "isActive" equalTo true }
-                .get()
-            
-            for (doc in helpers.documents) {
-                
-                val helperId = doc.get<String>("id") ?: continue
-                
-                // Criar notificação push (será processada pela Cloud Function)
-                val notification = mapOf(
-                    "to" to helperId,
-                    "data" to mapOf(
-                        "type" to "emergency_request",
-                        "emergencyId" to emergencyId,
-                        "requesterName" to requesterName,
-                        "title" to "🆘 Emergência de Asma",
-                        "body" to "$requesterName precisa de ajuda próximo a você"
-                    ),
-                    "timestamp" to getCurrentTimeMillis(),
-                    "processed" to false
-                )
-                
-                firestore.collection("push_notifications").add(notification)
-            }
-        } catch (e: Exception) {
-            // Log silently, não falhar a criação da emergência
-        }
-    }
-
     override suspend fun cancelEmergency(emergencyId: String): Result<Boolean> {
         return try {
             val userId = auth.currentUser?.uid
@@ -134,8 +93,11 @@ class EmergencyRepositoryImpl(
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
             val userEmail = auth.currentUser?.email ?: ""
             
-            // Salvar localização no perfil do usuário (para geohash)
-            authRepository.updateUserLocation(latitude, longitude)
+            // Atualizar localização diretamente sem depender de AuthRepository
+            try {
+                firestore.collection("users").document(userId)
+                    .update(mapOf("latitude" to latitude, "longitude" to longitude))
+            } catch (e: Exception) { /* silently fail */ }
             
             val helperData = mapOf(
                 "id" to userId,
@@ -299,13 +261,12 @@ class EmergencyRepositoryImpl(
             val longitude = location.longitude
             val helpers = mutableListOf<Helper>()
             
-            // Query all active helpers (Firebase KMM não tem geospatial query ainda)
-            val snapshot = firestore.collection("helpers").get()
+            // Filtra ativos no servidor para reduzir leituras
+            val snapshot = firestore.collection("helpers")
+                .where { "isActive" equalTo true }
+                .get()
             
             for (doc in snapshot.documents) {
-                val isActive = doc.get<Boolean>("isActive") ?: false
-                if (!isActive) continue
-                
                 val geoPoint = doc.get<GeoPoint?>("location")
                 if (geoPoint != null) {
                     val distance = calculateDistance(
@@ -338,20 +299,25 @@ class EmergencyRepositoryImpl(
 
     override suspend fun updateEmergencyStatus(emergencyId: String, status: EmergencyStatus): Result<Unit> {
         return try {
+            val userId = auth.currentUser?.uid
+                ?: return Result.failure(IllegalStateException("User not authenticated"))
+
+            val doc = firestore.collection("emergency_requests").document(emergencyId).get()
+            if (!doc.exists) return Result.failure(IllegalStateException("Emergência não encontrada"))
+
+            val requesterId = doc.get<String?>("requesterId")
+            val helperId = doc.get<String?>("helperId")
+            if (requesterId != userId && helperId != userId) {
+                return Result.failure(IllegalStateException("Não autorizado"))
+            }
+
             val updates = if (status == EmergencyStatus.RESOLVED) {
-                mapOf(
-                    "status" to status.dbValue,
-                    "active" to false,
-                    "resolvedAt" to getCurrentTimeMillis()
-                )
+                mapOf("status" to status.dbValue, "active" to false, "resolvedAt" to getCurrentTimeMillis())
             } else {
                 mapOf("status" to status.dbValue)
             }
 
-            firestore.collection("emergency_requests")
-                .document(emergencyId)
-                .update(updates)
-
+            firestore.collection("emergency_requests").document(emergencyId).update(updates)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

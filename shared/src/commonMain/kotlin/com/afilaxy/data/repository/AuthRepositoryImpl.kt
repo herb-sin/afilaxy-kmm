@@ -42,7 +42,7 @@ class AuthRepositoryImpl(
             
             Result.success(user)
         } catch (e: Exception) {
-            Result.failure(Exception(mapAuthError(e.message)))
+            Result.failure(e)
         }
     }
     
@@ -79,7 +79,7 @@ class AuthRepositoryImpl(
             
             Result.success(user)
         } catch (e: Exception) {
-            Result.failure(Exception(mapAuthError(e.message)))
+            Result.failure(e)
         }
     }
     
@@ -87,8 +87,7 @@ class AuthRepositoryImpl(
         try {
             auth.signOut()
         } catch (e: Exception) {
-            // Log error but don't throw - logout should always succeed
-            println("Error during logout: ${e.message}")
+            // Silently fail - logout should always succeed
         }
     }
     
@@ -166,16 +165,4 @@ class AuthRepositoryImpl(
         )
     }
     
-    /**
-     * Mapeia mensagens de erro do Firebase para mensagens amigáveis
-     */
-    private fun mapAuthError(message: String?): String {
-        return when {
-            message?.contains("password", ignoreCase = true) == true -> "Senha incorreta"
-            message?.contains("email", ignoreCase = true) == true -> "Email inválido"
-            message?.contains("user", ignoreCase = true) == true -> "Usuário não encontrado"
-            message?.contains("network", ignoreCase = true) == true -> "Erro de conexão"
-            else -> "Erro ao autenticar: ${message ?: "desconhecido"}"
-        }
-    }
 }
