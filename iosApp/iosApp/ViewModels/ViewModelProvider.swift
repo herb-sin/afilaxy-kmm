@@ -13,7 +13,9 @@ class ViewModelProvider {
     }
     
     func getChatViewModel(emergencyId: String) -> ChatViewModel {
-        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: { ParametersHolder(values: [emergencyId], useIndexedValues: false) }) as! ChatViewModel
+        let chatRepository = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ChatRepository
+        let authRepository = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! AuthRepository
+        return ChatViewModel(emergencyId: emergencyId, chatRepository: chatRepository, authRepository: authRepository)
     }
     
     func getAuthViewModel() -> AuthViewModel {
