@@ -38,14 +38,11 @@ class UBSRepositoryImpl(
                             )
                         } else null
                     } catch (e: Exception) {
-                        println("[UBSRepository] Erro ao processar documento ${doc.id}: ${e.message}")
                         null
                     }
                 }
                 .sortedBy { it.distanceKm }
         } catch (e: Exception) {
-            println("[UBSRepository] Erro ao buscar UBS: ${e.message}")
-            e.printStackTrace()
             emptyList()
         }
     }

@@ -5,16 +5,17 @@ import * as geofireCommon from 'geofire-common';
 // Inicializar Firebase Admin
 admin.initializeApp();
 
+// Stripe inicializado uma vez (evita re-instanciação a cada cold start)
+const stripe = require('stripe')(functions.config().stripe.secret_key);
+
 // ============================================
 // STRIPE WEBHOOK - MVP PROFISSIONAIS
 // ============================================
 
-/**
- * Cloud Function para criar sessão de checkout do Stripe
- * Chamada pelo portal web de profissionais
- */
 export const createCheckoutSession = functions.https.onCall(async (data, context) => {
-    const stripe = require('stripe')(functions.config().stripe?.secret_key);
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
     
     const { priceId, email, metadata } = data;
 
@@ -78,8 +79,7 @@ export const createCheckoutSession = functions.https.onCall(async (data, context
  * Atualiza subscriptionPlan e subscriptionExpiry no Firestore
  */
 export const stripeWebhook = functions.https.onRequest(async (req, res) => {
-    const stripe = require('stripe')(functions.config().stripe?.secret_key);
-    const endpointSecret = functions.config().stripe?.webhook_secret;
+    const endpointSecret = functions.config().stripe.webhook_secret;
 
     const sig = req.headers['stripe-signature'];
 
@@ -429,17 +429,14 @@ export const onEmergencyAccepted = functions.firestore
  * Envia notificação para o destinatário
  */
 export const onChatMessage = functions.firestore
-    .document('emergencies/{emergencyId}/messages/{messageId}')
+    .document('emergency_chats/{emergencyId}/messages/{messageId}')
     .onCreate(async (snap, context) => {
         const message = snap.data();
         const emergencyId = context.params.emergencyId;
 
-        console.log(`Nova mensagem no chat da emergência ${emergencyId}`);
-
         try {
-            // Buscar dados da emergência
             const emergencyDoc = await admin.firestore()
-                .collection('emergencies')
+                .collection('emergency_requests')
                 .doc(emergencyId)
                 .get();
 
@@ -450,13 +447,10 @@ export const onChatMessage = functions.firestore
 
             const emergencyData = emergencyDoc.data();
 
-            // Determinar destinatário (se sender é requester, enviar para helper e vice-versa)
             let recipientId: string;
             if (message.senderId === emergencyData?.requesterId) {
-                // Mensagem do requester, enviar para helper
                 recipientId = emergencyData?.helperId;
             } else {
-                // Mensagem do helper, enviar para requester
                 recipientId = emergencyData?.requesterId;
             }
 
@@ -484,17 +478,16 @@ export const onChatMessage = functions.firestore
                 return null;
             }
 
-            // Enviar notificação
             const notificationMessage = {
                 notification: {
                     title: message.senderName || 'Nova mensagem',
-                    body: message.text || '',
+                    body: message.message || '',
                 },
                 data: {
                     type: 'chat',
                     emergencyId: emergencyId,
                     senderName: message.senderName || '',
-                    message: message.text || '',
+                    message: message.message || '',
                 },
                 token: recipientToken,
             };
@@ -547,53 +540,5 @@ export const onUserLocationUpdate = functions.firestore
         return null;
     });
 
-/**
- * HTTP Function para migrar dados de helpers existentes
- * Execute uma vez: curl https://us-central1-afilaxy-app.cloudfunctions.net/migrateHelperLocations
- */
-export const migrateHelperLocations = functions.https.onRequest(async (req, res) => {
-    try {
-        console.log('Iniciando migração de geohashes para helpers...');
-
-        // Buscar todos os usuários (helpers e não-helpers)
-        const usersSnapshot = await admin.firestore()
-            .collection('users')
-            .get();
-
-        if (usersSnapshot.empty) {
-            res.send({ success: true, message: 'Nenhum usuário encontrado', updated: 0 });
-            return;
-        }
-
-        const batch = admin.firestore().batch();
-        let updated = 0;
-
-        usersSnapshot.docs.forEach((doc) => {
-            const data = doc.data();
-
-            // Apenas atualizar se tiver coordenadas
-            if (data.latitude && data.longitude) {
-                const hash = geofireCommon.geohashForLocation([data.latitude, data.longitude]);
-                batch.update(doc.ref, {
-                    geohash: hash,
-                    helperRadius: data.helperRadius || 5000 // padrão 5km
-                });
-                updated++;
-                console.log(`Usuário ${doc.id}: geohash = ${hash}`);
-            }
-        });
-
-        await batch.commit();
-        console.log(`Migração concluída: ${updated} usuários atualizados`);
-
-        res.send({
-            success: true,
-            message: 'Migração concluída com sucesso',
-            updated: updated,
-            total: usersSnapshot.size
-        });
-    } catch (error) {
-        console.error('Erro na migração:', error);
-        res.status(500).send({ success: false, error: String(error) });
-    }
-});
+// migrateHelperLocations removida — migração concluída, função era pública sem autenticação
+// Para re-executar se necessário, usar Admin SDK localmente via script Node.js

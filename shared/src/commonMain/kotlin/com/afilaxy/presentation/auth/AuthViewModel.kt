@@ -173,7 +173,7 @@ class AuthViewModel(
             exception.message?.contains("EMAIL_EXISTS") == true -> 
                 "Este email já está cadastrado"
             exception.message?.contains("WEAK_PASSWORD") == true -> 
-                "Senha muito fraca. Use no mínimo 6 caracteres"
+                "Senha muito fraca. Use no mínimo 8 caracteres"
             exception.message?.contains("INVALID_EMAIL") == true -> 
                 "Email inválido"
             exception.message?.contains("network") == true -> 
