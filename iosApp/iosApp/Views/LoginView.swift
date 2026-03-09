@@ -10,7 +10,7 @@ struct LoginView: View {
     @State private var error: String?
     @State private var showRegister = false
     
-    @State private var viewModel = ViewModelProvider.shared.getLoginViewModel()
+    @State private var viewModel: LoginViewModel? = nil
     
     var body: some View {
         NavigationView {
@@ -70,6 +70,11 @@ struct LoginView: View {
                 Spacer()
             }
             .navigationBarHidden(true)
+            .task {
+                if viewModel == nil {
+                    viewModel = ViewModelProvider.shared.getLoginViewModel()
+                }
+            }
             .sheet(isPresented: $showRegister) {
                 RegisterView()
             }
@@ -77,14 +82,15 @@ struct LoginView: View {
     }
     
     private func login() {
+        guard let vm = viewModel else { return }
         isLoading = true
         error = nil
-        viewModel.onEmailChange(email: email)
-        viewModel.onPasswordChange(password: password)
-        viewModel.onLoginClick()
+        vm.onEmailChange(email: email)
+        vm.onPasswordChange(password: password)
+        vm.onLoginClick()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             isLoading = false
-            let state = viewModel.state.value as? LoginState
+            let state = vm.state.value as? LoginState
             if state?.error == nil {
                 onLoginSuccess()
             } else {
