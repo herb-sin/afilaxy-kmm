@@ -77,20 +77,27 @@ struct LoginView: View {
     
     private func login() {
         let vm = container.loginViewModel
-        isLoading = true
         error = nil
-        DispatchQueue.main.async {
-            vm.onEmailChange(email: self.email)
-            vm.onPasswordChange(password: self.password)
-            vm.onLoginClick()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                self.isLoading = false
-                if let state = vm.state.value as? LoginState {
+        isLoading = true
+        vm.onEmailChange(email: email)
+        vm.onPasswordChange(password: password)
+        vm.onLoginClick()
+        observeLoginState(vm: vm)
+    }
+
+    private func observeLoginState(vm: LoginViewModel) {
+        Task { @MainActor in
+            while true {
+                try? await Task.sleep(nanoseconds: 200_000_000)
+                let state = vm.currentState()
+                if !state.isLoading {
+                    isLoading = false
                     if state.isLoggedIn {
-                        self.onLoginSuccess()
+                        onLoginSuccess()
                     } else if let err = state.error {
-                        self.error = err
+                        error = err
                     }
+                    break
                 }
             }
         }

@@ -70,4 +70,6 @@ class LoginViewModel(
     fun clearError() {
         _state.update { it.copy(error = null) }
     }
+
+    fun currentState(): LoginState = _state.value
 }
