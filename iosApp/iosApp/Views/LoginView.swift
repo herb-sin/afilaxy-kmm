@@ -79,16 +79,18 @@ struct LoginView: View {
         let vm = container.loginViewModel
         isLoading = true
         error = nil
-        vm.onEmailChange(email: email)
-        vm.onPasswordChange(password: password)
-        vm.onLoginClick()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            isLoading = false
-            if let state = vm.state.value as? LoginState {
-                if state.isLoggedIn {
-                    onLoginSuccess()
-                } else if let err = state.error {
-                    error = err
+        DispatchQueue.main.async {
+            vm.onEmailChange(email: self.email)
+            vm.onPasswordChange(password: self.password)
+            vm.onLoginClick()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                self.isLoading = false
+                if let state = vm.state.value as? LoginState {
+                    if state.isLoggedIn {
+                        self.onLoginSuccess()
+                    } else if let err = state.error {
+                        self.error = err
+                    }
                 }
             }
         }
