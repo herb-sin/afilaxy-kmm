@@ -3,6 +3,7 @@ import shared
 
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var container: AppContainer
     @State private var notificationsEnabled = true
     @State private var locationAlways = false
     @State private var showLogoutAlert = false
@@ -10,9 +11,7 @@ struct SettingsView: View {
     @State private var showTerms = false
     @State private var showPrivacy = false
     @State private var showHelp = false
-    
-    @State private var authViewModel: AuthViewModel? = nil
-    
+
     var body: some View {
         NavigationView {
             List {
@@ -88,11 +87,6 @@ struct SettingsView: View {
             }
             .navigationTitle("Configurações")
             .navigationBarTitleDisplayMode(.inline)
-            .task {
-                if authViewModel == nil {
-                    authViewModel = ViewModelProvider.shared.getAuthViewModel()
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Fechar") {
@@ -103,7 +97,7 @@ struct SettingsView: View {
             .alert("Sair", isPresented: $showLogoutAlert) {
                 Button("Cancelar", role: .cancel) { }
                 Button("Sair", role: .destructive) {
-                    authViewModel?.onLogout()
+                    container.authViewModel.onLogout()
                     dismiss()
                 }
             } message: {
