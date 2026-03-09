@@ -11,7 +11,7 @@ struct SettingsView: View {
     @State private var showPrivacy = false
     @State private var showHelp = false
     
-    @State private var authViewModel = ViewModelProvider.shared.getAuthViewModel()
+    @State private var authViewModel: AuthViewModel? = nil
     
     var body: some View {
         NavigationView {
@@ -88,6 +88,11 @@ struct SettingsView: View {
             }
             .navigationTitle("Configurações")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                if authViewModel == nil {
+                    authViewModel = ViewModelProvider.shared.getAuthViewModel()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Fechar") {
@@ -98,7 +103,7 @@ struct SettingsView: View {
             .alert("Sair", isPresented: $showLogoutAlert) {
                 Button("Cancelar", role: .cancel) { }
                 Button("Sair", role: .destructive) {
-                    authViewModel.onLogout()
+                    authViewModel?.onLogout()
                     dismiss()
                 }
             } message: {
