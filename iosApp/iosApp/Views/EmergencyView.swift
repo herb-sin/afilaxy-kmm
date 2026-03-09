@@ -3,11 +3,10 @@ import shared
 
 struct EmergencyView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var container: AppContainer
     @State private var description = ""
     @State private var isLoading = false
     @State private var error: String?
-    
-    @State private var viewModel: EmergencyViewModel? = nil
     
     var body: some View {
         NavigationView {
@@ -57,11 +56,6 @@ struct EmergencyView: View {
             .padding(32)
             .navigationTitle("Emergência")
             .navigationBarTitleDisplayMode(.inline)
-            .task {
-                if viewModel == nil {
-                    viewModel = ViewModelProvider.shared.getEmergencyViewModel()
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancelar") {
@@ -73,10 +67,9 @@ struct EmergencyView: View {
     }
     
     private func createEmergency() {
-        guard let vm = viewModel else { return }
         isLoading = true
         error = nil
-        vm.onCreateEmergency()
+        container.emergencyViewModel.onCreateEmergency()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             isLoading = false
             dismiss()

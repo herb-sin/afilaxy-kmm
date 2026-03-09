@@ -3,15 +3,14 @@ import shared
 
 struct LoginView: View {
     let onLoginSuccess: () -> Void
-    
+
+    @EnvironmentObject var container: AppContainer
     @State private var email = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var error: String?
     @State private var showRegister = false
-    
-    @State private var viewModel: LoginViewModel? = nil
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
@@ -70,11 +69,6 @@ struct LoginView: View {
                 Spacer()
             }
             .navigationBarHidden(true)
-            .task {
-                if viewModel == nil {
-                    viewModel = ViewModelProvider.shared.getLoginViewModel()
-                }
-            }
             .sheet(isPresented: $showRegister) {
                 RegisterView()
             }
@@ -82,7 +76,7 @@ struct LoginView: View {
     }
     
     private func login() {
-        guard let vm = viewModel else { return }
+        let vm = container.loginViewModel
         isLoading = true
         error = nil
         vm.onEmailChange(email: email)
