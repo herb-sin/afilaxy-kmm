@@ -84,11 +84,11 @@ struct LoginView: View {
         vm.onLoginClick()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             isLoading = false
-            let state = vm.state.value as? LoginState
-            if state?.error == nil {
+            let state = vm.state.value
+            if state.isLoggedIn {
                 onLoginSuccess()
             } else {
-                error = state?.error
+                error = state.error as String?
             }
         }
     }
