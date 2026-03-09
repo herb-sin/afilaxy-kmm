@@ -3,25 +3,18 @@ import shared
 import FirebaseCore
 
 class AppContainer: ObservableObject {
-    let loginViewModel: LoginViewModel
-    let emergencyViewModel: EmergencyViewModel
-    let authViewModel: AuthViewModel
-
-    init() {
-        loginViewModel = ViewModelProvider.shared.getLoginViewModel()
-        emergencyViewModel = ViewModelProvider.shared.getEmergencyViewModel()
-        authViewModel = ViewModelProvider.shared.getAuthViewModel()
-    }
+    lazy var loginViewModel: LoginViewModel = ViewModelProvider.shared.getLoginViewModel()
+    lazy var emergencyViewModel: EmergencyViewModel = ViewModelProvider.shared.getEmergencyViewModel()
+    lazy var authViewModel: AuthViewModel = ViewModelProvider.shared.getAuthViewModel()
 }
 
 @main
 struct AfilaxyApp: App {
-    let container: AppContainer
+    let container = AppContainer()
 
     init() {
         FirebaseApp.configure()
         KoinHelperKt.doInitKoin()
-        container = AppContainer()
     }
 
     var body: some Scene {
