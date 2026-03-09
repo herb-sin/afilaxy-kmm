@@ -1,10 +1,9 @@
 import SwiftUI
-import shared
+import FirebaseAuth
 
 struct LoginView: View {
     let onLoginSuccess: () -> Void
 
-    @EnvironmentObject var container: AppContainer
     @State private var email = ""
     @State private var password = ""
     @State private var isLoading = false
@@ -57,9 +56,7 @@ struct LoginView: View {
                     .cornerRadius(10)
                     .disabled(isLoading)
                     
-                    Button(action: {
-                        showRegister = true
-                    }) {
+                    Button(action: { showRegister = true }) {
                         Text("Criar Conta")
                             .foregroundColor(.red)
                     }
@@ -76,30 +73,23 @@ struct LoginView: View {
     }
     
     private func login() {
-        let vm = container.loginViewModel
-        error = nil
+        guard !email.isBlank, !password.isBlank else {
+            error = email.isBlank ? "Email não pode estar vazio" : "Senha não pode estar vazia"
+            return
+        }
         isLoading = true
-        vm.onEmailChange(email: email)
-        vm.onPasswordChange(password: password)
-        vm.onLoginClick()
-        observeLoginState(vm: vm)
-    }
-
-    private func observeLoginState(vm: LoginViewModel) {
-        Task { @MainActor in
-            while true {
-                try? await Task.sleep(nanoseconds: 200_000_000)
-                let state = vm.currentState()
-                if !state.isLoading {
-                    isLoading = false
-                    if state.isLoggedIn {
-                        onLoginSuccess()
-                    } else if let err = state.error {
-                        error = err
-                    }
-                    break
-                }
+        error = nil
+        Auth.auth().signIn(withEmail: email, password: password) { _, err in
+            isLoading = false
+            if let err = err {
+                error = err.localizedDescription
+            } else {
+                onLoginSuccess()
             }
         }
     }
+}
+
+private extension String {
+    var isBlank: Bool { trimmingCharacters(in: .whitespaces).isEmpty }
 }
