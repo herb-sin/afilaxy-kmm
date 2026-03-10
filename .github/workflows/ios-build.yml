@@ -130,21 +130,14 @@ jobs:
           done | head -1)
           echo "Profile UUID: $PROFILE_UUID"
 
-          # Cria xcconfig que aplica signing APENAS no target iosApp
-          cat > /tmp/signing.xcconfig << EOF
-          CODE_SIGN_STYLE = Manual
-          CODE_SIGN_IDENTITY = Apple Distribution
-          DEVELOPMENT_TEAM = ${{ secrets.APPLE_TEAM_ID }}
-          PROVISIONING_PROFILE_SPECIFIER = $PROFILE_UUID
-          EOF
-
           xcodebuild \
             -workspace iosApp/iosApp.xcworkspace \
             -scheme iosApp \
             -configuration Release \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-            -xcconfig /tmp/signing.xcconfig \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             archive
 
       # Exporta o IPA usando signingStyle=manual com o UUID escaneado dos perfis instalados.
