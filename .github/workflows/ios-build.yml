@@ -121,9 +121,22 @@ jobs:
       #   2. Baixe/crie o perfil se necessário, sem poluir os targets dos Pods
       - name: Archive iOS App
         run: |
-          PROFILE_UUID=$(security cms -D -i "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision 2>/dev/null | \
-            /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null | head -1)
-          echo "Profile UUID for archive: $PROFILE_UUID"
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_UUID=$(for f in "$PROFILES_DIR"/*.mobileprovision; do
+            plist=$(security cms -D -i "$f" 2>/dev/null) || continue
+            bid=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /dev/stdin 2>/dev/null || true)
+            [[ "$bid" != *"com.afilaxy.app" ]] && continue
+            echo "$plist" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null
+          done | head -1)
+          echo "Profile UUID: $PROFILE_UUID"
+
+          # Cria xcconfig que aplica signing APENAS no target iosApp
+          cat > /tmp/signing.xcconfig << EOF
+          CODE_SIGN_STYLE = Manual
+          CODE_SIGN_IDENTITY = Apple Distribution
+          DEVELOPMENT_TEAM = ${{ secrets.APPLE_TEAM_ID }}
+          PROVISIONING_PROFILE_SPECIFIER = $PROFILE_UUID
+          EOF
 
           xcodebuild \
             -workspace iosApp/iosApp.xcworkspace \
@@ -131,10 +144,7 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
+            -xcconfig /tmp/signing.xcconfig \
             archive
 
       # Exporta o IPA usando signingStyle=manual com o UUID escaneado dos perfis instalados.
