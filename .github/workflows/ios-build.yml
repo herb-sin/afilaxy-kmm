@@ -138,7 +138,13 @@ jobs:
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
-            archive
+            JAVA_HOME="$JAVA_HOME" \
+            archive 2>&1 | tee /tmp/xcodebuild.log; \
+          STATUS=${PIPESTATUS[0]}; \
+          if [ $STATUS -ne 0 ]; then \
+            echo "=== ERROS DE COMPILAÇÃO ===" && grep -E "^.*(error:|warning: .*error)" /tmp/xcodebuild.log | head -50; \
+            exit $STATUS; \
+          fi
 
       # Exporta o IPA usando signingStyle=manual com o UUID escaneado dos perfis instalados.
       # O archive com -allowProvisioningUpdates atualiza/baixa o perfil correto para disco.
