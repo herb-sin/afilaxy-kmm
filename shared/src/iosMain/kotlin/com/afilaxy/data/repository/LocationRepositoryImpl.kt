@@ -6,25 +6,29 @@ import com.afilaxy.domain.repository.LocationRepository
 
 /**
  * Implementação iOS do LocationRepository
- * TODO: Implementar CoreLocation quando necessário
+ * Lê de IOSLocationBridge — singleton Kotlin que o código Swift atualiza via CLLocationManager
  */
 actual class LocationRepositoryImpl : LocationRepository {
-    
+
     actual override suspend fun getCurrentLocation(): Location? {
-        // Stub implementation - retorna localização mock
-        // TODO: Implementar CoreLocation real
+        if (!IOSLocationBridge.hasPermission) return null
+
+        val lat = IOSLocationBridge.latitude
+        val lon = IOSLocationBridge.longitude
+
+        // 0,0 indica que ainda não temos localização real
+        if (lat == 0.0 && lon == 0.0) return null
+
         return Location(
-            latitude = -23.5505,
-            longitude = -46.6333,
-            address = "São Paulo, SP",
+            latitude = lat,
+            longitude = lon,
+            address = null,
             timestamp = getCurrentTimeMillis(),
             accuracy = 10.0f
         )
     }
-    
+
     actual override fun hasLocationPermission(): Boolean {
-        // Stub implementation - sempre retorna true
-        // TODO: Verificar permissões reais do CoreLocation
-        return true
+        return IOSLocationBridge.hasPermission
     }
 }
