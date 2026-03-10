@@ -17,7 +17,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
+    runs-on: macos-15  # Xcode 16.4 — fixado para builds consistentes
 
     steps:
       - name: Checkout
