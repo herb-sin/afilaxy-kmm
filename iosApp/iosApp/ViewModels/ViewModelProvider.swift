@@ -4,25 +4,20 @@ import shared
 class ViewModelProvider {
     static let shared = ViewModelProvider()
     
-    func getLoginViewModel() -> LoginViewModel {
-        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! LoginViewModel
+    private func get<T: AnyObject>() -> T {
+        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! T
     }
     
-    func getEmergencyViewModel() -> EmergencyViewModel {
-        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! EmergencyViewModel
-    }
+    func getLoginViewModel() -> LoginViewModel { get() }
+    func getAuthViewModel() -> AuthViewModel { get() }
+    func getEmergencyViewModel() -> EmergencyViewModel { get() }
+    func getProfileViewModel() -> ProfileViewModel { get() }
+    func getHistoryViewModel() -> HistoryViewModel { get() }
+    func getProfessionalListViewModel() -> ProfessionalListViewModel { get() }
     
     func getChatViewModel(emergencyId: String) -> ChatViewModel {
-        let chatRepository = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ChatRepository
-        let authRepository = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! AuthRepository
+        let chatRepository: ChatRepository = get()
+        let authRepository: AuthRepository = get()
         return ChatViewModel(emergencyId: emergencyId, chatRepository: chatRepository, authRepository: authRepository)
-    }
-    
-    func getAuthViewModel() -> AuthViewModel {
-        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! AuthViewModel
-    }
-    
-    func getProfileViewModel() -> ProfileViewModel {
-        return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfileViewModel
     }
 }

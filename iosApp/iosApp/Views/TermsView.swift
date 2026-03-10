@@ -4,9 +4,8 @@ struct TermsView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
                     Text("Termos de Uso")
                         .font(.title)
                         .fontWeight(.bold)
@@ -44,13 +43,6 @@ struct TermsView: View {
             }
             .navigationTitle("Termos de Uso")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Fechar") {
-                        dismiss()
-                    }
-                }
-            }
         }
     }
 }

@@ -4,9 +4,8 @@ struct AboutView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
+        ScrollView {
+            VStack(spacing: 24) {
                     Image(systemName: "heart.circle.fill")
                         .font(.system(size: 80))
                         .foregroundColor(.red)
@@ -58,13 +57,6 @@ struct AboutView: View {
             }
             .navigationTitle("Sobre")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Fechar") {
-                        dismiss()
-                    }
-                }
-            }
         }
     }
 }

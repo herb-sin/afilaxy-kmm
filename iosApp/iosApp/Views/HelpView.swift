@@ -4,9 +4,8 @@ struct HelpView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
                     Text("Como usar o Afilaxy")
                         .font(.title)
                         .fontWeight(.bold)
@@ -61,13 +60,6 @@ struct HelpView: View {
             }
             .navigationTitle("Ajuda")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Fechar") {
-                        dismiss()
-                    }
-                }
-            }
         }
     }
 }
