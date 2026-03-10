@@ -121,18 +121,20 @@ jobs:
       #   2. Baixe/crie o perfil se necessário, sem poluir os targets dos Pods
       - name: Archive iOS App
         run: |
+          PROFILE_UUID=$(security cms -D -i "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision 2>/dev/null | \
+            /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null | head -1)
+          echo "Profile UUID for archive: $PROFILE_UUID"
+
           xcodebuild \
             -workspace iosApp/iosApp.xcworkspace \
             -scheme iosApp \
             -configuration Release \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
-            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             archive
 
       # Exporta o IPA usando signingStyle=manual com o UUID escaneado dos perfis instalados.
