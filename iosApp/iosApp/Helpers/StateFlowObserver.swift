@@ -1,88 +1,92 @@
 import Foundation
 import shared
 
-// Observa StateFlow KMM coletando via coroutine scope do ViewModel.
-// Usa Kotlinx_coroutines_coreFlowKt.collect com callback no MainThread.
+// Observa StateFlow KMM via polling no MainThread.
+// Kotlinx_coroutines_coreFlowKt.collect não tem assinatura estável no Swift bridge
+// desta versão do KMM — polling é a abordagem mais segura e portável.
 
-private func observe<VM: KMMViewModel, S: AnyObject>(
-    vm: VM,
+private func makeWrapper<T: AnyObject>(
+    initial: T,
     stateFlow: Kotlinx_coroutines_coreStateFlow,
-    onChange: @escaping (S) -> Void
-) {
-    let scope = vm.viewModelScope.coroutineScope
-    Kotlinx_coroutines_coreFlowKt.collect(
-        flow: stateFlow,
-        collector: { value, completionHandler in
-            if let s = value as? S {
-                DispatchQueue.main.async { onChange(s) }
-            }
-            completionHandler(nil)
-        },
-        completionHandler: { _ in }
-    )
+    onChange: @escaping (T) -> Void
+) -> Timer {
+    return Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        guard let value = stateFlow.value as? T else { return }
+        onChange(value)
+    }
 }
 
 final class EmergencyViewModelWrapper: ObservableObject {
     let vm: EmergencyViewModel
     @Published private(set) var state: EmergencyState
+    private var timer: Timer?
 
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
         self.state = vm.state.value as! EmergencyState
-        observe(vm: vm, stateFlow: vm.state) { [weak self] (s: EmergencyState) in
-            self?.state = s
+        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+            if self?.state as AnyObject !== s { self?.state = s }
         }
     }
+    deinit { timer?.invalidate() }
 }
 
 final class AuthViewModelWrapper: ObservableObject {
     let vm: AuthViewModel
     @Published private(set) var state: AuthState
+    private var timer: Timer?
 
     init(_ vm: AuthViewModel) {
         self.vm = vm
         self.state = vm.state.value as! AuthState
-        observe(vm: vm, stateFlow: vm.state) { [weak self] (s: AuthState) in
-            self?.state = s
+        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+            if self?.state as AnyObject !== s { self?.state = s }
         }
     }
+    deinit { timer?.invalidate() }
 }
 
 final class HistoryViewModelWrapper: ObservableObject {
     let vm: HistoryViewModel
     @Published private(set) var state: HistoryState
+    private var timer: Timer?
 
     init(_ vm: HistoryViewModel) {
         self.vm = vm
         self.state = vm.state.value as! HistoryState
-        observe(vm: vm, stateFlow: vm.state) { [weak self] (s: HistoryState) in
-            self?.state = s
+        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+            if self?.state as AnyObject !== s { self?.state = s }
         }
     }
+    deinit { timer?.invalidate() }
 }
 
 final class ProfileViewModelWrapper: ObservableObject {
     let vm: ProfileViewModel
     @Published private(set) var state: ProfileState
+    private var timer: Timer?
 
     init(_ vm: ProfileViewModel) {
         self.vm = vm
         self.state = vm.state.value as! ProfileState
-        observe(vm: vm, stateFlow: vm.state) { [weak self] (s: ProfileState) in
-            self?.state = s
+        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+            if self?.state as AnyObject !== s { self?.state = s }
         }
     }
+    deinit { timer?.invalidate() }
 }
 
 final class ProfessionalListViewModelWrapper: ObservableObject {
     let vm: ProfessionalListViewModel
     @Published private(set) var state: ProfessionalListState
+    private var timer: Timer?
 
     init(_ vm: ProfessionalListViewModel) {
         self.vm = vm
         self.state = vm.state.value as! ProfessionalListState
-        observe(vm: vm, stateFlow: vm.state) { [weak self] (s: ProfessionalListState) in
-            self?.state = s
+        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+            if self?.state as AnyObject !== s { self?.state = s }
         }
     }
+    deinit { timer?.invalidate() }
 }

@@ -10,7 +10,12 @@ struct NotificationsView: View {
     var body: some View {
         Group {
             if notifications.isEmpty {
-                ContentUnavailableView("Nenhuma notificação", systemImage: "bell.slash")
+                VStack(spacing: 12) {
+                    Image(systemName: "bell.slash").font(.largeTitle)
+                    Text("Nenhuma notificação")
+                }
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(notifications, id: \.id) { item in
                     VStack(alignment: .leading, spacing: 4) {
