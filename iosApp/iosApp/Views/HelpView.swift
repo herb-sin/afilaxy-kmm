@@ -57,10 +57,9 @@ struct HelpView: View {
                     )
                 }
                 .padding()
-            }
-            .navigationTitle("Ajuda")
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationTitle("Ajuda")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

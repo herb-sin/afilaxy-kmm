@@ -3,19 +3,21 @@ import shared
 
 struct ProfessionalListView: View {
     @EnvironmentObject var container: AppContainer
-    @State private var vmState: ProfessionalListState? = nil
 
     var body: some View {
+        let state = container.professionals.state
         Group {
-            if vmState?.isLoading == true {
-                ProgressView()
-            } else if let error = vmState?.error {
-                ContentUnavailableView(error, systemImage: "exclamationmark.triangle")
-            } else if vmState?.professionals.isEmpty != false {
-                ContentUnavailableView("Nenhum profissional encontrado", systemImage: "person.slash")
+            if state.isLoading {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = state.error {
+                VStack { Image(systemName: "exclamationmark.triangle").font(.largeTitle); Text(error) }
+                    .foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if state.professionals.isEmpty {
+                VStack { Image(systemName: "person.slash").font(.largeTitle); Text("Nenhum profissional encontrado") }
+                    .foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(vmState?.professionals ?? [], id: \.id) { professional in
-                    ProfessionalRowView(professional: professional)
+                List(state.professionals, id: \.id) { p in
+                    ProfessionalRowView(professional: p)
                 }
             }
         }
@@ -24,18 +26,11 @@ struct ProfessionalListView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Button("Todos") { container.professionalListViewModel.filterBySpecialty(specialty: nil) }
-                    Button("Pneumologistas") { container.professionalListViewModel.filterBySpecialty(specialty: .pneumologist) }
-                    Button("Alergistas") { container.professionalListViewModel.filterBySpecialty(specialty: .allergist) }
-                    Button("Fisioterapeutas") { container.professionalListViewModel.filterBySpecialty(specialty: .physiotherapist) }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                }
-            }
-        }
-        .task {
-            for await state in container.professionalListViewModel.state {
-                vmState = state
+                    Button("Todos")           { container.professionals.vm.filterBySpecialty(specialty: nil) }
+                    Button("Pneumologistas")  { container.professionals.vm.filterBySpecialty(specialty: .pneumologist) }
+                    Button("Alergistas")      { container.professionals.vm.filterBySpecialty(specialty: .allergist) }
+                    Button("Fisioterapeutas") { container.professionals.vm.filterBySpecialty(specialty: .physiotherapist) }
+                } label: { Image(systemName: "line.3.horizontal.decrease.circle") }
             }
         }
     }
@@ -56,29 +51,19 @@ private struct ProfessionalRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(professional.name)
-                    .font(.headline)
+                Text(professional.name).font(.headline)
                 if professional.subscriptionPlan == .premium {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundColor(.blue)
-                        .font(.caption)
+                    Image(systemName: "checkmark.seal.fill").foregroundColor(.blue).font(.caption)
                 }
             }
-            Text(specialtyLabel)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            Text("CRM: \(professional.crm)")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Text(specialtyLabel).font(.subheadline).foregroundColor(.secondary)
+            Text("CRM: \(professional.crm)").font(.caption).foregroundColor(.secondary)
             if !professional.bio.isEmpty {
-                Text(professional.bio)
-                    .font(.caption)
-                    .lineLimit(2)
+                Text(professional.bio).font(.caption).lineLimit(2)
             }
             if let whatsapp = professional.whatsapp {
                 Link(destination: URL(string: "https://wa.me/55\(whatsapp)")!) {
-                    Label("Entrar em Contato", systemImage: "phone.fill")
-                        .font(.subheadline)
+                    Label("Entrar em Contato", systemImage: "phone.fill").font(.subheadline)
                 }
             }
         }

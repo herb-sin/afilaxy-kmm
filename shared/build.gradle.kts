@@ -25,7 +25,7 @@ kotlin {
         summary = "Shared code for Afilaxy"
         homepage = "https://github.com/herb-sin/afilaxy"
         version = "1.0"
-        ios.deploymentTarget = "15.0"
+        ios.deploymentTarget = "16.0"
         podfile = project.file("../iosApp/Podfile")
         framework {
             baseName = "shared"

@@ -2,17 +2,8 @@ import SwiftUI
 import shared
 
 enum AppRoute: Hashable {
-    case home
-    case emergency
-    case history
-    case profile
-    case professionals
-    case notifications
-    case settings
-    case about
-    case terms
-    case privacy
-    case help
+    case home, emergency, history, profile, professionals
+    case notifications, settings, about, terms, privacy, help
 }
 
 struct ContentView: View {

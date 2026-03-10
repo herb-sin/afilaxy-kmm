@@ -8,7 +8,6 @@ struct RegisterView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    @State private var vmState: AuthState? = nil
 
     private var passwordsMatch: Bool { password == confirmPassword }
     private var isFormValid: Bool {
@@ -16,49 +15,38 @@ struct RegisterView: View {
     }
 
     var body: some View {
+        let state = container.auth.state
         Form {
             Section {
                 TextField("Nome completo", text: $name)
                 TextField("Email", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never).keyboardType(.emailAddress)
                 SecureField("Senha (mín. 6 caracteres)", text: $password)
                 SecureField("Confirmar Senha", text: $confirmPassword)
             }
-
             if !passwordsMatch && !confirmPassword.isEmpty {
                 Section { Text("As senhas não coincidem").foregroundColor(.red).font(.caption) }
             }
-
-            if let error = vmState?.error {
+            if let error = state.error {
                 Section { Text(error).foregroundColor(.red).font(.caption) }
             }
-
             Section {
                 Button(action: register) {
-                    if vmState?.isLoading == true {
-                        ProgressView().frame(maxWidth: .infinity)
-                    } else {
-                        Text("Criar Conta").frame(maxWidth: .infinity)
-                    }
+                    if state.isLoading { ProgressView().frame(maxWidth: .infinity) }
+                    else { Text("Criar Conta").frame(maxWidth: .infinity) }
                 }
-                .disabled(!isFormValid || vmState?.isLoading == true)
+                .disabled(!isFormValid || state.isLoading)
             }
         }
         .navigationTitle("Criar Conta")
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: vmState?.isAuthenticated) { _, isAuth in
-            if isAuth == true { dismiss() }
-        }
-        .task {
-            for await state in container.authViewModel.state {
-                vmState = state
-            }
+        .onReceive(container.auth.$state) { s in
+            if s.isAuthenticated { dismiss() }
         }
     }
 
     private func register() {
-        container.authViewModel.onRegister(email: email, password: password, name: name)
+        container.auth.vm.onRegister(email: email, password: password, name: name)
     }
 }
 

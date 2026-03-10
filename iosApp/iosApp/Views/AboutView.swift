@@ -54,10 +54,9 @@ struct AboutView: View {
                         .foregroundColor(.gray)
                 }
                 .padding(.vertical, 32)
-            }
-            .navigationTitle("Sobre")
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationTitle("Sobre")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
