@@ -259,13 +259,19 @@ class EmergencyRepositoryImpl(
         return try {
             val latitude = location.latitude
             val longitude = location.longitude
-            val helpers = mutableListOf<Helper>()
-            
-            // Filtra ativos no servidor para reduzir leituras
+
+            // Pré-filtro por bounding box de latitude para reduzir leituras do Firestore
+            // 1 grau de latitude ≈ 111 km — calcula margem para o raio solicitado
+            val deltaLat = radiusKm / 111.0
+            val minLat = latitude - deltaLat
+            val maxLat = latitude + deltaLat
+
             val snapshot = firestore.collection("helpers")
-                .where { "isActive" equalTo true }
+                .where { ("isActive" equalTo true) and ("latitude" greaterThanOrEqualTo minLat) and ("latitude" lessThanOrEqualTo maxLat) }
                 .get()
-            
+
+            val helpers = mutableListOf<Helper>()
+
             for (doc in snapshot.documents) {
                 val geoPoint = doc.get<GeoPoint?>("location")
                 if (geoPoint != null) {
@@ -273,7 +279,7 @@ class EmergencyRepositoryImpl(
                         latitude, longitude,
                         geoPoint.latitude, geoPoint.longitude
                     )
-                    
+
                     if (distance <= radiusKm) {
                         helpers.add(
                             Helper(
@@ -290,7 +296,7 @@ class EmergencyRepositoryImpl(
                     }
                 }
             }
-            
+
             Result.success(helpers.sortedBy { it.distance })
         } catch (e: Exception) {
             Result.failure(e)

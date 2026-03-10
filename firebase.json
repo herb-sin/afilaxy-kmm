@@ -1,6 +1,12 @@
 {
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs18"
+  "functions": [
+    {
+      "source": "functions",
+      "runtime": "nodejs22",
+      "predeploy": ["cd \"$RESOURCE_DIR\" && npx tsc"]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }

@@ -32,34 +32,22 @@ service cloud.firestore {
       allow write: if isOwner(helperId);
     }
     
-    // Emergencies collection
-    match /emergencies/{emergencyId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.location != null
-        && request.resource.data.location.latitude is number
-        && request.resource.data.location.longitude is number
-        && request.resource.data.status in ['active', 'pending']
-        && request.resource.data.createdAt == request.time;
-      allow update: if isAuthenticated()
-        && (isOwner(resource.data.userId) || request.auth.uid == resource.data.helperId)
-        && request.resource.data.userId == resource.data.userId;
-      allow delete: if isOwner(resource.data.userId);
-    }
-    
-    // Chat messages
-    match /emergencies/{emergencyId}/messages/{messageId} {
+    // Emergency requests collection (coleção real usada pelo app)
+    match /emergency_requests/{emergencyId} {
       allow read: if isAuthenticated()
-        && (request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.userId
-            || request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.helperId);
+        && (request.auth.uid == resource.data.requesterId
+            || request.auth.uid == resource.data.helperId);
       allow create: if isAuthenticated()
-        && (request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.userId
-            || request.auth.uid == get(/databases/$(database)/documents/emergencies/$(emergencyId)).data.helperId)
-        && request.resource.data.senderId == request.auth.uid
-        && isValidString(request.resource.data.text, 1, 1000)
-        && request.resource.data.timestamp == request.time;
-      allow update, delete: if false;
+        && request.resource.data.requesterId == request.auth.uid
+        && request.resource.data.latitude is number
+        && request.resource.data.longitude is number
+        && request.resource.data.active == true;
+      allow update: if isAuthenticated()
+        && (request.auth.uid == resource.data.requesterId
+            || request.auth.uid == resource.data.helperId)
+        // Não permite alterar o dono da emergência
+        && request.resource.data.requesterId == resource.data.requesterId;
+      allow delete: if false; // Emergências não são deletadas, apenas marcadas como inativas
     }
     
     // Professionals collection
