@@ -27,21 +27,21 @@ struct RegisterView: View {
             if !passwordsMatch && !confirmPassword.isEmpty {
                 Section { Text("As senhas não coincidem").foregroundColor(.red).font(.caption) }
             }
-            if let error = state.error {
+            if let error = state?.error {
                 Section { Text(error).foregroundColor(.red).font(.caption) }
             }
             Section {
                 Button(action: register) {
-                    if state.isLoading { ProgressView().frame(maxWidth: .infinity) }
+                    if state?.isLoading == true { ProgressView().frame(maxWidth: .infinity) }
                     else { Text("Criar Conta").frame(maxWidth: .infinity) }
                 }
-                .disabled(!isFormValid || state.isLoading)
+                .disabled(!isFormValid || state?.isLoading == true)
             }
         }
         .navigationTitle("Criar Conta")
         .navigationBarTitleDisplayMode(.inline)
         .onReceive(container.auth.$state) { s in
-            if s.isAuthenticated { dismiss() }
+            if s?.isAuthenticated == true { dismiss() }
         }
     }
 

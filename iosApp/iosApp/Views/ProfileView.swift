@@ -18,9 +18,9 @@ struct ProfileView: View {
     var body: some View {
         let state = container.profile.state
         Form {
-            if state.isLoading { Section { ProgressView() } }
-            if let msg = state.successMessage { Section { Text(msg).foregroundColor(.green) } }
-            if let err = state.error { Section { Text(err).foregroundColor(.red) } }
+            if state == nil || state!.isLoading { Section { ProgressView() } }
+            if let msg = state?.successMessage { Section { Text(msg).foregroundColor(.green) } }
+            if let err = state?.error { Section { Text(err).foregroundColor(.red) } }
 
             Section("Informações Pessoais") {
                 TextField("Nome completo", text: $name)
@@ -40,16 +40,16 @@ struct ProfileView: View {
             }
             Section {
                 Button(action: saveProfile) {
-                    if state.isSaving { ProgressView().frame(maxWidth: .infinity) }
+                    if state?.isSaving == true { ProgressView().frame(maxWidth: .infinity) }
                     else { Text("Salvar Alterações").frame(maxWidth: .infinity) }
                 }
-                .disabled(state.isSaving)
+                .disabled(state?.isSaving == true)
             }
         }
         .navigationTitle("Meu Perfil")
         .navigationBarTitleDisplayMode(.inline)
         .onReceive(container.profile.$state) { s in
-            guard !fieldsLoaded, let p = s.profile else { return }
+            guard !fieldsLoaded, let p = s?.profile else { return }
             fieldsLoaded = true
             name = p.name; phone = p.phone
             bloodType = p.healthData?.bloodType ?? ""
@@ -64,7 +64,7 @@ struct ProfileView: View {
     }
 
     private func saveProfile() {
-        guard let profile = container.profile.state.profile else { return }
+        guard let profile = container.profile.state?.profile else { return }
         let updated = profile.doCopy(
             uid: profile.uid, name: name, email: profile.email, phone: phone,
             photoUrl: profile.photoUrl,

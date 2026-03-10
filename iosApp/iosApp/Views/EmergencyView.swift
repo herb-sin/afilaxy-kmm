@@ -5,7 +5,14 @@ struct EmergencyView: View {
     @EnvironmentObject var container: AppContainer
 
     var body: some View {
-        let state = container.emergency.state
+        guard let state = container.emergency.state else {
+            return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
+        }
+        return AnyView(emergencyBody(state: state))
+    }
+
+    @ViewBuilder
+    private func emergencyBody(state: EmergencyState) -> some View {
         List {
             if state.hasActiveEmergency {
                 Section {

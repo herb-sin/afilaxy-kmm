@@ -5,7 +5,14 @@ struct HistoryView: View {
     @EnvironmentObject var container: AppContainer
 
     var body: some View {
-        let state = container.history.state
+        guard let state = container.history.state else {
+            return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
+        }
+        return AnyView(historyBody(state: state))
+    }
+
+    @ViewBuilder
+    private func historyBody(state: HistoryState) -> some View {
         Group {
             if state.isLoading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)

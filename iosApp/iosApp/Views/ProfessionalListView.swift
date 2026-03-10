@@ -5,7 +5,14 @@ struct ProfessionalListView: View {
     @EnvironmentObject var container: AppContainer
 
     var body: some View {
-        let state = container.professionals.state
+        guard let state = container.professionals.state else {
+            return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
+        }
+        return AnyView(listBody(state: state))
+    }
+
+    @ViewBuilder
+    private func listBody(state: ProfessionalListState) -> some View {
         Group {
             if state.isLoading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
