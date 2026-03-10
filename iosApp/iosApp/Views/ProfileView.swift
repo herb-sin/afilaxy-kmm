@@ -48,8 +48,8 @@ struct ProfileView: View {
         }
         .navigationTitle("Meu Perfil")
         .navigationBarTitleDisplayMode(.inline)
-        .onReceive(container.profile.$state) { s in
-            guard !fieldsLoaded, let p = s.profile else { return }
+        .onReceive(container.profile.objectWillChange) { _ in
+            guard !fieldsLoaded, let p = container.profile.state.profile else { return }
             fieldsLoaded = true
             name = p.name; phone = p.phone
             bloodType = p.healthData?.bloodType ?? ""
