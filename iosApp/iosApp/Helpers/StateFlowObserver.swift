@@ -5,17 +5,6 @@ import shared
 // Kotlinx_coroutines_coreFlowKt.collect não tem assinatura estável no Swift bridge
 // desta versão do KMM — polling é a abordagem mais segura e portável.
 
-private func makeWrapper<T: AnyObject>(
-    initial: T,
-    stateFlow: Kotlinx_coroutines_coreStateFlow,
-    onChange: @escaping (T) -> Void
-) -> Timer {
-    return Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-        guard let value = stateFlow.value as? T else { return }
-        onChange(value)
-    }
-}
-
 final class EmergencyViewModelWrapper: ObservableObject {
     let vm: EmergencyViewModel
     @Published private(set) var state: EmergencyState
@@ -23,8 +12,9 @@ final class EmergencyViewModelWrapper: ObservableObject {
 
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
-        self.state = (vm.state.value as? EmergencyState) ?? EmergencyState()
-        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+        self.state = vm.state.value as! EmergencyState
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let s = vm.state.value as? EmergencyState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
         }
     }
@@ -38,8 +28,9 @@ final class AuthViewModelWrapper: ObservableObject {
 
     init(_ vm: AuthViewModel) {
         self.vm = vm
-        self.state = (vm.state.value as? AuthState) ?? AuthState()
-        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+        self.state = vm.state.value as! AuthState
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let s = vm.state.value as? AuthState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
         }
     }
@@ -53,8 +44,9 @@ final class HistoryViewModelWrapper: ObservableObject {
 
     init(_ vm: HistoryViewModel) {
         self.vm = vm
-        self.state = (vm.state.value as? HistoryState) ?? HistoryState()
-        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+        self.state = vm.state.value as! HistoryState
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let s = vm.state.value as? HistoryState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
         }
     }
@@ -68,8 +60,9 @@ final class ProfileViewModelWrapper: ObservableObject {
 
     init(_ vm: ProfileViewModel) {
         self.vm = vm
-        self.state = (vm.state.value as? ProfileState) ?? ProfileState()
-        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+        self.state = vm.state.value as! ProfileState
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let s = vm.state.value as? ProfileState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
         }
     }
@@ -83,8 +76,9 @@ final class ProfessionalListViewModelWrapper: ObservableObject {
 
     init(_ vm: ProfessionalListViewModel) {
         self.vm = vm
-        self.state = (vm.state.value as? ProfessionalListState) ?? ProfessionalListState()
-        timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
+        self.state = vm.state.value as! ProfessionalListState
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let s = vm.state.value as? ProfessionalListState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
         }
     }
