@@ -31,10 +31,11 @@ struct EmergencyView: View {
                 }
             }
 
-            let helpers = state.nearbyHelpers
+            let helpers: [Helper] = Array(state.nearbyHelpers)
             if !helpers.isEmpty {
                 Section("Helpers Próximos") {
-                    ForEach(helpers, id: \.uid) { helper in
+                    ForEach(helpers.indices, id: \.self) { i in
+                        let helper = helpers[i]
                         HStack {
                             Image(systemName: "person.fill").foregroundColor(.accentColor)
                             VStack(alignment: .leading) {

@@ -60,8 +60,8 @@ struct LoginView: View {
                 NavigationStack { RegisterView() }
             }
         }
-        .onReceive(container.auth.objectWillChange) { _ in
-            if container.auth.state.isAuthenticated { onLoginSuccess() }
+        .onReceive(container.auth.$state) { s in
+            if s.isAuthenticated { onLoginSuccess() }
         }
     }
 
