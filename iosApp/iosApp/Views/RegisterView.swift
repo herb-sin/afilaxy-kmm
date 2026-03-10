@@ -40,8 +40,8 @@ struct RegisterView: View {
         }
         .navigationTitle("Criar Conta")
         .navigationBarTitleDisplayMode(.inline)
-        .onReceive(container.auth.$state) { s in
-            if s.isAuthenticated { dismiss() }
+        .onReceive(container.auth.objectWillChange) { _ in
+            if container.auth.state.isAuthenticated { dismiss() }
         }
     }
 
