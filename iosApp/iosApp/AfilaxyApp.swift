@@ -3,12 +3,12 @@ import shared
 import FirebaseCore
 
 class AppContainer: ObservableObject {
+    lazy var auth = AuthViewModelWrapper(ViewModelProvider.shared.getAuthViewModel())
+    lazy var emergency = EmergencyViewModelWrapper(ViewModelProvider.shared.getEmergencyViewModel())
+    lazy var history = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
+    lazy var profile = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
+    lazy var professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
     lazy var loginViewModel: LoginViewModel = ViewModelProvider.shared.getLoginViewModel()
-    lazy var authViewModel: AuthViewModel = ViewModelProvider.shared.getAuthViewModel()
-    lazy var emergencyViewModel: EmergencyViewModel = ViewModelProvider.shared.getEmergencyViewModel()
-    lazy var profileViewModel: ProfileViewModel = ViewModelProvider.shared.getProfileViewModel()
-    lazy var historyViewModel: HistoryViewModel = ViewModelProvider.shared.getHistoryViewModel()
-    lazy var professionalListViewModel: ProfessionalListViewModel = ViewModelProvider.shared.getProfessionalListViewModel()
 }
 
 @main

@@ -40,10 +40,9 @@ struct TermsView: View {
                     )
                 }
                 .padding()
-            }
-            .navigationTitle("Termos de Uso")
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationTitle("Termos de Uso")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

@@ -35,7 +35,7 @@ struct SettingsView: View {
         .alert("Sair", isPresented: $showLogoutAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Sair", role: .destructive) {
-                container.authViewModel.onLogout()
+                container.auth.vm.onLogout()
             }
         } message: {
             Text("Deseja realmente sair?")

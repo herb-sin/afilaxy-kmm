@@ -55,10 +55,9 @@ struct PrivacyView: View {
                         .padding(.top)
                 }
                 .padding()
-            }
-            .navigationTitle("Privacidade")
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationTitle("Privacidade")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

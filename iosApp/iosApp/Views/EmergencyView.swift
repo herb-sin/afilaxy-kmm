@@ -3,74 +3,55 @@ import shared
 
 struct EmergencyView: View {
     @EnvironmentObject var container: AppContainer
-    @State private var vmState: EmergencyState? = nil
 
     var body: some View {
+        let state = container.emergency.state
         List {
-            if vmState?.hasActiveEmergency == true {
+            if state.hasActiveEmergency {
                 Section {
-                    HStack {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
-                        Text("Emergência Ativa")
-                            .font(.headline)
-                    }
-                    if vmState?.currentEmergency?.assignedHelperId == nil {
-                        HStack {
-                            ProgressView()
-                            Text("Aguardando helper...")
-                                .foregroundColor(.secondary)
-                        }
+                    Label("Emergência Ativa", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                    if state.currentEmergency?.assignedHelperId == nil {
+                        HStack { ProgressView(); Text("Aguardando helper...").foregroundColor(.secondary) }
                     }
                     Button("Cancelar Emergência", role: .destructive) {
-                        container.emergencyViewModel.onCancelEmergency()
+                        container.emergency.vm.onCancelEmergency()
                     }
                 }
             } else {
                 Section {
                     Button {
-                        container.emergencyViewModel.onCreateEmergency()
+                        container.emergency.vm.onCreateEmergency()
                     } label: {
                         Label("🆘 Solicitar Ajuda", systemImage: "exclamationmark.triangle.fill")
-                            .frame(maxWidth: .infinity)
-                            .foregroundColor(.white)
-                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity).foregroundColor(.white).padding(.vertical, 8)
                     }
-                    .disabled(vmState?.isCreatingEmergency == true || vmState?.isLoading == true)
+                    .disabled(state.isCreatingEmergency || state.isLoading)
                     .listRowBackground(Color.red)
                 }
             }
 
-            let helpers = vmState?.nearbyHelpers ?? []
+            let helpers = state.nearbyHelpers
             if !helpers.isEmpty {
                 Section("Helpers Próximos") {
                     ForEach(helpers, id: \.uid) { helper in
                         HStack {
-                            Image(systemName: "person.fill")
-                                .foregroundColor(.accentColor)
+                            Image(systemName: "person.fill").foregroundColor(.accentColor)
                             VStack(alignment: .leading) {
                                 Text(helper.name).font(.headline)
                                 Text(String(format: "%.1f km", Double(helper.distance) / 1000.0))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .font(.caption).foregroundColor(.secondary)
                             }
                         }
                     }
                 }
             }
 
-            if let error = vmState?.error {
-                Section {
-                    Text(error).foregroundColor(.red).font(.caption)
-                }
+            if let error = state.error {
+                Section { Text(error).foregroundColor(.red).font(.caption) }
             }
         }
         .navigationTitle("Emergência")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            for await state in container.emergencyViewModel.state {
-                vmState = state
-            }
-        }
     }
 }

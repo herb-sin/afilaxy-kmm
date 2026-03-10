@@ -3,18 +3,20 @@ import shared
 
 struct HistoryView: View {
     @EnvironmentObject var container: AppContainer
-    @State private var vmState: HistoryState? = nil
 
     var body: some View {
+        let state = container.history.state
         Group {
-            if vmState?.isLoading == true {
-                ProgressView()
-            } else if let error = vmState?.error {
-                ContentUnavailableView(error, systemImage: "exclamationmark.triangle")
-            } else if vmState?.filteredHistory.isEmpty != false {
-                ContentUnavailableView("Nenhuma emergência", systemImage: "clock")
+            if state.isLoading {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = state.error {
+                VStack { Image(systemName: "exclamationmark.triangle").font(.largeTitle); Text(error) }
+                    .foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if state.filteredHistory.isEmpty {
+                VStack { Image(systemName: "clock").font(.largeTitle); Text("Nenhuma emergência") }
+                    .foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(vmState?.filteredHistory ?? [], id: \.id) { item in
+                List(state.filteredHistory, id: \.id) { item in
                     HistoryRowView(item: item)
                 }
             }
@@ -24,19 +26,12 @@ struct HistoryView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Button("Todas") { container.historyViewModel.applyFilter(filter: .all) }
-                    Button("Resolvidas") { container.historyViewModel.applyFilter(filter: .resolved) }
-                    Button("Canceladas") { container.historyViewModel.applyFilter(filter: .cancelled) }
-                    Button("Como Solicitante") { container.historyViewModel.applyFilter(filter: .asRequester) }
-                    Button("Como Helper") { container.historyViewModel.applyFilter(filter: .asHelper) }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                }
-            }
-        }
-        .task {
-            for await state in container.historyViewModel.state {
-                vmState = state
+                    Button("Todas")           { container.history.vm.applyFilter(filter: .all) }
+                    Button("Resolvidas")      { container.history.vm.applyFilter(filter: .resolved) }
+                    Button("Canceladas")      { container.history.vm.applyFilter(filter: .cancelled) }
+                    Button("Como Solicitante"){ container.history.vm.applyFilter(filter: .asRequester) }
+                    Button("Como Helper")     { container.history.vm.applyFilter(filter: .asHelper) }
+                } label: { Image(systemName: "line.3.horizontal.decrease.circle") }
             }
         }
     }
@@ -45,7 +40,7 @@ struct HistoryView: View {
 private struct HistoryRowView: View {
     let item: EmergencyHistory
 
-    var statusLabel: (String, Color) {
+    var statusInfo: (String, Color) {
         switch item.status {
         case "resolved":  return ("✅ Resolvida", .green)
         case "cancelled": return ("❌ Cancelada", .red)
@@ -56,15 +51,10 @@ private struct HistoryRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(statusLabel.0)
-                .font(.headline)
-                .foregroundColor(statusLabel.1)
-            Text("Solicitante: \(item.requesterName)")
-                .font(.subheadline)
+            Text(statusInfo.0).font(.headline).foregroundColor(statusInfo.1)
+            Text("Solicitante: \(item.requesterName)").font(.subheadline)
             if let helper = item.helperName {
-                Text("Helper: \(helper)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                Text("Helper: \(helper)").font(.subheadline).foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 4)
