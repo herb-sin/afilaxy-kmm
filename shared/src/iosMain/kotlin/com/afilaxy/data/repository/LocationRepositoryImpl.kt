@@ -22,7 +22,7 @@ actual class LocationRepositoryImpl : LocationRepository {
         return Location(
             latitude = lat,
             longitude = lon,
-            address = null,
+            address = "",
             timestamp = getCurrentTimeMillis(),
             accuracy = 10.0f
         )
