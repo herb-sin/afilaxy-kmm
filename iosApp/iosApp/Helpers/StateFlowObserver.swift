@@ -23,7 +23,7 @@ final class EmergencyViewModelWrapper: ObservableObject {
 
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! EmergencyState
+        self.state = (vm.state.value as? EmergencyState) ?? EmergencyState()
         timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
             if self?.state as AnyObject !== s { self?.state = s }
         }
@@ -38,7 +38,7 @@ final class AuthViewModelWrapper: ObservableObject {
 
     init(_ vm: AuthViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! AuthState
+        self.state = (vm.state.value as? AuthState) ?? AuthState()
         timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
             if self?.state as AnyObject !== s { self?.state = s }
         }
@@ -53,7 +53,7 @@ final class HistoryViewModelWrapper: ObservableObject {
 
     init(_ vm: HistoryViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! HistoryState
+        self.state = (vm.state.value as? HistoryState) ?? HistoryState()
         timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
             if self?.state as AnyObject !== s { self?.state = s }
         }
@@ -68,7 +68,7 @@ final class ProfileViewModelWrapper: ObservableObject {
 
     init(_ vm: ProfileViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! ProfileState
+        self.state = (vm.state.value as? ProfileState) ?? ProfileState()
         timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
             if self?.state as AnyObject !== s { self?.state = s }
         }
@@ -83,7 +83,7 @@ final class ProfessionalListViewModelWrapper: ObservableObject {
 
     init(_ vm: ProfessionalListViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! ProfessionalListState
+        self.state = (vm.state.value as? ProfessionalListState) ?? ProfessionalListState()
         timer = makeWrapper(initial: state, stateFlow: vm.state) { [weak self] s in
             if self?.state as AnyObject !== s { self?.state = s }
         }
