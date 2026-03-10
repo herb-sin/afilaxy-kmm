@@ -4,9 +4,8 @@ struct PrivacyView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
                     Text("Política de Privacidade")
                         .font(.title)
                         .fontWeight(.bold)
@@ -59,13 +58,6 @@ struct PrivacyView: View {
             }
             .navigationTitle("Privacidade")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Fechar") {
-                        dismiss()
-                    }
-                }
-            }
         }
     }
 }

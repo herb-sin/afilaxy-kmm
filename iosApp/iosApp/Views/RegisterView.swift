@@ -1,79 +1,67 @@
 import SwiftUI
+import shared
 
 struct RegisterView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var container: AppContainer
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    @State private var isLoading = false
-    @State private var error: String?
-    
+    @State private var vmState: AuthState? = nil
+
+    private var passwordsMatch: Bool { password == confirmPassword }
+    private var isFormValid: Bool {
+        !name.isBlank && !email.isBlank && password.count >= 6 && passwordsMatch
+    }
+
     var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
-                TextField("Nome", text: $name)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                
+        Form {
+            Section {
+                TextField("Nome completo", text: $name)
                 TextField("Email", text: $email)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
-                
-                SecureField("Senha", text: $password)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                
+                SecureField("Senha (mín. 6 caracteres)", text: $password)
                 SecureField("Confirmar Senha", text: $confirmPassword)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                
-                if let error = error {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
-                
+            }
+
+            if !passwordsMatch && !confirmPassword.isEmpty {
+                Section { Text("As senhas não coincidem").foregroundColor(.red).font(.caption) }
+            }
+
+            if let error = vmState?.error {
+                Section { Text(error).foregroundColor(.red).font(.caption) }
+            }
+
+            Section {
                 Button(action: register) {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    if vmState?.isLoading == true {
+                        ProgressView().frame(maxWidth: .infinity)
                     } else {
-                        Text("Cadastrar")
-                            .fontWeight(.semibold)
+                        Text("Criar Conta").frame(maxWidth: .infinity)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.red)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-                .disabled(isLoading)
-                
-                Spacer()
+                .disabled(!isFormValid || vmState?.isLoading == true)
             }
-            .padding(32)
-            .navigationTitle("Criar Conta")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancelar") {
-                        dismiss()
-                    }
-                }
+        }
+        .navigationTitle("Criar Conta")
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: vmState?.isAuthenticated) { _, isAuth in
+            if isAuth == true { dismiss() }
+        }
+        .task {
+            for await state in container.authViewModel.state {
+                vmState = state
             }
         }
     }
-    
+
     private func register() {
-        guard password == confirmPassword else {
-            error = "Senhas não conferem"
-            return
-        }
-        
-        isLoading = true
-        // TODO: Implementar registro
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            isLoading = false
-            dismiss()
-        }
+        container.authViewModel.onRegister(email: email, password: password, name: name)
     }
+}
+
+private extension String {
+    var isBlank: Bool { trimmingCharacters(in: .whitespaces).isEmpty }
 }

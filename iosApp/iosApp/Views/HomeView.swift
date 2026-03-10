@@ -2,106 +2,91 @@ import SwiftUI
 import shared
 
 struct HomeView: View {
+    @Binding var path: NavigationPath
     let onLogout: () -> Void
-    
-    @State private var showEmergency = false
-    @State private var showSettings = false
-    @State private var isHelperMode = false
-    
+
+    @EnvironmentObject var container: AppContainer
+    @State private var vmState: EmergencyState? = nil
+    @State private var showLogoutAlert = false
+
     var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                // Emergency Button
-                Button(action: {
-                    showEmergency = true
-                }) {
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 64))
-                        Text("EMERGÊNCIA")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                    }
-                    .frame(width: 200, height: 200)
-                    .foregroundColor(.white)
-                    .background(Color.red)
-                    .cornerRadius(100)
+        let isHelperMode = vmState?.isHelperMode ?? false
+
+        List {
+            Section {
+                Toggle(isOn: Binding(
+                    get: { isHelperMode },
+                    set: { container.emergencyViewModel.onToggleHelperMode(enable: $0) }
+                )) {
+                    Label("Modo Ajudante", systemImage: "heart.fill")
                 }
-                
-                // Helper Mode Toggle
-                Toggle(isOn: $isHelperMode) {
-                    HStack {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(.red)
-                        Text("Modo Helper")
-                            .fontWeight(.semibold)
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
-                .padding(.horizontal, 32)
-                
-                // Menu Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    MenuCard(icon: "clock.fill", title: "Histórico") {
-                        // TODO: Navigate to history
-                    }
-                    
-                    MenuCard(icon: "bell.fill", title: "Notificações") {
-                        // TODO: Navigate to notifications
-                    }
-                    
-                    MenuCard(icon: "gearshape.fill", title: "Configurações") {
-                        showSettings = true
-                    }
-                    
-                    MenuCard(icon: "info.circle", title: "Sobre") {
-                        // TODO: Navigate to about
-                    }
-                }
-                .padding(.horizontal, 32)
-                
-                Spacer()
+                Text(isHelperMode ? "Você está disponível para ajudar" : "Ative para receber pedidos")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            .padding(.top, 32)
-            .navigationTitle("Afilaxy")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: onLogout) {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                    }
+
+            Section {
+                Button {
+                    path.append(AppRoute.emergency)
+                } label: {
+                    Label("🆘 EMERGÊNCIA", systemImage: "exclamationmark.triangle.fill")
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(.white)
+                        .padding(.vertical, 8)
+                }
+                .listRowBackground(Color.red)
+            }
+
+            Section {
+                NavigationLink(value: AppRoute.history) {
+                    Label("Histórico", systemImage: "clock.fill")
+                }
+                NavigationLink(value: AppRoute.professionals) {
+                    Label("Profissionais", systemImage: "stethoscope")
+                }
+                NavigationLink(value: AppRoute.notifications) {
+                    Label("Notificações", systemImage: "bell.fill")
+                }
+                NavigationLink(value: AppRoute.profile) {
+                    Label("Meu Perfil", systemImage: "person.fill")
+                }
+                NavigationLink(value: AppRoute.settings) {
+                    Label("Configurações", systemImage: "gearshape.fill")
                 }
             }
-            .sheet(isPresented: $showEmergency) {
-                EmergencyView()
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
+
+            if let error = vmState?.error {
+                Section {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                }
             }
         }
-    }
-}
-
-struct MenuCard: View {
-    let icon: String
-    let title: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 32))
-                Text(title)
-                    .font(.subheadline)
+        .navigationTitle("Afilaxy")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showLogoutAlert = true
+                } label: {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 100)
-            .background(Color(.systemGray6))
-            .foregroundColor(.primary)
-            .cornerRadius(10)
+        }
+        .alert("Sair", isPresented: $showLogoutAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Sair", role: .destructive) {
+                container.authViewModel.onLogout()
+                onLogout()
+            }
+        } message: {
+            Text("Deseja realmente sair?")
+        }
+        .task {
+            for await state in container.emergencyViewModel.state {
+                vmState = state
+            }
         }
     }
 }
