@@ -1,18 +1,14 @@
 import Foundation
 import shared
 
-// Observa StateFlow KMM via polling no MainThread.
-// Kotlinx_coroutines_coreFlowKt.collect não tem assinatura estável no Swift bridge
-// desta versão do KMM — polling é a abordagem mais segura e portável.
-
 final class EmergencyViewModelWrapper: ObservableObject {
     let vm: EmergencyViewModel
-    @Published private(set) var state: EmergencyState
+    @Published private(set) var state: EmergencyState?
     private var timer: Timer?
 
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! EmergencyState
+        self.state = vm.state.value as? EmergencyState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? EmergencyState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
@@ -23,12 +19,12 @@ final class EmergencyViewModelWrapper: ObservableObject {
 
 final class AuthViewModelWrapper: ObservableObject {
     let vm: AuthViewModel
-    @Published private(set) var state: AuthState
+    @Published private(set) var state: AuthState?
     private var timer: Timer?
 
     init(_ vm: AuthViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! AuthState
+        self.state = vm.state.value as? AuthState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? AuthState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
@@ -39,12 +35,12 @@ final class AuthViewModelWrapper: ObservableObject {
 
 final class HistoryViewModelWrapper: ObservableObject {
     let vm: HistoryViewModel
-    @Published private(set) var state: HistoryState
+    @Published private(set) var state: HistoryState?
     private var timer: Timer?
 
     init(_ vm: HistoryViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! HistoryState
+        self.state = vm.state.value as? HistoryState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? HistoryState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
@@ -55,12 +51,12 @@ final class HistoryViewModelWrapper: ObservableObject {
 
 final class ProfileViewModelWrapper: ObservableObject {
     let vm: ProfileViewModel
-    @Published private(set) var state: ProfileState
+    @Published private(set) var state: ProfileState?
     private var timer: Timer?
 
     init(_ vm: ProfileViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! ProfileState
+        self.state = vm.state.value as? ProfileState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? ProfileState else { return }
             if self?.state as AnyObject !== s { self?.state = s }
@@ -71,12 +67,12 @@ final class ProfileViewModelWrapper: ObservableObject {
 
 final class ProfessionalListViewModelWrapper: ObservableObject {
     let vm: ProfessionalListViewModel
-    @Published private(set) var state: ProfessionalListState
+    @Published private(set) var state: ProfessionalListState?
     private var timer: Timer?
 
     init(_ vm: ProfessionalListViewModel) {
         self.vm = vm
-        self.state = vm.state.value as! ProfessionalListState
+        self.state = vm.state.value as? ProfessionalListState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? ProfessionalListState else { return }
             if self?.state as AnyObject !== s { self?.state = s }

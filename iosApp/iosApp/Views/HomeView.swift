@@ -8,7 +8,14 @@ struct HomeView: View {
     @State private var showLogoutAlert = false
 
     var body: some View {
-        let state = container.emergency.state
+        guard let state = container.emergency.state else {
+            return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
+        }
+        return AnyView(homeBody(state: state))
+    }
+
+    @ViewBuilder
+    private func homeBody(state: EmergencyState) -> some View {
         List {
             Section {
                 Toggle(isOn: Binding(

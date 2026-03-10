@@ -30,12 +30,12 @@ struct LoginView: View {
                     SecureField("Senha", text: $password)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
 
-                    if let error = state.error {
+                    if let error = state?.error {
                         Text(error).foregroundColor(.red).font(.caption)
                     }
 
                     Button(action: login) {
-                        if state.isLoading {
+                        if state?.isLoading == true {
                             ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white))
                         } else {
                             Text("Entrar").fontWeight(.semibold)
@@ -46,7 +46,7 @@ struct LoginView: View {
                     .background(Color.red)
                     .foregroundColor(.white)
                     .cornerRadius(10)
-                    .disabled(state.isLoading || email.isBlank || password.isBlank)
+                    .disabled(state?.isLoading == true || email.isBlank || password.isBlank)
 
                     Button { showRegister = true } label: {
                         Text("Criar Conta").foregroundColor(.red)
@@ -61,7 +61,7 @@ struct LoginView: View {
             }
         }
         .onReceive(container.auth.$state) { s in
-            if s.isAuthenticated { onLoginSuccess() }
+            if s?.isAuthenticated == true { onLoginSuccess() }
         }
     }
 
