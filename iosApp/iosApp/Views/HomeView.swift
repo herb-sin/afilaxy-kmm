@@ -22,12 +22,15 @@ struct HomeView: View {
                     get: { state.isHelperMode },
                     set: { newValue in
                         if newValue {
-                            // Solicitar permissão "sempre" antes de ativar
                             LocationManagerBridge.shared.enableHelperMode()
+                            // Aguardar 500ms para permissão ser processada
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                container.emergency.vm.onToggleHelperMode(enable: newValue)
+                            }
                         } else {
                             LocationManagerBridge.shared.disableHelperMode()
+                            container.emergency.vm.onToggleHelperMode(enable: newValue)
                         }
-                        container.emergency.vm.onToggleHelperMode(enable: newValue)
                     }
                 )) {
                     Label("Modo Ajudante", systemImage: "heart.fill")
