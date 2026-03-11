@@ -31,16 +31,20 @@ class ProfileRepositoryImpl(
                 email = doc.get("email") ?: "",
                 phone = doc.get("phone") ?: "",
                 photoUrl = doc.get("photoUrl"),
-                healthData = healthDataMap?.let {
+                healthData = healthDataMap?.let { healthMap ->
+                    @Suppress("UNCHECKED_CAST")
+                    val allergiesList = (healthMap["allergies"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                    @Suppress("UNCHECKED_CAST")
+                    val medicationsList = (healthMap["medications"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                    @Suppress("UNCHECKED_CAST")
+                    val conditionsList = (healthMap["conditions"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                    
                     UserHealthData(
-                        bloodType = it["bloodType"] as? String ?: "",
-                        @Suppress("UNCHECKED_CAST")
-                        allergies = (it["allergies"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                        @Suppress("UNCHECKED_CAST")
-                        medications = (it["medications"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                        @Suppress("UNCHECKED_CAST")
-                        conditions = (it["conditions"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                        notes = it["notes"] as? String ?: ""
+                        bloodType = healthMap["bloodType"] as? String ?: "",
+                        allergies = allergiesList,
+                        medications = medicationsList,
+                        conditions = conditionsList,
+                        notes = healthMap["notes"] as? String ?: ""
                     )
                 },
                 emergencyContact = emergencyContactMap?.let {
