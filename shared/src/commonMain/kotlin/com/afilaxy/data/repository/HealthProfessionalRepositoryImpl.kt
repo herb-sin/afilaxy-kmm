@@ -17,12 +17,23 @@ class HealthProfessionalRepositoryImpl(
     private val collection = firestore.collection("health_professionals")
     
     override suspend fun getAll(): List<HealthProfessional> {
-        return collection
-            .where { "subscriptionExpiry" greaterThan getCurrentTimeMillis() }
-            .get()
-            .documents
-            .mapNotNull { it.data<HealthProfessional>() }
-            .sortedByDescending { calculatePriority(it) }
+        return try {
+            collection
+                .get()
+                .documents
+                .mapNotNull { doc ->
+                    try {
+                        doc.data<HealthProfessional>()
+                    } catch (e: Exception) {
+                        println("❌ HealthProfessional deserialization failed: ${e.message}")
+                        null
+                    }
+                }
+                .sortedByDescending { calculatePriority(it) }
+        } catch (e: Exception) {
+            println("❌ getAll professionals failed: ${e.message}")
+            emptyList()
+        }
     }
     
     override suspend fun getById(id: String): HealthProfessional? {
