@@ -1,5 +1,6 @@
 import CoreLocation
 import Combine
+import shared
 
 /// Gerencia permissões e atualizações de localização via CLLocationManager
 final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
