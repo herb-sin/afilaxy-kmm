@@ -65,5 +65,9 @@ struct HomeView: View {
                 onLogout()
             }
         } message: { Text("Deseja realmente sair?") }
+        .onReceive(container.auth.$state) { s in
+            // Detecta logout disparado por views nested (ex: SettingsView)
+            if s?.isAuthenticated == false { onLogout() }
+        }
     }
 }

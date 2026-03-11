@@ -18,8 +18,12 @@ class ProfileRepositoryImpl(
                 return Result.success(null)
             }
             
-            val healthDataMap = doc.get<Map<String, Any>?>("healthData")
-            val emergencyContactMap = doc.get<Map<String, Any>?>("emergencyContact")
+            // Usa doc.data (raw map) para evitar serializer de Any que falha no iOS/Kotlin Native
+            val rawData: Map<String, Any?> = doc.data() ?: emptyMap()
+            @Suppress("UNCHECKED_CAST")
+            val healthDataMap = rawData["healthData"] as? Map<String, Any?>
+            @Suppress("UNCHECKED_CAST")
+            val emergencyContactMap = rawData["emergencyContact"] as? Map<String, Any?>
             
             val profile = UserProfile(
                 uid = userId,
@@ -30,9 +34,12 @@ class ProfileRepositoryImpl(
                 healthData = healthDataMap?.let {
                     UserHealthData(
                         bloodType = it["bloodType"] as? String ?: "",
-                        allergies = (it["allergies"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                        medications = (it["medications"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                        conditions = (it["conditions"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+                        @Suppress("UNCHECKED_CAST")
+                        allergies = (it["allergies"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                        @Suppress("UNCHECKED_CAST")
+                        medications = (it["medications"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                        @Suppress("UNCHECKED_CAST")
+                        conditions = (it["conditions"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                         notes = it["notes"] as? String ?: ""
                     )
                 },

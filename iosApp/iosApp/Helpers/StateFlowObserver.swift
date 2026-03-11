@@ -11,7 +11,7 @@ final class EmergencyViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? EmergencyState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? EmergencyState else { return }
-            if self?.state as AnyObject !== s { self?.state = s }
+            DispatchQueue.main.async { self?.state = s }
         }
     }
     deinit { timer?.invalidate() }
@@ -27,7 +27,7 @@ final class AuthViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? AuthState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? AuthState else { return }
-            if self?.state as AnyObject !== s { self?.state = s }
+            DispatchQueue.main.async { self?.state = s }
         }
     }
     deinit { timer?.invalidate() }
@@ -43,7 +43,7 @@ final class HistoryViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? HistoryState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? HistoryState else { return }
-            if self?.state as AnyObject !== s { self?.state = s }
+            DispatchQueue.main.async { self?.state = s }
         }
     }
     deinit { timer?.invalidate() }
@@ -59,7 +59,7 @@ final class ProfileViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? ProfileState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? ProfileState else { return }
-            if self?.state as AnyObject !== s { self?.state = s }
+            DispatchQueue.main.async { self?.state = s }
         }
     }
     deinit { timer?.invalidate() }
@@ -75,7 +75,7 @@ final class ProfessionalListViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? ProfessionalListState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let s = vm.state.value as? ProfessionalListState else { return }
-            if self?.state as AnyObject !== s { self?.state = s }
+            DispatchQueue.main.async { self?.state = s }
         }
     }
     deinit { timer?.invalidate() }
