@@ -20,7 +20,15 @@ struct HomeView: View {
             Section {
                 Toggle(isOn: Binding(
                     get: { state.isHelperMode },
-                    set: { container.emergency.vm.onToggleHelperMode(enable: $0) }
+                    set: { newValue in
+                        if newValue {
+                            // Solicitar permissão "sempre" antes de ativar
+                            LocationManagerBridge.shared.enableHelperMode()
+                        } else {
+                            LocationManagerBridge.shared.disableHelperMode()
+                        }
+                        container.emergency.vm.onToggleHelperMode(enable: newValue)
+                    }
                 )) {
                     Label("Modo Ajudante", systemImage: "heart.fill")
                 }

@@ -1,64 +1,51 @@
 import Foundation
-import CoreLocation
 import shared
 
-/// Ponte unidirecional: Swift → Kotlin
-/// Swift lê a localização do CLLocationManager e escreve em IOSLocationBridge (Kotlin object)
-/// para que o LocationRepositoryImpl (iosMain) possa ler sem dependência circular.
-final class LocationManagerBridge: NSObject, CLLocationManagerDelegate {
-
+/// Bridge que conecta LocationManager (Swift) com IOSLocationBridge (Kotlin)
+final class LocationManagerBridge {
     static let shared = LocationManagerBridge()
-    private let manager = CLLocationManager()
-
-    private override init() {
-        super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.distanceFilter = 50
-        updatePermissionBridge()
-    }
-
+    
+    private let locationManager = LocationManager.shared
+    
+    private init() {}
+    
+    /// Inicia monitoramento de localização e sincroniza com Kotlin
     func start() {
-        switch manager.authorizationStatus {
-        case .authorizedAlways, .authorizedWhenInUse:
-            manager.startUpdatingLocation()
-        default:
-            manager.requestWhenInUseAuthorization()
+        // Solicitar permissão inicial
+        locationManager.requestWhenInUse()
+        
+        // Inicializar bridge com estado atual
+        updateBridge()
+        
+        // Observar mudanças de localização
+        locationManager.startUpdating()
+    }
+    
+    /// Atualiza o bridge Kotlin com estado atual
+    private func updateBridge() {
+        IOSLocationBridge.shared.hasPermission = locationManager.hasPermission
+        
+        if let location = locationManager.currentLocation {
+            IOSLocationBridge.shared.latitude = location.coordinate.latitude
+            IOSLocationBridge.shared.longitude = location.coordinate.longitude
         }
     }
-
-    func requestBackground() {
-        manager.requestAlwaysAuthorization()
-        if manager.authorizationStatus == .authorizedAlways {
-            manager.allowsBackgroundLocationUpdates = true
-            manager.startUpdatingLocation()
+    
+    /// Ativa modo helper (solicita permissão "sempre" se necessário)
+    func enableHelperMode() {
+        // Se já tem permissão "sempre", apenas iniciar background updates
+        if locationManager.hasPermission {
+            locationManager.startBackgroundUpdating()
+            return
         }
+        
+        // Caso contrário, solicitar permissão "sempre"
+        locationManager.requestAlwaysAuthorization()
+        // startBackgroundUpdating será chamado automaticamente em didChangeAuthorization
     }
-
-    // MARK: - CLLocationManagerDelegate
-
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let loc = locations.last else { return }
-        IOSLocationBridge.shared.latitude = loc.coordinate.latitude
-        IOSLocationBridge.shared.longitude = loc.coordinate.longitude
-        IOSLocationBridge.shared.hasPermission = true
-    }
-
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("LocationManagerBridge error: \(error.localizedDescription)")
-    }
-
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        updatePermissionBridge()
-        if manager.authorizationStatus == .authorizedWhenInUse ||
-           manager.authorizationStatus == .authorizedAlways {
-            manager.startUpdatingLocation()
-        }
-    }
-
-    private func updatePermissionBridge() {
-        let granted = manager.authorizationStatus == .authorizedAlways ||
-                      manager.authorizationStatus == .authorizedWhenInUse
-        IOSLocationBridge.shared.hasPermission = granted
+    
+    /// Desativa modo helper
+    func disableHelperMode() {
+        locationManager.stopUpdating()
     }
 }

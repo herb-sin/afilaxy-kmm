@@ -99,6 +99,10 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         currentLocation = location
+        
+        // Atualizar bridge para Kotlin
+        IOSLocationBridge.shared.latitude = location.coordinate.latitude
+        IOSLocationBridge.shared.longitude = location.coordinate.longitude
 
         if let cont = locationContinuation {
             locationContinuation = nil
@@ -116,7 +120,16 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
+        
+        // Atualizar bridge para Kotlin
+        IOSLocationBridge.shared.hasPermission = hasPermission
+        
         if hasPermission {
+            // Se tem permissão "sempre", ativar background updates
+            if manager.authorizationStatus == .authorizedAlways {
+                manager.allowsBackgroundLocationUpdates = true
+                manager.pausesLocationUpdatesAutomatically = false
+            }
             manager.startUpdatingLocation()
         }
     }
