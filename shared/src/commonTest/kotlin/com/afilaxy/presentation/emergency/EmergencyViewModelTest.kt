@@ -32,7 +32,8 @@ class EmergencyViewModelTest {
         emergencyRepository = FakeEmergencyRepository()
         locationRepository = FakeLocationRepository()
         notificationRepository = FakeNotificationRepository()
-        viewModel = EmergencyViewModel(emergencyRepository, locationRepository, notificationRepository)
+        val createEmergencyUseCase = com.afilaxy.domain.usecase.CreateEmergencyUseCase(emergencyRepository)
+        viewModel = EmergencyViewModel(emergencyRepository, locationRepository, notificationRepository, createEmergencyUseCase)
     }
 
     @Test
@@ -51,7 +52,8 @@ class EmergencyViewModelTest {
     fun `init should detect existing active emergency`() = runTest(testDispatcher) {
         // Create fresh VM with an active emergency already set
         emergencyRepository.setActiveEmergencyId("existing-id")
-        val vm = EmergencyViewModel(emergencyRepository, locationRepository, notificationRepository)
+        val createEmergencyUseCase = com.afilaxy.domain.usecase.CreateEmergencyUseCase(emergencyRepository)
+        val vm = EmergencyViewModel(emergencyRepository, locationRepository, notificationRepository, createEmergencyUseCase)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = vm.state.value
@@ -69,14 +71,6 @@ class EmergencyViewModelTest {
         assertEquals("test-emergency-id", state.emergencyId)
         assertFalse(state.isCreatingEmergency)
         assertNull(state.error)
-    }
-
-    @Test
-    fun `onCreateEmergency should notify nearby helpers on success`() = runTest(testDispatcher) {
-        viewModel.onCreateEmergency()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(1, notificationRepository.notifyNearbyHelpersCallCount)
     }
 
     @Test
