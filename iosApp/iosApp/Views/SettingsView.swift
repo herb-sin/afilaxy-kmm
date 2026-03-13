@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showShareSheet = false
     @State private var logFileURLs: [URL] = []
     @State private var showClearLogsAlert = false
+    @State private var showNoLogsAlert = false
 
     var body: some View {
         List {
@@ -73,6 +74,11 @@ struct SettingsView: View {
         } message: {
             Text("Todos os logs serão removidos permanentemente.")
         }
+        .alert("Sem Logs", isPresented: $showNoLogsAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Nenhum arquivo de log encontrado. Use o app para gerar logs.")
+        }
         .sheet(isPresented: $showShareSheet) {
             if !logFileURLs.isEmpty {
                 ShareSheet(items: logFileURLs)
@@ -82,8 +88,12 @@ struct SettingsView: View {
     
     private func exportLogs() {
         logFileURLs = FileLogger.shared.getAllLogFileURLs()
+        NSLog("[SettingsView] Found \(logFileURLs.count) log files")
+        
         if !logFileURLs.isEmpty {
             showShareSheet = true
+        } else {
+            showNoLogsAlert = true
         }
     }
     

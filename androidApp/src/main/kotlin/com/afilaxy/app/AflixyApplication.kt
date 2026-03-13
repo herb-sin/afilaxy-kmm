@@ -6,6 +6,7 @@ import com.afilaxy.app.performance.AnrOptimizer
 import com.afilaxy.app.performance.LogOptimizer
 import com.afilaxy.di.platformModule
 import com.afilaxy.di.sharedModule
+import com.afilaxy.util.FileLogger
 import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,6 +23,8 @@ class AflixyApplication : Application() {
     
     override fun onCreate() {
         super.onCreate()
+        
+        FileLogger.initialize(this)
         
         analyticsManager = AnalyticsManager(this)
         

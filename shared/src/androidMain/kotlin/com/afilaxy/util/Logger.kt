@@ -12,22 +12,31 @@ actual object Logger {
     )
     
     actual fun d(tag: String, message: String) {
-        Log.d(tag, sanitize(message))
+        val sanitized = sanitize(message)
+        Log.d(tag, sanitized)
+        FileLogger.log("DEBUG", tag, sanitized)
     }
     
     actual fun i(tag: String, message: String) {
-        Log.i(tag, sanitize(message))
+        val sanitized = sanitize(message)
+        Log.i(tag, sanitized)
+        FileLogger.log("INFO", tag, sanitized)
     }
     
     actual fun w(tag: String, message: String) {
-        Log.w(tag, sanitize(message))
+        val sanitized = sanitize(message)
+        Log.w(tag, sanitized)
+        FileLogger.log("WARN", tag, sanitized)
     }
     
     actual fun e(tag: String, message: String, throwable: Throwable?) {
+        val sanitized = sanitize(message)
         if (throwable != null) {
-            Log.e(tag, sanitize(message), throwable)
+            Log.e(tag, sanitized, throwable)
+            FileLogger.log("ERROR", tag, "$sanitized\n${throwable.stackTraceToString()}")
         } else {
-            Log.e(tag, sanitize(message))
+            Log.e(tag, sanitized)
+            FileLogger.log("ERROR", tag, sanitized)
         }
     }
     

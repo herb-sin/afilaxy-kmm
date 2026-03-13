@@ -14,17 +14,19 @@ actual object Logger {
     actual fun d(tag: String, message: String) {
         val sanitized = sanitize(message)
         NSLog("[DEBUG] [$tag] $sanitized")
-        // FileLogger Swift será chamado via NSLog interceptor
+        IOSFileLogger.log("DEBUG", tag, sanitized)
     }
     
     actual fun i(tag: String, message: String) {
         val sanitized = sanitize(message)
         NSLog("[INFO] [$tag] $sanitized")
+        IOSFileLogger.log("INFO", tag, sanitized)
     }
     
     actual fun w(tag: String, message: String) {
         val sanitized = sanitize(message)
         NSLog("[WARN] [$tag] $sanitized")
+        IOSFileLogger.log("WARN", tag, sanitized)
     }
     
     actual fun e(tag: String, message: String, throwable: Throwable?) {
@@ -35,6 +37,7 @@ actual object Logger {
         }
         val sanitized = sanitize(fullMessage)
         NSLog("[ERROR] [$tag] $sanitized")
+        IOSFileLogger.log("ERROR", tag, sanitized)
     }
     
     actual fun sanitize(message: String): String {
