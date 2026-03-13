@@ -1,5 +1,6 @@
 package com.afilaxy.app.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -10,12 +11,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import com.afilaxy.app.navigation.AppRoutes
 import com.afilaxy.domain.repository.AuthRepository
+import com.afilaxy.util.FileLogger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,6 +98,11 @@ fun SettingsScreen(
             
             HorizontalDivider()
             
+            // Seção Desenvolvedor
+            DeveloperSection()
+            
+            HorizontalDivider()
+            
             SettingsItem(
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 title = "Sair",
@@ -143,5 +155,90 @@ fun SettingsItem(
         Icon(icon, contentDescription = null)
         Spacer(modifier = Modifier.width(16.dp))
         Text(title, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+fun DeveloperSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var logSize by remember { mutableStateOf("Calculando...") }
+    var showClearDialog by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val size = FileLogger.getTotalSize()
+            logSize = "${size / 1024} KB"
+        }
+    }
+    
+    Column {
+        Text(
+            text = "Desenvolvedor",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(16.dp)
+        )
+        
+        SettingsItem(
+            icon = Icons.Default.Share,
+            title = "Exportar Logs ($logSize)",
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    val logs = FileLogger.getAllLogs()
+                    if (logs.isNotEmpty()) {
+                        val uris = logs.map { file ->
+                            FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                file
+                            )
+                        }
+                        
+                        withContext(Dispatchers.Main) {
+                            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                type = "text/plain"
+                                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Exportar Logs"))
+                        }
+                    }
+                }
+            }
+        )
+        
+        HorizontalDivider()
+        
+        SettingsItem(
+            icon = Icons.Default.Delete,
+            title = "Limpar Logs",
+            onClick = { showClearDialog = true }
+        )
+    }
+    
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            title = { Text("Limpar Logs") },
+            text = { Text("Deseja realmente limpar todos os logs?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            FileLogger.clearLogs()
+                            logSize = "0 KB"
+                        }
+                        showClearDialog = false
+                    }
+                ) {
+                    Text("Sim")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) {
+                    Text("Não")
+                }
+            }
+        )
     }
 }
