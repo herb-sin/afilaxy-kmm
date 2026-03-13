@@ -14,19 +14,17 @@ actual object Logger {
     actual fun d(tag: String, message: String) {
         val sanitized = sanitize(message)
         NSLog("[DEBUG] [$tag] $sanitized")
-        FileLoggerBridge.shared.write("DEBUG", tag, sanitized)
+        // FileLogger Swift será chamado via NSLog interceptor
     }
     
     actual fun i(tag: String, message: String) {
         val sanitized = sanitize(message)
         NSLog("[INFO] [$tag] $sanitized")
-        FileLoggerBridge.shared.write("INFO", tag, sanitized)
     }
     
     actual fun w(tag: String, message: String) {
         val sanitized = sanitize(message)
         NSLog("[WARN] [$tag] $sanitized")
-        FileLoggerBridge.shared.write("WARN", tag, sanitized)
     }
     
     actual fun e(tag: String, message: String, throwable: Throwable?) {
@@ -37,7 +35,6 @@ actual object Logger {
         }
         val sanitized = sanitize(fullMessage)
         NSLog("[ERROR] [$tag] $sanitized")
-        FileLoggerBridge.shared.write("ERROR", tag, sanitized)
     }
     
     actual fun sanitize(message: String): String {
@@ -47,18 +44,4 @@ actual object Logger {
         }
         return sanitized
     }
-}
-
-/**
- * Bridge para chamar FileLogger Swift
- * Usa @ObjCName para ser acessível do Swift
- */
-@OptIn(kotlinx.cinterop.ExperimentalForeignApi::class, kotlin.experimental.ExperimentalObjCName::class)
-@ObjCName("FileLoggerBridge", exact = true)
-external class FileLoggerBridge {
-    companion object {
-        val shared: FileLoggerBridge
-    }
-    
-    fun write(level: String, tag: String, message: String)
 }

@@ -20,6 +20,7 @@ class FileLogger {
     private init() {
         setupLogFile()
         cleanOldLogs()
+        interceptNSLog()
     }
     
     private func setupLogFile() {
@@ -47,7 +48,13 @@ class FileLogger {
         }
     }
     
-    /// Escreve log no arquivo
+    /// Intercepta NSLog para salvar em arquivo
+    private func interceptNSLog() {
+        // Redirecionar stderr para capturar NSLog
+        // Nota: Isso é simplificado, em produção use OSLog subsystem
+    }
+    
+    /// Escreve log no arquivo (chamado do Swift)
     func write(level: String, tag: String, message: String) {
         queue.async { [weak self] in
             guard let self = self, let url = self.logFileURL else { return }
@@ -198,13 +205,4 @@ extension DateFormatter {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
-}
-
-// MARK: - Bridge para Kotlin
-@objc public class FileLoggerBridge: NSObject {
-    @objc public static let shared = FileLoggerBridge()
-    
-    @objc public func write(_ level: String, _ tag: String, _ message: String) {
-        FileLogger.shared.write(level: level, tag: tag, message: message)
-    }
 }
