@@ -103,6 +103,8 @@ class EmergencyRepositoryImpl(
                 "id" to userId,
                 "email" to userEmail,
                 "location" to GeoPoint(latitude, longitude),
+                "latitude" to latitude,
+                "longitude" to longitude,
                 "isActive" to true,
                 "lastUpdate" to getCurrentTimeMillis()
             )
