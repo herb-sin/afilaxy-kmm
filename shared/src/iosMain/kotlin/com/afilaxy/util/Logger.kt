@@ -1,5 +1,7 @@
 package com.afilaxy.util
 
+import platform.Foundation.NSLog
+
 actual object Logger {
     private val sensitivePatterns = listOf(
         Regex("password[\"']?\\s*[:=]\\s*[\"']?([^\"',\\s}]+)", RegexOption.IGNORE_CASE),
@@ -10,15 +12,21 @@ actual object Logger {
     )
     
     actual fun d(tag: String, message: String) {
-        IOSLogBridge.log("DEBUG", tag, sanitize(message))
+        val sanitized = sanitize(message)
+        NSLog("[DEBUG] [$tag] $sanitized")
+        FileLoggerBridge.shared.write("DEBUG", tag, sanitized)
     }
     
     actual fun i(tag: String, message: String) {
-        IOSLogBridge.log("INFO", tag, sanitize(message))
+        val sanitized = sanitize(message)
+        NSLog("[INFO] [$tag] $sanitized")
+        FileLoggerBridge.shared.write("INFO", tag, sanitized)
     }
     
     actual fun w(tag: String, message: String) {
-        IOSLogBridge.log("WARN", tag, sanitize(message))
+        val sanitized = sanitize(message)
+        NSLog("[WARN] [$tag] $sanitized")
+        FileLoggerBridge.shared.write("WARN", tag, sanitized)
     }
     
     actual fun e(tag: String, message: String, throwable: Throwable?) {
@@ -27,7 +35,9 @@ actual object Logger {
         } else {
             message
         }
-        IOSLogBridge.log("ERROR", tag, sanitize(fullMessage))
+        val sanitized = sanitize(fullMessage)
+        NSLog("[ERROR] [$tag] $sanitized")
+        FileLoggerBridge.shared.write("ERROR", tag, sanitized)
     }
     
     actual fun sanitize(message: String): String {
@@ -40,8 +50,15 @@ actual object Logger {
 }
 
 /**
- * Bridge para chamar código Swift de logging
+ * Bridge para chamar FileLogger Swift
+ * Usa @ObjCName para ser acessível do Swift
  */
-expect object IOSLogBridge {
-    fun log(level: String, tag: String, message: String)
+@OptIn(kotlinx.cinterop.ExperimentalForeignApi::class, kotlin.experimental.ExperimentalObjCName::class)
+@ObjCName("FileLoggerBridge", exact = true)
+external class FileLoggerBridge {
+    companion object {
+        val shared: FileLoggerBridge
+    }
+    
+    fun write(level: String, tag: String, message: String)
 }
