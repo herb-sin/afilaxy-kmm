@@ -50,8 +50,27 @@ class FileLogger {
     
     /// Intercepta NSLog para salvar em arquivo
     private func interceptNSLog() {
-        // Redirecionar stderr para capturar NSLog
-        // Nota: Isso é simplificado, em produção use OSLog subsystem
+        let pipe = Pipe()
+        dup2(pipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
+        
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty, let logString = String(data: data, encoding: .utf8) else { return }
+            
+            if logString.contains("[AFILAXY_LOG]") {
+                let components = logString.components(separatedBy: "[AFILAXY_LOG] ")
+                if components.count > 1 {
+                    let logContent = components[1]
+                    let parts = logContent.components(separatedBy: "] [")
+                    if parts.count >= 3 {
+                        let level = parts[0].replacingOccurrences(of: "[", with: "")
+                        let tag = parts[1]
+                        let message = parts[2].replacingOccurrences(of: "]\n", with: "")
+                        self?.write(level: level, tag: tag, message: message)
+                    }
+                }
+            }
+        }
     }
     
     /// Escreve log no arquivo (chamado do Swift)
@@ -76,9 +95,6 @@ class FileLogger {
                 fileHandle.write(data)
                 try? fileHandle.close()
             }
-            
-            // Também logar no OSLog para debug no Xcode
-            os_log("%{public}@", type: self.osLogType(for: level), logLine)
         }
     }
     
