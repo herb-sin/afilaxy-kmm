@@ -25,7 +25,7 @@ android {
         // toLongOrNull() + range check garante valor válido sem overflow (CWE-190).
         val rawVersionCodeStr = System.getenv("VERSION_CODE")
             ?: properties.getProperty("VERSION_CODE")
-            ?: error("VERSION_CODE não definido em local.properties nem como variável de ambiente")
+            ?: "1" // fallback para builds locais
         val rawVersionCodeLong = rawVersionCodeStr.trim().toLongOrNull()
             ?: error("VERSION_CODE não é um número válido: '$rawVersionCodeStr'")
         require(rawVersionCodeLong in 1L..2_100_000_000L) {
