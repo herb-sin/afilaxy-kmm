@@ -1,14 +1,44 @@
 import SwiftUI
+import CoreLocation
 import shared
 
 struct EmergencyView: View {
     @EnvironmentObject var container: AppContainer
+    @StateObject private var locationManager = LocationManager.shared
 
     var body: some View {
         guard let state = container.emergency.state else {
             return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
         }
         return AnyView(emergencyBody(state: state))
+    }
+
+    private func requestLocationAndCreateEmergency() {
+        if locationManager.hasPermission {
+            LocationManagerBridge.shared.start()
+            // Aguarda até 3s pela localização antes de chamar o ViewModel
+            Task {
+                _ = await locationManager.fetchCurrentLocation()
+                await MainActor.run {
+                    container.emergency.vm.onCreateEmergency()
+                }
+            }
+        } else {
+            locationManager.requestWhenInUse()
+            // Observa mudança de permissão e tenta novamente
+            Task {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await MainActor.run {
+                    if locationManager.hasPermission {
+                        LocationManagerBridge.shared.start()
+                        container.emergency.vm.onCreateEmergency()
+                    } else {
+                        // Permissão negada — o ViewModel vai retornar "Erro ao obter localização"
+                        container.emergency.vm.onCreateEmergency()
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -28,7 +58,7 @@ struct EmergencyView: View {
             } else {
                 Section {
                     Button {
-                        container.emergency.vm.onCreateEmergency()
+                        requestLocationAndCreateEmergency()
                     } label: {
                         Label("🆘 Solicitar Ajuda", systemImage: "exclamationmark.triangle.fill")
                             .frame(maxWidth: .infinity).foregroundColor(.white).padding(.vertical, 8)

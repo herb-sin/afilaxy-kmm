@@ -11,13 +11,9 @@ final class LocationManagerBridge {
     
     /// Inicia monitoramento de localização e sincroniza com Kotlin
     func start() {
-        // Solicitar permissão inicial
+        FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "start() hasPermission=\(locationManager.hasPermission) authStatus=\(locationManager.authorizationStatus.rawValue)")
         locationManager.requestWhenInUse()
-        
-        // Inicializar bridge com estado atual
         updateBridge()
-        
-        // Observar mudanças de localização
         locationManager.startUpdating()
     }
     
@@ -28,24 +24,25 @@ final class LocationManagerBridge {
         if let location = locationManager.currentLocation {
             IOSLocationBridge.shared.latitude = location.coordinate.latitude
             IOSLocationBridge.shared.longitude = location.coordinate.longitude
+            FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "updateBridge lat=\(location.coordinate.latitude) lon=\(location.coordinate.longitude)")
+        } else {
+            FileLogger.shared.write(level: "WARN", tag: "LocationBridge", message: "updateBridge: no location yet, hasPermission=\(locationManager.hasPermission)")
         }
     }
     
     /// Ativa modo helper (solicita permissão "sempre" se necessário)
     func enableHelperMode() {
-        // Se já tem permissão "sempre", apenas iniciar background updates
+        FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "enableHelperMode hasPermission=\(locationManager.hasPermission)")
         if locationManager.hasPermission {
             locationManager.startBackgroundUpdating()
             return
         }
-        
-        // Caso contrário, solicitar permissão "sempre"
         locationManager.requestAlwaysAuthorization()
-        // startBackgroundUpdating será chamado automaticamente em didChangeAuthorization
     }
     
     /// Desativa modo helper
     func disableHelperMode() {
+        FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "disableHelperMode")
         locationManager.stopUpdating()
     }
 }

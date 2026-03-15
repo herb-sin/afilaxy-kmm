@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 import shared
 
 struct HomeView: View {
@@ -23,13 +24,16 @@ struct HomeView: View {
                     set: { newValue in
                         if newValue {
                             LocationManagerBridge.shared.enableHelperMode()
-                            // Aguardar 500ms para permissão ser processada
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                container.emergency.vm.onToggleHelperMode(enable: newValue)
+                            Task {
+                                // Aguarda localização real antes de ativar
+                                _ = await LocationManager.shared.fetchCurrentLocation()
+                                await MainActor.run {
+                                    container.emergency.vm.onToggleHelperMode(enable: true)
+                                }
                             }
                         } else {
                             LocationManagerBridge.shared.disableHelperMode()
-                            container.emergency.vm.onToggleHelperMode(enable: newValue)
+                            container.emergency.vm.onToggleHelperMode(enable: false)
                         }
                     }
                 )) {
