@@ -96,17 +96,21 @@ jobs:
 
       # Injeta método de export e Team ID real no ExportOptions.plist
       # Mapeamento para nomes atuais do Xcode 16+
+      # SECURITY: inputs do workflow_dispatch são mapeados para env vars antes de
+      # serem usados no shell, evitando script injection via ${{ }} interpolation.
       - name: Configure ExportOptions.plist
+        env:
+          INPUT_METHOD: ${{ github.event.inputs.export_method || 'app-store' }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          INPUT_METHOD="${{ github.event.inputs.export_method || 'app-store' }}"
           case "$INPUT_METHOD" in
             ad-hoc)      METHOD="release-testing" ;;
             app-store)   METHOD="app-store-connect" ;;
             development) METHOD="development" ;;
-            *)           METHOD="$INPUT_METHOD" ;;
+            *)           echo "Invalid export_method: $INPUT_METHOD"; exit 1 ;;
           esac
           /usr/libexec/PlistBuddy -c "Set :method $METHOD" iosApp/ExportOptions.plist
-          /usr/libexec/PlistBuddy -c "Set :teamID ${{ secrets.APPLE_TEAM_ID }}" iosApp/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Set :teamID $APPLE_TEAM_ID" iosApp/ExportOptions.plist
 
       # Escreve a API key do App Store Connect em arquivo para autenticação do xcodebuild
       - name: Write Apple API Key file

@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import com.afilaxy.app.MainActivity
 import com.afilaxy.app.ui.theme.AflixyTheme
 import com.afilaxy.domain.repository.EmergencyRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
@@ -33,17 +34,23 @@ class EmergencyOverlayActivity : ComponentActivity() {
     
     private val cancelReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val cancelledEmergencyId = intent?.getStringExtra("emergency_id")
+            if (intent?.action != "com.afilaxy.CANCEL_EMERGENCY") return
+            val cancelledEmergencyId = intent.getStringExtra("emergency_id")
+                ?.takeIf { it.isNotBlank() } ?: return
             val currentEmergencyId = getIntent().getStringExtra("emergency_id")
-            
-            if (cancelledEmergencyId == currentEmergencyId) {
-                finish()
-            }
+                ?.takeIf { it.isNotBlank() } ?: return
+            if (cancelledEmergencyId == currentEmergencyId) finish()
         }
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // CWE-306: reject overlay if user is not authenticated
+        if (FirebaseAuth.getInstance().currentUser == null) {
+            finish()
+            return
+        }
         
         // Show on lockscreen and turn on screen
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
@@ -64,12 +71,15 @@ class EmergencyOverlayActivity : ComponentActivity() {
             )
         }
         
-        val emergencyId = intent.getStringExtra("emergency_id") ?: ""
-        val requesterName = intent.getStringExtra("requesterName") ?: "Alguém"
-        val distance = intent.getStringExtra("distance") ?: "0"
+        val emergencyId = intent.getStringExtra("emergency_id")
+            ?.takeIf { it.isNotBlank() } ?: run { finish(); return }
+        val requesterName = intent.getStringExtra("requesterName")?.trim()
+            ?.takeIf { it.isNotBlank() } ?: "Alguém"
+        val distance = intent.getStringExtra("distance")?.trim()
+            ?.takeIf { it.matches(Regex("\\d+(\\.\\d+)?")) } ?: "0"
         
         val filter = IntentFilter("com.afilaxy.CANCEL_EMERGENCY")
-        registerReceiver(cancelReceiver, filter, RECEIVER_NOT_EXPORTED)
+        registerReceiver(cancelReceiver, filter, "com.afilaxy.permission.CANCEL_EMERGENCY", null)
         
         setContent {
             AflixyTheme {

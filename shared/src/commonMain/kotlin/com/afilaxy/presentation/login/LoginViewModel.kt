@@ -57,10 +57,14 @@ class LoginViewModel(
                     }
                 }
                 .onFailure { exception ->
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             isLoading = false,
-                            error = exception.message ?: "Erro ao fazer login"
+                            // Sanitiza mensagem — exception.message pode conter dados externos (CWE-117)
+                            error = exception.message
+                                ?.replace(Regex("[\\r\\n\\t\\x00-\\x1F]"), " ")
+                                ?.take(200)
+                                ?: "Erro ao fazer login"
                         )
                     }
                 }

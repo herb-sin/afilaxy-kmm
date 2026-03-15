@@ -12,6 +12,12 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.location.network" android:required="false" />
 
+    <!-- Signature-level permission: only this app can send CANCEL_EMERGENCY broadcasts -->
+    <permission
+        android:name="com.afilaxy.permission.CANCEL_EMERGENCY"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.afilaxy.permission.CANCEL_EMERGENCY" />
+
     <application
         android:name=".AflixyApplication"
         android:allowBackup="false"

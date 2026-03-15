@@ -1,6 +1,7 @@
 package com.afilaxy.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -9,10 +10,26 @@ import androidx.navigation.navArgument
 import com.afilaxy.app.ui.screens.*
 import com.afilaxy.domain.model.Evento
 import com.afilaxy.domain.model.Produto
+import com.google.firebase.auth.FirebaseAuth
+
+private val protectedRoutes = setOf(
+    AppRoutes.HOME, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
+    AppRoutes.SETTINGS, AppRoutes.COMMUNITY, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
+    AppRoutes.MAP, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
+    AppRoutes.TERMS, AppRoutes.PRIVACY, "emergency_request", "emergency_response", AppRoutes.CHAT
+)
 
 @Composable
 fun NavGraph(startDestination: String? = null) {
     val navController = rememberNavController()
+    val isAuthenticated = FirebaseAuth.getInstance().currentUser != null
+
+    // Redirect unauthenticated deep-links to login
+    LaunchedEffect(startDestination) {
+        if (startDestination != null && !isAuthenticated) {
+            navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
+        }
+    }
 
     // Dados da comunidade — centralizados aqui para reuso nas rotas de detalhe
     val produtos = listOf(

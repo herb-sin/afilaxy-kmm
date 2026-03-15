@@ -18,15 +18,10 @@ import org.koin.dsl.module
 
 class AflixyApplication : Application() {
     
-    lateinit var analyticsManager: AnalyticsManager
-        private set
-    
     override fun onCreate() {
         super.onCreate()
         
         FileLogger.initialize(this)
-        
-        analyticsManager = AnalyticsManager(this)
         
         startKoin {
             androidLogger(Level.DEBUG)
@@ -35,7 +30,7 @@ class AflixyApplication : Application() {
                 sharedModule(),
                 platformModule(),
                 module {
-                    single { analyticsManager }
+                    single { AnalyticsManager(androidContext()) }
                 }
             )
         }

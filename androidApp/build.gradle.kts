@@ -13,20 +13,35 @@ android {
         applicationId = "com.afilaxy.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 16
-        versionName = "2.1.0-kmm"
-        
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
-        
-        // Maps API Key from local.properties
+
+        // Leitura única do local.properties para todo o defaultConfig
         val properties = org.jetbrains.kotlin.konan.properties.Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
             localPropertiesFile.inputStream().use { properties.load(it) }
         }
+
+        // versionCode lido de VERSION_CODE em local.properties ou variável de ambiente CI.
+        // BigInteger parseia sem overflow por construção; intValueExact() lança ArithmeticException
+        // se o valor não couber em Int, eliminando CWE-190 sem nenhuma conversão implícita.
+        val rawVersionCodeStr = System.getenv("VERSION_CODE")
+            ?: properties.getProperty("VERSION_CODE")
+            ?: error("VERSION_CODE não definido em local.properties nem como variável de ambiente")
+        val versionCodeBig = runCatching { java.math.BigInteger(rawVersionCodeStr) }
+            .getOrElse { error("VERSION_CODE não é um número válido: '$rawVersionCodeStr'") }
+        require(versionCodeBig >= java.math.BigInteger.ONE) {
+            "VERSION_CODE deve ser >= 1, recebido: $rawVersionCodeStr"
+        }
+        versionCode = runCatching { versionCodeBig.intValueExact() }
+            .getOrElse { error("VERSION_CODE excede o limite máximo permitido para versionCode Android: '$rawVersionCodeStr'") }
+        versionName = "2.1.0-kmm"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+
+        // Maps API Key from local.properties
         val mapsApiKey = properties.getProperty("MAPS_API_KEY") ?: "YOUR_MAPS_API_KEY_HERE"
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
@@ -80,7 +95,7 @@ android {
     
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes.add("/META-INF/{AL2.0,LGPL2.1}")
         }
     }
 }

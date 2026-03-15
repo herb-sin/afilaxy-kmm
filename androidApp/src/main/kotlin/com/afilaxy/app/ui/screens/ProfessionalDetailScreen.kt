@@ -72,18 +72,25 @@ fun ProfessionalDetailScreen(
                     professional = state.professional!!,
                     modifier = Modifier.padding(padding),
                     onWhatsAppClick = {
-                        val phone = state.professional!!.whatsapp ?: return@ProfessionalDetailContent
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse("https://wa.me/55${phone.replace(Regex("[^0-9]"), "")}")
-                        }
-                        context.startActivity(intent)
+                        val raw = state.professional!!.whatsapp ?: return@ProfessionalDetailContent
+                        val digits = raw.replace(Regex("[^0-9]"), "").take(15)
+                        if (digits.isBlank()) return@ProfessionalDetailContent
+                        val uri = Uri.Builder()
+                            .scheme("https")
+                            .authority("wa.me")
+                            .appendPath("55$digits")
+                            .build()
+                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                     },
                     onPhoneClick = {
-                        val phone = state.professional!!.phone ?: return@ProfessionalDetailContent
-                        val intent = Intent(Intent.ACTION_DIAL).apply {
-                            data = Uri.parse("tel:$phone")
-                        }
-                        context.startActivity(intent)
+                        val raw = state.professional!!.phone ?: return@ProfessionalDetailContent
+                        val digits = raw.replace(Regex("[^0-9+]"), "").take(15)
+                        if (digits.isBlank()) return@ProfessionalDetailContent
+                        val uri = Uri.Builder()
+                            .scheme("tel")
+                            .opaquePart(digits)
+                            .build()
+                        context.startActivity(Intent(Intent.ACTION_DIAL, uri))
                     }
                 )
             }

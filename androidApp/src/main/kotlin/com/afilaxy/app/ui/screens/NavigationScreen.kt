@@ -23,7 +23,12 @@ fun NavigationScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val destination = LatLng(destinationLat, destinationLng)
+
+    val safeLat = destinationLat.takeIf { it.isFinite() && it in -90.0..90.0 } ?: run { onBackClick(); return }
+    val safeLng = destinationLng.takeIf { it.isFinite() && it in -180.0..180.0 } ?: run { onBackClick(); return }
+    val safeName = destinationName.replace(Regex("[<>&\"'\\x00-\\x1F]"), "").take(100).ifBlank { "Pessoa em emergência" }
+
+    val destination = LatLng(safeLat, safeLng)
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(destination, 15f)
@@ -32,7 +37,7 @@ fun NavigationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Navegação para $destinationName") },
+                title = { Text("Navegação para $safeName") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
@@ -52,30 +57,31 @@ fun NavigationScreen(
             ) {
                 Marker(
                     state = MarkerState(position = destination),
-                    title = destinationName
+                    title = safeName
                 )
             }
 
             Button(
                 onClick = {
-                    try {
-                        // Sanitizar coordenadas (prevenir injeção de URI)
-                        val safeLat = destinationLat.toBigDecimal().toPlainString()
-                        val safeLng = destinationLng.toBigDecimal().toPlainString()
-                        val uri = Uri.parse("google.navigation:q=$safeLat,$safeLng")
+                    val latStr = safeLat.toBigDecimal().toPlainString()
+                        val lngStr = safeLng.toBigDecimal().toPlainString()
+                        val uri = Uri.Builder()
+                            .scheme("google.navigation")
+                            .appendQueryParameter("q", "$latStr,$lngStr")
+                            .build()
                         val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                             setPackage("com.google.android.apps.maps")
                         }
-                        // Fallback para qualquer app de navegação se Google Maps não instalado
                         if (intent.resolveActivity(context.packageManager) != null) {
                             context.startActivity(intent)
                         } else {
-                            val fallbackUri = Uri.parse("geo:$safeLat,$safeLng?q=$safeLat,$safeLng")
+                            val fallbackUri = Uri.Builder()
+                                .scheme("geo")
+                                .path("$latStr,$lngStr")
+                                .appendQueryParameter("q", "$latStr,$lngStr($safeName)")
+                                .build()
                             context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
                         }
-                    } catch (e: Exception) {
-                        // Ignorar silenciosamente — botão apenas não abre se falhar
-                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()

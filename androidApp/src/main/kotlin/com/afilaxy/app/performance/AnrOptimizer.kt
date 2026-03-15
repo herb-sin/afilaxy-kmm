@@ -8,7 +8,7 @@ object AnrOptimizer {
     
     private val ioScope = CoroutineScope(Dispatchers.IO)
     
-    fun executeAsync(block: suspend () -> Unit) {
+    internal fun executeAsync(block: suspend () -> Unit) {
         ioScope.launch {
             try {
                 block()
