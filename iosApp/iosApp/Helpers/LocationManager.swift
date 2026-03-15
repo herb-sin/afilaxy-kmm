@@ -100,6 +100,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         currentLocation = location
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "didUpdateLocations lat=\(location.coordinate.latitude) lon=\(location.coordinate.longitude) acc=\(location.horizontalAccuracy)")
         
         // Atualizar bridge para Kotlin
         IOSLocationBridge.shared.latitude = location.coordinate.latitude
@@ -121,6 +122,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "authorizationChanged status=\(manager.authorizationStatus.rawValue) hasPermission=\(hasPermission)")
         
         // Atualizar bridge para Kotlin
         IOSLocationBridge.shared.hasPermission = hasPermission
