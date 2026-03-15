@@ -87,14 +87,24 @@ struct SettingsView: View {
     }
     
     private func exportLogs() {
-        logFileURLs = FileLogger.shared.getAllLogFileURLs()
-        // Contagem não é dado externo — seguro logar via FileLogger
-        FileLogger.shared.write(level: "DEBUG", tag: "SettingsView", message: "Found \(logFileURLs.count) log files")
+        let urls = FileLogger.shared.getAllLogFileURLs()
+        FileLogger.shared.write(level: "DEBUG", tag: "SettingsView", message: "Found \(urls.count) log files")
 
-        if !logFileURLs.isEmpty {
-            showShareSheet = true
-        } else {
+        // Lê conteúdo de todos os arquivos e compartilha como texto
+        let content = urls.compactMap { url in
+            try? String(contentsOf: url, encoding: .utf8)
+        }.joined(separator: "\n\n--- next file ---\n\n")
+
+        if content.isEmpty {
             showNoLogsAlert = true
+        } else {
+            logFileURLs = urls
+            // Compartilha o texto diretamente em vez das URLs
+            let av = UIActivityViewController(activityItems: [content], applicationActivities: nil)
+            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let root = scene.windows.first?.rootViewController {
+                root.present(av, animated: true)
+            }
         }
     }
     
