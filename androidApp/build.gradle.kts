@@ -22,18 +22,16 @@ android {
         }
 
         // versionCode lido de VERSION_CODE em local.properties ou variável de ambiente CI.
-        // BigInteger parseia sem overflow por construção; intValueExact() lança ArithmeticException
-        // se o valor não couber em Int, eliminando CWE-190 sem nenhuma conversão implícita.
+        // toLongOrNull() + range check garante valor válido sem overflow (CWE-190).
         val rawVersionCodeStr = System.getenv("VERSION_CODE")
             ?: properties.getProperty("VERSION_CODE")
             ?: error("VERSION_CODE não definido em local.properties nem como variável de ambiente")
-        val versionCodeBig = runCatching { java.math.BigInteger(rawVersionCodeStr) }
-            .getOrElse { error("VERSION_CODE não é um número válido: '$rawVersionCodeStr'") }
-        require(versionCodeBig >= java.math.BigInteger.ONE) {
-            "VERSION_CODE deve ser >= 1, recebido: $rawVersionCodeStr"
+        val rawVersionCodeLong = rawVersionCodeStr.trim().toLongOrNull()
+            ?: error("VERSION_CODE não é um número válido: '$rawVersionCodeStr'")
+        require(rawVersionCodeLong in 1L..2_100_000_000L) {
+            "VERSION_CODE deve estar entre 1 e 2100000000, recebido: $rawVersionCodeStr"
         }
-        versionCode = runCatching { versionCodeBig.intValueExact() }
-            .getOrElse { error("VERSION_CODE excede o limite máximo permitido para versionCode Android: '$rawVersionCodeStr'") }
+        versionCode = rawVersionCodeLong.toInt()
         versionName = "2.1.0-kmm"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -84,7 +82,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    
+
     kotlinOptions {
         jvmTarget = "17"
     }
