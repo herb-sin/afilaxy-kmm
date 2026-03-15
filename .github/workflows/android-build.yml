@@ -31,9 +31,11 @@ jobs:
         echo "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}" | base64 --decode \
           > androidApp/google-services.json
 
-    # Injeta MAPS_API_KEY no local.properties para o build
-    - name: Inject Maps API Key
-      run: echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}" >> local.properties
+    # Injeta MAPS_API_KEY e VERSION_CODE no local.properties para o build
+    - name: Inject build properties
+      run: |
+        echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}" >> local.properties
+        echo "VERSION_CODE=${{ github.run_number }}" >> local.properties
     
     - name: Run shared module tests
       run: ./gradlew shared:testDebugUnitTest --stacktrace || true
