@@ -1,9 +1,12 @@
 package com.afilaxy.util
 
 import platform.Foundation.NSLog
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.value
+import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.Platform
-import kotlin.native.concurrent.AtomicReference
 
+@OptIn(ExperimentalNativeApi::class)
 actual object Logger {
     // AtomicReference de kotlin.native.concurrent garante thread-safety sem dependência extra
     private val hookRef = AtomicReference<((String, String, String) -> Unit)?>(null)
