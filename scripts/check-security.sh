@@ -14,10 +14,10 @@ ISSUES=0
 
 # 1. Verificar se credenciais estão no .gitignore
 echo "1️⃣ Verificando .gitignore..."
-if grep -q "google-services.json" .gitignore && \
-   grep -q "GoogleService-Info.plist" .gitignore && \
-   grep -q "local.properties" .gitignore && \
-   grep -q "*firebase-adminsdk*.json" .gitignore; then
+if grep -qF "google-services.json" .gitignore && \
+   grep -qF "GoogleService-Info.plist" .gitignore && \
+   grep -qF "local.properties" .gitignore && \
+   grep -qF "*firebase-adminsdk*.json" .gitignore; then
     echo -e "${GREEN}✅ Arquivos de credenciais estão no .gitignore${NC}"
 else
     echo -e "${RED}❌ Alguns arquivos de credenciais não estão no .gitignore${NC}"

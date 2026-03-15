@@ -14,10 +14,11 @@ object FcmHelper {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val token = FirebaseMessaging.getInstance().token.await()
-                Log.d("FCM", "Token obtained: $token")
+                // Token não logado — dado sensível (CWE-117)
+                Log.d("FCM", "Token obtido com sucesso")
                 authRepository.updateFcmToken(token)
             } catch (e: Exception) {
-                Log.e("FCM", "Error getting token", e)
+                Log.e("FCM", "Erro ao obter token")
             }
         }
     }

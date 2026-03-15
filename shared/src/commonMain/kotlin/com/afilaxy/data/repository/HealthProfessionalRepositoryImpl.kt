@@ -3,15 +3,18 @@ package com.afilaxy.data.repository
 import com.afilaxy.domain.model.HealthProfessional
 import com.afilaxy.domain.model.Location
 import com.afilaxy.domain.model.Specialty
+import com.afilaxy.util.Logger
 import com.afilaxy.domain.model.SubscriptionPlan
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.HealthProfessionalRepository
+import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.where
 import kotlin.math.*
 
 class HealthProfessionalRepositoryImpl(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ) : HealthProfessionalRepository {
     
     private val collection = firestore.collection("health_professionals")
@@ -25,13 +28,13 @@ class HealthProfessionalRepositoryImpl(
                     try {
                         doc.data<HealthProfessional>()
                     } catch (e: Exception) {
-                        println("❌ HealthProfessional deserialization failed: ${e.message}")
+                        Logger.e("HealthProfessionalRepo", "Deserialization failed", e)
                         null
                     }
                 }
                 .sortedByDescending { calculatePriority(it) }
         } catch (e: Exception) {
-            println("❌ getAll professionals failed: ${e.message}")
+            Logger.e("HealthProfessionalRepo", "getAll failed", e)
             emptyList()
         }
     }
@@ -62,6 +65,7 @@ class HealthProfessionalRepositoryImpl(
     }
     
     override suspend fun updateSubscription(id: String, plan: SubscriptionPlan, expiryDate: Long) {
+        auth.currentUser ?: throw IllegalStateException("User not authenticated")
         collection.document(id).update(
             "subscriptionPlan" to plan.name,
             "subscriptionExpiry" to expiryDate

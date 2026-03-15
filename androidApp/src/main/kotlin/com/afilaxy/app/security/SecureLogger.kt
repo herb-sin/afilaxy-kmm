@@ -26,14 +26,14 @@ object SecureLogger {
         }
     }
     
+    // Remove \n, \r e demais caracteres de controle de dados externos antes de logar (CWE-117).
+    // Aplicar também ao sanitize() do SecureLogger para consistência.
     private fun sanitize(input: String): String {
         return try {
             input
-                .replace("\n", "_")
-                .replace("\r", "_")
-                .replace("\t", "_")
+                .replace(Regex("[\\r\\n\\t\\x00-\\x1F\\x7F]"), " ")
                 .take(MAX_LOG_LENGTH)
-                .filter { it.isLetterOrDigit() || it in "_-. :()[]{}/"}
+                .filter { it.isLetterOrDigit() || it in "_-. :()[]{}/" }
                 .ifBlank { "SANITIZED" }
         } catch (e: Exception) {
             "SANITIZED"

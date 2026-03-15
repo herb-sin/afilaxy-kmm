@@ -34,6 +34,10 @@ class RateLimiter(
             attempts.remove(key)
         }
     }
+
+    internal suspend fun resetAll() {
+        mutex.withLock { attempts.clear() }
+    }
 }
 
 sealed class RateLimitResult {

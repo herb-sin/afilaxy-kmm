@@ -28,7 +28,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("APNs registration failed: \(error.localizedDescription)")
+        FileLogger.shared.write(level: "ERROR", tag: "AppDelegate", message: "APNs registration failed: \(error.localizedDescription)")
     }
 
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
@@ -49,7 +49,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         Firestore.firestore().collection("users").document(uid)
             .setData(["fcmToken": token], merge: true) { error in
                 if let error = error {
-                    print("Erro ao salvar FCM token: \(error.localizedDescription)")
+                    FileLogger.shared.write(level: "ERROR", tag: "AppDelegate", message: "Erro ao salvar FCM token: \(error.localizedDescription)")
                 }
             }
     }
@@ -77,8 +77,11 @@ struct AfilaxyApp: App {
     init() {
         FirebaseApp.configure()
         KoinHelperKt.doInitKoin()
-        // Iniciar rastreamento de localização
         LocationManagerBridge.shared.start()
+        Logger.shared.fileLogHook = { level, tag, message in
+            FileLogger.shared.write(level: level, tag: tag, message: message)
+        }
+        FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App iniciado")
     }
 
     var body: some Scene {

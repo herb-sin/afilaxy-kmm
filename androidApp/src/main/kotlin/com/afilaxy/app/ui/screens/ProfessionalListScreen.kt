@@ -160,10 +160,14 @@ fun ProfessionalListScreen(
                                 professional = professional,
                                 onContactClick = {
                                     professional.whatsapp?.let { whatsapp ->
-                                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            data = Uri.parse("https://wa.me/55$whatsapp")
-                                        }
-                                        context.startActivity(intent)
+                                        val digits = whatsapp.replace(Regex("[^0-9]"), "").take(15)
+                                        if (digits.isBlank()) return@let
+                                        val uri = Uri.Builder()
+                                            .scheme("https")
+                                            .authority("wa.me")
+                                            .appendPath("55$digits")
+                                            .build()
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                                     }
                                 }
                             )

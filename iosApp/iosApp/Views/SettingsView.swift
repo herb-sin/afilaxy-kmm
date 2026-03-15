@@ -88,8 +88,9 @@ struct SettingsView: View {
     
     private func exportLogs() {
         logFileURLs = FileLogger.shared.getAllLogFileURLs()
-        NSLog("[SettingsView] Found \(logFileURLs.count) log files")
-        
+        // Contagem não é dado externo — seguro logar via FileLogger
+        FileLogger.shared.write(level: "DEBUG", tag: "SettingsView", message: "Found \(logFileURLs.count) log files")
+
         if !logFileURLs.isEmpty {
             showShareSheet = true
         } else {

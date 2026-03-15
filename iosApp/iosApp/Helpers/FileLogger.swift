@@ -1,224 +1,111 @@
 import Foundation
-import os.log
 
-/// Logger que salva logs em arquivo local no Cache directory
 class FileLogger {
     static let shared = FileLogger()
-    
+
     private let fileManager = FileManager.default
     private let queue = DispatchQueue(label: "com.afilaxy.filelogger", qos: .utility)
     private var logFileURL: URL?
-    private let maxFileSize: Int64 = 5 * 1024 * 1024 // 5MB
-    private let maxLogAge: TimeInterval = 7 * 24 * 60 * 60 // 7 dias
-    
+    private let maxFileSize: Int64 = 5 * 1024 * 1024
+    private let maxLogAge: TimeInterval = 7 * 24 * 60 * 60
+
     private let dateFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
     }()
-    
+
     private init() {
         setupLogFile()
         cleanOldLogs()
-        interceptNSLog()
     }
-    
+
     private func setupLogFile() {
-        guard let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            os_log("Failed to get cache directory", type: .error)
-            return
-        }
-        
+        guard let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+
         let logsDir = cacheDir.appendingPathComponent("logs", isDirectory: true)
-        
-        // Criar diretório de logs se não existir
-        if !fileManager.fileExists(atPath: logsDir.path) {
-            try? fileManager.createDirectory(at: logsDir, withIntermediateDirectories: true)
-        }
-        
-        // Arquivo de log com data atual
+        try? fileManager.createDirectory(at: logsDir, withIntermediateDirectories: true)
+
         let dateString = DateFormatter.logFileDate.string(from: Date())
         logFileURL = logsDir.appendingPathComponent("afilaxy_\(dateString).log")
-        
-        // Criar arquivo se não existir
+
         if let url = logFileURL, !fileManager.fileExists(atPath: url.path) {
             fileManager.createFile(atPath: url.path, contents: nil)
-            let header = "=== Afilaxy iOS Logs - \(dateString) ===\n\n"
-            try? header.write(to: url, atomically: true, encoding: .utf8)
+            try? "=== Afilaxy iOS Logs - \(dateString) ===\n\n".write(to: url, atomically: true, encoding: .utf8)
         }
     }
-    
-    /// Intercepta NSLog para salvar em arquivo
-    private func interceptNSLog() {
-        let pipe = Pipe()
-        dup2(pipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
-        
-        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            let data = handle.availableData
-            guard !data.isEmpty, let logString = String(data: data, encoding: .utf8) else { return }
-            
-            if logString.contains("[AFILAXY_LOG]") {
-                let components = logString.components(separatedBy: "[AFILAXY_LOG] ")
-                if components.count > 1 {
-                    let logContent = components[1]
-                    let parts = logContent.components(separatedBy: "] [")
-                    if parts.count >= 3 {
-                        let level = parts[0].replacingOccurrences(of: "[", with: "")
-                        let tag = parts[1]
-                        let message = parts[2].replacingOccurrences(of: "]\n", with: "")
-                        self?.write(level: level, tag: tag, message: message)
-                    }
-                }
-            }
-        }
-    }
-    
-    /// Escreve log no arquivo (chamado do Swift)
+
     func write(level: String, tag: String, message: String) {
         queue.async { [weak self] in
-            guard let self = self, let url = self.logFileURL else { return }
-            
-            let timestamp = self.dateFormatter.string(from: Date())
-            let logLine = "[\(timestamp)] [\(level)] [\(tag)] \(message)\n"
-            
-            // Verificar tamanho do arquivo antes de escrever
-            if let attributes = try? self.fileManager.attributesOfItem(atPath: url.path),
-               let fileSize = attributes[.size] as? Int64,
-               fileSize > self.maxFileSize {
+            guard let self, let url = self.logFileURL else { return }
+
+            if let size = try? self.fileManager.attributesOfItem(atPath: url.path)[.size] as? Int64,
+               size > self.maxFileSize {
                 self.rotateLogFile()
             }
-            
-            // Append ao arquivo
-            if let data = logLine.data(using: .utf8),
-               let fileHandle = try? FileHandle(forWritingTo: url) {
-                fileHandle.seekToEndOfFile()
-                fileHandle.write(data)
-                try? fileHandle.close()
+
+            let line = "[\(self.dateFormatter.string(from: Date()))] [\(level)] [\(tag)] \(message)\n"
+            if let data = line.data(using: .utf8),
+               let handle = try? FileHandle(forWritingTo: url) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
             }
         }
     }
-    
-    /// Rotaciona arquivo de log quando atinge tamanho máximo
+
     private func rotateLogFile() {
-        guard let currentURL = logFileURL else { return }
-        
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let rotatedURL = currentURL.deletingPathExtension()
-            .appendingPathExtension("\(timestamp).log")
-        
-        try? fileManager.moveItem(at: currentURL, to: rotatedURL)
-        
-        // Criar novo arquivo
-        fileManager.createFile(atPath: currentURL.path, contents: nil)
-        let header = "=== Afilaxy iOS Logs - Rotated ===\n\n"
-        try? header.write(to: currentURL, atomically: true, encoding: .utf8)
+        guard let url = logFileURL else { return }
+        let rotated = url.deletingLastPathComponent()
+            .appendingPathComponent("afilaxy_\(Int(Date().timeIntervalSince1970)).log")
+        try? fileManager.moveItem(at: url, to: rotated)
+        fileManager.createFile(atPath: url.path, contents: nil)
     }
-    
-    /// Remove logs mais antigos que maxLogAge
+
     private func cleanOldLogs() {
         queue.async { [weak self] in
-            guard let self = self,
-                  let cacheDir = self.fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-                return
-            }
-            
-            let logsDir = cacheDir.appendingPathComponent("logs", isDirectory: true)
-            
-            guard let files = try? self.fileManager.contentsOfDirectory(
-                at: logsDir,
-                includingPropertiesForKeys: [.creationDateKey],
-                options: .skipsHiddenFiles
-            ) else {
-                return
-            }
-            
-            let cutoffDate = Date().addingTimeInterval(-self.maxLogAge)
-            
-            for file in files {
-                if let attributes = try? self.fileManager.attributesOfItem(atPath: file.path),
-                   let creationDate = attributes[.creationDate] as? Date,
-                   creationDate < cutoffDate {
-                    try? self.fileManager.removeItem(at: file)
+            guard let self else { return }
+            let cutoff = Date().addingTimeInterval(-self.maxLogAge)
+            self.getAllLogFileURLs().forEach { url in
+                if let date = (try? self.fileManager.attributesOfItem(atPath: url.path))?[.creationDate] as? Date,
+                   date < cutoff {
+                    try? self.fileManager.removeItem(at: url)
                 }
             }
         }
     }
-    
-    /// Retorna URL do arquivo de log atual
-    func getLogFileURL() -> URL? {
-        return logFileURL
-    }
-    
-    /// Retorna todas as URLs de logs
+
     func getAllLogFileURLs() -> [URL] {
-        guard let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            return []
-        }
-        
+        guard let cacheDir = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return [] }
         let logsDir = cacheDir.appendingPathComponent("logs", isDirectory: true)
-        
-        guard let files = try? fileManager.contentsOfDirectory(
-            at: logsDir,
-            includingPropertiesForKeys: [.creationDateKey],
-            options: .skipsHiddenFiles
-        ) else {
-            return []
-        }
-        
-        return files.sorted { url1, url2 in
-            let date1 = (try? url1.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? Date.distantPast
-            let date2 = (try? url2.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? Date.distantPast
-            return date1 > date2
+        let files = (try? fileManager.contentsOfDirectory(at: logsDir, includingPropertiesForKeys: [.creationDateKey], options: .skipsHiddenFiles)) ?? []
+        return files.filter { $0.pathExtension == "log" }.sorted {
+            let d1 = (try? $0.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
+            let d2 = (try? $1.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
+            return d1 > d2
         }
     }
-    
-    /// Retorna tamanho total dos logs em bytes
+
     func getTotalLogSize() -> Int64 {
-        let urls = getAllLogFileURLs()
-        var totalSize: Int64 = 0
-        
-        for url in urls {
-            if let attributes = try? fileManager.attributesOfItem(atPath: url.path),
-               let fileSize = attributes[.size] as? Int64 {
-                totalSize += fileSize
-            }
+        getAllLogFileURLs().reduce(0) { total, url in
+            total + ((try? fileManager.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0)
         }
-        
-        return totalSize
     }
-    
-    /// Limpa todos os logs
+
     func clearAllLogs() {
         queue.async { [weak self] in
-            guard let self = self,
-                  let cacheDir = self.fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-                return
-            }
-            
-            let logsDir = cacheDir.appendingPathComponent("logs", isDirectory: true)
-            try? self.fileManager.removeItem(at: logsDir)
-            
-            // Recriar estrutura
+            guard let self,
+                  let cacheDir = self.fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+            try? self.fileManager.removeItem(at: cacheDir.appendingPathComponent("logs"))
             self.setupLogFile()
-        }
-    }
-    
-    private func osLogType(for level: String) -> OSLogType {
-        switch level {
-        case "DEBUG": return .debug
-        case "INFO": return .info
-        case "WARN": return .default
-        case "ERROR": return .error
-        default: return .default
         }
     }
 }
 
-// MARK: - DateFormatter Extension
 extension DateFormatter {
     static let logFileDate: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
     }()
 }

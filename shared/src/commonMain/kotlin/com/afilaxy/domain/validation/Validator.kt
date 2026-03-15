@@ -35,7 +35,9 @@ object Validator {
     
     fun sanitizeInput(input: String): String {
         return input.trim()
-            .replace(Regex("<[^>]*>"), "")
+            .replace(Regex("<[^>]*>"), "")   // remove tags HTML/XML
+            .replace(Regex("[\\r\\n\\t]"), " ") // previne log injection (CWE-117)
+            .replace(Regex("[\\x00-\\x1F\\x7F]"), "") // remove demais caracteres de controle
             .take(1000)
     }
 }

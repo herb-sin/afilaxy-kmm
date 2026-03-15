@@ -45,7 +45,9 @@ Podfile.lock
 
 # Firebase
 google-services.json
+!google-services.json.template
 GoogleService-Info.plist
+!GoogleService-Info.plist.template
 
 # Environment
 .env
@@ -54,6 +56,13 @@ GoogleService-Info.plist
 *.jks
 *.keystore
 keystore.properties
+
+# Certificados e chaves privadas Apple
+*.key
+*.csr
+*.p12
+*.cer
+*.mobileprovision
 
 # macOS
 .DS_Store

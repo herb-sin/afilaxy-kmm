@@ -31,7 +31,7 @@ class EmergencyViewModelWrapper : ViewModel(), KoinComponent {
                     sharedViewModel.onCreateEmergency()
                 }
                 is RateLimitResult.Limited -> {
-                    val minutes = (result.waitTimeMillis / 60_000).toInt()
+                    val minutes = (result.waitTimeMillis / 60_000).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
                     _rateLimitState.value = "Limite atingido. Aguarde $minutes minutos."
                 }
             }

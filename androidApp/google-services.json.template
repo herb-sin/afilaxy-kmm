@@ -1,42 +1,57 @@
 {
   "project_info": {
-    "project_number": "YOUR_PROJECT_NUMBER",
-    "project_id": "YOUR_PROJECT_ID",
-    "storage_bucket": "YOUR_PROJECT_ID.firebasestorage.app"
+    "project_number": "19540410113",
+    "project_id": "afilaxy-app",
+    "storage_bucket": "afilaxy-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "YOUR_MOBILE_SDK_APP_ID",
+        "mobilesdk_app_id": "1:19540410113:android:9d2f048920ffe837b9e500",
         "android_client_info": {
           "package_name": "com.afilaxy.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+          "client_id": "19540410113-h2r6eacbl2peu0kdohd2kitoio0mh299.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.afilaxy.app",
-            "certificate_hash": "YOUR_CERTIFICATE_HASH"
+            "certificate_hash": "f4eb099ae583086ef06108f28c9be1ee06f98955"
           }
         },
         {
-          "client_id": "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
+          "client_id": "19540410113-vc92pd0vkf6u82lrfh4bgl43h7tv1eq9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.afilaxy.app",
+            "certificate_hash": "35900b245697977fdba934bc3163012ab4d5a50a"
+          }
+        },
+        {
+          "client_id": "19540410113-ueqc5fi9qvejkq46jcqr7f7kie58nn1d.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "YOUR_API_KEY"
+          "current_key": "YOUR_FIREBASE_API_KEY"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
+              "client_id": "19540410113-ueqc5fi9qvejkq46jcqr7f7kie58nn1d.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "19540410113-67efguq3vm3n9gds3rq6cu5fsvn8v55p.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.afilaxy.app"
+              }
             }
           ]
         }

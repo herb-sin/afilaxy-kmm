@@ -112,10 +112,10 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("LocationManager error: \(error.localizedDescription)")
+        FileLogger.shared.write(level: "ERROR", tag: "LocationManager", message: "Location update failed")
         if let cont = locationContinuation {
             locationContinuation = nil
-            cont.resume(returning: currentLocation) // retorna última conhecida ou nil
+            cont.resume(returning: currentLocation)
         }
     }
 

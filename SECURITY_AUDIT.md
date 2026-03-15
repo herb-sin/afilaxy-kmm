@@ -72,21 +72,24 @@ git push origin --force --tags
 
 ## 🔐 Credenciais Expostas no Histórico
 
+> ⚠️ As chaves foram removidas deste documento para evitar reexposição.
+> Consulte o histórico git local para referência, se necessário.
+
 ### Firebase API Keys (Android)
-- `AIzaSyDFZEq_oU2AycrSHnQE3WqvFUrwLrqq_Qw`
-- **Ação:** Revogar no Firebase Console se tornar público
+- `[REDACTED]`
+- **Ação:** Revogar no Firebase Console → Project Settings → API Keys
 
 ### Firebase API Keys (iOS)
-- `AIzaSyDpLGE4BUU_po4Vb7_S7k_4LfuI-KgMifM`
-- **Ação:** Revogar no Firebase Console se tornar público
+- `[REDACTED]`
+- **Ação:** Revogar no Firebase Console → Project Settings → API Keys
 
 ### Google Maps API
-- `AIzaSyDgrhJR41VIJv9ozBqjMvy8r9BFJrtx_Tw`
-- **Ação:** Revogar no Google Cloud Console se tornar público
+- `[REDACTED]`
+- **Ação:** Revogar no Google Cloud Console → APIs & Services → Credentials
 
 ### Firebase Admin SDK
 - Private key exposta em commit antigo
-- **Ação:** Revogar service account no Firebase Console
+- **Ação:** Revogar service account no Firebase Console → Project Settings → Service Accounts
 
 ---
 

@@ -39,7 +39,7 @@ class LoginViewModelWrapper : ViewModel(), KoinComponent {
                     sharedViewModel.onLoginClick()
                 }
                 is RateLimitResult.Limited -> {
-                    val seconds = (result.waitTimeMillis / 1000).toInt()
+                    val seconds = (result.waitTimeMillis / 1000).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
                     _rateLimitState.value = "Muitas tentativas. Aguarde $seconds segundos."
                 }
             }

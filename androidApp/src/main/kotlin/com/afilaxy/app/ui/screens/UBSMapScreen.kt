@@ -138,7 +138,16 @@ fun UBSMapScreen(
                             UBSCard(
                                 ubs = ubs,
                                 onNavigateClick = {
-                                    val uri = Uri.parse("google.navigation:q=${ubs.location?.latitude},${ubs.location?.longitude}")
+                                    val lat = ubs.location?.latitude
+                                        ?.takeIf { it.isFinite() && it in -90.0..90.0 } ?: return@UBSCard
+                                    val lng = ubs.location?.longitude
+                                        ?.takeIf { it.isFinite() && it in -180.0..180.0 } ?: return@UBSCard
+                                    val latStr = lat.toBigDecimal().toPlainString()
+                                    val lngStr = lng.toBigDecimal().toPlainString()
+                                    val uri = Uri.Builder()
+                                        .scheme("google.navigation")
+                                        .appendQueryParameter("q", "$latStr,$lngStr")
+                                        .build()
                                     val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                                         setPackage("com.google.android.apps.maps")
                                     }
@@ -146,10 +155,13 @@ fun UBSMapScreen(
                                 },
                                 onCallClick = {
                                     ubs.phone?.let { phone ->
-                                        val intent = Intent(Intent.ACTION_DIAL).apply {
-                                            data = Uri.parse("tel:$phone")
-                                        }
-                                        context.startActivity(intent)
+                                        val digits = phone.replace(Regex("[^0-9+]"), "").take(15)
+                                        if (digits.isBlank()) return@let
+                                        val uri = Uri.Builder()
+                                            .scheme("tel")
+                                            .opaquePart(digits)
+                                            .build()
+                                        context.startActivity(Intent(Intent.ACTION_DIAL, uri))
                                     }
                                 }
                             )

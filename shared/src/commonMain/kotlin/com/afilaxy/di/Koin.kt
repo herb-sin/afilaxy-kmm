@@ -49,7 +49,7 @@ fun sharedModule(): Module = module {
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
     single<NotificationRepository> { NotificationRepositoryImpl(get()) }
-    single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get()) }
+    single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get(), get()) }
     // LocationRepository é injetado no platformModule()
     
     // Use Cases
