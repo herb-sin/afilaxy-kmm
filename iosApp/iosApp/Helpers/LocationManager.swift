@@ -15,9 +15,11 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     private override init() {
         super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.distanceFilter = 50 // atualiza a cada 50m
+        DispatchQueue.main.async {
+            self.manager.delegate = self
+            self.manager.desiredAccuracy = kCLLocationAccuracyBest
+            self.manager.distanceFilter = 50
+        }
         authorizationStatus = manager.authorizationStatus
     }
 
@@ -25,6 +27,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     /// Solicita permissão "ao usar" (modo emergência)
     func requestWhenInUse() {
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "requestWhenInUse authStatus=\(manager.authorizationStatus.rawValue)")
         manager.requestWhenInUseAuthorization()
     }
 
