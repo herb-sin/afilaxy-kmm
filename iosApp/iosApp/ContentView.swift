@@ -34,6 +34,10 @@ struct ContentView: View {
                     }
                 }
             }
+            .onAppear {
+                // Solicita permissão de localização após login, com UI pronta
+                LocationManager.shared.requestWhenInUse()
+            }
         } else {
             LoginView(onLoginSuccess: {
                 DispatchQueue.main.async { isLoggedIn = true }
