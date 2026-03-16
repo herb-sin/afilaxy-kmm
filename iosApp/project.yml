@@ -1,6 +1,5 @@
 name: iosApp
 options:
-  bundleIdPrefix: br.com.afilaxy
   deploymentTarget:
     iOS: "16.0"
   xcodeVersion: "16.4"
