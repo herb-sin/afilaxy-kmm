@@ -7,12 +7,35 @@ struct HomeView: View {
     let onLogout: () -> Void
     @EnvironmentObject var container: AppContainer
     @State private var showLogoutAlert = false
+    @State private var helperToggle = false
+    @State private var isTogglingHelper = false
 
     var body: some View {
         guard let state = container.emergency.state else {
             return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
         }
         return AnyView(homeBody(state: state))
+    }
+
+    private func activateHelperMode() {
+        guard !isTogglingHelper else { return }
+        isTogglingHelper = true
+        FileLogger.shared.write(level: "INFO", tag: "HomeView", message: "activateHelperMode start")
+        LocationManager.shared.requestWhenInUse()
+        Task {
+            let location = await LocationManager.shared.fetchCurrentLocation()
+            FileLogger.shared.write(level: "INFO", tag: "HomeView", message: "fetchCurrentLocation result: \(location?.coordinate.latitude ?? 0), \(location?.coordinate.longitude ?? 0)")
+            await MainActor.run {
+                if LocationManager.shared.hasPermission {
+                    LocationManagerBridge.shared.enableHelperMode()
+                    container.emergency.vm.onToggleHelperMode(enable: true)
+                } else {
+                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "No permission after fetch")
+                    helperToggle = false
+                }
+                isTogglingHelper = false
+            }
+        }
     }
 
     @ViewBuilder
@@ -22,15 +45,9 @@ struct HomeView: View {
                 Toggle(isOn: Binding(
                     get: { state.isHelperMode },
                     set: { newValue in
+                        guard !isTogglingHelper else { return }
                         if newValue {
-                            LocationManagerBridge.shared.enableHelperMode()
-                            Task {
-                                // Aguarda localização real antes de ativar
-                                _ = await LocationManager.shared.fetchCurrentLocation()
-                                await MainActor.run {
-                                    container.emergency.vm.onToggleHelperMode(enable: true)
-                                }
-                            }
+                            activateHelperMode()
                         } else {
                             LocationManagerBridge.shared.disableHelperMode()
                             container.emergency.vm.onToggleHelperMode(enable: false)
