@@ -78,6 +78,8 @@ struct AfilaxyApp: App {
         FirebaseApp.configure()
         KoinHelperKt.doInitKoin()
         LocationManagerBridge.shared.start()
+        // Solicita permissão de localização explicitamente na abertura
+        LocationManager.shared.requestWhenInUse()
         Logger.shared.fileLogHook = { level, tag, message in
             FileLogger.shared.write(level: level, tag: tag, message: message)
         }
