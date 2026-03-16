@@ -5,7 +5,15 @@ import shared
 /// Gerencia permissões e atualizações de localização via CLLocationManager
 final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
-    static let shared = LocationManager()
+    static let shared: LocationManager = {
+        if Thread.isMainThread {
+            return LocationManager()
+        } else {
+            var instance: LocationManager!
+            DispatchQueue.main.sync { instance = LocationManager() }
+            return instance
+        }
+    }()
 
     private let manager = CLLocationManager()
     private var locationContinuation: CheckedContinuation<CLLocation?, Never>?
@@ -15,11 +23,9 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     private override init() {
         super.init()
-        DispatchQueue.main.async {
-            self.manager.delegate = self
-            self.manager.desiredAccuracy = kCLLocationAccuracyBest
-            self.manager.distanceFilter = 50
-        }
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.distanceFilter = 50
         authorizationStatus = manager.authorizationStatus
     }
 
