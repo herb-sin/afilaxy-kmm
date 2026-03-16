@@ -35,8 +35,11 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                // Solicita permissão de localização após login, com UI pronta
-                LocationManager.shared.requestWhenInUse()
+                // Aguarda 500ms para iOS carregar estado de permissão do sandbox
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    FileLogger.shared.write(level: "INFO", tag: "ContentView", message: "requestWhenInUse authStatus=\(LocationManager.shared.authorizationStatus.rawValue)")
+                    LocationManager.shared.requestWhenInUse()
+                }
             }
         } else {
             LoginView(onLoginSuccess: {

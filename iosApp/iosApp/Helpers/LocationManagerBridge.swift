@@ -12,7 +12,8 @@ final class LocationManagerBridge {
     /// Inicia monitoramento de localização e sincroniza com Kotlin
     func start() {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "start() hasPermission=\(locationManager.hasPermission) authStatus=\(locationManager.authorizationStatus.rawValue)")
-        locationManager.requestWhenInUse()
+        // Não solicita permissão aqui — deixa o iOS carregar o estado primeiro
+        // A permissão é solicitada no ContentView.onAppear
         updateBridge()
         locationManager.startUpdating()
     }
