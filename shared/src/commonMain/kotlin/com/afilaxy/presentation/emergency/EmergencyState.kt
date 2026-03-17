@@ -11,6 +11,7 @@ data class EmergencyState(
     val emergencyId: String? = null,
     val emergencyStatus: String? = null,
     val nearbyHelpers: List<Helper> = emptyList(),
+    val incomingEmergencies: List<Emergency> = emptyList(),
     val isLoading: Boolean = false,
     val isCreatingEmergency: Boolean = false,
     val error: String? = null,
