@@ -21,6 +21,7 @@ struct EmergencyView: View {
                 _ = await locationManager.fetchCurrentLocation()
                 await MainActor.run {
                     container.emergency.vm.onCreateEmergency()
+                    LocationManagerBridge.shared.disableHelperMode()
                 }
             }
         } else {

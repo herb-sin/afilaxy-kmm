@@ -90,11 +90,16 @@ class EmergencyViewModel(
             )
             createEmergencyUseCase.execute(emergency)
                 .onSuccess { emergencyId ->
+                    // Desativar helper mode — quem solicita ajuda não pode ser helper
+                    if (_state.value.isHelperMode) {
+                        emergencyRepository.deactivateHelper()
+                    }
                     _state.update { 
                         it.copy(
                             emergencyId = emergencyId,
                             hasActiveEmergency = true,
                             isCreatingEmergency = false,
+                            isHelperMode = false,
                             error = null
                         )
                     }
