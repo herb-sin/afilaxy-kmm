@@ -20,8 +20,6 @@ targets:
       - path: iosApp/LaunchScreen.storyboard
       - path: Assets.xcassets
         optional: true
-    info:
-      path: iosApp/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.afilaxy.app
