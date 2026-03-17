@@ -25,6 +25,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.afilaxy.app
+        PRODUCT_NAME: Afilaxy
         INFOPLIST_FILE: iosApp/Info.plist
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
