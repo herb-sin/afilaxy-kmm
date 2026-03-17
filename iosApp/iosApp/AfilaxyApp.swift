@@ -5,6 +5,7 @@ import FirebaseAuth
 import FirebaseMessaging
 import FirebaseFirestore
 import UserNotifications
+import Combine
 
 // MARK: - AppDelegate (APNs + FCM)
 
@@ -58,13 +59,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 // MARK: - AppContainer
 
 class AppContainer: ObservableObject {
-    // ViewModels são criados com proteção contra crash de Koin
     lazy var auth      = AuthViewModelWrapper(ViewModelProvider.shared.getAuthViewModel())
     lazy var emergency = EmergencyViewModelWrapper(ViewModelProvider.shared.getEmergencyViewModel())
     lazy var history   = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
     lazy var profile   = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
     lazy var professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
     lazy var loginViewModel: LoginViewModel = ViewModelProvider.shared.getLoginViewModel()
+
+    private var cancellables = Set<AnyCancellable>()
+
+    func observeChildren() {
+        emergency.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        auth.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+    }
 }
 
 // MARK: - App Entry Point
@@ -78,6 +85,7 @@ struct AfilaxyApp: App {
         FirebaseApp.configure()
         KoinHelperKt.doInitKoin()
         LocationManagerBridge.shared.start()
+        container.observeChildren()
         Logger.shared.fileLogHook = { level, tag, message in
             FileLogger.shared.write(level: level, tag: tag, message: message)
         }
