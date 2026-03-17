@@ -135,6 +135,8 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
+        // Nunca regredir para notDetermined se já tínhamos permissão
+        if status == .notDetermined && hasPermission { return }
         authorizationStatus = status
         FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "authorizationChanged status=\(status.rawValue) hasPermission=\(hasPermission) accuracy=\(manager.accuracyAuthorization.rawValue)")
         
