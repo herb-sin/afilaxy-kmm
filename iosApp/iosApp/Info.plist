@@ -42,6 +42,11 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>EmergencyLocation</key>
+		<string>Precisamos da localização exata para conectar você com helpers próximos durante emergências.</string>
+	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Precisamos da sua localização para conectar você com helpers próximos durante emergências.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

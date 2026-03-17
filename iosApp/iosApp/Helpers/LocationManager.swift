@@ -26,8 +26,10 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 50
-        authorizationStatus = manager.authorizationStatus
-        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "init authStatus=\(manager.authorizationStatus.rawValue) hasPermission=\(manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways)")
+        // NÃO lê authorizationStatus aqui — o iOS ainda não carregou o estado.
+        // O delegate locationManagerDidChangeAuthorization é chamado automaticamente
+        // pelo iOS logo após o delegate ser atribuído, com o valor correto.
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "init — aguardando delegate para authStatus")
     }
 
     // MARK: - Permissões
@@ -36,6 +38,9 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     func requestWhenInUse() {
         FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "requestWhenInUse authStatus=\(manager.authorizationStatus.rawValue)")
         manager.requestWhenInUseAuthorization()
+        if manager.accuracyAuthorization == .reducedAccuracy {
+            manager.requestTemporaryFullAccuracyAuthorization(withPurposeKey: "EmergencyLocation") { _ in }
+        }
     }
 
     /// Solicita permissão "sempre" (modo helper com background location)
