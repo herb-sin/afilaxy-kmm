@@ -392,7 +392,7 @@ class EmergencyRepositoryImpl(
                         id = doc.id,
                         userId = doc.get("requesterId") ?: "",
                         userName = doc.get("requesterName") ?: "",
-                        location = Location(lat, lon, doc.get("timestamp") ?: 0L),
+                        location = Location(lat, lon, "", doc.get("timestamp") ?: 0L),
                         status = EmergencyStatus.fromDb(doc.get("status") ?: "waiting"),
                         assignedHelperId = doc.get("helperId"),
                         timestamp = doc.get("timestamp") ?: 0L
