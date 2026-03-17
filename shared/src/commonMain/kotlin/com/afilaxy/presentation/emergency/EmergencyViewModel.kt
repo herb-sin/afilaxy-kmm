@@ -176,6 +176,7 @@ class EmergencyViewModel(
                                 userLongitude = location.longitude
                             )
                         }
+                        observeIncomingEmergencies(location.latitude, location.longitude)
                     }
                     .onFailure { exception ->
                         _state.update { 
@@ -261,6 +262,15 @@ class EmergencyViewModel(
         }
     }
     
+    private fun observeIncomingEmergencies(latitude: Double, longitude: Double) {
+        viewModelScope.coroutineScope.launch {
+            emergencyRepository.observeNearbyEmergencies(latitude, longitude, 5.0)
+                .collect { emergencies ->
+                    _state.update { it.copy(incomingEmergencies = emergencies) }
+                }
+        }
+    }
+
     private fun findNearbyHelpers() {
         val latitude = _state.value.userLatitude
         val longitude = _state.value.userLongitude

@@ -377,6 +377,30 @@ class EmergencyRepositoryImpl(
         }
     }
 
+    override fun observeNearbyEmergencies(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Emergency>> {
+        val deltaLat = radiusKm / 111.0
+        return firestore.collection("emergency_requests")
+            .where { ("active" equalTo true) and ("latitude" greaterThanOrEqualTo latitude - deltaLat) and ("latitude" lessThanOrEqualTo latitude + deltaLat) }
+            .snapshots
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { doc ->
+                    val lat = doc.get<Double?>("latitude") ?: return@mapNotNull null
+                    val lon = doc.get<Double?>("longitude") ?: return@mapNotNull null
+                    val distance = calculateDistance(latitude, longitude, lat, lon)
+                    if (distance > radiusKm) return@mapNotNull null
+                    Emergency(
+                        id = doc.id,
+                        userId = doc.get("requesterId") ?: "",
+                        userName = doc.get("requesterName") ?: "",
+                        location = Location(lat, lon, doc.get("timestamp") ?: 0L),
+                        status = EmergencyStatus.fromDb(doc.get("status") ?: "waiting"),
+                        assignedHelperId = doc.get("helperId"),
+                        timestamp = doc.get("timestamp") ?: 0L
+                    )
+                }
+            }
+    }
+
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> {
         return firestore.collection("emergency_requests")
             .document(emergencyId)
