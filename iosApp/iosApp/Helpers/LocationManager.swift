@@ -27,6 +27,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 50
         authorizationStatus = manager.authorizationStatus
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "init authStatus=\(manager.authorizationStatus.rawValue) hasPermission=\(manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways)")
     }
 
     // MARK: - Permissões
@@ -43,7 +44,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     var hasPermission: Bool {
-        switch manager.authorizationStatus {
+        switch authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             return true
         default:
@@ -130,8 +131,9 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
-        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "authorizationChanged status=\(manager.authorizationStatus.rawValue) hasPermission=\(hasPermission)")
+        let status = manager.authorizationStatus
+        authorizationStatus = status
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "authorizationChanged status=\(status.rawValue) hasPermission=\(hasPermission) accuracy=\(manager.accuracyAuthorization.rawValue)")
         
         // Atualizar bridge para Kotlin
         IOSLocationBridge.shared.hasPermission = hasPermission
