@@ -35,10 +35,11 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                // Aguarda 500ms para iOS carregar estado de permissão do sandbox
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     FileLogger.shared.write(level: "INFO", tag: "ContentView", message: "requestWhenInUse authStatus=\(LocationManager.shared.authorizationStatus.rawValue)")
-                    LocationManager.shared.requestWhenInUse()
+                    if !LocationManager.shared.hasPermission {
+                        LocationManager.shared.requestWhenInUse()
+                    }
                 }
             }
         } else {

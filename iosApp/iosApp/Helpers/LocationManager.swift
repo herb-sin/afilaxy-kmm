@@ -36,11 +36,9 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     /// Solicita permissão "ao usar" (modo emergência)
     func requestWhenInUse() {
-        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "requestWhenInUse authStatus=\(manager.authorizationStatus.rawValue)")
+        let desc = Bundle.main.object(forInfoDictionaryKey: "NSLocationWhenInUseUsageDescription") as? String
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "requestWhenInUse authStatus=\(manager.authorizationStatus.rawValue) plistKey=\(desc != nil ? "OK" : "MISSING")")
         manager.requestWhenInUseAuthorization()
-        if manager.accuracyAuthorization == .reducedAccuracy {
-            manager.requestTemporaryFullAccuracyAuthorization(withPurposeKey: "EmergencyLocation") { _ in }
-        }
     }
 
     /// Solicita permissão "sempre" (modo helper com background location)
