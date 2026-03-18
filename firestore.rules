@@ -34,7 +34,10 @@ service cloud.firestore {
     
     // Emergency requests collection (coleção real usada pelo app)
     match /emergency_requests/{emergencyId} {
-      allow read: if isAuthenticated()
+      // list: qualquer usuário autenticado pode fazer queries (necessário para observeNearbyEmergencies)
+      allow list: if isAuthenticated();
+      // get: apenas participantes podem ler documento individual
+      allow get: if isAuthenticated()
         && (request.auth.uid == resource.data.requesterId
             || request.auth.uid == resource.data.helperId);
       allow create: if isAuthenticated()
@@ -45,9 +48,8 @@ service cloud.firestore {
       allow update: if isAuthenticated()
         && (request.auth.uid == resource.data.requesterId
             || request.auth.uid == resource.data.helperId)
-        // Não permite alterar o dono da emergência
         && request.resource.data.requesterId == resource.data.requesterId;
-      allow delete: if false; // Emergências não são deletadas, apenas marcadas como inativas
+      allow delete: if false;
     }
     
     // Professionals collection
