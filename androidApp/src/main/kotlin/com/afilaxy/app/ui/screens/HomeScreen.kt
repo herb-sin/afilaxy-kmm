@@ -85,10 +85,16 @@ fun HomeScreen(
             }
     }
 
-    // Observa emergências próximas quando helper mode está ativo
-    LaunchedEffect(state.isHelperMode, state.userLatitude, state.userLongitude) {
-        if (!state.isHelperMode || state.userLatitude == 0.0) return@LaunchedEffect
-        viewModel.startObservingIncomingEmergencies(state.userLatitude, state.userLongitude)
+    // Observa emergências próximas assim que tiver localização (independente de helper mode)
+    val location = remember {
+        val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+        lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+            ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+    }
+    LaunchedEffect(location) {
+        val lat = location?.latitude ?: return@LaunchedEffect
+        val lon = location.longitude
+        viewModel.startObservingIncomingEmergencies(lat, lon)
     }
 
     // Permissões de localização + notificações (Android 13+)

@@ -16,27 +16,25 @@ struct EmergencyView: View {
     private func requestLocationAndCreateEmergency() {
         if locationManager.hasPermission {
             LocationManagerBridge.shared.start()
-            // Aguarda até 3s pela localização antes de chamar o ViewModel
-            Task {
-                _ = await locationManager.fetchCurrentLocation()
-                await MainActor.run {
-                    container.emergency.vm.onCreateEmergency()
-                    LocationManagerBridge.shared.disableHelperMode()
+            // Usa localização já conhecida se recente, senão aguarda
+            if locationManager.currentLocation != nil {
+                container.emergency.vm.onCreateEmergency()
+                LocationManagerBridge.shared.disableHelperMode()
+            } else {
+                Task {
+                    _ = await locationManager.fetchCurrentLocation()
+                    await MainActor.run {
+                        container.emergency.vm.onCreateEmergency()
+                        LocationManagerBridge.shared.disableHelperMode()
+                    }
                 }
             }
         } else {
             locationManager.requestWhenInUse()
-            // Observa mudança de permissão e tenta novamente
             Task {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 await MainActor.run {
-                    if locationManager.hasPermission {
-                        LocationManagerBridge.shared.start()
-                        container.emergency.vm.onCreateEmergency()
-                    } else {
-                        // Permissão negada — o ViewModel vai retornar "Erro ao obter localização"
-                        container.emergency.vm.onCreateEmergency()
-                    }
+                    container.emergency.vm.onCreateEmergency()
                 }
             }
         }
