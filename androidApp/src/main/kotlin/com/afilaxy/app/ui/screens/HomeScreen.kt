@@ -85,18 +85,6 @@ fun HomeScreen(
             }
     }
 
-    // Observa emergências próximas assim que tiver localização (independente de helper mode)
-    LaunchedEffect(hasAllPermissions) {
-        if (!hasAllPermissions) return@LaunchedEffect
-        try {
-            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
-            val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
-                ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-                ?: return@LaunchedEffect
-            viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
-        } catch (_: SecurityException) {}
-    }
-
     // Permissões de localização + notificações (Android 13+)
     val requiredPermissions = remember {
         buildList {
@@ -110,6 +98,18 @@ fun HomeScreen(
     val permissionsState = rememberMultiplePermissionsState(permissions = requiredPermissions)
     val missingPermissions = permissionsState.permissions.filter { !it.status.isGranted }
     val hasAllPermissions = missingPermissions.isEmpty()
+
+    // Observa emergências próximas assim que tiver localização (independente de helper mode)
+    LaunchedEffect(hasAllPermissions) {
+        if (!hasAllPermissions) return@LaunchedEffect
+        try {
+            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+            val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                ?: return@LaunchedEffect
+            viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
+        } catch (_: SecurityException) {}
+    }
 
     // Ao entrar na tela, verificar se alguma permissão está pendente
     LaunchedEffect(Unit) {
