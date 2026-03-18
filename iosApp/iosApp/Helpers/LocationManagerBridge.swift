@@ -42,6 +42,7 @@ final class LocationManagerBridge {
             "location": GeoPoint(latitude: lat, longitude: lon),
             "latitude": lat,
             "longitude": lon,
+            "geohash": encodeGeohash(lat: lat, lon: lon),
             "isActive": true,
             "lastUpdate": FieldValue.serverTimestamp()
         ]
@@ -55,6 +56,27 @@ final class LocationManagerBridge {
                 }
             }
         }
+    }
+
+    // Geohash precision=9 — compatível com geofire-common
+    private func encodeGeohash(lat: Double, lon: Double, precision: Int = 9) -> String {
+        let base32 = Array("0123456789bcdefghjkmnpqrstuvwxyz")
+        var minLat = -90.0, maxLat = 90.0, minLon = -180.0, maxLon = 180.0
+        var hash = "", bits = 0, bitsTotal = 0, hashValue = 0
+        while hash.count < precision {
+            if bitsTotal % 2 == 0 {
+                let mid = (minLon + maxLon) / 2
+                if lon >= mid { hashValue = (hashValue << 1) | 1; minLon = mid }
+                else { hashValue = hashValue << 1; maxLon = mid }
+            } else {
+                let mid = (minLat + maxLat) / 2
+                if lat >= mid { hashValue = (hashValue << 1) | 1; minLat = mid }
+                else { hashValue = hashValue << 1; maxLat = mid }
+            }
+            bits += 1; bitsTotal += 1
+            if bits == 5 { hash.append(base32[hashValue]); bits = 0; hashValue = 0 }
+        }
+        return hash
     }
 
     func disableHelperMode() {
