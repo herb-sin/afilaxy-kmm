@@ -24,16 +24,22 @@ struct HomeView: View {
         LocationManager.shared.requestWhenInUse()
         Task {
             let location = await LocationManager.shared.fetchCurrentLocation()
-            FileLogger.shared.write(level: "INFO", tag: "HomeView", message: "fetchCurrentLocation result: \(location?.coordinate.latitude ?? 0), \(location?.coordinate.longitude ?? 0)")
-            await MainActor.run {
-                if LocationManager.shared.hasPermission {
-                    LocationManagerBridge.shared.enableHelperMode()
-                    container.emergency.vm.onToggleHelperMode(enable: true)
-                } else {
-                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "No permission after fetch")
-                    helperToggle = false
+            let lat = location?.coordinate.latitude ?? 0
+            let lon = location?.coordinate.longitude ?? 0
+            FileLogger.shared.write(level: "INFO", tag: "HomeView", message: "fetchCurrentLocation result: \(lat), \(lon)")
+            guard LocationManager.shared.hasPermission, lat != 0 else {
+                await MainActor.run {
+                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "No permission or location after fetch")
+                    isTogglingHelper = false
                 }
-                isTogglingHelper = false
+                return
+            }
+            // Firestore write via iOS SDK (não passa pelo Kotlin/Native)
+            LocationManagerBridge.shared.enableHelperMode(lat: lat, lon: lon) { success in
+                if success {
+                    self.container.emergency.vm.onToggleHelperMode(enable: true)
+                }
+                self.isTogglingHelper = false
             }
         }
     }
