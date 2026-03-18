@@ -7,6 +7,7 @@ import com.afilaxy.domain.repository.LocationRepository
 import com.afilaxy.domain.repository.NotificationRepository
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,10 +52,16 @@ class EmergencyViewModel(
     
     fun observeEmergencyStatus(emergencyId: String) {
         viewModelScope.coroutineScope.launch {
-            emergencyRepository.observeEmergencyStatus(emergencyId)
-                .collect { status ->
-                    _state.update { it.copy(emergencyStatus = status) }
-                }
+            while (true) {
+                try {
+                    val doc = emergencyRepository.getActiveEmergency()
+                    // poll status via getActiveEmergency — se retornar null, emergência encerrou
+                    if (doc.getOrNull() == null && _state.value.hasActiveEmergency) {
+                        _state.update { it.copy(emergencyStatus = "resolved") }
+                    }
+                } catch (_: Exception) {}
+                delay(5000)
+            }
         }
     }
     
