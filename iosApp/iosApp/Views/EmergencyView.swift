@@ -76,7 +76,7 @@ struct EmergencyView: View {
                             Image(systemName: "person.fill").foregroundColor(.accentColor)
                             VStack(alignment: .leading) {
                                 Text(helper.name).font(.headline)
-                                Text(String(format: "%.1f km", Double(helper.distance) / 1000.0))
+                                Text(String(format: "%.1f km", helper.distance))
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         }

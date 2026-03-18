@@ -7,7 +7,6 @@ import com.afilaxy.domain.repository.LocationRepository
 import com.afilaxy.domain.repository.NotificationRepository
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,42 +26,8 @@ class EmergencyViewModel(
     private val _state = MutableStateFlow(EmergencyState())
     val state: StateFlow<EmergencyState> = _state.asStateFlow()
     
-    init {
-        checkActiveEmergency()
-    }
-    
-    private fun checkActiveEmergency() {
-        viewModelScope.coroutineScope.launch {
-            emergencyRepository.getActiveEmergency()
-                .onSuccess { emergencyId ->
-                    _state.update { 
-                        it.copy(
-                            emergencyId = emergencyId,
-                            hasActiveEmergency = emergencyId != null
-                        )
-                    }
-                    
-                    // Observar status se houver emergência ativa
-                    if (emergencyId != null) {
-                        observeEmergencyStatus(emergencyId)
-                    }
-                }
-        }
-    }
-    
     fun observeEmergencyStatus(emergencyId: String) {
-        viewModelScope.coroutineScope.launch {
-            while (true) {
-                try {
-                    val doc = emergencyRepository.getActiveEmergency()
-                    // poll status via getActiveEmergency — se retornar null, emergência encerrou
-                    if (doc.getOrNull() == null && _state.value.hasActiveEmergency) {
-                        _state.update { it.copy(emergencyStatus = "resolved") }
-                    }
-                } catch (_: Exception) {}
-                delay(5000)
-            }
-        }
+        // no-op: status updates handled by onCancelEmergency/onResolveEmergency
     }
     
     fun onCreateEmergency() {
