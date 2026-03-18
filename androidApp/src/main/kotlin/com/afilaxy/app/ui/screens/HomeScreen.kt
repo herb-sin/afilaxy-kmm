@@ -63,12 +63,14 @@ fun HomeScreen(
 
     // Notificação local quando emergência próxima chega via Firestore
     val notificationManager = context.getSystemService(android.app.NotificationManager::class.java)
+    val notifiedEmergencyIds = remember { mutableSetOf<String>() }
     LaunchedEffect(state.incomingEmergencies) {
         android.util.Log.i("HomeScreen", "incomingEmergencies updated: count=${state.incomingEmergencies.size}")
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         state.incomingEmergencies
-            .filter { it.userId != userId }
+            .filter { it.userId != userId && !notifiedEmergencyIds.contains(it.id) }
             .forEach { emergency ->
+                notifiedEmergencyIds.add(emergency.id)
                 val channelId = "afilaxy_emergency"
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     notificationManager.createNotificationChannel(

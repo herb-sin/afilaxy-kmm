@@ -78,6 +78,7 @@ class AppContainer: ObservableObject {
     func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 5.0) {
         emergencyListener?.remove()
         let deltaLat = radiusKm / 111.0
+        let startTime = Date()
         emergencyListener = Firestore.firestore()
             .collection("emergency_requests")
             .whereField("active", isEqualTo: true)
@@ -86,24 +87,16 @@ class AppContainer: ObservableObject {
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self, let snapshot else { return }
                 let uid = Auth.auth().currentUser?.uid
-                let incoming = snapshot.documents.compactMap { doc -> shared.Emergency? in
-                    let data = doc.data()
-                    guard let docLat = data["latitude"] as? Double,
-                          let docLon = data["longitude"] as? Double,
-                          let requesterId = data["requesterId"] as? String,
-                          requesterId != uid else { return nil }
-                    let dLat = docLat - lat; let dLon = docLon - lon
-                    let dist = sqrt(dLat * dLat + dLon * dLon) * 111.0
-                    guard dist <= radiusKm else { return nil }
-                    return nil // apenas conta para notificação local abaixo
-                }
-                // Notificação local para cada nova emergência
                 snapshot.documentChanges
                     .filter { $0.type == .added }
                     .forEach { change in
                         let data = change.document.data()
                         guard let requesterId = data["requesterId"] as? String,
                               requesterId != uid else { return }
+                        // Ignorar documentos que já existiam antes do listener iniciar
+                        let timestamp = (data["timestamp"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
+                            ?? (data["timestamp"] as? Timestamp)?.dateValue()
+                        if let ts = timestamp, ts < startTime { return }
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
                         self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!")
