@@ -122,61 +122,44 @@ class EmergencyViewModel(
     }
     
     fun onToggleHelperMode(enable: Boolean) {
+        _state.update {
+            it.copy(
+                isHelperMode = enable,
+                isLoading = false,
+                error = null
+            )
+        }
+    }
+
+    fun activateHelperWithLocation() {
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            
-            if (enable) {
-                // Obter localização e ativar helper
-                val location = locationRepository.getCurrentLocation()
-                if (location == null) {
-                    _state.update { 
+            val location = locationRepository.getCurrentLocation()
+            if (location == null) {
+                _state.update { it.copy(isLoading = false, error = "Erro ao obter localização") }
+                return@launch
+            }
+            emergencyRepository.activateHelper(location.latitude, location.longitude)
+                .onSuccess {
+                    _state.update {
                         it.copy(
+                            isHelperMode = true,
                             isLoading = false,
-                            error = "Erro ao obter localização"
+                            userLatitude = location.latitude,
+                            userLongitude = location.longitude
                         )
                     }
-                    return@launch
                 }
-                
-                emergencyRepository.activateHelper(location.latitude, location.longitude)
-                    .onSuccess {
-                        _state.update { 
-                            it.copy(
-                                isHelperMode = true,
-                                isLoading = false,
-                                userLatitude = location.latitude,
-                                userLongitude = location.longitude
-                            )
-                        }
-                    }
-                    .onFailure { exception ->
-                        _state.update { 
-                            it.copy(
-                                isLoading = false,
-                                error = "Erro ao ativar modo helper: ${exception.message}"
-                            )
-                        }
-                    }
-            } else {
-                // Desativar helper
-                emergencyRepository.deactivateHelper()
-                    .onSuccess {
-                        _state.update { 
-                            it.copy(
-                                isHelperMode = false,
-                                isLoading = false
-                            )
-                        }
-                    }
-                    .onFailure { exception ->
-                        _state.update { 
-                            it.copy(
-                                isLoading = false,
-                                error = "Erro ao desativar modo helper: ${exception.message}"
-                            )
-                        }
-                    }
-            }
+                .onFailure { e ->
+                    _state.update { it.copy(isLoading = false, error = "Erro ao ativar helper: ${e.message}") }
+                }
+        }
+    }
+
+    fun deactivateHelper() {
+        viewModelScope.coroutineScope.launch {
+            emergencyRepository.deactivateHelper()
+            _state.update { it.copy(isHelperMode = false, isLoading = false) }
         }
     }
     

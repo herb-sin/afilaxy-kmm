@@ -14,26 +14,31 @@ struct EmergencyView: View {
     }
 
     private func requestLocationAndCreateEmergency() {
+        FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "requestLocationAndCreateEmergency hasPermission=\(locationManager.hasPermission) hasLocation=\(locationManager.currentLocation != nil)")
         if locationManager.hasPermission {
             LocationManagerBridge.shared.start()
-            // Usa localização já conhecida se recente, senão aguarda
             if locationManager.currentLocation != nil {
+                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "using cached location — calling onCreateEmergency")
                 container.emergency.vm.onCreateEmergency()
                 LocationManagerBridge.shared.disableHelperMode()
             } else {
+                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "no cached location — fetching async")
                 Task {
                     _ = await locationManager.fetchCurrentLocation()
                     await MainActor.run {
+                        FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "async fetch done — calling onCreateEmergency")
                         container.emergency.vm.onCreateEmergency()
                         LocationManagerBridge.shared.disableHelperMode()
                     }
                 }
             }
         } else {
+            FileLogger.shared.write(level: "WARN", tag: "EmergencyView", message: "no permission — requesting WhenInUse")
             locationManager.requestWhenInUse()
             Task {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 await MainActor.run {
+                    FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "calling onCreateEmergency after permission wait")
                     container.emergency.vm.onCreateEmergency()
                 }
             }
@@ -51,6 +56,7 @@ struct EmergencyView: View {
                         HStack { ProgressView(); Text("Aguardando helper...").foregroundColor(.secondary) }
                     }
                     Button("Cancelar Emergência", role: .destructive) {
+                        FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "cancelEmergency tapped")
                         container.emergency.vm.onCancelEmergency()
                     }
                 }
@@ -90,5 +96,8 @@ struct EmergencyView: View {
         }
         .navigationTitle("Emergência")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
+        }
     }
 }

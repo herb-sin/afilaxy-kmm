@@ -310,7 +310,7 @@ fun HomeScreen(
                                     pendingHelperMode = true
                                     showLocationPermission = true
                                 } else {
-                                    viewModel.onToggleHelperMode(false)
+                                    viewModel.deactivateHelper()
                                 }
                             }
                         )
@@ -370,7 +370,7 @@ fun HomeScreen(
                         onPermissionGranted = {
                             showLocationPermission = false
                             if (pendingHelperMode) {
-                                viewModel.onToggleHelperMode(true)
+                                viewModel.activateHelperWithLocation()
                                 pendingHelperMode = false
                             }
                         },

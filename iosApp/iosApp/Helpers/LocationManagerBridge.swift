@@ -1,5 +1,7 @@
 import Foundation
 import shared
+import FirebaseFirestore
+import FirebaseAuth
 
 /// Bridge que conecta LocationManager (Swift) com IOSLocationBridge (Kotlin)
 final class LocationManagerBridge {
@@ -9,19 +11,14 @@ final class LocationManagerBridge {
     
     private init() {}
     
-    /// Inicia monitoramento de localização e sincroniza com Kotlin
     func start() {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "start() hasPermission=\(locationManager.hasPermission) authStatus=\(locationManager.authorizationStatus.rawValue)")
-        // Não solicita permissão aqui — deixa o iOS carregar o estado primeiro
-        // A permissão é solicitada no ContentView.onAppear
         updateBridge()
         locationManager.startUpdating()
     }
     
-    /// Atualiza o bridge Kotlin com estado atual
     private func updateBridge() {
         IOSLocationBridge.shared.hasPermission = locationManager.hasPermission
-        
         if let location = locationManager.currentLocation {
             IOSLocationBridge.shared.latitude = location.coordinate.latitude
             IOSLocationBridge.shared.longitude = location.coordinate.longitude
@@ -30,16 +27,40 @@ final class LocationManagerBridge {
             FileLogger.shared.write(level: "WARN", tag: "LocationBridge", message: "updateBridge: no location yet, hasPermission=\(locationManager.hasPermission)")
         }
     }
-    
-    /// Ativa modo helper (solicita permissão "sempre" se necessário)
-    func enableHelperMode() {
+
+    /// Ativa helper mode: escreve no Firestore via SDK iOS (evita crash no Kotlin/Native)
+    /// e chama completion na main thread quando concluído.
+    func enableHelperMode(lat: Double, lon: Double, completion: @escaping (Bool) -> Void) {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "enableHelperMode hasPermission=\(locationManager.hasPermission)")
-        locationManager.startBackgroundUpdating()
+        locationManager.startUpdating()
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(false)
+            return
+        }
+        let data: [String: Any] = [
+            "id": uid,
+            "location": GeoPoint(latitude: lat, longitude: lon),
+            "latitude": lat,
+            "longitude": lon,
+            "isActive": true,
+            "lastUpdate": FieldValue.serverTimestamp()
+        ]
+        Firestore.firestore().collection("helpers").document(uid).setData(data, merge: true) { error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    FileLogger.shared.write(level: "ERROR", tag: "LocationBridge", message: "enableHelperMode Firestore error: \(error.localizedDescription)")
+                    completion(false)
+                } else {
+                    completion(true)
+                }
+            }
+        }
     }
-    
-    /// Desativa modo helper
+
     func disableHelperMode() {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "disableHelperMode")
         locationManager.stopUpdating()
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        Firestore.firestore().collection("helpers").document(uid).delete()
     }
 }
