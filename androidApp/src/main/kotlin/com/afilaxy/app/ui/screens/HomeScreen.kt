@@ -64,6 +64,7 @@ fun HomeScreen(
     // Notificação local quando emergência próxima chega via Firestore
     val notificationManager = context.getSystemService(android.app.NotificationManager::class.java)
     LaunchedEffect(state.incomingEmergencies) {
+        android.util.Log.i("HomeScreen", "incomingEmergencies updated: count=${state.incomingEmergencies.size}")
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         state.incomingEmergencies
             .filter { it.userId != userId }
@@ -101,14 +102,23 @@ fun HomeScreen(
 
     // Observa emergências próximas assim que tiver localização (independente de helper mode)
     LaunchedEffect(hasAllPermissions) {
-        if (!hasAllPermissions) return@LaunchedEffect
+        if (!hasAllPermissions) {
+            android.util.Log.w("HomeScreen", "observeEmergencies: missing permissions, skipping")
+            return@LaunchedEffect
+        }
         try {
             val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
             val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
                 ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-                ?: return@LaunchedEffect
+            if (location == null) {
+                android.util.Log.w("HomeScreen", "observeEmergencies: no last known location")
+                return@LaunchedEffect
+            }
+            android.util.Log.i("HomeScreen", "observeEmergencies: starting at ${location.latitude}, ${location.longitude}")
             viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
-        } catch (_: SecurityException) {}
+        } catch (e: SecurityException) {
+            android.util.Log.e("HomeScreen", "observeEmergencies: SecurityException", e)
+        }
     }
 
     // Ao entrar na tela, verificar se alguma permissão está pendente

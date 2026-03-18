@@ -228,7 +228,8 @@ class EmergencyViewModel(
                         _state.update { it.copy(incomingEmergencies = emergencies) }
                     }
             } catch (e: Exception) {
-                // Silently ignore — não deve crashar o app se o listener falhar
+                // Log para diagnóstico — não crashar o app
+                com.afilaxy.util.Logger.e("EmergencyViewModel", "observeIncomingEmergencies failed", e)
             }
         }
     }
