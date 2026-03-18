@@ -34,11 +34,7 @@ final class LocationManagerBridge {
     /// Ativa modo helper (solicita permissão "sempre" se necessário)
     func enableHelperMode() {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "enableHelperMode hasPermission=\(locationManager.hasPermission)")
-        if locationManager.hasPermission {
-            locationManager.startBackgroundUpdating()
-            return
-        }
-        locationManager.requestAlwaysAuthorization()
+        locationManager.startBackgroundUpdating()
     }
     
     /// Desativa modo helper

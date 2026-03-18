@@ -66,12 +66,8 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func startBackgroundUpdating() {
-        guard manager.authorizationStatus == .authorizedAlways else {
-            manager.requestAlwaysAuthorization()
-            return
-        }
-        manager.allowsBackgroundLocationUpdates = true
-        manager.pausesLocationUpdatesAutomatically = false
+        // WhenInUse é suficiente para o modo helper — não solicita Always
+        // para evitar crash ao apresentar diálogo de sistema durante rerender SwiftUI
         manager.startUpdatingLocation()
     }
 
@@ -144,11 +140,6 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         IOSLocationBridge.shared.hasPermission = hasPermission
         
         if hasPermission {
-            // Se tem permissão "sempre", ativar background updates
-            if manager.authorizationStatus == .authorizedAlways {
-                manager.allowsBackgroundLocationUpdates = true
-                manager.pausesLocationUpdatesAutomatically = false
-            }
             manager.startUpdatingLocation()
         }
     }
