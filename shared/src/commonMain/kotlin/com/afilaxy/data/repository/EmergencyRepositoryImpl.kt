@@ -93,7 +93,6 @@ class EmergencyRepositoryImpl(
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
             val userEmail = auth.currentUser?.email ?: ""
             
-            // Atualizar localização diretamente sem depender de AuthRepository
             try {
                 firestore.collection("users").document(userId)
                     .update(mapOf("latitude" to latitude, "longitude" to longitude))
@@ -105,6 +104,7 @@ class EmergencyRepositoryImpl(
                 "location" to GeoPoint(latitude, longitude),
                 "latitude" to latitude,
                 "longitude" to longitude,
+                "geohash" to encodeGeohash(latitude, longitude),
                 "isActive" to true,
                 "lastUpdate" to getCurrentTimeMillis()
             )
@@ -418,7 +418,7 @@ class EmergencyRepositoryImpl(
      * Calcular distância entre dois pontos (fórmula Haversine)
      */
     private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val r = 6371.0 // Earth radius in km
+        val r = 6371.0
         val dLat = (lat2 - lat1) * PI / 180.0
         val dLon = (lon2 - lon1) * PI / 180.0
         val a = sin(dLat / 2) * sin(dLat / 2) +
@@ -426,5 +426,28 @@ class EmergencyRepositoryImpl(
                 sin(dLon / 2) * sin(dLon / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return r * c
+    }
+
+    // Geohash precision=9 — compatível com geofire-common usado na Cloud Function
+    private fun encodeGeohash(latitude: Double, longitude: Double, precision: Int = 9): String {
+        val base32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+        var minLat = -90.0; var maxLat = 90.0
+        var minLon = -180.0; var maxLon = 180.0
+        val hash = StringBuilder()
+        var bits = 0; var bitsTotal = 0; var hashValue = 0
+        while (hash.length < precision) {
+            if (bitsTotal % 2 == 0) {
+                val mid = (minLon + maxLon) / 2
+                if (longitude >= mid) { hashValue = (hashValue shl 1) or 1; minLon = mid }
+                else { hashValue = hashValue shl 1; maxLon = mid }
+            } else {
+                val mid = (minLat + maxLat) / 2
+                if (latitude >= mid) { hashValue = (hashValue shl 1) or 1; minLat = mid }
+                else { hashValue = hashValue shl 1; maxLat = mid }
+            }
+            bits++; bitsTotal++
+            if (bits == 5) { hash.append(base32[hashValue]); bits = 0; hashValue = 0 }
+        }
+        return hash.toString()
     }
 }

@@ -38,6 +38,7 @@ struct HomeView: View {
             LocationManagerBridge.shared.enableHelperMode(lat: lat, lon: lon) { success in
                 if success {
                     self.container.emergency.vm.onToggleHelperMode(enable: true)
+                    self.container.startObservingNearbyEmergencies(lat: lat, lon: lon)
                 }
                 self.isTogglingHelper = false
             }
@@ -57,6 +58,7 @@ struct HomeView: View {
                         } else {
                             LocationManagerBridge.shared.disableHelperMode()
                             container.emergency.vm.onToggleHelperMode(enable: false)
+                            container.stopObservingNearbyEmergencies()
                         }
                     }
                 )) {
