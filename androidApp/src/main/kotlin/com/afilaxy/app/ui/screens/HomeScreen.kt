@@ -86,15 +86,15 @@ fun HomeScreen(
     }
 
     // Observa emergências próximas assim que tiver localização (independente de helper mode)
-    val location = remember {
-        val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
-        lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
-            ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-    }
-    LaunchedEffect(location) {
-        val lat = location?.latitude ?: return@LaunchedEffect
-        val lon = location.longitude
-        viewModel.startObservingIncomingEmergencies(lat, lon)
+    LaunchedEffect(hasAllPermissions) {
+        if (!hasAllPermissions) return@LaunchedEffect
+        try {
+            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+            val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                ?: return@LaunchedEffect
+            viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
+        } catch (_: SecurityException) {}
     }
 
     // Permissões de localização + notificações (Android 13+)
