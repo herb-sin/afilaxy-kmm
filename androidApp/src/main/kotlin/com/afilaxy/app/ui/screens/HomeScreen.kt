@@ -64,25 +64,31 @@ fun HomeScreen(
     // Notificação local quando emergência próxima chega via Firestore
     val notificationManager = context.getSystemService(android.app.NotificationManager::class.java)
     LaunchedEffect(state.incomingEmergencies) {
-        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
         state.incomingEmergencies
             .filter { it.userId != userId }
             .forEach { emergency ->
                 val channelId = "afilaxy_emergency"
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     notificationManager.createNotificationChannel(
-                        android.app.NotificationChannel(channelId, "Emergências", android.app.NotificationManager.IMPORTANCE_HIGH)
+                        NotificationChannel(channelId, "Emergências", NotificationManager.IMPORTANCE_HIGH)
                     )
                 }
-                val notification = androidx.core.app.NotificationCompat.Builder(context, channelId)
+                val notification = NotificationCompat.Builder(context, channelId)
                     .setSmallIcon(com.afilaxy.app.R.drawable.ic_launcher_foreground)
                     .setContentTitle("Nova Emergência Próxima!")
                     .setContentText("${emergency.userName} precisa de ajuda")
-                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
                     .setAutoCancel(true)
                     .build()
                 notificationManager.notify(emergency.id.hashCode(), notification)
             }
+    }
+
+    // Observa emergências próximas quando helper mode está ativo
+    LaunchedEffect(state.isHelperMode, state.userLatitude, state.userLongitude) {
+        if (!state.isHelperMode || state.userLatitude == 0.0) return@LaunchedEffect
+        viewModel.startObservingIncomingEmergencies(state.userLatitude, state.userLongitude)
     }
 
     // Permissões de localização + notificações (Android 13+)

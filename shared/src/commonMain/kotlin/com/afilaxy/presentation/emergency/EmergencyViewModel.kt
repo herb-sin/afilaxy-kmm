@@ -176,7 +176,6 @@ class EmergencyViewModel(
                                 userLongitude = location.longitude
                             )
                         }
-                        observeIncomingEmergencies(location.latitude, location.longitude)
                     }
                     .onFailure { exception ->
                         _state.update { 
@@ -262,12 +261,20 @@ class EmergencyViewModel(
         }
     }
     
+    fun startObservingIncomingEmergencies(latitude: Double, longitude: Double) {
+        observeIncomingEmergencies(latitude, longitude)
+    }
+
     private fun observeIncomingEmergencies(latitude: Double, longitude: Double) {
         viewModelScope.coroutineScope.launch {
-            emergencyRepository.observeNearbyEmergencies(latitude, longitude, 5.0)
-                .collect { emergencies ->
-                    _state.update { it.copy(incomingEmergencies = emergencies) }
-                }
+            try {
+                emergencyRepository.observeNearbyEmergencies(latitude, longitude, 5.0)
+                    .collect { emergencies ->
+                        _state.update { it.copy(incomingEmergencies = emergencies) }
+                    }
+            } catch (e: Exception) {
+                // Silently ignore — não deve crashar o app se o listener falhar
+            }
         }
     }
 
