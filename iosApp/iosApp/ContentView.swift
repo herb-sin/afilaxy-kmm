@@ -42,6 +42,11 @@ struct ContentView: View {
                     }
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenEmergency"))) { notification in
+                if notification.userInfo?["emergencyId"] is String {
+                    path.append(AppRoute.emergency)
+                }
+            }
         } else {
             LoginView(onLoginSuccess: {
                 DispatchQueue.main.async { isLoggedIn = true }
