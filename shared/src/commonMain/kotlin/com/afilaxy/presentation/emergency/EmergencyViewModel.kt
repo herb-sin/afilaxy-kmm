@@ -220,6 +220,13 @@ class EmergencyViewModel(
         observeIncomingEmergencies(latitude, longitude)
     }
 
+    // Set persistente de IDs já notificados — sobrevive a recomposições do Compose
+    private val _notifiedEmergencyIds = mutableSetOf<String>()
+
+    fun isAlreadyNotified(emergencyId: String): Boolean = emergencyId in _notifiedEmergencyIds
+
+    fun markAsNotified(emergencyId: String) { _notifiedEmergencyIds.add(emergencyId) }
+
     private fun observeIncomingEmergencies(latitude: Double, longitude: Double) {
         viewModelScope.coroutineScope.launch {
             try {
