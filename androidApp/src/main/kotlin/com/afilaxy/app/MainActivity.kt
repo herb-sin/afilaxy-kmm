@@ -57,7 +57,8 @@ class MainActivity : ComponentActivity() {
                         NavGraph(
                             startDestination = if (isAuthenticated && openEmergencyResponse && emergencyId != null) {
                                 "emergency_response/$emergencyId"
-                            } else null
+                            } else null,
+                            emergencyViewModel = emergencyViewModel
                         )
                     }
                 }

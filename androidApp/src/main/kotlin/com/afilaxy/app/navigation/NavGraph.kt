@@ -10,7 +10,9 @@ import androidx.navigation.navArgument
 import com.afilaxy.app.ui.screens.*
 import com.afilaxy.domain.model.Evento
 import com.afilaxy.domain.model.Produto
+import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.google.firebase.auth.FirebaseAuth
+import org.koin.androidx.compose.koinViewModel
 
 private val protectedRoutes = setOf(
     AppRoutes.HOME, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
@@ -20,7 +22,7 @@ private val protectedRoutes = setOf(
 )
 
 @Composable
-fun NavGraph(startDestination: String? = null) {
+fun NavGraph(startDestination: String? = null, emergencyViewModel: EmergencyViewModel? = null) {
     val navController = rememberNavController()
     val isAuthenticated = FirebaseAuth.getInstance().currentUser != null
 
@@ -100,15 +102,16 @@ fun NavGraph(startDestination: String? = null) {
         
         composable(AppRoutes.EMERGENCY) {
             EmergencyScreen(
-                onNavigateToRequest = { emergencyId -> 
-                    navController.navigate("emergency_request/$emergencyId") 
+                onNavigateToRequest = { emergencyId ->
+                    navController.navigate("emergency_request/$emergencyId")
                 },
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToChat = {},
-                onNavigateToResponse = {}
+                onNavigateToResponse = {},
+                viewModel = emergencyViewModel ?: koinViewModel()
             )
         }
-        
+
         composable(
             route = "emergency_request/{emergencyId}",
             arguments = listOf(navArgument("emergencyId") { type = NavType.StringType })
@@ -116,7 +119,8 @@ fun NavGraph(startDestination: String? = null) {
             val emergencyId = backStackEntry.arguments?.getString("emergencyId") ?: ""
             EmergencyRequestScreen(
                 emergencyId = emergencyId,
-                navController = navController
+                navController = navController,
+                viewModel = emergencyViewModel ?: koinViewModel()
             )
         }
         

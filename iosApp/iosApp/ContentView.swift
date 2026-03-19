@@ -4,6 +4,7 @@ import shared
 enum AppRoute: Hashable {
     case home, emergency, history, profile, professionals
     case notifications, settings, about, terms, privacy, help
+    case emergencyResponse(String)
 }
 
 struct ContentView: View {
@@ -21,9 +22,11 @@ struct ContentView: View {
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
-                    case .emergency:
-                        EmergencyView()
-                            .onDisappear { emergencyRouteActive = false }
+                    case .emergency:   EmergencyView()
+                        .onDisappear { emergencyRouteActive = false }
+                    case .emergencyResponse(let emergencyId):
+                        EmergencyResponseView(emergencyId: emergencyId)
+                        .onDisappear { emergencyRouteActive = false }
                     case .history:     HistoryView()
                     case .profile:     ProfileView()
                     case .professionals: ProfessionalListView()
@@ -46,10 +49,10 @@ struct ContentView: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenEmergency"))) { notification in
-                guard notification.userInfo?["emergencyId"] is String,
+                guard let emergencyId = notification.userInfo?["emergencyId"] as? String,
                       !emergencyRouteActive else { return }
                 emergencyRouteActive = true
-                path.append(AppRoute.emergency)
+                path.append(AppRoute.emergencyResponse(emergencyId))
             }
         } else {
             LoginView(onLoginSuccess: {
