@@ -96,7 +96,8 @@ class AppContainer: ObservableObject {
                         let docId = change.document.documentID
                         guard let requesterId = data["requesterId"] as? String,
                               requesterId != uid,
-                              !self.notifiedEmergencyIds.contains(docId) else { return }
+                              !self.notifiedEmergencyIds.contains(docId),
+                              (data["status"] as? String) == "waiting" else { return }
                         // Ignorar documentos que já existiam antes do listener iniciar
                         let tsMillis = (data["timestamp"] as? Int64)
                             ?? (data["timestamp"] as? Int).map { Int64($0) }
