@@ -78,12 +78,24 @@ fun HomeScreen(
                         NotificationChannel(channelId, "Emergências", NotificationManager.IMPORTANCE_HIGH)
                     )
                 }
+                val intent = android.content.Intent(context, com.afilaxy.app.MainActivity::class.java).apply {
+                    flags = android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("emergencyId", emergency.id)
+                    putExtra("openEmergencyResponse", true)
+                }
+                val pendingIntent = android.app.PendingIntent.getActivity(
+                    context,
+                    emergency.id.hashCode(),
+                    intent,
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                )
                 val notification = NotificationCompat.Builder(context, channelId)
                     .setSmallIcon(com.afilaxy.app.R.drawable.ic_launcher_foreground)
-                    .setContentTitle("Nova Emergência Próxima!")
+                    .setContentTitle("🆘 Nova Emergência Próxima!")
                     .setContentText("${emergency.userName} precisa de ajuda")
                     .setPriority(NotificationCompat.PRIORITY_MAX)
                     .setAutoCancel(true)
+                    .setContentIntent(pendingIntent)
                     .build()
                 notificationManager.notify(emergency.id.hashCode(), notification)
             }
@@ -104,13 +116,13 @@ fun HomeScreen(
     val hasAllPermissions = missingPermissions.isEmpty()
 
     // Observa emergências próximas uma única vez assim que tiver permissão
-    var observerStarted by remember { mutableStateOf(false) }
+    val observerStarted = rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(hasAllPermissions) {
         if (!hasAllPermissions) {
             FileLogger.log("WARN", "HomeScreen", "observeEmergencies: missing permissions, skipping")
             return@LaunchedEffect
         }
-        if (observerStarted) return@LaunchedEffect
+        if (observerStarted.value) return@LaunchedEffect
         try {
             val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
             val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
@@ -121,7 +133,7 @@ fun HomeScreen(
             }
             FileLogger.log("INFO", "HomeScreen", "observeEmergencies: starting at ${location.latitude}, ${location.longitude}")
             viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
-            observerStarted = true
+            observerStarted.value = true
         } catch (e: SecurityException) {
             FileLogger.log("ERROR", "HomeScreen", "observeEmergencies: SecurityException: ${e.message}")
         }
