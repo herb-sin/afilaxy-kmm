@@ -10,6 +10,7 @@ struct ContentView: View {
     @EnvironmentObject var container: AppContainer
     @State private var isLoggedIn = false
     @State private var path = NavigationPath()
+    @State private var emergencyRouteActive = false
 
     var body: some View {
         if isLoggedIn {
@@ -20,7 +21,9 @@ struct ContentView: View {
                 )
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
-                    case .emergency:   EmergencyView()
+                    case .emergency:
+                        EmergencyView()
+                            .onDisappear { emergencyRouteActive = false }
                     case .history:     HistoryView()
                     case .profile:     ProfileView()
                     case .professionals: ProfessionalListView()
@@ -43,9 +46,10 @@ struct ContentView: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenEmergency"))) { notification in
-                if notification.userInfo?["emergencyId"] is String {
-                    path.append(AppRoute.emergency)
-                }
+                guard notification.userInfo?["emergencyId"] is String,
+                      !emergencyRouteActive else { return }
+                emergencyRouteActive = true
+                path.append(AppRoute.emergency)
             }
         } else {
             LoginView(onLoginSuccess: {
