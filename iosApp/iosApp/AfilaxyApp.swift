@@ -94,9 +94,12 @@ class AppContainer: ObservableObject {
                         guard let requesterId = data["requesterId"] as? String,
                               requesterId != uid else { return }
                         // Ignorar documentos que já existiam antes do listener iniciar
-                        let timestamp = (data["timestamp"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) }
-                            ?? (data["timestamp"] as? Timestamp)?.dateValue()
-                        if let ts = timestamp, ts < startTime { return }
+                        let tsMillis = (data["timestamp"] as? Int64)
+                            ?? (data["timestamp"] as? Int).map { Int64($0) }
+                            ?? (data["timestamp"] as? Double).map { Int64($0) }
+                            ?? 0
+                        let docDate = Date(timeIntervalSince1970: Double(tsMillis) / 1000)
+                        if tsMillis > 0 && docDate < startTime { return }
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
                         self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!")

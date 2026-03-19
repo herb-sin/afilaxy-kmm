@@ -79,8 +79,8 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     /// Usa a última localização conhecida se disponível e recente (< 30s),
     /// caso contrário solicita uma nova leitura e aguarda até 5 segundos.
     func fetchCurrentLocation() async -> CLLocation? {
-        // Se já temos localização recente, retornar diretamente
-        if let loc = currentLocation, Date().timeIntervalSince(loc.timestamp) < 30 {
+        // Usa localização recente (< 120s) diretamente sem aguardar GPS
+        if let loc = currentLocation, Date().timeIntervalSince(loc.timestamp) < 120 {
             return loc
         }
 
