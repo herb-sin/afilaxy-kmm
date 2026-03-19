@@ -65,7 +65,7 @@ fun HomeScreen(
     val notificationManager = context.getSystemService(android.app.NotificationManager::class.java)
     val notifiedEmergencyIds = remember { mutableSetOf<String>() }
     LaunchedEffect(state.incomingEmergencies) {
-        android.util.Log.i("HomeScreen", "incomingEmergencies updated: count=${state.incomingEmergencies.size}")
+        FileLogger.log("INFO", "HomeScreen", "incomingEmergencies updated: count=${state.incomingEmergencies.size}")
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         state.incomingEmergencies
             .filter { it.userId != userId && !notifiedEmergencyIds.contains(it.id) }
@@ -105,7 +105,7 @@ fun HomeScreen(
     // Observa emergências próximas assim que tiver localização (independente de helper mode)
     LaunchedEffect(hasAllPermissions) {
         if (!hasAllPermissions) {
-            android.util.Log.w("HomeScreen", "observeEmergencies: missing permissions, skipping")
+            FileLogger.log("WARN", "HomeScreen", "observeEmergencies: missing permissions, skipping")
             return@LaunchedEffect
         }
         try {
@@ -113,13 +113,13 @@ fun HomeScreen(
             val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
                 ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
             if (location == null) {
-                android.util.Log.w("HomeScreen", "observeEmergencies: no last known location")
+                FileLogger.log("WARN", "HomeScreen", "observeEmergencies: no last known location")
                 return@LaunchedEffect
             }
-            android.util.Log.i("HomeScreen", "observeEmergencies: starting at ${location.latitude}, ${location.longitude}")
+            FileLogger.log("INFO", "HomeScreen", "observeEmergencies: starting at ${location.latitude}, ${location.longitude}")
             viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
         } catch (e: SecurityException) {
-            android.util.Log.e("HomeScreen", "observeEmergencies: SecurityException", e)
+            FileLogger.log("ERROR", "HomeScreen", "observeEmergencies: SecurityException: ${e.message}")
         }
     }
 
