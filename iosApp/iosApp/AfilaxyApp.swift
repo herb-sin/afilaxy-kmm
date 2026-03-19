@@ -45,6 +45,24 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         completionHandler([.banner, .sound, .badge])
     }
 
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        if let emergencyId = userInfo["emergencyId"] as? String {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .init("AfilaxyOpenEmergency"),
+                    object: nil,
+                    userInfo: ["emergencyId": emergencyId]
+                )
+            }
+        }
+        completionHandler()
+    }
+
     private func saveFcmToken(_ token: String) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         Firestore.firestore().collection("users").document(uid)
@@ -67,6 +85,7 @@ class AppContainer: ObservableObject {
     lazy var loginViewModel: LoginViewModel = ViewModelProvider.shared.getLoginViewModel()
 
     private var cancellables = Set<AnyCancellable>()
+    @Published var pendingEmergencyId: String? = nil
     private var emergencyListener: ListenerRegistration?
     private var notifiedEmergencyIds = Set<String>()
 
@@ -107,7 +126,7 @@ class AppContainer: ObservableObject {
                         self.notifiedEmergencyIds.insert(docId)
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
-                        self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!")
+                        self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: docId)
                     }
             }
     }
@@ -117,13 +136,14 @@ class AppContainer: ObservableObject {
         emergencyListener = nil
     }
 
-    private func sendLocalNotification(title: String, body: String) {
+    private func sendLocalNotification(title: String, body: String, emergencyId: String) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        content.userInfo = ["emergencyId": emergencyId]
         let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
+            identifier: emergencyId,
             content: content,
             trigger: nil
         )

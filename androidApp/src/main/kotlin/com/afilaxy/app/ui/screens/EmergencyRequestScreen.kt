@@ -34,7 +34,13 @@ fun EmergencyRequestScreen(
     }
     
     // Navegar de volta quando emergência for cancelada
+    // Usa chave estável para não disparar na inicialização
+    val initializedRef = remember { mutableStateOf(false) }
     LaunchedEffect(state.hasActiveEmergency) {
+        if (!initializedRef.value) {
+            initializedRef.value = true
+            return@LaunchedEffect
+        }
         if (!state.hasActiveEmergency && !state.isLoading) {
             navController.popBackStack()
         }
