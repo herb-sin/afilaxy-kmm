@@ -103,12 +103,14 @@ fun HomeScreen(
     val missingPermissions = permissionsState.permissions.filter { !it.status.isGranted }
     val hasAllPermissions = missingPermissions.isEmpty()
 
-    // Observa emergências próximas assim que tiver localização (independente de helper mode)
+    // Observa emergências próximas uma única vez assim que tiver permissão
+    var observerStarted by remember { mutableStateOf(false) }
     LaunchedEffect(hasAllPermissions) {
         if (!hasAllPermissions) {
             FileLogger.log("WARN", "HomeScreen", "observeEmergencies: missing permissions, skipping")
             return@LaunchedEffect
         }
+        if (observerStarted) return@LaunchedEffect
         try {
             val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
             val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
@@ -119,6 +121,7 @@ fun HomeScreen(
             }
             FileLogger.log("INFO", "HomeScreen", "observeEmergencies: starting at ${location.latitude}, ${location.longitude}")
             viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
+            observerStarted = true
         } catch (e: SecurityException) {
             FileLogger.log("ERROR", "HomeScreen", "observeEmergencies: SecurityException: ${e.message}")
         }

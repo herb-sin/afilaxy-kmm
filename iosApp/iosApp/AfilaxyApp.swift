@@ -68,6 +68,7 @@ class AppContainer: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var emergencyListener: ListenerRegistration?
+    private var notifiedEmergencyIds = Set<String>()
 
     func observeChildren() {
         emergency.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
@@ -77,6 +78,7 @@ class AppContainer: ObservableObject {
     /// Inicia listener Firestore nativo para emergências próximas (iOS-safe, sem KMM Flow)
     func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 5.0) {
         emergencyListener?.remove()
+        notifiedEmergencyIds.removeAll()
         let deltaLat = radiusKm / 111.0
         let startTime = Date()
         emergencyListener = Firestore.firestore()
@@ -91,8 +93,10 @@ class AppContainer: ObservableObject {
                     .filter { $0.type == .added }
                     .forEach { change in
                         let data = change.document.data()
+                        let docId = change.document.documentID
                         guard let requesterId = data["requesterId"] as? String,
-                              requesterId != uid else { return }
+                              requesterId != uid,
+                              !self.notifiedEmergencyIds.contains(docId) else { return }
                         // Ignorar documentos que já existiam antes do listener iniciar
                         let tsMillis = (data["timestamp"] as? Int64)
                             ?? (data["timestamp"] as? Int).map { Int64($0) }
@@ -100,6 +104,7 @@ class AppContainer: ObservableObject {
                             ?? 0
                         let docDate = Date(timeIntervalSince1970: Double(tsMillis) / 1000)
                         if tsMillis > 0 && docDate < startTime { return }
+                        self.notifiedEmergencyIds.insert(docId)
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
                         self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!")
