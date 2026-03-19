@@ -18,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -115,30 +114,6 @@ fun HomeScreen(
     val permissionsState = rememberMultiplePermissionsState(permissions = requiredPermissions)
     val missingPermissions = permissionsState.permissions.filter { !it.status.isGranted }
     val hasAllPermissions = missingPermissions.isEmpty()
-
-    // Observa emergências próximas uma única vez assim que tiver permissão
-    val observerStarted = rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(hasAllPermissions) {
-        if (!hasAllPermissions) {
-            FileLogger.log("WARN", "HomeScreen", "observeEmergencies: missing permissions, skipping")
-            return@LaunchedEffect
-        }
-        if (observerStarted.value) return@LaunchedEffect
-        try {
-            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
-            val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
-                ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-            if (location == null) {
-                FileLogger.log("WARN", "HomeScreen", "observeEmergencies: no last known location")
-                return@LaunchedEffect
-            }
-            FileLogger.log("INFO", "HomeScreen", "observeEmergencies: starting at ${location.latitude}, ${location.longitude}")
-            viewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
-            observerStarted.value = true
-        } catch (e: SecurityException) {
-            FileLogger.log("ERROR", "HomeScreen", "observeEmergencies: SecurityException: ${e.message}")
-        }
-    }
 
     // Ao entrar na tela, verificar se alguma permissão está pendente
     LaunchedEffect(Unit) {
