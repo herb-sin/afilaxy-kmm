@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import com.afilaxy.app.R
 import com.afilaxy.app.ui.components.RequestLocationPermission
+import com.afilaxy.util.FileLogger
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
