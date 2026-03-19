@@ -78,7 +78,6 @@ class AppContainer: ObservableObject {
     /// Inicia listener Firestore nativo para emergências próximas (iOS-safe, sem KMM Flow)
     func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 5.0) {
         emergencyListener?.remove()
-        notifiedEmergencyIds.removeAll()
         let deltaLat = radiusKm / 111.0
         let startTime = Date()
         emergencyListener = Firestore.firestore()
