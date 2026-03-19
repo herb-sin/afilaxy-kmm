@@ -111,7 +111,7 @@ fun EmergencyRequestScreen(
                             FileLogger.log("INFO", "EmergencyRequestScreen", "cancelEmergency tapped hasActive=${state.hasActiveEmergency}")
                             viewModel.onCancelEmergency()
                         },
-                        enabled = !state.isLoading,
+                        enabled = state.hasActiveEmergency && !state.isLoading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )

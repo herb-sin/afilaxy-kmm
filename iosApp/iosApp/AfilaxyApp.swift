@@ -116,13 +116,14 @@ class AppContainer: ObservableObject {
                               requesterId != uid,
                               !self.notifiedEmergencyIds.contains(docId),
                               (data["status"] as? String) == "waiting" else { return }
-                        // Ignorar documentos que já existiam antes do listener iniciar
+                        // Ignorar documentos sem timestamp ou anteriores ao início do listener
                         let tsMillis = (data["timestamp"] as? Int64)
                             ?? (data["timestamp"] as? Int).map { Int64($0) }
                             ?? (data["timestamp"] as? Double).map { Int64($0) }
                             ?? 0
+                        guard tsMillis > 0 else { return }   // sem timestamp → doc inválido, ignora
                         let docDate = Date(timeIntervalSince1970: Double(tsMillis) / 1000)
-                        if tsMillis > 0 && docDate < startTime { return }
+                        if docDate < startTime { return }    // doc antigo (pré-listener) → ignora
                         self.notifiedEmergencyIds.insert(docId)
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")

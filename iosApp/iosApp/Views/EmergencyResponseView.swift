@@ -7,6 +7,7 @@ struct EmergencyResponseView: View {
     let emergencyId: String
     @EnvironmentObject var container: AppContainer
     @Environment(\.dismiss) private var dismiss
+    @State private var isAccepting = false
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -35,15 +36,23 @@ struct EmergencyResponseView: View {
                     NavigationLink("Abrir Chat", value: AppRoute.emergency) // placeholder — chat não implementado no iOS ainda
                 } else {
                     Button {
+                        guard !isAccepting else { return }
+                        isAccepting = true
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "acceptEmergency tapped emergencyId=\(emergencyId)")
                         container.emergency.vm.onAcceptEmergency(emergencyId: emergencyId)
                     } label: {
-                        Label("Aceitar e Ajudar", systemImage: "heart.fill")
-                            .frame(maxWidth: .infinity)
-                            .foregroundColor(.white)
-                            .padding(.vertical, 8)
+                        if isAccepting {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        } else {
+                            Label("Aceitar e Ajudar", systemImage: "heart.fill")
+                                .frame(maxWidth: .infinity)
+                                .foregroundColor(.white)
+                                .padding(.vertical, 8)
+                        }
                     }
-                    .disabled(state.isLoading)
+                    .disabled(state.isLoading || isAccepting)
                     .listRowBackground(Color.green)
                 }
             }
@@ -56,6 +65,15 @@ struct EmergencyResponseView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "appeared emergencyId=\(emergencyId)")
+        }
+        // Dismiss automático quando a emergência foi atribuída a este helper
+        .onReceive(container.emergency.$state) { newState in
+            guard let s = newState else { return }
+            if (s.emergencyId == emergencyId && s.hasActiveEmergency) ||
+               (s.emergencyStatus == "matched" && isAccepting) {
+                FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "emergency matched — dismissing")
+                dismiss()
+            }
         }
     }
 }
