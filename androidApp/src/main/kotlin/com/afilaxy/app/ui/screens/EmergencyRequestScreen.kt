@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.afilaxy.app.R
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.util.FileLogger
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,6 +24,10 @@ fun EmergencyRequestScreen(
     viewModel: EmergencyViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(Unit) {
+        FileLogger.log("INFO", "EmergencyRequestScreen", "opened emergencyId=$emergencyId hasActive=${state.hasActiveEmergency}")
+    }
     
     // Navegar para chat quando helper aceitar
     LaunchedEffect(state.emergencyStatus) {
@@ -103,6 +108,7 @@ fun EmergencyRequestScreen(
                     
                     Button(
                         onClick = {
+                            FileLogger.log("INFO", "EmergencyRequestScreen", "cancelEmergency tapped hasActive=${state.hasActiveEmergency}")
                             viewModel.onCancelEmergency()
                         },
                         enabled = !state.isLoading,
