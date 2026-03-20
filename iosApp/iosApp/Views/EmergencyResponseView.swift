@@ -35,8 +35,10 @@ struct EmergencyResponseView: View {
                             isAccepting = false
                             if success {
                                 accepted = true
-                                // Atualiza estado KMM para consistência
-                                container.emergency.vm.onAcceptEmergency(emergencyId: emergencyId)
+                                // Actualiza estado local sem chamar KMM (evita crash Kotlin/Native em thread não-main)
+                                DispatchQueue.main.async {
+                                    container.emergency.vm.onToggleHelperMode(enable: false)
+                                }
                             } else {
                                 errorMessage = error ?? "Erro ao aceitar emergência"
                             }
