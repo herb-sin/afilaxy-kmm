@@ -147,6 +147,8 @@ class EmergencyViewModel(
                             userLongitude = location.longitude
                         )
                     }
+                    // Layer 1 — observer ligado ao helper mode, coordenadas garantidas
+                    startObservingIncomingEmergencies(location.latitude, location.longitude)
                 }
                 .onFailure { e ->
                     _state.update { it.copy(isLoading = false, error = "Erro ao ativar helper: ${e.message}") }
@@ -214,7 +216,11 @@ class EmergencyViewModel(
         }
     }
     
+    private var emergencyObserverStarted = false
+
     fun startObservingIncomingEmergencies(latitude: Double, longitude: Double) {
+        if (emergencyObserverStarted) return
+        emergencyObserverStarted = true
         observeIncomingEmergencies(latitude, longitude)
     }
 
