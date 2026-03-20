@@ -51,13 +51,28 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
                 "helper_response" -> {
                     Log.d("FCM", "Resposta de helper recebida")
                     val title = data["title"] ?: "Helper Encontrado!"
-                    val body = data["body"] ?: "Algu\u00e9m est\u00e1 vindo te ajudar"
+                    val body = data["body"] ?: "Alguém está vindo te ajudar"
                     showNotification(title.sanitizeForLog(), body.sanitizeForLog(), null)
+                }
+                "helper_matched" -> {
+                    Log.d("FCM", "Helper aceitou emergência")
+                    val emergencyId = data["emergencyId"] ?: ""
+                    val helperName = data["helperName"] ?: "Alguém"
+                    val title = "Helper Encontrado!"
+                    val body = "$helperName está vindo te ajudar"
+                    showHelperMatchedNotification(title.sanitizeForLog(), body.sanitizeForLog(), emergencyId.sanitizeForLog())
                 }
                 else -> {
                     val title = data["title"] ?: "Afilaxy"
                     val body = data["body"] ?: ""
-                    showNotification(title.sanitizeForLog(), body.sanitizeForLog(), null)
+                    val emergencyId = data["emergencyId"]
+                    if (emergencyId != null) {
+                        showHelperMatchedNotification(
+                            title.sanitizeForLog(), body.sanitizeForLog(), emergencyId.sanitizeForLog()
+                        )
+                    } else {
+                        showNotification(title.sanitizeForLog(), body.sanitizeForLog(), null)
+                    }
                 }
             }
         }
@@ -76,6 +91,36 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
     
+    private fun showHelperMatchedNotification(title: String, body: String, emergencyId: String) {
+        val channelId = "afilaxy_emergency"
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("emergencyId", emergencyId)
+            putExtra("openEmergencyRequest", true)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, emergencyId.hashCode(), intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.createNotificationChannel(
+                NotificationChannel(channelId, "Emergências", NotificationManager.IMPORTANCE_HIGH)
+            )
+        }
+        notificationManager.notify(
+            safeNotificationId(emergencyId),
+            NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
+        )
+    }
+
     private fun showEmergencyNotification(title: String, body: String, emergencyId: String) {
         val channelId = "afilaxy_emergency"
         
