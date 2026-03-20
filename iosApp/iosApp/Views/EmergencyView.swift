@@ -20,7 +20,6 @@ struct EmergencyView: View {
             if locationManager.currentLocation != nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "using cached location — calling onCreateEmergency")
                 container.emergency.vm.onCreateEmergency()
-                LocationManagerBridge.shared.disableHelperMode()
             } else {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "no cached location — fetching async")
                 Task {
@@ -28,7 +27,6 @@ struct EmergencyView: View {
                     await MainActor.run {
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "async fetch done — calling onCreateEmergency")
                         container.emergency.vm.onCreateEmergency()
-                        LocationManagerBridge.shared.disableHelperMode()
                     }
                 }
             }
@@ -98,6 +96,17 @@ struct EmergencyView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
+        }
+        .onChange(of: state.hasActiveEmergency) { active in
+            if active {
+                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(state.emergencyId ?? "nil")")
+                LocationManagerBridge.shared.disableHelperMode()
+            }
+        }
+        .onChange(of: state.error) { error in
+            if let error {
+                FileLogger.shared.write(level: "ERROR", tag: "EmergencyView", message: "createEmergency error: \(error)")
+            }
         }
     }
 }

@@ -62,11 +62,12 @@ class EmergencyViewModel(
             )
             createEmergencyUseCase.execute(emergency)
                 .onSuccess { emergencyId ->
+                    com.afilaxy.util.Logger.d("EmergencyViewModel", "onCreateEmergency success emergencyId=$emergencyId")
                     // Desativar helper mode — quem solicita ajuda não pode ser helper
                     if (_state.value.isHelperMode) {
                         emergencyRepository.deactivateHelper()
                     }
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             emergencyId = emergencyId,
                             hasActiveEmergency = true,
@@ -75,15 +76,12 @@ class EmergencyViewModel(
                             error = null
                         )
                     }
-                    
-                    // Observar status da emergência
                     observeEmergencyStatus(emergencyId)
-                    
-                    // Buscar helpers próximos
                     findNearbyHelpers()
                 }
                 .onFailure { exception ->
-                    _state.update { 
+                    com.afilaxy.util.Logger.e("EmergencyViewModel", "onCreateEmergency failed: ${exception.message}", exception)
+                    _state.update {
                         it.copy(
                             isCreatingEmergency = false,
                             error = exception.message ?: "Erro ao criar emergência"
