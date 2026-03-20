@@ -60,13 +60,16 @@ fun RequestLocationPermission(
     var showForegroundRationale by remember { mutableStateOf(false) }
     var showBackgroundRationale by remember { mutableStateOf(false) }
     var hasLaunchedRequest by remember { mutableStateOf(false) }
+    // Guard: garante que onPermissionGranted() é chamado no máximo uma vez por invocação
+    var called by remember { mutableStateOf(false) }
+
+    fun grantOnce() { if (!called) { called = true; onPermissionGranted() } }
 
     // --- Efeito inicial: decide o que fazer com foreground ---
     LaunchedEffect(Unit) {
         when {
             foregroundState.allPermissionsGranted -> {
-                // Foreground já concedido — verificar background
-                handleBackgroundStep(backgroundState?.status?.isGranted, onPermissionGranted) {
+                handleBackgroundStep(backgroundState?.status?.isGranted, ::grantOnce) {
                     showBackgroundRationale = true
                 }
             }
@@ -89,7 +92,7 @@ fun RequestLocationPermission(
     // --- Após o request inicial, verificar resultado ---
     LaunchedEffect(foregroundState.allPermissionsGranted) {
         if (foregroundState.allPermissionsGranted) {
-            handleBackgroundStep(backgroundState?.status?.isGranted, onPermissionGranted) {
+            handleBackgroundStep(backgroundState?.status?.isGranted, ::grantOnce) {
                 showBackgroundRationale = true
             }
         } else if (hasLaunchedRequest && !foregroundState.allPermissionsGranted) {
@@ -102,7 +105,7 @@ fun RequestLocationPermission(
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         LaunchedEffect(backgroundState?.status?.isGranted) {
             if (foregroundState.allPermissionsGranted && backgroundState?.status?.isGranted == true) {
-                onPermissionGranted()
+                grantOnce()
             }
         }
     }
@@ -162,7 +165,7 @@ fun RequestLocationPermission(
             onDismissRequest = {
                 // Usuário dispensou — modo helper funciona, mas sem alertas em segundo plano
                 showBackgroundRationale = false
-                onPermissionGranted() // Conceder acesso foreground apenas
+                grantOnce() // Conceder acesso foreground apenas
             },
             title = { Text("Localização em Segundo Plano") },
             text = {
@@ -183,7 +186,7 @@ fun RequestLocationPermission(
                                 data = Uri.fromParts("package", context.packageName, null)
                             }
                         )
-                        onPermissionGranted() // Aceita apenas foreground por ora
+                        grantOnce() // Aceita apenas foreground por ora
                     } else {
                         backgroundState?.launchPermissionRequest()
                     }
@@ -194,7 +197,7 @@ fun RequestLocationPermission(
             dismissButton = {
                 TextButton(onClick = {
                     showBackgroundRationale = false
-                    onPermissionGranted() // Aceita apenas foreground
+                    grantOnce() // Aceita apenas foreground
                 }) {
                     Text("Usar sem segundo plano")
                 }

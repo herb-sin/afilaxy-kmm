@@ -117,13 +117,19 @@ class AppContainer: ObservableObject {
                               !self.notifiedEmergencyIds.contains(docId),
                               (data["status"] as? String) == "waiting" else { return }
                         // Ignorar documentos sem timestamp ou anteriores ao início do listener
-                        let tsMillis = (data["timestamp"] as? Int64)
-                            ?? (data["timestamp"] as? Int).map { Int64($0) }
-                            ?? (data["timestamp"] as? Double).map { Int64($0) }
-                            ?? 0
-                        guard tsMillis > 0 else { return }   // sem timestamp → doc inválido, ignora
-                        let docDate = Date(timeIntervalSince1970: Double(tsMillis) / 1000)
-                        if docDate < startTime { return }    // doc antigo (pré-listener) → ignora
+                        let docDate: Date
+                        if let ts = data["timestamp"] as? Timestamp {
+                            // Firestore nativo Timestamp (criado por Android SDK)
+                            docDate = ts.dateValue()
+                        } else if let ms = (data["timestamp"] as? Int64)
+                                    ?? (data["timestamp"] as? Int).map(Int64.init)
+                                    ?? (data["timestamp"] as? Double).map(Int64.init) {
+                            guard ms > 0 else { return }
+                            docDate = Date(timeIntervalSince1970: Double(ms) / 1000)
+                        } else {
+                            return  // sem timestamp válido → descarta
+                        }
+                        if docDate < startTime { return }  // doc antigo (pré-listener) → ignora
                         self.notifiedEmergencyIds.insert(docId)
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
@@ -177,9 +183,9 @@ struct AfilaxyApp: App {
                 .environmentObject(container)
         }
         .onChange(of: scenePhase) { phase in
-            if phase == .background || phase == .inactive {
+            if phase == .background {
                 container.stopObservingNearbyEmergencies()
-                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=\(phase) — listener removido")
+                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=background — listener removido")
             }
         }
     }

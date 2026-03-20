@@ -63,8 +63,12 @@ fun EmergencyScreen(
         ) {
             if (!state.hasActiveEmergency) {
                 Button(
-                    onClick = { showLocationPermission = true },
-                    enabled = !state.isLoading,
+                    onClick = {
+                        if (!state.isCreatingEmergency && !state.hasActiveEmergency) {
+                            showLocationPermission = true
+                        }
+                    },
+                    enabled = !state.isLoading && !state.isCreatingEmergency,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
