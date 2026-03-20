@@ -49,10 +49,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val isAuthenticated = FirebaseAuth.getInstance().currentUser != null
         val emergencyId = intent.getStringExtra("emergencyId")
             ?.takeIf { it.isNotBlank() && it.all { c -> c.isLetterOrDigit() || c == '-' || c == '_' } }
         val openEmergencyResponse = intent.getBooleanExtra("openEmergencyResponse", false)
+        val openEmergencyRequest = intent.getBooleanExtra("openEmergencyRequest", false)
 
         setContent {
             KoinAndroidContext {
@@ -61,12 +61,35 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        NavGraph(
-                            startDestination = if (isAuthenticated && openEmergencyResponse && emergencyId != null) {
-                                "emergency_response/$emergencyId"
-                            } else null,
-                            emergencyViewModel = emergencyViewModel
-                        )
+                        val authResolved = androidx.compose.runtime.remember {
+                            androidx.compose.runtime.mutableStateOf(false)
+                        }
+                        val resolvedDestination = androidx.compose.runtime.remember {
+                            androidx.compose.runtime.mutableStateOf<String?>(null)
+                        }
+                        androidx.compose.runtime.DisposableEffect(Unit) {
+                            val auth = FirebaseAuth.getInstance()
+                            val listener = com.google.firebase.auth.FirebaseAuth.AuthStateListener { firebaseAuth ->
+                                if (!authResolved.value) {
+                                    val user = firebaseAuth.currentUser
+                                    resolvedDestination.value = when {
+                                        user != null && openEmergencyResponse && emergencyId != null -> "emergency_response/$emergencyId"
+                                        user != null && openEmergencyRequest && emergencyId != null -> "emergency_request/$emergencyId"
+                                        user != null -> com.afilaxy.app.navigation.AppRoutes.HOME
+                                        else -> com.afilaxy.app.navigation.AppRoutes.LOGIN
+                                    }
+                                    authResolved.value = true
+                                }
+                            }
+                            auth.addAuthStateListener(listener)
+                            onDispose { auth.removeAuthStateListener(listener) }
+                        }
+                        if (authResolved.value) {
+                            NavGraph(
+                                startDestination = resolvedDestination.value,
+                                emergencyViewModel = emergencyViewModel
+                            )
+                        }
                     }
                 }
             }

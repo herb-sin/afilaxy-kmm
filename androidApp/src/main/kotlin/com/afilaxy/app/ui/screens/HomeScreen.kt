@@ -62,8 +62,8 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // Layer 3 — safety net: inicia observer quando coordenadas saem de 0.0 (uma única vez)
-    LaunchedEffect(state.userLatitude, state.userLongitude) {
+    // Layer 3 — safety net: inicia/reinicia observer quando coordenadas ou helperMode mudam
+    LaunchedEffect(state.isHelperMode, state.userLatitude, state.userLongitude) {
         if (state.isHelperMode &&
             (state.userLatitude != 0.0 || state.userLongitude != 0.0)
         ) {
