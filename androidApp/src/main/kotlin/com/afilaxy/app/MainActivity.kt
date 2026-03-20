@@ -43,7 +43,10 @@ class MainActivity : ComponentActivity() {
 
         // Inicia observer de emergências próximas com escopo de Activity
         if (FirebaseAuth.getInstance().currentUser != null) {
-            startEmergencyObserver()
+            // Layer 2 — relançamento: se já era helper, reinicia observer com last known location
+            if (emergencyViewModel.state.value.isHelperMode) {
+                startEmergencyObserver()
+            }
         }
 
         val isAuthenticated = FirebaseAuth.getInstance().currentUser != null
