@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -13,9 +12,14 @@ import androidx.lifecycle.lifecycleScope
 import com.afilaxy.app.navigation.NavGraph
 import com.afilaxy.app.ui.theme.AflixyTheme
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.util.FileLogger
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import org.koin.androidx.compose.KoinAndroidContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -69,13 +73,25 @@ class MainActivity : ComponentActivity() {
     private fun startEmergencyObserver() {
         lifecycleScope.launch {
             try {
-                val lm = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
-                val location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
-                    ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-                    ?: return@launch
+                val fusedClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
+                // Tenta last known primeiro (rápido)
+                var location = fusedClient.lastLocation.await()
+                if (location == null) {
+                    // Solicita localização atual com timeout implícito do sistema
+                    FileLogger.log("INFO", "MainActivity", "lastLocation null, requesting current location")
+                    val cts = CancellationTokenSource()
+                    location = fusedClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.token).await()
+                }
+                if (location == null) {
+                    FileLogger.log("WARN", "MainActivity", "startEmergencyObserver: no location available, skipping")
+                    return@launch
+                }
+                FileLogger.log("INFO", "MainActivity", "startEmergencyObserver: lat=${location.latitude} lon=${location.longitude}")
                 emergencyViewModel.startObservingIncomingEmergencies(location.latitude, location.longitude)
             } catch (e: SecurityException) {
-                android.util.Log.e("MainActivity", "startEmergencyObserver: ${e.message}")
+                FileLogger.log("ERROR", "MainActivity", "startEmergencyObserver: SecurityException: ${e.message}")
+            } catch (e: Exception) {
+                FileLogger.log("ERROR", "MainActivity", "startEmergencyObserver: ${e.message}")
             }
         }
     }
