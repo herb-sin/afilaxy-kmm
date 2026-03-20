@@ -157,6 +157,7 @@ class AppContainer: ObservableObject {
 @main
 struct AfilaxyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @Environment(\.scenePhase) private var scenePhase
     let container = AppContainer()
 
     init() {
@@ -174,6 +175,12 @@ struct AfilaxyApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(container)
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .background || phase == .inactive {
+                container.stopObservingNearbyEmergencies()
+                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=\(phase) — listener removido")
+            }
         }
     }
 }

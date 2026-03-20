@@ -85,4 +85,44 @@ final class LocationManagerBridge {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         Firestore.firestore().collection("helpers").document(uid).delete()
     }
+
+    /// Aceita emergência via iOS SDK nativo (evita crash Kotlin/Native em thread não-main)
+    func acceptEmergency(emergencyId: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(false, "Usuário não autenticado")
+            return
+        }
+        let db = Firestore.firestore()
+        let ref = db.collection("emergency_requests").document(emergencyId)
+        db.runTransaction({ transaction, errorPointer in
+            let doc: DocumentSnapshot
+            do { doc = try transaction.getDocument(ref) }
+            catch let e as NSError { errorPointer?.pointee = e; return nil }
+            guard doc.exists,
+                  let active = doc.data()?["active"] as? Bool, active,
+                  let status = doc.data()?["status"] as? String, status == "waiting",
+                  doc.data()?["helperId"] == nil else {
+                let e = NSError(domain: "Afilaxy", code: 409,
+                    userInfo: [NSLocalizedDescriptionKey: "Emergência não disponível"])
+                errorPointer?.pointee = e
+                return nil
+            }
+            transaction.updateData([
+                "status": "matched",
+                "helperId": uid,
+                "matchedAt": FieldValue.serverTimestamp()
+            ], forDocument: ref)
+            return nil
+        }) { _, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    FileLogger.shared.write(level: "ERROR", tag: "LocationBridge", message: "acceptEmergency error: \(error.localizedDescription)")
+                    completion(false, error.localizedDescription)
+                } else {
+                    FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "acceptEmergency success emergencyId=\(emergencyId)")
+                    completion(true, nil)
+                }
+            }
+        }
+    }
 }

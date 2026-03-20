@@ -1,23 +1,15 @@
 import SwiftUI
 import shared
 
-/// Tela exibida ao helper quando clica na notificação de emergência próxima.
-/// Permite aceitar a emergência e iniciar o chat.
 struct EmergencyResponseView: View {
     let emergencyId: String
     @EnvironmentObject var container: AppContainer
     @Environment(\.dismiss) private var dismiss
     @State private var isAccepting = false
+    @State private var accepted = false
+    @State private var errorMessage: String? = nil
 
     var body: some View {
-        guard let state = container.emergency.state else {
-            return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
-        }
-        return AnyView(content(state: state))
-    }
-
-    @ViewBuilder
-    private func content(state: EmergencyState) -> some View {
         List {
             Section {
                 Label("Pedido de Socorro", systemImage: "exclamationmark.triangle.fill")
@@ -29,35 +21,40 @@ struct EmergencyResponseView: View {
             }
 
             Section {
-                if state.hasActiveEmergency && state.emergencyId == emergencyId {
-                    // Já aceitou — mostra status
+                if accepted {
                     Label("Você aceitou esta emergência", systemImage: "checkmark.circle.fill")
                         .foregroundColor(.green)
-                    NavigationLink("Abrir Chat", value: AppRoute.emergency) // placeholder — chat não implementado no iOS ainda
                 } else {
                     Button {
                         guard !isAccepting else { return }
                         isAccepting = true
+                        errorMessage = nil
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "acceptEmergency tapped emergencyId=\(emergencyId)")
-                        container.emergency.vm.onAcceptEmergency(emergencyId: emergencyId)
+                        // Usa iOS SDK nativo — evita crash Kotlin/Native em thread não-main
+                        LocationManagerBridge.shared.acceptEmergency(emergencyId: emergencyId) { success, error in
+                            isAccepting = false
+                            if success {
+                                accepted = true
+                                // Atualiza estado KMM para consistência
+                                container.emergency.vm.onAcceptEmergency(emergencyId: emergencyId)
+                            } else {
+                                errorMessage = error ?? "Erro ao aceitar emergência"
+                            }
+                        }
                     } label: {
                         if isAccepting {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
+                            ProgressView().frame(maxWidth: .infinity).padding(.vertical, 8)
                         } else {
                             Label("Aceitar e Ajudar", systemImage: "heart.fill")
-                                .frame(maxWidth: .infinity)
-                                .foregroundColor(.white)
-                                .padding(.vertical, 8)
+                                .frame(maxWidth: .infinity).foregroundColor(.white).padding(.vertical, 8)
                         }
                     }
-                    .disabled(state.isLoading || isAccepting)
+                    .disabled(isAccepting)
                     .listRowBackground(Color.green)
                 }
             }
 
-            if let error = state.error {
+            if let error = errorMessage {
                 Section { Text(error).foregroundColor(.red).font(.caption) }
             }
         }
@@ -65,15 +62,6 @@ struct EmergencyResponseView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "appeared emergencyId=\(emergencyId)")
-        }
-        // Dismiss automático quando a emergência foi atribuída a este helper
-        .onReceive(container.emergency.$state) { newState in
-            guard let s = newState else { return }
-            if (s.emergencyId == emergencyId && s.hasActiveEmergency) ||
-               (s.emergencyStatus == "matched" && isAccepting) {
-                FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "emergency matched — dismissing")
-                dismiss()
-            }
         }
     }
 }

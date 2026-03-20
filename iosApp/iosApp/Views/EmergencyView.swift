@@ -97,14 +97,13 @@ struct EmergencyView: View {
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
         }
-        .onChange(of: state.hasActiveEmergency) { active in
-            if active {
-                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(state.emergencyId ?? "nil")")
+        .onReceive(container.emergency.$state) { newState in
+            guard let s = newState else { return }
+            if s.hasActiveEmergency {
+                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(s.emergencyId ?? \"nil\")")
                 LocationManagerBridge.shared.disableHelperMode()
             }
-        }
-        .onChange(of: state.error) { error in
-            if let error {
+            if let error = s.error, !s.hasActiveEmergency {
                 FileLogger.shared.write(level: "ERROR", tag: "EmergencyView", message: "createEmergency error: \(error)")
             }
         }
