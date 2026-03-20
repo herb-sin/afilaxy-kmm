@@ -36,10 +36,12 @@ service cloud.firestore {
     match /emergency_requests/{emergencyId} {
       // list: qualquer usuário autenticado pode fazer queries (necessário para observeNearbyEmergencies)
       allow list: if isAuthenticated();
-      // get: apenas participantes podem ler documento individual
+      // get: apenas participantes podem ler documento individual, ou helper para transação de accept
       allow get: if isAuthenticated()
         && (request.auth.uid == resource.data.requesterId
-            || request.auth.uid == resource.data.helperId);
+            || request.auth.uid == resource.data.helperId
+            // Helper pode ler emergências waiting para transação atómica de accept
+            || (resource.data.status == 'waiting' && resource.data.active == true));
       allow create: if isAuthenticated()
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.latitude is number
