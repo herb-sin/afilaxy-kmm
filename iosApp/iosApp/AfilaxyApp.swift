@@ -186,6 +186,20 @@ struct AfilaxyApp: App {
             if phase == .background {
                 container.stopObservingNearbyEmergencies()
                 FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=background — listener removido")
+            } else if phase == .active {
+                let isHelper = container.emergency.state?.isHelperMode == true
+                if isHelper {
+                    // Sempre para antes de (re)iniciar — evita listeners órfãos
+                    container.stopObservingNearbyEmergencies()
+                    if let loc = LocationManager.shared.currentLocation {
+                        container.startObservingNearbyEmergencies(lat: loc.coordinate.latitude,
+                                                              lon: loc.coordinate.longitude)
+                        FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=active — listener reiniciado lat=\(loc.coordinate.latitude)")
+                    } else {
+                        // Localização não disponível após background longo — HomeView cobre ao activar helper mode
+                        FileLogger.shared.write(level: "WARN", tag: "AfilaxyApp", message: "scenePhase=active — listener não reiniciado: sem localização")
+                    }
+                }
             }
         }
     }
