@@ -46,9 +46,16 @@ service cloud.firestore {
         && request.resource.data.longitude is number
         && request.resource.data.active == true;
       allow update: if isAuthenticated()
-        && (request.auth.uid == resource.data.requesterId
-            || request.auth.uid == resource.data.helperId)
-        && request.resource.data.requesterId == resource.data.requesterId;
+        && request.resource.data.requesterId == resource.data.requesterId
+        && (
+          // Requester ou helper já atribuído podem actualizar livremente
+          request.auth.uid == resource.data.requesterId
+          || request.auth.uid == resource.data.helperId
+          // Helper a aceitar: documento ainda sem helperId, apenas escreve campos de aceitação
+          || (resource.data.helperId == null
+              && request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['status', 'helperId', 'helperName', 'matchedAt', 'expiresAt']))
+        );
       allow delete: if false;
     }
     
