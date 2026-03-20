@@ -100,7 +100,8 @@ struct EmergencyView: View {
         .onReceive(container.emergency.$state) { newState in
             guard let s = newState else { return }
             if s.hasActiveEmergency {
-                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(s.emergencyId ?? \"nil\")")
+                let eid = s.emergencyId ?? "nil"
+                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()
             }
             if let error = s.error, !s.hasActiveEmergency {
