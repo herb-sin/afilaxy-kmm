@@ -5,6 +5,7 @@ import shared
 struct EmergencyView: View {
     @EnvironmentObject var container: AppContainer
     @StateObject private var locationManager = LocationManager.shared
+    @State private var helperModeDisabledOnEmergency = false
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -97,9 +98,13 @@ struct EmergencyView: View {
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
         }
+        .onDisappear {
+            helperModeDisabledOnEmergency = false
+        }
         .onReceive(container.emergency.$state) { newState in
             guard let s = newState else { return }
-            if s.hasActiveEmergency {
+            if s.hasActiveEmergency && !helperModeDisabledOnEmergency {
+                helperModeDisabledOnEmergency = true
                 let eid = s.emergencyId ?? "nil"
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()
