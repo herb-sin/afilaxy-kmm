@@ -51,10 +51,11 @@ service cloud.firestore {
           // Requester ou helper já atribuído podem actualizar livremente
           request.auth.uid == resource.data.requesterId
           || request.auth.uid == resource.data.helperId
-          // Helper a aceitar: documento ainda sem helperId, apenas escreve campos de aceitação
-          || (resource.data.helperId == null
+          // Helper a aceitar: campo helperId ausente ou null, escreve apenas campos de aceitação
+          || (!('helperId' in resource.data) || resource.data.helperId == null)
               && request.resource.data.diff(resource.data).affectedKeys()
-                  .hasOnly(['status', 'helperId', 'helperName', 'matchedAt', 'expiresAt']))
+                  .hasOnly(['status', 'helperId', 'matchedAt', 'helperName', 'expiresAt'])
+              && request.resource.data.helperId == request.auth.uid
         );
       allow delete: if false;
     }
