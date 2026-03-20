@@ -26,10 +26,21 @@ fun NavGraph(startDestination: String? = null, emergencyViewModel: EmergencyView
     val navController = rememberNavController()
     val isAuthenticated = FirebaseAuth.getInstance().currentUser != null
 
-    // Redirect unauthenticated deep-links to login
+    // Redirect unauthenticated deep-links to login — aguarda Auth restaurar sessão
     LaunchedEffect(startDestination) {
         if (startDestination != null && !isAuthenticated) {
-            navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
+            // Firebase Auth pode ainda não ter restaurado a sessão no cold start via FCM
+            // Aguarda até 1s antes de redirecionar para login
+            var retries = 0
+            while (retries < 10 && FirebaseAuth.getInstance().currentUser == null) {
+                kotlinx.coroutines.delay(100)
+                retries++
+            }
+            if (FirebaseAuth.getInstance().currentUser == null) {
+                navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
+            } else {
+                navController.navigate(startDestination) { popUpTo(0) { inclusive = true } }
+            }
         }
     }
 
