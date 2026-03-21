@@ -102,8 +102,8 @@ dependencies {
     // Shared KMM module
     implementation(project(":shared"))
     
-    // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    // Compose BOM — atualizado 2025-03 (era 2024.06.00)
+    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
     implementation(composeBom)
     
     // Compose
@@ -119,22 +119,22 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     
-    // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // Navigation Compose — atualizado 2025-03 (era 2.7.7)
+    implementation("androidx.navigation:navigation-compose:2.8.9")
     
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
     
-    // Koin
-    implementation("io.insert-koin:koin-android:3.5.0")
-    implementation("io.insert-koin:koin-androidx-compose:3.5.0")
+    // Koin — atualizado 2025-03 (era 3.5.0)
+    implementation("io.insert-koin:koin-android:3.5.6")
+    implementation("io.insert-koin:koin-androidx-compose:3.5.6")
     
-    // KMM ViewModel
+    // KMM ViewModel — ALPHA-16 mantido: migração para 2.x requer refactor de API (tech debt)
     implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16")
     
-    // Firebase (Android specific)
-    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
+    // Firebase (Android specific) — BOM atualizado 2025-03 (era 33.0.0)
+    implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
     

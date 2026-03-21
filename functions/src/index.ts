@@ -30,25 +30,32 @@ export const createCheckoutSession = functions.https.onCall(async (data, context
     }
 
     try {
-        // Criar ou buscar profissional no Firestore
+        // Usar uid do Firebase Auth como ID do documento — operação idempotente.
+        // set+merge atualiza campos de perfil sem sobrescrever dados de assinatura já existentes.
+        const professionalId = context.auth!.uid;
         const professionalsRef = admin.firestore().collection('health_professionals');
-        const existingProf = await professionalsRef.where('email', '==', email).limit(1).get();
-        
-        let professionalId: string;
-        
-        if (existingProf.empty) {
-            const newProf = await professionalsRef.add({
+        const profRef = professionalsRef.doc(professionalId);
+
+        // 1. Atualizar campos de perfil (sempre): name, email, crm
+        await profRef.set(
+            {
                 name: metadata.name,
                 email: email,
                 crm: metadata.crm,
                 specialty: 'PNEUMOLOGIST',
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true } // merge:true — não sobrescreve subscriptionPlan, subscriptionExpiry, etc.
+        );
+
+        // 2. Inicializar campos de assinatura apenas se o documento é novo (createdAt ausente)
+        const profSnap = await profRef.get();
+        if (!profSnap.data()?.createdAt) {
+            await profRef.update({
                 subscriptionPlan: 'NONE',
                 subscriptionExpiry: 0,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
-            professionalId = newProf.id;
-        } else {
-            professionalId = existingProf.docs[0].id;
         }
 
         const session = await getStripe().checkout.sessions.create({
