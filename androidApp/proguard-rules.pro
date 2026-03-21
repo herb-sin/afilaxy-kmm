@@ -52,6 +52,13 @@
     public static *** i(...);
 }
 
+# Logger KMM compartilhado — remove chamadas de debug/info no release (auditoria 2026-03)
+-assumenosideeffects class com.afilaxy.util.Logger {
+    public static *** d(...);
+    public static *** i(...);
+    public static *** v(...);
+}
+
 -assumenosideeffects class com.afilaxy.app.performance.LogOptimizer {
     public static *** d(...);
     public static *** i(...);

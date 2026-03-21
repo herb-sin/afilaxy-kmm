@@ -111,6 +111,11 @@ class AuthViewModel(
             _state.update { it.copy(error = "Todos os campos são obrigatórios") }
             return
         }
+
+        if (!Validator.isValidEmail(email)) {
+            _state.update { it.copy(error = "Email inválido") }
+            return
+        }
         
         if (!Validator.isValidPassword(password)) {
             _state.update { it.copy(error = "A senha deve ter no mínimo 8 caracteres, 1 letra maiúscula e 1 número") }
