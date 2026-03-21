@@ -63,7 +63,7 @@ service cloud.firestore {
       allow delete: if false;
     }
     
-    // Professionals collection
+    // Professionals collection (legacy)
     match /professionals/{professionalId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(professionalId)
@@ -72,6 +72,14 @@ service cloud.firestore {
         && request.resource.data.subscriptionStatus in ['active', 'inactive', 'trial'];
       allow update: if isOwner(professionalId);
       allow delete: if isOwner(professionalId);
+    }
+
+    // Health professionals collection (usado pelo app KMM)
+    match /health_professionals/{professionalId} {
+      allow read: if isAuthenticated();
+      // Writes apenas via Cloud Functions (Stripe webhook) ou pelo próprio profissional
+      allow create, update: if isAuthenticated() && isOwner(professionalId);
+      allow delete: if false;
     }
     
     // UBS (Health Centers) - read-only for users
