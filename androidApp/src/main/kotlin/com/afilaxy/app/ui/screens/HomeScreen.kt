@@ -58,6 +58,7 @@ fun HomeScreen(
     val authState by authViewModel.state.collectAsState()
     var showLocationPermission by remember { mutableStateOf(false) }
     var pendingHelperMode by remember { mutableStateOf(false) }
+    var locationPermissionKey by remember { mutableStateOf(0) }
     var showPermissionsRationale by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -320,6 +321,7 @@ fun HomeScreen(
                             onCheckedChange = { checked ->
                                 if (checked) {
                                     pendingHelperMode = true
+                                    locationPermissionKey++
                                     showLocationPermission = true
                                 } else {
                                     viewModel.deactivateHelper()
@@ -378,19 +380,21 @@ fun HomeScreen(
                 }
 
                 if (showLocationPermission) {
-                    RequestLocationPermission(
-                        onPermissionGranted = {
-                            showLocationPermission = false
-                            if (pendingHelperMode) {
-                                viewModel.activateHelperWithLocation()
+                    key(locationPermissionKey) {
+                        RequestLocationPermission(
+                            onPermissionGranted = {
+                                showLocationPermission = false
+                                if (pendingHelperMode) {
+                                    viewModel.activateHelperWithLocation()
+                                    pendingHelperMode = false
+                                }
+                            },
+                            onPermissionDenied = {
+                                showLocationPermission = false
                                 pendingHelperMode = false
                             }
-                        },
-                        onPermissionDenied = {
-                            showLocationPermission = false
-                            pendingHelperMode = false
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
