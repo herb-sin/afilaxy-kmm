@@ -86,6 +86,7 @@ class AppContainer: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     @Published var pendingEmergencyId: String? = nil
+    @Published var pendingChatId: String? = nil
     private var emergencyListener: ListenerRegistration?
     private var notifiedEmergencyIds = Set<String>()
 
@@ -141,6 +142,10 @@ class AppContainer: ObservableObject {
     func stopObservingNearbyEmergencies() {
         emergencyListener?.remove()
         emergencyListener = nil
+    }
+
+    func navigateToChat(emergencyId: String) {
+        pendingChatId = emergencyId
     }
 
     private func sendLocalNotification(title: String, body: String, emergencyId: String) {

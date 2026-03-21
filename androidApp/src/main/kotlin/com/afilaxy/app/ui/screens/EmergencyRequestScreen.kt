@@ -14,6 +14,7 @@ import androidx.navigation.NavController
 import com.afilaxy.app.R
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,7 +41,6 @@ fun EmergencyRequestScreen(
     }
     
     // Navegar de volta quando emergência for cancelada
-    // Usa chave estável para não disparar na inicialização
     val initializedRef = remember { mutableStateOf(false) }
     LaunchedEffect(state.hasActiveEmergency) {
         if (!initializedRef.value) {
@@ -49,6 +49,17 @@ fun EmergencyRequestScreen(
         }
         if (!state.hasActiveEmergency && !state.isLoading) {
             navController.popBackStack()
+        }
+    }
+
+    // Timeout de segurança: se cancelTapped mas tela não saiu em 5s, força popBackStack
+    LaunchedEffect(cancelTapped) {
+        if (cancelTapped) {
+            delay(5_000)
+            if (navController.currentDestination?.route?.startsWith("emergency_request") == true) {
+                FileLogger.log("WARN", "EmergencyRequestScreen", "cancel timeout — forcing popBackStack")
+                navController.popBackStack()
+            }
         }
     }
     

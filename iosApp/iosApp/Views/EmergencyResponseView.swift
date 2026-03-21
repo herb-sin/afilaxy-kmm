@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseFirestore
 import shared
 
 struct EmergencyResponseView: View {
@@ -8,6 +9,7 @@ struct EmergencyResponseView: View {
     @State private var isAccepting = false
     @State private var accepted = false
     @State private var errorMessage: String? = nil
+    @State private var statusListener: ListenerRegistration? = nil
 
     var body: some View {
         List {
@@ -24,23 +26,25 @@ struct EmergencyResponseView: View {
                 if accepted {
                     Label("Você aceitou esta emergência", systemImage: "checkmark.circle.fill")
                         .foregroundColor(.green)
+                    Text("Abrindo chat...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 } else {
                     Button {
                         guard !isAccepting else { return }
                         isAccepting = true
                         errorMessage = nil
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "acceptEmergency tapped emergencyId=\(emergencyId)")
-                        // Usa iOS SDK nativo — evita crash Kotlin/Native em thread não-main
                         LocationManagerBridge.shared.acceptEmergency(emergencyId: emergencyId) { success, error in
-                            isAccepting = false
-                            if success {
-                                accepted = true
-                                // Actualiza estado local sem chamar KMM (evita crash Kotlin/Native em thread não-main)
-                                DispatchQueue.main.async {
+                            DispatchQueue.main.async {
+                                isAccepting = false
+                                if success {
+                                    accepted = true
                                     container.emergency.vm.onToggleHelperMode(enable: false)
+                                    startStatusObserver()
+                                } else {
+                                    errorMessage = error ?? "Erro ao aceitar emergência"
                                 }
-                            } else {
-                                errorMessage = error ?? "Erro ao aceitar emergência"
                             }
                         }
                     } label: {
@@ -65,5 +69,27 @@ struct EmergencyResponseView: View {
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "appeared emergencyId=\(emergencyId)")
         }
+        .onDisappear {
+            statusListener?.remove()
+            statusListener = nil
+        }
+    }
+
+    private func startStatusObserver() {
+        statusListener = Firestore.firestore()
+            .collection("emergency_requests")
+            .document(emergencyId)
+            .addSnapshotListener { snapshot, _ in
+                guard let data = snapshot?.data(),
+                      let status = data["status"] as? String,
+                      status == "matched" else { return }
+                DispatchQueue.main.async {
+                    FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "status=matched — navigating to chat emergencyId=\(emergencyId)")
+                    statusListener?.remove()
+                    statusListener = nil
+                    // Substitui EmergencyResponseView por ChatView na stack
+                    container.navigateToChat(emergencyId: emergencyId)
+                }
+            }
     }
 }
