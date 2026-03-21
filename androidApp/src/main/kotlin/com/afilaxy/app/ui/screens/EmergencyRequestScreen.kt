@@ -24,6 +24,7 @@ fun EmergencyRequestScreen(
     viewModel: EmergencyViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    var cancelTapped by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyRequestScreen", "opened emergencyId=$emergencyId hasActive=${state.hasActiveEmergency}")
@@ -108,10 +109,12 @@ fun EmergencyRequestScreen(
                     
                     Button(
                         onClick = {
+                            if (cancelTapped) return@Button
+                            cancelTapped = true
                             FileLogger.log("INFO", "EmergencyRequestScreen", "cancelEmergency tapped hasActive=${state.hasActiveEmergency}")
                             viewModel.onCancelEmergency()
                         },
-                        enabled = state.hasActiveEmergency && !state.isLoading,
+                        enabled = state.hasActiveEmergency && !state.isLoading && !cancelTapped,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
