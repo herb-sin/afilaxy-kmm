@@ -10,6 +10,7 @@ struct EmergencyResponseView: View {
     @State private var accepted = false
     @State private var errorMessage: String? = nil
     @State private var statusListener: ListenerRegistration? = nil
+    @State private var chatNavigated = false
 
     var body: some View {
         List {
@@ -82,12 +83,14 @@ struct EmergencyResponseView: View {
             .addSnapshotListener { snapshot, _ in
                 guard let data = snapshot?.data(),
                       let status = data["status"] as? String,
-                      status == "matched" else { return }
+                      status == "matched",
+                      !chatNavigated else { return }
                 DispatchQueue.main.async {
+                    guard !chatNavigated else { return }
+                    chatNavigated = true
                     FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "status=matched — navigating to chat emergencyId=\(emergencyId)")
                     statusListener?.remove()
                     statusListener = nil
-                    // Substitui EmergencyResponseView por ChatView na stack
                     container.navigateToChat(emergencyId: emergencyId)
                 }
             }

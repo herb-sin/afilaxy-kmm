@@ -80,3 +80,19 @@ final class ProfessionalListViewModelWrapper: ObservableObject {
     }
     deinit { timer?.invalidate() }
 }
+
+final class ProfessionalDetailViewModelWrapper: ObservableObject {
+    let vm: ProfessionalDetailViewModel
+    @Published private(set) var state: ProfessionalDetailState?
+    private var timer: Timer?
+
+    init(_ vm: ProfessionalDetailViewModel) {
+        self.vm = vm
+        self.state = vm.state.value as? ProfessionalDetailState
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let s = vm.state.value as? ProfessionalDetailState else { return }
+            DispatchQueue.main.async { self?.state = s }
+        }
+    }
+    deinit { timer?.invalidate() }
+}

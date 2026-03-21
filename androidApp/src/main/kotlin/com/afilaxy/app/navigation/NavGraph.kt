@@ -201,6 +201,18 @@ fun NavGraph(
 
         composable(AppRoutes.PROFESSIONALS) {
             ProfessionalListScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDetail = { id -> navController.navigate(AppRoutes.professionalDetail(id)) }
+            )
+        }
+
+        composable(
+            route = AppRoutes.PROFESSIONAL_DETAIL,
+            arguments = listOf(navArgument("professionalId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val professionalId = backStackEntry.arguments?.getString("professionalId") ?: ""
+            ProfessionalDetailScreen(
+                professionalId = professionalId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

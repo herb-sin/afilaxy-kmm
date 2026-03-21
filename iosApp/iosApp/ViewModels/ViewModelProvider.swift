@@ -31,6 +31,11 @@ class ViewModelProvider {
         catch { fatalError("❌ Koin: ProfessionalListViewModel failed — \(error)") }
     }
 
+    func getProfessionalDetailViewModel() -> ProfessionalDetailViewModel {
+        do { return try KoinHelperKt.safeGetProfessionalDetailViewModel() }
+        catch { fatalError("❌ Koin: ProfessionalDetailViewModel failed — \(error)") }
+    }
+
     func getChatViewModel(emergencyId: String) -> ChatViewModel {
         let chatRepository: ChatRepository = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ChatRepository
         let authRepository: AuthRepository = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! AuthRepository

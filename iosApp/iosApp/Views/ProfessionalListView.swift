@@ -24,7 +24,9 @@ struct ProfessionalListView: View {
                     .foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(state.professionals, id: \.id) { p in
-                    ProfessionalRowView(professional: p)
+                    NavigationLink(value: AppRoute.professionalDetail(p.id)) {
+                        ProfessionalRowView(professional: p)
+                    }
                 }
             }
         }

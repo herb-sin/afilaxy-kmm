@@ -17,6 +17,7 @@ object AppRoutes {
     const val COMMUNITY = "community"
     const val AUTOCUIDADO = "autocuidado"
     const val PROFESSIONALS = "professionals"
+    const val PROFESSIONAL_DETAIL = "professional_detail/{professionalId}"
     const val MAP = "map"
     const val NOTIFICATIONS = "notifications"
     const val HELP = "help"
@@ -24,6 +25,7 @@ object AppRoutes {
     const val PRODUTO_DETAIL = "produto_detail/{produtoId}"
     const val NAVIGATION = "navigation/{lat}/{lng}/{name}"
 
+    fun professionalDetail(id: String) = "professional_detail/$id"
     fun emergencyResponse(emergencyId: String) = "emergency_response/$emergencyId"
     fun chat(emergencyId: String) = "chat/$emergencyId"
     fun eventoDetail(eventoId: String) = "evento_detail/$eventoId"

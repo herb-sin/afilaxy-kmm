@@ -67,7 +67,7 @@ struct ChatView: View {
 
     private func startListening() {
         listener = Firestore.firestore()
-            .collection("emergency_requests")
+            .collection("emergency_chats")
             .document(emergencyId)
             .collection("messages")
             .order(by: "timestamp", descending: false)
@@ -81,6 +81,7 @@ struct ChatView: View {
                               let text = d["message"] as? String else { return nil }
                         let ts: Date
                         if let t = d["timestamp"] as? Timestamp { ts = t.dateValue() }
+                        else if let ms = d["timestamp"] as? Int64 { ts = Date(timeIntervalSince1970: Double(ms) / 1000) }
                         else { ts = Date() }
                         return (id: doc.documentID, senderId: senderId, senderName: senderName, text: text, timestamp: ts)
                     }
@@ -90,19 +91,23 @@ struct ChatView: View {
 
     private func sendMessage() {
         let text = messageText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty,
-              let uid = currentUserId,
-              let name = Auth.auth().currentUser?.displayName ?? Auth.auth().currentUser?.email else { return }
+        guard !text.isEmpty, let uid = currentUserId else { return }
+        let name = Auth.auth().currentUser?.displayName ?? Auth.auth().currentUser?.email ?? "Usuário"
         messageText = ""
+        let msgId = UUID().uuidString
         Firestore.firestore()
-            .collection("emergency_requests")
+            .collection("emergency_chats")
             .document(emergencyId)
             .collection("messages")
-            .addDocument(data: [
+            .document(msgId)
+            .setData([
+                "id": msgId,
+                "emergencyId": emergencyId,
                 "senderId": uid,
                 "senderName": name,
                 "message": text,
-                "timestamp": FieldValue.serverTimestamp()
+                "timestamp": FieldValue.serverTimestamp(),
+                "isFromHelper": false
             ])
     }
 }
