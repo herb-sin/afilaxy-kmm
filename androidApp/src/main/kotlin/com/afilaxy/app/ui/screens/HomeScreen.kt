@@ -187,6 +187,7 @@ fun HomeScreen(
                         label = { Text("Sair") },
                         selected = false,
                         onClick = {
+                            viewModel.onLogout()
                             authViewModel.onLogout()
                             onLogout()
                         }
@@ -215,6 +216,7 @@ fun HomeScreen(
                             Icon(Icons.Default.Person, contentDescription = "Perfil")
                         }
                         IconButton(onClick = {
+                            viewModel.onLogout()
                             authViewModel.onLogout()
                             onLogout()
                         }) {

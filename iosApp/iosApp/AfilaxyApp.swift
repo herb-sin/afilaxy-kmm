@@ -82,6 +82,7 @@ class AppContainer: ObservableObject {
     lazy var history   = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
     lazy var profile   = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
     lazy var professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
+    lazy var professionalDetail = ProfessionalDetailViewModelWrapper(ViewModelProvider.shared.getProfessionalDetailViewModel())
     lazy var loginViewModel: LoginViewModel = ViewModelProvider.shared.getLoginViewModel()
 
     private var cancellables = Set<AnyCancellable>()

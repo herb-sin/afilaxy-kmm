@@ -5,6 +5,7 @@ import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
 import com.afilaxy.presentation.professional.ProfessionalListViewModel
+import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.util.Logger
 import org.koin.core.Koin
@@ -64,4 +65,10 @@ fun safeGetHistoryViewModel(): HistoryViewModel {
 fun safeGetProfessionalListViewModel(): ProfessionalListViewModel {
     Logger.d(TAG, "safeGetProfessionalListViewModel")
     return getKoin().get<ProfessionalListViewModel>().also { Logger.d(TAG, "ProfessionalListViewModel OK") }
+}
+
+@Throws(Exception::class)
+fun safeGetProfessionalDetailViewModel(): ProfessionalDetailViewModel {
+    Logger.d(TAG, "safeGetProfessionalDetailViewModel")
+    return getKoin().get<ProfessionalDetailViewModel>().also { Logger.d(TAG, "ProfessionalDetailViewModel OK") }
 }

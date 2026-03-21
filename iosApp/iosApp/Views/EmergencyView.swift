@@ -7,6 +7,9 @@ struct EmergencyView: View {
     @EnvironmentObject var container: AppContainer
     @StateObject private var locationManager = LocationManager.shared
     @State private var statusListener: ListenerRegistration? = nil
+    @State private var chatNavigated = false
+    @State private var secondsLeft: Int = 180
+    @State private var countdownTimer: Timer? = nil
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -45,6 +48,29 @@ struct EmergencyView: View {
         }
     }
 
+    private func startCountdown(expiresAt: Int64?) {
+        countdownTimer?.invalidate()
+        let expiry: Date
+        if let ms = expiresAt, ms > 0 {
+            expiry = Date(timeIntervalSince1970: Double(ms) / 1000)
+        } else {
+            expiry = Date().addingTimeInterval(180)
+        }
+        secondsLeft = max(0, Int(expiry.timeIntervalSinceNow))
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            let remaining = max(0, Int(expiry.timeIntervalSinceNow))
+            DispatchQueue.main.async {
+                secondsLeft = remaining
+                if remaining == 0 {
+                    countdownTimer?.invalidate()
+                    countdownTimer = nil
+                    FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown expired — auto cancel")
+                    container.emergency.vm.onCancelEmergency()
+                }
+            }
+        }
+    }
+
     private func startStatusObserver(emergencyId: String) {
         statusListener?.remove()
         statusListener = Firestore.firestore()
@@ -58,6 +84,7 @@ struct EmergencyView: View {
                     FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "status=matched — navigating to chat emergencyId=\(emergencyId)")
                     statusListener?.remove()
                     statusListener = nil
+                    chatNavigated = true
                     container.navigateToChat(emergencyId: emergencyId)
                 }
             }
@@ -72,9 +99,17 @@ struct EmergencyView: View {
                         .foregroundColor(.red)
                     if state.currentEmergency?.assignedHelperId == nil {
                         HStack { ProgressView(); Text("Aguardando helper...").foregroundColor(.secondary) }
+                        let minutes = secondsLeft / 60
+                        let seconds = secondsLeft % 60
+                        Text(String(format: "Expira em %d:%02d", minutes, seconds))
+                            .font(.headline)
+                            .foregroundColor(secondsLeft <= 30 ? .red : .orange)
+                            .monospacedDigit()
                     }
                     Button("Cancelar Emergência", role: .destructive) {
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "cancelEmergency tapped")
+                        countdownTimer?.invalidate()
+                        countdownTimer = nil
                         statusListener?.remove()
                         statusListener = nil
                         container.emergency.vm.onCancelEmergency()
@@ -122,14 +157,16 @@ struct EmergencyView: View {
         .onDisappear {
             statusListener?.remove()
             statusListener = nil
+            countdownTimer?.invalidate()
+            countdownTimer = nil
         }
         .onReceive(container.emergency.$state) { newState in
-            guard let s = newState else { return }
-            // Emergência confirmada pelo servidor — iniciar observer de status
+            guard let s = newState, !chatNavigated else { return }
             if s.hasActiveEmergency, let eid = s.emergencyId, statusListener == nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()
                 startStatusObserver(emergencyId: eid)
+                startCountdown(expiresAt: s.emergencyExpiresAt?.int64Value)
             }
             if let error = s.error, !s.hasActiveEmergency {
                 FileLogger.shared.write(level: "ERROR", tag: "EmergencyView", message: "createEmergency error: \(error)")

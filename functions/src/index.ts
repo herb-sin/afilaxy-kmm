@@ -541,6 +541,42 @@ export const onUserLocationUpdate = functions.firestore
 // Para re-executar se necessário, usar Admin SDK localmente via script Node.js
 
 /**
+ * Trigger onCreate — agenda cancelamento automático em 3 minutos
+ * Substitui o cron job expireEmergencies (mais eficiente: roda só quando necessário)
+ */
+export const scheduleEmergencyExpiry = functions.firestore
+    .document('emergency_requests/{emergencyId}')
+    .onCreate(async (snap, context) => {
+        const emergencyId = context.params.emergencyId;
+        const data = snap.data();
+        const expiresAt: number = data.expiresAt || (Date.now() + 180000);
+        const delayMs = Math.max(0, expiresAt - Date.now());
+
+        console.log(`Agendando expiração de ${emergencyId} em ${Math.round(delayMs / 1000)}s`);
+
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+
+        // Re-ler documento — pode já ter sido cancelado/aceito pelo cliente
+        const current = await snap.ref.get();
+        if (!current.exists) return null;
+
+        const currentData = current.data()!;
+        if (!currentData.active) {
+            console.log(`Emergência ${emergencyId} já inativa — nada a fazer`);
+            return null;
+        }
+
+        await snap.ref.update({
+            active: false,
+            status: 'expired',
+            expiredAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log(`✅ Emergência ${emergencyId} expirada automaticamente`);
+        return null;
+    });
+
+/**
  * Trigger quando um helper é ativado ou atualiza sua localização
  * Calcula e salva o geohash automaticamente na coleção 'helpers'
  * Isso permite queries eficientes por proximidade em onEmergencyCreated

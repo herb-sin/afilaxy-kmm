@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.afilaxy.domain.model.HealthProfessional
+import com.afilaxy.domain.model.PlanTier
 import com.afilaxy.domain.model.Specialty
 import com.afilaxy.domain.model.SubscriptionPlan
 import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
@@ -159,23 +160,27 @@ private fun ProfessionalDetailContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Badge do plano
-        if (professional.subscriptionPlan != SubscriptionPlan.NONE) {
+        if (professional.subscriptionPlan.tier() != PlanTier.NONE) {
+            val duration = when (professional.subscriptionPlan.durationMonths()) {
+                3 -> " · Trimestral"
+                6 -> " · Semestral"
+                12 -> " · Anual"
+                else -> ""
+            }
             AssistChip(
                 onClick = {},
                 label = {
-                    Text(
-                        when (professional.subscriptionPlan) {
-                            SubscriptionPlan.PREMIUM -> "⭐ PREMIUM"
-                            SubscriptionPlan.PRO -> "✨ PRO"
-                            SubscriptionPlan.BASIC -> "📋 BÁSICO"
-                            else -> ""
-                        }
-                    )
+                    Text(when (professional.subscriptionPlan.tier()) {
+                        PlanTier.PREMIUM -> "⭐ PREMIUM$duration"
+                        PlanTier.PRO -> "✨ PRO$duration"
+                        PlanTier.BASIC -> "📋 BÁSICO$duration"
+                        PlanTier.NONE -> ""
+                    })
                 },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = when (professional.subscriptionPlan) {
-                        SubscriptionPlan.PREMIUM -> Color(0xFFFFD700)
-                        SubscriptionPlan.PRO -> Color(0xFFC0C0C0)
+                    containerColor = when (professional.subscriptionPlan.tier()) {
+                        PlanTier.PREMIUM -> Color(0xFFFFD700)
+                        PlanTier.PRO -> Color(0xFFC0C0C0)
                         else -> MaterialTheme.colorScheme.secondaryContainer
                     }
                 )

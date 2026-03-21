@@ -6,6 +6,7 @@ enum AppRoute: Hashable {
     case notifications, settings, about, terms, privacy, help
     case emergencyResponse(String)
     case chat(String)
+    case professionalDetail(String)
 }
 
 struct ContentView: View {
@@ -13,6 +14,7 @@ struct ContentView: View {
     @State private var isLoggedIn = false
     @State private var path = NavigationPath()
     @State private var emergencyRouteActive = false
+    @State private var chatNavigatedId: String? = nil
 
     var body: some View {
         if isLoggedIn {
@@ -33,6 +35,7 @@ struct ContentView: View {
                     case .history:     HistoryView()
                     case .profile:     ProfileView()
                     case .professionals: ProfessionalListView()
+                    case .professionalDetail(let id): ProfessionalDetailView(professionalId: id)
                     case .notifications: NotificationsView()
                     case .settings:    SettingsView()
                     case .about:       AboutView()
@@ -58,6 +61,8 @@ struct ContentView: View {
                 path.append(AppRoute.emergencyResponse(emergencyId))
             }
             .onReceive(container.$pendingChatId.compactMap { $0 }) { emergencyId in
+                guard chatNavigatedId != emergencyId else { return }
+                chatNavigatedId = emergencyId
                 path.append(AppRoute.chat(emergencyId))
                 container.pendingChatId = nil
             }

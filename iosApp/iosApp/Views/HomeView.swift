@@ -101,6 +101,7 @@ struct HomeView: View {
         .alert("Sair", isPresented: $showLogoutAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Sair", role: .destructive) {
+                container.emergency.vm.onLogout()
                 container.auth.vm.onLogout()
                 onLogout()
             }

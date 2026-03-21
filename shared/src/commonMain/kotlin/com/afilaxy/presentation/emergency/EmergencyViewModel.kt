@@ -63,16 +63,17 @@ class EmergencyViewModel(
             createEmergencyUseCase.execute(emergency)
                 .onSuccess { emergencyId ->
                     com.afilaxy.util.Logger.d("EmergencyViewModel", "onCreateEmergency success emergencyId=$emergencyId")
-                    // Desativar helper mode — quem solicita ajuda não pode ser helper
                     if (_state.value.isHelperMode) {
                         emergencyRepository.deactivateHelper()
                     }
+                    val expiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + 180000L
                     _state.update {
                         it.copy(
                             emergencyId = emergencyId,
                             hasActiveEmergency = true,
                             isCreatingEmergency = false,
                             isHelperMode = false,
+                            emergencyExpiresAt = expiresAt,
                             error = null
                         )
                     }
@@ -160,6 +161,20 @@ class EmergencyViewModel(
         viewModelScope.coroutineScope.launch {
             emergencyRepository.deactivateHelper()
             _state.update { it.copy(isHelperMode = false, isLoading = false) }
+        }
+    }
+
+    /** Chamado no logout: cancela emergência ativa e desativa helper mode. */
+    fun onLogout() {
+        viewModelScope.coroutineScope.launch {
+            val emergencyId = _state.value.emergencyId
+            if (_state.value.hasActiveEmergency && emergencyId != null) {
+                emergencyRepository.cancelEmergency(emergencyId)
+            }
+            if (_state.value.isHelperMode) {
+                emergencyRepository.deactivateHelper()
+            }
+            _state.update { EmergencyState() }
         }
     }
     

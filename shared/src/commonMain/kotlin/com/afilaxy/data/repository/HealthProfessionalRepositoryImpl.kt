@@ -73,11 +73,11 @@ class HealthProfessionalRepositoryImpl(
     }
     
     private fun calculatePriority(professional: HealthProfessional): Int {
-        return when (professional.subscriptionPlan) {
-            SubscriptionPlan.PREMIUM -> 3
-            SubscriptionPlan.PRO -> 2
-            SubscriptionPlan.BASIC -> 1
-            SubscriptionPlan.NONE -> 0
+        return when (professional.subscriptionPlan.tier()) {
+            com.afilaxy.domain.model.PlanTier.PREMIUM -> 3
+            com.afilaxy.domain.model.PlanTier.PRO -> 2
+            com.afilaxy.domain.model.PlanTier.BASIC -> 1
+            com.afilaxy.domain.model.PlanTier.NONE -> 0
         }
     }
     

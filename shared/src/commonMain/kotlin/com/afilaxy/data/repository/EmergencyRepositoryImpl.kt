@@ -47,7 +47,7 @@ class EmergencyRepositoryImpl(
                 "status" to "waiting",
                 "active" to true,
                 "timestamp" to currentTime,
-                "expiresAt" to (currentTime + 600000) // 10 min
+                "expiresAt" to (currentTime + 180000) // 3 min
             )
             
             // Criar emergência
@@ -168,7 +168,7 @@ class EmergencyRepositoryImpl(
                     throw Exception("Emergência já foi aceita por outro helper")
                 }
                 
-                val newExpiresAt = getCurrentTimeMillis() + 600000 // 10 min
+                val newExpiresAt = getCurrentTimeMillis() + 180000 // 3 min
                 
                 update(
                     emergencyRef,

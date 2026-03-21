@@ -14,7 +14,7 @@ data class EmergencyRequest(
     val expiresAt: Long = 0L
 ) {
     companion object {
-        const val TIMEOUT_DURATION_MS = 5 * 60 * 1000L // 5 minutos
+        const val TIMEOUT_DURATION_MS = 3 * 60 * 1000L // 3 minutos
         
         fun create(
             id: String,

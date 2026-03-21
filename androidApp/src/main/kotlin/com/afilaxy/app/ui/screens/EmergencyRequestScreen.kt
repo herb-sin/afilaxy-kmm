@@ -27,6 +27,25 @@ fun EmergencyRequestScreen(
     val state by viewModel.state.collectAsState()
     var cancelTapped by remember { mutableStateOf(false) }
 
+    // Countdown timer
+    var secondsLeft by remember { mutableStateOf(180) }
+    LaunchedEffect(state.emergencyExpiresAt) {
+        val expiresAt = state.emergencyExpiresAt ?: return@LaunchedEffect
+        while (true) {
+            val remaining = ((expiresAt - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            secondsLeft = remaining
+            if (remaining == 0) {
+                FileLogger.log("INFO", "EmergencyRequestScreen", "countdown expired — auto cancel")
+                if (!cancelTapped) {
+                    cancelTapped = true
+                    viewModel.onCancelEmergency()
+                }
+                break
+            }
+            delay(1_000)
+        }
+    }
+
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyRequestScreen", "opened emergencyId=$emergencyId hasActive=${state.hasActiveEmergency}")
     }
@@ -107,6 +126,20 @@ fun EmergencyRequestScreen(
                         textAlign = TextAlign.Center
                     )
                     
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val minutes = secondsLeft / 60
+                    val seconds = secondsLeft % 60
+                    Text(
+                        text = "Expira em %d:%02d".format(minutes, seconds),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (secondsLeft <= 30)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onErrorContainer,
+                        textAlign = TextAlign.Center
+                    )
+
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     Text(
