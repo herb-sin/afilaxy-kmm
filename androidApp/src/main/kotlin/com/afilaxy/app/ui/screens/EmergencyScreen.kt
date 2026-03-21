@@ -35,11 +35,16 @@ fun EmergencyScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showLocationPermission by remember { mutableStateOf(false) }
+    var navigatedToRequest by remember { mutableStateOf(false) }
     
     // Navegar para EmergencyRequestScreen após criar emergência
     LaunchedEffect(state.emergencyId, state.hasActiveEmergency) {
-        if (state.emergencyId != null && state.hasActiveEmergency && !state.isCreatingEmergency) {
+        if (state.emergencyId != null && state.hasActiveEmergency && !state.isCreatingEmergency && !navigatedToRequest) {
+            navigatedToRequest = true
             onNavigateToRequest(state.emergencyId!!)
+        }
+        if (!state.hasActiveEmergency) {
+            navigatedToRequest = false
         }
     }
     
