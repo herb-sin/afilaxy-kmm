@@ -27,7 +27,12 @@ class EmergencyViewModel(
     val state: StateFlow<EmergencyState> = _state.asStateFlow()
     
     fun observeEmergencyStatus(emergencyId: String) {
-        // no-op: status updates handled by onCancelEmergency/onResolveEmergency
+        viewModelScope.coroutineScope.launch {
+            emergencyRepository.observeEmergencyStatus(emergencyId)
+                .collect { status ->
+                    _state.update { it.copy(emergencyStatus = status) }
+                }
+        }
     }
     
     fun onCreateEmergency() {
