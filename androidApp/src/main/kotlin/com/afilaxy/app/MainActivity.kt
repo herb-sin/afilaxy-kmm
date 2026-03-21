@@ -1,5 +1,6 @@
 package com.afilaxy.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,8 +8,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import com.afilaxy.app.navigation.AppRoutes
 import com.afilaxy.app.navigation.NavGraph
 import com.afilaxy.app.ui.theme.AflixyTheme
 import com.afilaxy.presentation.emergency.EmergencyViewModel
@@ -25,34 +30,27 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
 
-    // ViewModel com escopo de Activity — sobrevive à navegação entre telas
     private val emergencyViewModel: EmergencyViewModel by viewModel()
+
+    // Destino pendente de navegação (preenchido por onCreate ou onNewIntent)
+    private val pendingDestination = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
 
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                android.util.Log.d("FCM", "Token obtido com sucesso")
-            } else {
-                android.util.Log.e("FCM", "Falha ao obter token")
-            }
+            if (task.isSuccessful) android.util.Log.d("FCM", "Token obtido com sucesso")
+            else android.util.Log.e("FCM", "Falha ao obter token")
         }
 
-        // Inicia observer de emergências próximas com escopo de Activity
-        if (FirebaseAuth.getInstance().currentUser != null) {
-            // Layer 2 — relançamento: se já era helper, reinicia observer com last known location
-            if (emergencyViewModel.state.value.isHelperMode) {
-                startEmergencyObserver()
-            }
+        if (FirebaseAuth.getInstance().currentUser != null &&
+            emergencyViewModel.state.value.isHelperMode
+        ) {
+            startEmergencyObserver()
         }
 
-        val emergencyId = intent.getStringExtra("emergencyId")
-            ?.takeIf { it.isNotBlank() && it.all { c -> c.isLetterOrDigit() || c == '-' || c == '_' } }
-        val openEmergencyResponse = intent.getBooleanExtra("openEmergencyResponse", false)
-        val openEmergencyRequest = intent.getBooleanExtra("openEmergencyRequest", false)
+        resolveIntent(intent)
 
         setContent {
             KoinAndroidContext {
@@ -61,22 +59,18 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        val authResolved = androidx.compose.runtime.remember {
-                            androidx.compose.runtime.mutableStateOf(false)
-                        }
-                        val resolvedDestination = androidx.compose.runtime.remember {
-                            androidx.compose.runtime.mutableStateOf<String?>(null)
-                        }
-                        androidx.compose.runtime.DisposableEffect(Unit) {
+                        val authResolved = remember { mutableStateOf(false) }
+                        val startDestination = remember { mutableStateOf<String?>(null) }
+
+                        DisposableEffect(Unit) {
                             val auth = FirebaseAuth.getInstance()
-                            val listener = com.google.firebase.auth.FirebaseAuth.AuthStateListener { firebaseAuth ->
+                            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
                                 if (!authResolved.value) {
                                     val user = firebaseAuth.currentUser
-                                    resolvedDestination.value = when {
-                                        user != null && openEmergencyResponse && emergencyId != null -> "emergency_response/$emergencyId"
-                                        user != null && openEmergencyRequest && emergencyId != null -> "emergency_request/$emergencyId"
-                                        user != null -> com.afilaxy.app.navigation.AppRoutes.HOME
-                                        else -> com.afilaxy.app.navigation.AppRoutes.LOGIN
+                                    startDestination.value = when {
+                                        user != null && pendingDestination.value != null -> pendingDestination.value
+                                        user != null -> AppRoutes.HOME
+                                        else -> AppRoutes.LOGIN
                                     }
                                     authResolved.value = true
                                 }
@@ -84,10 +78,12 @@ class MainActivity : ComponentActivity() {
                             auth.addAuthStateListener(listener)
                             onDispose { auth.removeAuthStateListener(listener) }
                         }
+
                         if (authResolved.value) {
                             NavGraph(
-                                startDestination = resolvedDestination.value,
-                                emergencyViewModel = emergencyViewModel
+                                startDestination = startDestination.value,
+                                emergencyViewModel = emergencyViewModel,
+                                pendingDestination = pendingDestination
                             )
                         }
                     }
@@ -96,14 +92,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        resolveIntent(intent)
+    }
+
+    private fun resolveIntent(intent: Intent) {
+        val emergencyId = intent.getStringExtra("emergencyId")
+            ?.takeIf { it.isNotBlank() && it.all { c -> c.isLetterOrDigit() || c == '-' || c == '_' } }
+        val openEmergencyResponse = intent.getBooleanExtra("openEmergencyResponse", false)
+        val openEmergencyRequest = intent.getBooleanExtra("openEmergencyRequest", false)
+
+        pendingDestination.value = when {
+            emergencyId != null && openEmergencyResponse -> "emergency_response/$emergencyId"
+            emergencyId != null && openEmergencyRequest  -> "emergency_request/$emergencyId"
+            else -> null
+        }
+    }
+
     private fun startEmergencyObserver() {
         lifecycleScope.launch {
             try {
                 val fusedClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
-                // Tenta last known primeiro (rápido)
                 var location = fusedClient.lastLocation.await()
                 if (location == null) {
-                    // Solicita localização atual com timeout implícito do sistema
                     FileLogger.log("INFO", "MainActivity", "lastLocation null, requesting current location")
                     val cts = CancellationTokenSource()
                     location = fusedClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.token).await()

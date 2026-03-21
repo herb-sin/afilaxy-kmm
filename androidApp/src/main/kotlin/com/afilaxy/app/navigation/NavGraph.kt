@@ -2,6 +2,7 @@ package com.afilaxy.app.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,13 +23,26 @@ private val protectedRoutes = setOf(
 )
 
 @Composable
-fun NavGraph(startDestination: String? = null, emergencyViewModel: EmergencyViewModel? = null) {
+fun NavGraph(
+    startDestination: String? = null,
+    emergencyViewModel: EmergencyViewModel? = null,
+    pendingDestination: MutableState<String?>? = null
+) {
     val navController = rememberNavController()
 
     // Redirect unauthenticated deep-links to login
     LaunchedEffect(startDestination) {
         if (startDestination != null && FirebaseAuth.getInstance().currentUser == null) {
             navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
+        }
+    }
+
+    // Navegar quando onNewIntent entrega destino com app já aberto
+    LaunchedEffect(pendingDestination?.value) {
+        val dest = pendingDestination?.value ?: return@LaunchedEffect
+        if (navController.currentDestination != null) {
+            navController.navigate(dest) { launchSingleTop = true }
+            pendingDestination.value = null
         }
     }
 

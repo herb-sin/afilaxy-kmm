@@ -94,7 +94,7 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
     private fun showHelperMatchedNotification(title: String, body: String, emergencyId: String) {
         val channelId = "afilaxy_emergency"
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("emergencyId", emergencyId)
             putExtra("openEmergencyRequest", true)
         }
