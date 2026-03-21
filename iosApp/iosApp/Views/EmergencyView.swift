@@ -1,11 +1,12 @@
 import SwiftUI
 import CoreLocation
+import FirebaseFirestore
 import shared
 
 struct EmergencyView: View {
     @EnvironmentObject var container: AppContainer
     @StateObject private var locationManager = LocationManager.shared
-    @State private var helperModeDisabledOnEmergency = false
+    @State private var statusListener: ListenerRegistration? = nil
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -44,6 +45,24 @@ struct EmergencyView: View {
         }
     }
 
+    private func startStatusObserver(emergencyId: String) {
+        statusListener?.remove()
+        statusListener = Firestore.firestore()
+            .collection("emergency_requests")
+            .document(emergencyId)
+            .addSnapshotListener { snapshot, _ in
+                guard let data = snapshot?.data(),
+                      let status = data["status"] as? String,
+                      status == "matched" else { return }
+                DispatchQueue.main.async {
+                    FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "status=matched — navigating to chat emergencyId=\(emergencyId)")
+                    statusListener?.remove()
+                    statusListener = nil
+                    container.navigateToChat(emergencyId: emergencyId)
+                }
+            }
+    }
+
     @ViewBuilder
     private func emergencyBody(state: EmergencyState) -> some View {
         List {
@@ -56,6 +75,8 @@ struct EmergencyView: View {
                     }
                     Button("Cancelar Emergência", role: .destructive) {
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "cancelEmergency tapped")
+                        statusListener?.remove()
+                        statusListener = nil
                         container.emergency.vm.onCancelEmergency()
                     }
                 }
@@ -99,15 +120,16 @@ struct EmergencyView: View {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
         }
         .onDisappear {
-            helperModeDisabledOnEmergency = false
+            statusListener?.remove()
+            statusListener = nil
         }
         .onReceive(container.emergency.$state) { newState in
             guard let s = newState else { return }
-            if s.hasActiveEmergency && !helperModeDisabledOnEmergency {
-                helperModeDisabledOnEmergency = true
-                let eid = s.emergencyId ?? "nil"
+            // Emergência confirmada pelo servidor — iniciar observer de status
+            if s.hasActiveEmergency, let eid = s.emergencyId, statusListener == nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()
+                startStatusObserver(emergencyId: eid)
             }
             if let error = s.error, !s.hasActiveEmergency {
                 FileLogger.shared.write(level: "ERROR", tag: "EmergencyView", message: "createEmergency error: \(error)")
