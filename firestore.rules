@@ -107,19 +107,11 @@ service cloud.firestore {
     
     // Chat messages for emergencies (used by ChatRepositoryImpl via emergency_chats collection)
     match /emergency_chats/{emergencyId}/messages/{messageId} {
-      // Verificar se o usuário é requester ou helper da emergência correspondente
-      function isEmergencyParticipant() {
-        let req = get(/databases/$(database)/documents/emergency_requests/$(emergencyId));
-        return req.data.requesterId == request.auth.uid
-            || req.data.helperId == request.auth.uid;
-      }
-      allow read: if isAuthenticated() && isEmergencyParticipant();
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated()
-        && isEmergencyParticipant()
         && request.resource.data.senderId == request.auth.uid
-        && isValidString(request.resource.data.message, 1, 1000)
-        && request.resource.data.timestamp is number;
-      allow update, delete: if false; // Mensagens são imutáveis
+        && isValidString(request.resource.data.message, 1, 1000);
+      allow update, delete: if false;
     }
 
     // Default deny

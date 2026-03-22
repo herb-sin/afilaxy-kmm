@@ -80,8 +80,9 @@ struct ChatView: View {
                               let senderName = d["senderName"] as? String,
                               let text = d["message"] as? String else { return nil }
                         let ts: Date
-                        if let t = d["timestamp"] as? Timestamp { ts = t.dateValue() }
-                        else if let ms = d["timestamp"] as? Int64 { ts = Date(timeIntervalSince1970: Double(ms) / 1000) }
+                        if let ms = d["timestamp"] as? Int64 { ts = Date(timeIntervalSince1970: Double(ms) / 1000) }
+                        else if let ms = d["timestamp"] as? Double { ts = Date(timeIntervalSince1970: ms / 1000) }
+                        else if let t = d["timestamp"] as? Timestamp { ts = t.dateValue() }
                         else { ts = Date() }
                         return (id: doc.documentID, senderId: senderId, senderName: senderName, text: text, timestamp: ts)
                     }
@@ -95,6 +96,7 @@ struct ChatView: View {
         let name = Auth.auth().currentUser?.displayName ?? Auth.auth().currentUser?.email ?? "Usuário"
         messageText = ""
         let msgId = UUID().uuidString
+        let timestampMs = Int64(Date().timeIntervalSince1970 * 1000)
         Firestore.firestore()
             .collection("emergency_chats")
             .document(emergencyId)
@@ -106,7 +108,7 @@ struct ChatView: View {
                 "senderId": uid,
                 "senderName": name,
                 "message": text,
-                "timestamp": FieldValue.serverTimestamp(),
+                "timestamp": timestampMs,
                 "isFromHelper": false
             ])
     }

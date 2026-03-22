@@ -26,7 +26,11 @@ class EmergencyViewModel(
     private val _state = MutableStateFlow(EmergencyState())
     val state: StateFlow<EmergencyState> = _state.asStateFlow()
     
+    private var statusObservedId: String? = null
+
     fun observeEmergencyStatus(emergencyId: String) {
+        if (statusObservedId == emergencyId) return
+        statusObservedId = emergencyId
         viewModelScope.coroutineScope.launch {
             emergencyRepository.observeEmergencyStatus(emergencyId)
                 .collect { status ->
@@ -97,31 +101,26 @@ class EmergencyViewModel(
         }
     }
     
+    // Evita re-navegação para EmergencyRequestScreen após já ter navegado
+    private val _navigatedEmergencyIds = mutableSetOf<String>()
+    fun markNavigatedToRequest(emergencyId: String) { _navigatedEmergencyIds.add(emergencyId) }
+    fun wasNavigatedToRequest(emergencyId: String) = emergencyId in _navigatedEmergencyIds
+
     fun onCancelEmergency() {
         val emergencyId = _state.value.emergencyId ?: return
-        
+        // Limpa estado local imediatamente — independente do resultado do Firestore
+        _state.update {
+            it.copy(
+                emergencyId = null,
+                hasActiveEmergency = false,
+                isLoading = false,
+                nearbyHelpers = emptyList(),
+                emergencyStatus = null
+            )
+        }
+        statusObservedId = null
         viewModelScope.coroutineScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-            
             emergencyRepository.cancelEmergency(emergencyId)
-                .onSuccess {
-                    _state.update { 
-                        it.copy(
-                            emergencyId = null,
-                            hasActiveEmergency = false,
-                            isLoading = false,
-                            nearbyHelpers = emptyList()
-                        )
-                    }
-                }
-                .onFailure { exception ->
-                    _state.update { 
-                        it.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Erro ao cancelar emergência"
-                        )
-                    }
-                }
         }
     }
     
