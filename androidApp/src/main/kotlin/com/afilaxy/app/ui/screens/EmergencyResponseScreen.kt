@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.afilaxy.app.R
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.util.FileLogger
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -23,10 +24,16 @@ fun EmergencyResponseScreen(
     viewModel: EmergencyViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    
+
+    LaunchedEffect(Unit) {
+        FileLogger.log("INFO", "EmergencyResponseScreen", "opened emergencyId=$emergencyId")
+    }
+
     // Navegar para chat após aceitar
     LaunchedEffect(state.hasActiveEmergency) {
+        FileLogger.log("DEBUG", "EmergencyResponseScreen", "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId}")
         if (state.hasActiveEmergency && state.emergencyId == emergencyId) {
+            FileLogger.log("INFO", "EmergencyResponseScreen", "navigating to chat emergencyId=$emergencyId")
             navController.navigate("chat/$emergencyId") {
                 popUpTo("emergency_response/$emergencyId") { inclusive = true }
             }

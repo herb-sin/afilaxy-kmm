@@ -144,7 +144,8 @@ fun NavGraph(
             val emergencyId = backStackEntry.arguments?.getString("emergencyId") ?: ""
             EmergencyResponseScreen(
                 emergencyId = emergencyId,
-                navController = navController
+                navController = navController,
+                viewModel = emergencyViewModel ?: koinViewModel()
             )
         }
         
