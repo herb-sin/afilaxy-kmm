@@ -35,13 +35,14 @@ fun EmergencyScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showLocationPermission by remember { mutableStateOf(false) }
-    var navigatedToRequestId by remember { mutableStateOf<String?>(null) }
-    
+
     // Navegar para EmergencyRequestScreen após criar emergência
+    // navigatedToRequestId é persistido no ViewModel para sobreviver a recomposições
     LaunchedEffect(state.emergencyId, state.hasActiveEmergency) {
         val id = state.emergencyId
-        if (id != null && state.hasActiveEmergency && !state.isCreatingEmergency && navigatedToRequestId != id) {
-            navigatedToRequestId = id
+        if (id != null && state.hasActiveEmergency && !state.isCreatingEmergency
+            && !viewModel.wasNavigatedToRequest(id)) {
+            viewModel.markNavigatedToRequest(id)
             onNavigateToRequest(id)
         }
     }
@@ -93,56 +94,6 @@ fun EmergencyScreen(
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
-            }
-            
-            if (state.hasActiveEmergency) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = stringResource(R.string.emergency_active),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        
-                        if (state.currentEmergency?.assignedHelperId == null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = stringResource(R.string.emergency_waiting),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Button(
-                            onClick = { 
-                                viewModel.onCancelEmergency()
-                                onNavigateBack()
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text(stringResource(R.string.emergency_cancel))
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
             }
             
             // Lista de helpers próximos

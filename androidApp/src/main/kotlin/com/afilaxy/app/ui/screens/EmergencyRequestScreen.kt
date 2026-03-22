@@ -25,9 +25,7 @@ fun EmergencyRequestScreen(
     viewModel: EmergencyViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var cancelTapped by remember { mutableStateOf(false) }
 
-    // Countdown timer
     var secondsLeft by remember { mutableStateOf(180) }
     LaunchedEffect(state.emergencyExpiresAt) {
         val expiresAt = state.emergencyExpiresAt ?: return@LaunchedEffect
@@ -36,10 +34,7 @@ fun EmergencyRequestScreen(
             secondsLeft = remaining
             if (remaining == 0) {
                 FileLogger.log("INFO", "EmergencyRequestScreen", "countdown expired — auto cancel")
-                if (!cancelTapped) {
-                    cancelTapped = true
-                    viewModel.onCancelEmergency()
-                }
+                if (state.hasActiveEmergency) viewModel.onCancelEmergency()
                 break
             }
             delay(1_000)
@@ -48,38 +43,24 @@ fun EmergencyRequestScreen(
 
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyRequestScreen", "opened emergencyId=$emergencyId hasActive=${state.hasActiveEmergency}")
+        // Garantir que o observer está ativo para este emergencyId
+        viewModel.observeEmergencyStatus(emergencyId)
     }
-    
+
     // Navegar para chat quando helper aceitar
     LaunchedEffect(state.emergencyStatus) {
-        if (state.emergencyStatus == "matched" && state.emergencyId != null) {
-            navController.navigate("chat/${state.emergencyId}") {
+        FileLogger.log("DEBUG", "EmergencyRequestScreen", "emergencyStatus=${state.emergencyStatus}")
+        if (state.emergencyStatus == "matched") {
+            val chatId = state.emergencyId ?: emergencyId
+            navController.navigate("chat/$chatId") {
                 popUpTo("emergency_request/$emergencyId") { inclusive = true }
             }
         }
     }
     
     // Navegar de volta quando emergência for cancelada
-    val initializedRef = remember { mutableStateOf(false) }
     LaunchedEffect(state.hasActiveEmergency) {
-        if (!initializedRef.value) {
-            initializedRef.value = true
-            return@LaunchedEffect
-        }
-        if (!state.hasActiveEmergency && !state.isLoading) {
-            navController.popBackStack()
-        }
-    }
-
-    // Timeout de segurança: se cancelTapped mas tela não saiu em 5s, força popBackStack
-    LaunchedEffect(cancelTapped) {
-        if (cancelTapped) {
-            delay(5_000)
-            if (navController.currentDestination?.route?.startsWith("emergency_request") == true) {
-                FileLogger.log("WARN", "EmergencyRequestScreen", "cancel timeout — forcing popBackStack")
-                navController.popBackStack()
-            }
-        }
+        if (!state.hasActiveEmergency) navController.popBackStack()
     }
     
     Scaffold(
@@ -153,12 +134,10 @@ fun EmergencyRequestScreen(
                     
                     Button(
                         onClick = {
-                            if (cancelTapped) return@Button
-                            cancelTapped = true
                             FileLogger.log("INFO", "EmergencyRequestScreen", "cancelEmergency tapped hasActive=${state.hasActiveEmergency}")
                             viewModel.onCancelEmergency()
                         },
-                        enabled = state.hasActiveEmergency && !state.isLoading && !cancelTapped,
+                        enabled = state.hasActiveEmergency,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
@@ -174,16 +153,6 @@ fun EmergencyRequestScreen(
                         }
                     }
                 }
-            }
-            
-            if (state.nearbyHelpers.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "${state.nearbyHelpers.size} helper(s) próximo(s)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
             
             state.error?.let { error ->
