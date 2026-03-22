@@ -257,8 +257,18 @@ class EmergencyViewModel(
                     .collect { emergencies ->
                         _state.update { it.copy(incomingEmergencies = emergencies) }
                     }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // deixa o job cancelar normalmente
             } catch (e: Exception) {
                 com.afilaxy.util.Logger.e("EmergencyViewModel", "observeIncomingEmergencies failed", e)
+                emergencyObserverStarted = false
+                // Reinicia o observer após 3s para recuperar de erros transitórios
+                kotlinx.coroutines.delay(3000)
+                val lat = _state.value.userLatitude
+                val lon = _state.value.userLongitude
+                if (_state.value.isHelperMode && lat != 0.0 && lon != 0.0) {
+                    startObservingIncomingEmergencies(lat, lon)
+                }
             } finally {
                 emergencyObserverStarted = false
             }
