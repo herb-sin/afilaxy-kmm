@@ -18,6 +18,7 @@ data class EmergencyState(
     val error: String? = null,
     val isHelperMode: Boolean = false,
     val hasActiveEmergency: Boolean = false,
+    val isRequester: Boolean = false, // true = criou a emergência, false = aceitou como helper
     val userLatitude: Double = 0.0,
     val userLongitude: Double = 0.0
 )
