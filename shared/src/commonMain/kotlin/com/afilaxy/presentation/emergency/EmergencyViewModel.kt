@@ -26,6 +26,17 @@ class EmergencyViewModel(
     private val _state = MutableStateFlow(EmergencyState())
     val state: StateFlow<EmergencyState> = _state.asStateFlow()
     
+    fun fetchEmergencyExpiresAt(emergencyId: String) {
+        viewModelScope.coroutineScope.launch {
+            try {
+                val doc = emergencyRepository.getEmergencyExpiresAt(emergencyId)
+                if (doc != null) _state.update { it.copy(emergencyExpiresAt = doc) }
+            } catch (e: Exception) {
+                com.afilaxy.util.Logger.e("EmergencyViewModel", "fetchEmergencyExpiresAt failed: ${e.message}")
+            }
+        }
+    }
+
     private var statusObservedId: String? = null
 
     fun observeEmergencyStatus(emergencyId: String) {

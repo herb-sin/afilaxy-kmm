@@ -403,6 +403,13 @@ class EmergencyRepositoryImpl(
             }
     }
 
+    override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? {
+        return try {
+            val doc = firestore.collection("emergency_requests").document(emergencyId).get()
+            doc.get<Long?>("expiresAt")
+        } catch (e: Exception) { null }
+    }
+
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> {
         return firestore.collection("emergency_requests")
             .document(emergencyId)
