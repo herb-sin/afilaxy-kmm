@@ -47,20 +47,21 @@ class ChatRepositoryImpl(
                 com.afilaxy.util.Logger.d("ChatRepository", "snapshot docs=${snapshot.documents.size}")
                 snapshot.documents.mapNotNull { doc ->
                     try {
-                        val ts = doc.get<Any?>("timestamp")
-                        com.afilaxy.util.Logger.d("ChatRepository", "doc=${doc.id} ts=$ts tsType=${ts?.let { it::class.simpleName }}")
+                        val ts = doc.id.let {
+                            try { doc.get<Long>("timestamp") }
+                            catch (e1: Exception) {
+                                try { doc.get<Double>("timestamp").toLong() }
+                                catch (e2: Exception) { 0L }
+                            }
+                        }
+                        com.afilaxy.util.Logger.d("ChatRepository", "doc=${doc.id} ts=$ts")
                         ChatMessage(
                             id = doc.get("id") as? String ?: doc.id,
                             emergencyId = doc.get("emergencyId") as? String ?: "",
                             senderId = doc.get("senderId") as? String ?: "",
                             senderName = doc.get("senderName") as? String ?: "",
                             message = doc.get("message") as? String ?: "",
-                            timestamp = when (ts) {
-                                is Long -> ts
-                                is Double -> ts.toLong()
-                                is Int -> ts.toLong()
-                                else -> 0L
-                            },
+                            timestamp = ts,
                             isFromHelper = (doc.get("isFromHelper") as? Boolean) ?: false
                         )
                     } catch (e: Exception) {
