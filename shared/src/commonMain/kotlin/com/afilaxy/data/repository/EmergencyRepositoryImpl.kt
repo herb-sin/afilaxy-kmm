@@ -147,28 +147,18 @@ class EmergencyRepositoryImpl(
                 auth.currentUser?.displayName ?: "Helper"
             }
             
-            // Transação atômica para evitar race condition
             firestore.runTransaction {
                 val emergencyRef = firestore.collection("emergency_requests").document(emergencyId)
                 val emergencyDoc = get(emergencyRef)
                 
-                if (!emergencyDoc.exists) {
-                    throw Exception("Emergência não encontrada")
-                }
+                if (!emergencyDoc.exists) throw Exception("Emergência não encontrada")
                 
                 val isActive = emergencyDoc.get<Boolean>("active") ?: false
                 val currentHelperId = emergencyDoc.get<String?>("helperId")
                 val currentStatus = emergencyDoc.get<String>("status") ?: ""
                 
-                if (!isActive) {
-                    throw Exception("Emergência não está ativa")
-                }
-                
-                if (currentHelperId != null || currentStatus != "waiting") {
-                    throw Exception("Emergência já foi aceita por outro helper")
-                }
-                
-                val newExpiresAt = getCurrentTimeMillis() + 180000 // 3 min
+                if (!isActive) throw Exception("Emergência não está ativa")
+                if (currentHelperId != null || currentStatus != "waiting") throw Exception("Emergência já foi aceita")
                 
                 update(
                     emergencyRef,
@@ -176,12 +166,13 @@ class EmergencyRepositoryImpl(
                     "helperId" to userId,
                     "helperName" to helperName,
                     "matchedAt" to getCurrentTimeMillis(),
-                    "expiresAt" to newExpiresAt
+                    "expiresAt" to (getCurrentTimeMillis() + 180000)
                 )
             }
             
             Result.success(true)
         } catch (e: Exception) {
+            com.afilaxy.util.Logger.e("EmergencyRepo", "acceptEmergency failed emergencyId=$emergencyId: ${e.message}")
             Result.failure(e)
         }
     }
