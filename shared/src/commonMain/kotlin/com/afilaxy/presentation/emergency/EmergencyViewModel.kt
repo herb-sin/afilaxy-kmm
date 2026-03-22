@@ -82,6 +82,7 @@ class EmergencyViewModel(
                             hasActiveEmergency = true,
                             isCreatingEmergency = false,
                             isHelperMode = false,
+                            isRequester = true,
                             emergencyExpiresAt = expiresAt,
                             error = null
                         )
@@ -192,6 +193,7 @@ class EmergencyViewModel(
                         it.copy(
                             emergencyId = emergencyId,
                             hasActiveEmergency = true,
+                            isRequester = false,
                             isLoading = false
                         )
                     }

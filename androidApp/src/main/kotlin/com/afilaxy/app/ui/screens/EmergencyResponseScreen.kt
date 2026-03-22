@@ -24,9 +24,16 @@ fun EmergencyResponseScreen(
     viewModel: EmergencyViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    var secondsLeft by remember { mutableStateOf(180) }
 
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyResponseScreen", "opened emergencyId=$emergencyId")
+        // Countdown de 3 minutos — tempo máximo para aceitar
+        while (secondsLeft > 0) {
+            kotlinx.coroutines.delay(1_000)
+            secondsLeft--
+        }
+        navController.popBackStack()
     }
 
     // Navegar para chat após aceitar
@@ -92,6 +99,20 @@ fun EmergencyResponseScreen(
                         text = "Você pode ajudar?",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val minutes = secondsLeft / 60
+                    val seconds = secondsLeft % 60
+                    Text(
+                        text = "Expira em %d:%02d".format(minutes, seconds),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (secondsLeft <= 30)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onPrimaryContainer,
                         textAlign = TextAlign.Center
                     )
                     
