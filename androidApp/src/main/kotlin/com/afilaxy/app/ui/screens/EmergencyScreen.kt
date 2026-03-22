@@ -17,6 +17,7 @@ import com.afilaxy.app.R
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.domain.model.Helper
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.util.FileLogger
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
@@ -38,8 +39,9 @@ fun EmergencyScreen(
 
     // Navegar para EmergencyRequestScreen após criar emergência
     // navigatedToRequestId é persistido no ViewModel para sobreviver a recomposições
-    LaunchedEffect(state.emergencyId, state.hasActiveEmergency) {
+    LaunchedEffect(state.emergencyId, state.hasActiveEmergency, state.isRequester) {
         val id = state.emergencyId
+        FileLogger.log("DEBUG", "EmergencyScreen", "hasActive=${state.hasActiveEmergency} isRequester=${state.isRequester} emergencyId=$id")
         if (id != null && state.hasActiveEmergency && state.isRequester && !state.isCreatingEmergency
             && !viewModel.wasNavigatedToRequest(id)) {
             viewModel.markNavigatedToRequest(id)

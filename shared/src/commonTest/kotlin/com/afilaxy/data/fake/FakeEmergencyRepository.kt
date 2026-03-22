@@ -106,6 +106,8 @@ class FakeEmergencyRepository(
 
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> = statusFlow
 
+    override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? = null
+
     // Test helpers
     fun setShouldSucceed(value: Boolean) { shouldSucceed = value }
     fun setActiveEmergencyId(id: String?) { activeEmergencyId = id }

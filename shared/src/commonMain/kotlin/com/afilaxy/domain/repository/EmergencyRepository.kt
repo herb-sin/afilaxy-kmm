@@ -22,4 +22,5 @@ interface EmergencyRepository {
     suspend fun getUserEmergencyHistory(userId: String): Result<List<com.afilaxy.domain.model.EmergencyHistory>>
     fun observeNearbyEmergencies(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Emergency>>
     fun observeEmergencyStatus(emergencyId: String): Flow<String?>
+    suspend fun getEmergencyExpiresAt(emergencyId: String): Long?
 }

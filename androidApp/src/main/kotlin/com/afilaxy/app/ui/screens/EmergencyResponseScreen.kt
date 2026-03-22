@@ -26,14 +26,23 @@ fun EmergencyResponseScreen(
     val state by viewModel.state.collectAsState()
     var secondsLeft by remember { mutableStateOf(180) }
 
+    // Sincroniza countdown com expiresAt real da emergência no Firestore
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyResponseScreen", "opened emergencyId=$emergencyId")
-        // Countdown de 3 minutos — tempo máximo para aceitar
-        while (secondsLeft > 0) {
+        viewModel.fetchEmergencyExpiresAt(emergencyId)
+    }
+
+    LaunchedEffect(state.emergencyExpiresAt) {
+        val expiresAt = state.emergencyExpiresAt ?: return@LaunchedEffect
+        while (true) {
+            val remaining = ((expiresAt - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            secondsLeft = remaining
+            if (remaining == 0) {
+                navController.popBackStack()
+                break
+            }
             kotlinx.coroutines.delay(1_000)
-            secondsLeft--
         }
-        navController.popBackStack()
     }
 
     // Navegar para chat após aceitar
