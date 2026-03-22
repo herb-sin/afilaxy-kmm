@@ -51,7 +51,12 @@ class ChatRepositoryImpl(
                             senderId = doc.get("senderId") as? String ?: "",
                             senderName = doc.get("senderName") as? String ?: "",
                             message = doc.get("message") as? String ?: "",
-                            timestamp = (doc.get("timestamp") as? Long) ?: 0L,
+                            timestamp = when (val ts = doc.get<Any?>("timestamp")) {
+                                is Long -> ts
+                                is Double -> ts.toLong()
+                                is Int -> ts.toLong()
+                                else -> 0L
+                            },
                             isFromHelper = (doc.get("isFromHelper") as? Boolean) ?: false
                         )
                     } catch (e: Exception) {

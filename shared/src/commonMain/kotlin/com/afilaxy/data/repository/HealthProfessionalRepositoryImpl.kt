@@ -26,9 +26,9 @@ class HealthProfessionalRepositoryImpl(
                 .documents
                 .mapNotNull { doc ->
                     try {
-                        doc.data<HealthProfessional>()
+                        mapDocToHealthProfessional(doc)
                     } catch (e: Exception) {
-                        Logger.e("HealthProfessionalRepo", "Deserialization failed", e)
+                        Logger.e("HealthProfessionalRepo", "Deserialization failed for ${doc.id}", e)
                         null
                     }
                 }
@@ -40,19 +40,32 @@ class HealthProfessionalRepositoryImpl(
     }
     
     override suspend fun getById(id: String): HealthProfessional? {
-        return collection.document(id).get().data<HealthProfessional>()
+        return try {
+            val doc = collection.document(id).get()
+            if (doc.exists) mapDocToHealthProfessional(doc) else null
+        } catch (e: Exception) {
+            Logger.e("HealthProfessionalRepo", "getById failed for $id", e)
+            null
+        }
     }
     
     override suspend fun findBySpecialty(specialty: Specialty): List<HealthProfessional> {
-        return collection
-            .where { 
-                "specialty" equalTo specialty.name
-                "subscriptionExpiry" greaterThan getCurrentTimeMillis()
-            }
-            .get()
-            .documents
-            .mapNotNull { it.data<HealthProfessional>() }
-            .sortedByDescending { calculatePriority(it) }
+        return try {
+            collection
+                .where {
+                    "specialty" equalTo specialty.name
+                    "subscriptionExpiry" greaterThan getCurrentTimeMillis()
+                }
+                .get()
+                .documents
+                .mapNotNull { doc ->
+                    try { mapDocToHealthProfessional(doc) } catch (e: Exception) { null }
+                }
+                .sortedByDescending { calculatePriority(it) }
+        } catch (e: Exception) {
+            Logger.e("HealthProfessionalRepo", "findBySpecialty failed", e)
+            emptyList()
+        }
     }
     
     override suspend fun findNearby(location: Location, radiusKm: Double): List<HealthProfessional> {
@@ -72,6 +85,38 @@ class HealthProfessionalRepositoryImpl(
         )
     }
     
+    private fun mapDocToHealthProfessional(doc: dev.gitlive.firebase.firestore.DocumentSnapshot): HealthProfessional {
+        val planStr = doc.get<String?>("subscriptionPlan") ?: "NONE"
+        val plan = try { SubscriptionPlan.valueOf(planStr) } catch (e: Exception) { SubscriptionPlan.NONE }
+
+        val specialtyStr = doc.get<String?>("specialty") ?: "PNEUMOLOGIST"
+        val specialty = try { Specialty.valueOf(specialtyStr) } catch (e: Exception) { Specialty.PNEUMOLOGIST }
+
+        // GeoPoint salvo pelo seed — extrair lat/lon sem depender de deserialização automática
+        val geoPoint = try { doc.get<dev.gitlive.firebase.firestore.GeoPoint?>("location") } catch (e: Exception) { null }
+        val location = geoPoint?.let {
+            Location(latitude = it.latitude, longitude = it.longitude, address = "", timestamp = 0L)
+        }
+
+        return HealthProfessional(
+            id = doc.get<String?>("id") ?: doc.id,
+            name = doc.get<String?>("name") ?: "",
+            specialty = specialty,
+            crm = doc.get<String?>("crm") ?: "",
+            subscriptionPlan = plan,
+            subscriptionExpiry = doc.get<Long?>("subscriptionExpiry") ?: 0L,
+            profilePhoto = doc.get<String?>("profilePhoto"),
+            bio = doc.get<String?>("bio") ?: "",
+            phone = doc.get<String?>("phone"),
+            whatsapp = doc.get<String?>("whatsapp"),
+            clinicAddress = doc.get<String?>("clinicAddress"),
+            location = location,
+            rating = doc.get<Double?>("rating") ?: 0.0,
+            totalReviews = doc.get<Int?>("totalReviews") ?: 0,
+            isVerified = doc.get<Boolean?>("isVerified") ?: false
+        )
+    }
+
     private fun calculatePriority(professional: HealthProfessional): Int {
         return when (professional.subscriptionPlan.tier()) {
             com.afilaxy.domain.model.PlanTier.PREMIUM -> 3

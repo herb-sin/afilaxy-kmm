@@ -63,13 +63,12 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            // Campo de enviar mensagem
-            Surface(
-                shadowElevation = 8.dp
-            ) {
+            Surface(shadowElevation = 8.dp) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -133,7 +132,7 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(
-                        items = state.messages.reversed(),
+                        items = state.messages,
                         key = { it.timestamp }
                     ) { message ->
                         MessageBubble(
