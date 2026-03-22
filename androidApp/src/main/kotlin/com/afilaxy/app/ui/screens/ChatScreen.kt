@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
 import com.afilaxy.presentation.chat.ChatViewModel
+import com.afilaxy.util.FileLogger
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -38,12 +39,13 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
-    
-    // Auto-scroll quando novas mensagens chegam
+
+    LaunchedEffect(Unit) {
+        FileLogger.log("INFO", "ChatScreen", "opened emergencyId=$emergencyId")
+    }
     LaunchedEffect(state.messages.size) {
-        if (state.messages.isNotEmpty()) {
-            listState.animateScrollToItem(0)
-        }
+        FileLogger.log("DEBUG", "ChatScreen", "messages count=${state.messages.size} currentUserId=${state.currentUserId}")
+        if (state.messages.isNotEmpty()) listState.animateScrollToItem(0)
     }
     
     Scaffold(

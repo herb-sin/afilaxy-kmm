@@ -48,19 +48,21 @@ fun EmergencyRequestScreen(
     }
 
     // Navegar para chat quando helper aceitar
+    var navigatedToChat by remember { mutableStateOf(false) }
     LaunchedEffect(state.emergencyStatus) {
         FileLogger.log("DEBUG", "EmergencyRequestScreen", "emergencyStatus=${state.emergencyStatus}")
-        if (state.emergencyStatus == "matched") {
+        if (state.emergencyStatus == "matched" && !navigatedToChat) {
+            navigatedToChat = true
             val chatId = state.emergencyId ?: emergencyId
             navController.navigate("chat/$chatId") {
                 popUpTo("emergency_request/$emergencyId") { inclusive = true }
             }
         }
     }
-    
-    // Navegar de volta quando emergência for cancelada
+
+    // Navegar de volta apenas quando cancelado (não quando foi para o chat)
     LaunchedEffect(state.hasActiveEmergency) {
-        if (!state.hasActiveEmergency) navController.popBackStack()
+        if (!state.hasActiveEmergency && !navigatedToChat) navController.popBackStack()
     }
     
     Scaffold(

@@ -36,6 +36,7 @@ class ChatRepositoryImpl(
     }
     
     override fun getMessages(emergencyId: String): Flow<List<ChatMessage>> {
+        com.afilaxy.util.Logger.d("ChatRepository", "getMessages emergencyId=$emergencyId")
         return firestore
             .collection("emergency_chats")
             .document(emergencyId)
@@ -43,6 +44,7 @@ class ChatRepositoryImpl(
             .orderBy("timestamp")
             .snapshots
             .map { snapshot ->
+                com.afilaxy.util.Logger.d("ChatRepository", "snapshot docs=${snapshot.documents.size}")
                 snapshot.documents.mapNotNull { doc ->
                     try {
                         ChatMessage(
