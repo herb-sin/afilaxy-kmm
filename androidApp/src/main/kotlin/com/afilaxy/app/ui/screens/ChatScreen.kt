@@ -78,6 +78,7 @@ fun ChatScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .imePadding()
                         .navigationBarsPadding()
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
