@@ -117,7 +117,12 @@ fun NavGraph(
                 onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
                 onNavigateToCommunity = { navController.navigate(AppRoutes.COMMUNITY) },
                 onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
-                onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) }
+                onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
+                onLogout = {
+                    navController.navigate(AppRoutes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
         
