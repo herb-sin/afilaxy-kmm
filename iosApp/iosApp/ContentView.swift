@@ -58,8 +58,8 @@ struct ContentView: View {
             }
             .onReceive(container.emergency.$state) { s in
                 let isActive = s?.hasActiveEmergency == true
-                if wasActiveEmergency && !isActive {
-                    // Emergência resolvida/cancelada — volta para home
+                // Pop para home quando emergência termina (requester) OU quando chat estava ativo e emergência foi resolvida (helper)
+                if (wasActiveEmergency && !isActive) || (chatNavigatedId != nil && !isActive) {
                     path.removeLast(path.count)
                     chatNavigatedId = nil
                 }

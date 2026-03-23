@@ -57,6 +57,7 @@ fun ChatScreen(
     }
     
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.chat_title)) },

@@ -64,32 +64,35 @@ class ProfileRepositoryImpl(
     
     override suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
-            val data = mutableMapOf<String, Any?>(
-                "name" to profile.name,
-                "email" to profile.email,
-                "phone" to profile.phone,
-                "photoUrl" to profile.photoUrl
-            )
-            
-            profile.healthData?.let {
-                data["healthData"] = mapOf(
+            val healthMap: Map<String, Any> = profile.healthData?.let {
+                mapOf(
                     "bloodType" to it.bloodType,
                     "allergies" to it.allergies,
                     "medications" to it.medications,
                     "conditions" to it.conditions,
                     "notes" to it.notes
                 )
-            }
-            
-            profile.emergencyContact?.let {
-                data["emergencyContact"] = mapOf(
+            } ?: emptyMap()
+
+            val contactMap: Map<String, Any> = profile.emergencyContact?.let {
+                mapOf(
                     "name" to it.name,
                     "phone" to it.phone,
                     "relationship" to it.relationship
                 )
+            } ?: emptyMap()
+
+            val data: Map<String, Any> = buildMap {
+                put("name", profile.name)
+                put("email", profile.email)
+                put("phone", profile.phone)
+                profile.photoUrl?.let { put("photoUrl", it) }
+                if (healthMap.isNotEmpty()) put("healthData", healthMap)
+                if (contactMap.isNotEmpty()) put("emergencyContact", contactMap)
             }
-            
-            firestore.collection("users").document(profile.uid).update(data)
+
+            firestore.collection("users").document(profile.uid)
+                .set(data, merge = true)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -98,7 +101,7 @@ class ProfileRepositoryImpl(
     
     override suspend fun updateHealthData(userId: String, healthData: UserHealthData): Result<Unit> {
         return try {
-            firestore.collection("users").document(userId).update(
+            val data: Map<String, Any> = mapOf(
                 "healthData" to mapOf(
                     "bloodType" to healthData.bloodType,
                     "allergies" to healthData.allergies,
@@ -107,6 +110,7 @@ class ProfileRepositoryImpl(
                     "notes" to healthData.notes
                 )
             )
+            firestore.collection("users").document(userId).set(data, merge = true)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -115,13 +119,14 @@ class ProfileRepositoryImpl(
     
     override suspend fun updateEmergencyContact(userId: String, contact: EmergencyContact): Result<Unit> {
         return try {
-            firestore.collection("users").document(userId).update(
+            val data: Map<String, Any> = mapOf(
                 "emergencyContact" to mapOf(
                     "name" to contact.name,
                     "phone" to contact.phone,
                     "relationship" to contact.relationship
                 )
             )
+            firestore.collection("users").document(userId).set(data, merge = true)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
