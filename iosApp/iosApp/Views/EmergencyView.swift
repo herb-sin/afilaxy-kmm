@@ -62,7 +62,7 @@ struct EmergencyView: View {
             .collection("emergency_requests")
             .document(emergencyId)
             .updateData(["active": false, "status": status])
-        container.emergency.clearEmergencyStateSwift()
+        container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
         isCancelling = false
     }
 
