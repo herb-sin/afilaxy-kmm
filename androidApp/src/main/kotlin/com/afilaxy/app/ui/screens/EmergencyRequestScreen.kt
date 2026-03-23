@@ -47,11 +47,11 @@ fun EmergencyRequestScreen(
         viewModel.observeEmergencyStatus(emergencyId)
     }
 
-    // Navegar para chat quando helper aceitar
+    // Navegar para chat quando helper aceitar — apenas se for o requester
     var navigatedToChat by remember { mutableStateOf(false) }
     LaunchedEffect(state.emergencyStatus) {
         FileLogger.log("DEBUG", "EmergencyRequestScreen", "emergencyStatus=${state.emergencyStatus}")
-        if (state.emergencyStatus == "matched" && !navigatedToChat) {
+        if (state.emergencyStatus == "matched" && !navigatedToChat && state.isRequester) {
             navigatedToChat = true
             val chatId = state.emergencyId ?: emergencyId
             navController.navigate("chat/$chatId") {
