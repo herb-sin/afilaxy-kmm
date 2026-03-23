@@ -91,6 +91,15 @@ class AppContainer: ObservableObject {
     private var emergencyListener: ListenerRegistration?
     private var notifiedEmergencyIds = Set<String>()
 
+    func freezeAll() {
+        emergency.freezeSwift()
+        auth.signOutSwift()
+        history.freeze()
+        profile.freeze()
+        professionals.freeze()
+        professionalDetail.freeze()
+    }
+
     func observeChildren() {
         emergency.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         auth.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)

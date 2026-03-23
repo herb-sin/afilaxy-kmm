@@ -53,6 +53,14 @@ final class EmergencyViewModelWrapper: ObservableObject {
         DispatchQueue.main.async { self.state = newState }
     }
 
+    /// Para o timer permanentemente — deve ser chamado no logout antes de qualquer signOut.
+    func freezeSwift() {
+        timer?.invalidate()
+        timer = nil
+        localOverride = false
+        helperModeOverride = false
+    }
+
     /// Limpa o estado de emergência localmente — sem chamar nenhum método KMM.
     func clearEmergencyStateSwift() {
         guard let current = state else { return }
@@ -148,6 +156,7 @@ final class HistoryViewModelWrapper: ObservableObject {
         }
     }
     deinit { timer?.invalidate() }
+    func freeze() { timer?.invalidate(); timer = nil }
 }
 
 final class ProfileViewModelWrapper: ObservableObject {
@@ -164,6 +173,7 @@ final class ProfileViewModelWrapper: ObservableObject {
         }
     }
     deinit { timer?.invalidate() }
+    func freeze() { timer?.invalidate(); timer = nil }
 }
 
 final class ProfessionalListViewModelWrapper: ObservableObject {
@@ -180,6 +190,7 @@ final class ProfessionalListViewModelWrapper: ObservableObject {
         }
     }
     deinit { timer?.invalidate() }
+    func freeze() { timer?.invalidate(); timer = nil }
 }
 
 final class ProfessionalDetailViewModelWrapper: ObservableObject {
@@ -196,4 +207,5 @@ final class ProfessionalDetailViewModelWrapper: ObservableObject {
         }
     }
     deinit { timer?.invalidate() }
+    func freeze() { timer?.invalidate(); timer = nil }
 }

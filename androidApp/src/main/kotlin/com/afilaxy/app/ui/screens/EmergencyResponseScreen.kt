@@ -1,5 +1,6 @@
 package com.afilaxy.app.ui.screens
 
+import android.app.NotificationManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -7,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,15 @@ fun EmergencyResponseScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var secondsLeft by remember { mutableStateOf(180) }
+    val context = LocalContext.current
+
+    // Cancela a notificação do sistema usando o mesmo ID derivado do emergencyId
+    fun cancelEmergencyNotification() {
+        val nm = context.getSystemService(NotificationManager::class.java)
+        val safeId = emergencyId.filter { it.isLetterOrDigit() }.take(8).ifEmpty { "0" }
+            .fold(0) { acc, c -> acc * 31 + c.code }
+        nm.cancel(safeId)
+    }
 
     // Sincroniza countdown e pré-carrega estado da emergência no ViewModel
     LaunchedEffect(Unit) {
@@ -36,10 +47,18 @@ fun EmergencyResponseScreen(
 
     LaunchedEffect(state.emergencyExpiresAt) {
         val expiresAt = state.emergencyExpiresAt ?: return@LaunchedEffect
+        // Emergência já expirada ao abrir — cancela notificação e volta imediatamente
+        if (System.currentTimeMillis() >= expiresAt) {
+            FileLogger.log("INFO", "EmergencyResponseScreen", "already expired on open — dismissing emergencyId=$emergencyId")
+            cancelEmergencyNotification()
+            navController.popBackStack()
+            return@LaunchedEffect
+        }
         while (true) {
             val remaining = ((expiresAt - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
             secondsLeft = remaining
             if (remaining == 0) {
+                cancelEmergencyNotification()
                 navController.popBackStack()
                 break
             }
