@@ -1,9 +1,11 @@
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
+import shared
 
 struct ChatView: View {
     let emergencyId: String
+    @EnvironmentObject var container: AppContainer
     @State private var messages: [(id: String, senderId: String, senderName: String, text: String, timestamp: Date)] = []
     @State private var messageText = ""
     @State private var listener: ListenerRegistration? = nil
@@ -49,20 +51,36 @@ struct ChatView: View {
         }
         .navigationTitle("Chat de Emergência")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { showResolveDialog = true } label: {
+                    Image(systemName: "chevron.left")
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Resolver") { showResolveDialog = true }
             }
         }
-        .alert("Resolver Emergência", isPresented: $showResolveDialog) {
-            Button("Sim") { dismiss() }
-            Button("Não", role: .cancel) {}
-        } message: { Text("A emergência foi resolvida?") }
+        .alert("Encerrar Emergência", isPresented: $showResolveDialog) {
+            Button("Resolver", role: .destructive) { resolveEmergency() }
+            Button("Continuar no Chat", role: .cancel) {}
+        } message: { Text("Você precisa resolver a emergência antes de sair.") }
         .onAppear { startListening() }
         .onDisappear {
             listener?.remove()
             listener = nil
         }
+    }
+
+    private func resolveEmergency() {
+        Firestore.firestore()
+            .collection("emergency_requests")
+            .document(emergencyId)
+            .updateData(["status": "resolved", "active": false])
+        // Limpa estado local sem I/O via KMM
+        container.emergency.vm.onToggleHelperMode(enable: false)
+        dismiss()
     }
 
     private func startListening() {
