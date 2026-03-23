@@ -79,7 +79,7 @@ struct ChatView: View {
             .document(emergencyId)
             .updateData(["status": "resolved", "active": false])
         container.emergency.clearEmergencyStateSwift()
-        dismiss()
+        // dismiss() não necessário — ContentView faz pop ao detectar hasActiveEmergency=false
     }
 
     private func startListening() {

@@ -5,62 +5,66 @@ final class EmergencyViewModelWrapper: ObservableObject {
     let vm: EmergencyViewModel
     @Published private(set) var state: EmergencyState?
     private var timer: Timer?
+    /// Enquanto frozenUntil > now, o timer não sobrescreve o estado Swift local.
+    private var frozenUntil: Date = .distantPast
 
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
         self.state = vm.state.value as? EmergencyState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self, Date() > self.frozenUntil else { return }
             guard let s = vm.state.value as? EmergencyState else { return }
-            DispatchQueue.main.async { self?.state = s }
+            DispatchQueue.main.async { self.state = s }
         }
     }
     deinit { timer?.invalidate() }
 
-    /// Limpa o estado de emergência localmente no lado Swift — sem chamar nenhum método KMM.
-    /// Seguro para chamar do iOS (evita SIGABRT do MutableStateFlow KMM).
-    func clearEmergencyStateSwift() {
-        DispatchQueue.main.async {
-            guard let current = self.state else { return }
-            self.state = EmergencyState(
-                currentEmergency: nil,
-                emergencyId: nil,
-                emergencyStatus: nil,
-                emergencyExpiresAt: nil,
-                nearbyHelpers: current.nearbyHelpers,
-                incomingEmergencies: current.incomingEmergencies,
-                isLoading: false,
-                isCreatingEmergency: false,
-                error: nil,
-                isHelperMode: false,
-                hasActiveEmergency: false,
-                isRequester: false,
-                userLatitude: current.userLatitude,
-                userLongitude: current.userLongitude
-            )
-        }
+    /// Congela o polling por `seconds` segundos e aplica `newState` imediatamente.
+    private func applyLocalState(_ newState: EmergencyState, freezeFor seconds: TimeInterval = 3.0) {
+        frozenUntil = Date().addingTimeInterval(seconds)
+        DispatchQueue.main.async { self.state = newState }
     }
 
-    /// Altera apenas isHelperMode no estado Swift — sem chamar nenhum método KMM.
+    /// Limpa o estado de emergência localmente — sem chamar nenhum método KMM.
+    func clearEmergencyStateSwift() {
+        guard let current = state else { return }
+        applyLocalState(EmergencyState(
+            currentEmergency: nil,
+            emergencyId: nil,
+            emergencyStatus: nil,
+            emergencyExpiresAt: nil,
+            nearbyHelpers: current.nearbyHelpers,
+            incomingEmergencies: current.incomingEmergencies,
+            isLoading: false,
+            isCreatingEmergency: false,
+            error: nil,
+            isHelperMode: false,
+            hasActiveEmergency: false,
+            isRequester: false,
+            userLatitude: current.userLatitude,
+            userLongitude: current.userLongitude
+        ))
+    }
+
+    /// Altera apenas isHelperMode — sem chamar nenhum método KMM.
     func setHelperMode(_ enabled: Bool) {
-        DispatchQueue.main.async {
-            guard let current = self.state else { return }
-            self.state = EmergencyState(
-                currentEmergency: current.currentEmergency,
-                emergencyId: current.emergencyId,
-                emergencyStatus: current.emergencyStatus,
-                emergencyExpiresAt: current.emergencyExpiresAt,
-                nearbyHelpers: current.nearbyHelpers,
-                incomingEmergencies: current.incomingEmergencies,
-                isLoading: current.isLoading,
-                isCreatingEmergency: current.isCreatingEmergency,
-                error: current.error,
-                isHelperMode: enabled,
-                hasActiveEmergency: current.hasActiveEmergency,
-                isRequester: current.isRequester,
-                userLatitude: current.userLatitude,
-                userLongitude: current.userLongitude
-            )
-        }
+        guard let current = state else { return }
+        applyLocalState(EmergencyState(
+            currentEmergency: current.currentEmergency,
+            emergencyId: current.emergencyId,
+            emergencyStatus: current.emergencyStatus,
+            emergencyExpiresAt: current.emergencyExpiresAt,
+            nearbyHelpers: current.nearbyHelpers,
+            incomingEmergencies: current.incomingEmergencies,
+            isLoading: current.isLoading,
+            isCreatingEmergency: current.isCreatingEmergency,
+            error: current.error,
+            isHelperMode: enabled,
+            hasActiveEmergency: current.hasActiveEmergency,
+            isRequester: current.isRequester,
+            userLatitude: current.userLatitude,
+            userLongitude: current.userLongitude
+        ))
     }
 }
 
