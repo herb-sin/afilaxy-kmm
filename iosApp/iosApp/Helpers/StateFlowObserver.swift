@@ -10,6 +10,8 @@ final class EmergencyViewModelWrapper: ObservableObject {
     private var localOverride = false
     /// Quando true, o polling preserva isHelperMode=true mesmo que o KMM diga false.
     private var helperModeOverride = false
+    /// IDs de emergência já cancelados/resolvidos localmente — bloqueados permanentemente no polling.
+    private var cancelledEmergencyIds = Set<String>()
 
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
@@ -20,6 +22,25 @@ final class EmergencyViewModelWrapper: ObservableObject {
             if self.localOverride {
                 guard !s.hasActiveEmergency else { return }
                 self.localOverride = false
+            }
+            // Bloqueia restauração de emergência já cancelada pelo usuário
+            if let eid = s.emergencyId as? String, self.cancelledEmergencyIds.contains(eid) {
+                s = EmergencyState(
+                    currentEmergency: nil,
+                    emergencyId: nil,
+                    emergencyStatus: nil,
+                    emergencyExpiresAt: nil,
+                    nearbyHelpers: s.nearbyHelpers,
+                    incomingEmergencies: s.incomingEmergencies,
+                    isLoading: false,
+                    isCreatingEmergency: false,
+                    error: nil,
+                    isHelperMode: s.isHelperMode,
+                    hasActiveEmergency: false,
+                    isRequester: false,
+                    userLatitude: s.userLatitude,
+                    userLongitude: s.userLongitude
+                )
             }
             // Preserva helper mode local se o KMM ainda não confirmou
             if self.helperModeOverride && !s.isHelperMode {
@@ -59,11 +80,14 @@ final class EmergencyViewModelWrapper: ObservableObject {
         timer = nil
         localOverride = false
         helperModeOverride = false
+        cancelledEmergencyIds.removeAll()
     }
 
     /// Limpa o estado de emergência localmente — sem chamar nenhum método KMM.
-    func clearEmergencyStateSwift() {
+    /// emergencyId: ID a bloquear permanentemente no polling (evita restauração pelo KMM).
+    func clearEmergencyStateSwift(cancelledId: String? = nil) {
         guard let current = state else { return }
+        if let eid = cancelledId { cancelledEmergencyIds.insert(eid) }
         applyLocalState(EmergencyState(
             currentEmergency: nil,
             emergencyId: nil,
@@ -79,7 +103,7 @@ final class EmergencyViewModelWrapper: ObservableObject {
             isRequester: false,
             userLatitude: current.userLatitude,
             userLongitude: current.userLongitude
-        ), holdUntilKmmClears: true)
+        ), holdUntilKmmClears: false)
     }
 
     /// Altera apenas isHelperMode — sem chamar nenhum método KMM.
