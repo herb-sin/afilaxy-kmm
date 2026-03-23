@@ -12,6 +12,7 @@ struct EmergencyView: View {
     @State private var countdownTimer: Timer? = nil
 
     @State private var isCancelling = false
+    @State private var lastEmergencyId: String? = nil
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -185,13 +186,16 @@ struct EmergencyView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
-            // Cancela automaticamente se a emergência já expirou
-            if state.hasActiveEmergency,
-               let ms = state.emergencyExpiresAt?.int64Value, ms > 0,
-               Date(timeIntervalSince1970: Double(ms) / 1000) <= Date() {
-                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "onAppear: emergency already expired — auto cancel")
-                if let eid = container.emergency.state?.emergencyId as? String { cancelEmergencyNative(emergencyId: eid) }
-            }
+            guard state.hasActiveEmergency,
+                  let eid = state.emergencyId as? String,
+                  let ms = state.emergencyExpiresAt?.int64Value, ms > 0,
+                  Date(timeIntervalSince1970: Double(ms) / 1000) <= Date() else { return }
+            // Só auto-cancela se for a mesma emergência que já estava ativa
+            guard eid == lastEmergencyId else { return }
+            FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "onAppear: emergency already expired — auto cancel")
+            guard !isCancelling else { return }
+            isCancelling = true
+            cancelEmergencyNative(emergencyId: eid)
         }
         .onDisappear {
             statusListener?.remove()
@@ -205,19 +209,26 @@ struct EmergencyView: View {
                 chatNavigated = false
                 return
             }
-            guard !chatNavigated, let eid = s.emergencyId else { return }
-            // Reinicia observer e countdown apenas se ainda não houve match
-            if statusListener == nil && !chatNavigated {
+            guard let eid = s.emergencyId else { return }
+            // Nova emergência detectada — reseta todo o estado local
+            if eid != lastEmergencyId {
+                lastEmergencyId = eid
+                chatNavigated = false
+                isCancelling = false
+                countdownTimer?.invalidate()
+                countdownTimer = nil
+                statusListener?.remove()
+                statusListener = nil
+            }
+            guard !chatNavigated else { return }
+            if statusListener == nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()
                 startStatusObserver(emergencyId: eid)
             }
-            // Só inicia countdown se ainda não houve match
-            if !chatNavigated {
-                let expiresAt = s.emergencyExpiresAt?.int64Value ?? 0
-                if expiresAt > 0 {
-                    startCountdown(expiresAt: expiresAt)
-                }
+            let expiresAt = s.emergencyExpiresAt?.int64Value ?? 0
+            if expiresAt > 0 {
+                startCountdown(expiresAt: expiresAt)
             }
         }
     }
