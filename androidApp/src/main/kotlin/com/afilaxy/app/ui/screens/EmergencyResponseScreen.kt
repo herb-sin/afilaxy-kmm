@@ -48,9 +48,9 @@ fun EmergencyResponseScreen(
     }
 
     // Navegar para chat após aceitar
-    LaunchedEffect(state.hasActiveEmergency) {
+    LaunchedEffect(state.hasActiveEmergency, state.emergencyId) {
         FileLogger.log("DEBUG", "EmergencyResponseScreen", "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId}")
-        if (state.hasActiveEmergency && state.emergencyId == emergencyId) {
+        if (state.hasActiveEmergency && state.emergencyId == emergencyId && !state.isRequester) {
             FileLogger.log("INFO", "EmergencyResponseScreen", "navigating to chat emergencyId=$emergencyId")
             navController.navigate("chat/$emergencyId") {
                 popUpTo("emergency_response/$emergencyId") { inclusive = true }
