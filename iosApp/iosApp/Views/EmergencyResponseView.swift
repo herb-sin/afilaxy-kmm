@@ -58,6 +58,14 @@ struct EmergencyResponseView: View {
                     }
                     .disabled(isAccepting)
                     .listRowBackground(Color.green)
+
+                    Button(role: .destructive) {
+                        dismiss()
+                    } label: {
+                        Label("Recusar", systemImage: "xmark.circle")
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                    }
+                    .disabled(isAccepting)
                 }
             }
 

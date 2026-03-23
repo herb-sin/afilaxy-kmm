@@ -1,11 +1,8 @@
 package com.afilaxy.app.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,11 +12,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.afilaxy.app.R
 import com.afilaxy.app.ui.components.RequestLocationPermission
-import com.afilaxy.domain.model.Helper
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
 import org.koin.androidx.compose.koinViewModel
-import kotlin.math.roundToInt
 
 /**
  * Tela de Emergência
@@ -97,39 +92,7 @@ fun EmergencyScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
             }
-            
-            // Lista de helpers próximos
-            Text(
-                text = stringResource(R.string.emergency_searching),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-            
-            if (state.nearbyHelpers.isEmpty() && !state.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.emergency_no_helpers),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(state.nearbyHelpers) { helper ->
-                        HelperCard(helper = helper)
-                    }
-                }
-            }
-            
-            // Mensagem de erro
+
             if (state.error != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -156,23 +119,3 @@ fun EmergencyScreen(
     }
 }
 
-@Composable
-private fun HelperCard(helper: Helper) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = helper.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = stringResource(R.string.emergency_distance, (helper.distance / 1000.0).roundToInt().toString()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
