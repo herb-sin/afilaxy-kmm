@@ -1,4 +1,6 @@
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
 import shared
 
 struct SettingsView: View {
@@ -61,8 +63,17 @@ struct SettingsView: View {
         .alert("Sair", isPresented: $showLogoutAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Sair", role: .destructive) {
-                container.emergency.vm.onLogout()
-                container.auth.vm.onLogout()
+                let state = container.emergency.state
+                if state?.hasActiveEmergency == true, let eid = state?.emergencyId as? String {
+                    Firestore.firestore().collection("emergency_requests").document(eid)
+                        .updateData(["active": false, "status": "cancelled"])
+                }
+                if state?.isHelperMode == true, let uid = Auth.auth().currentUser?.uid {
+                    Firestore.firestore().collection("helpers").document(uid).delete()
+                    LocationManagerBridge.shared.disableHelperMode()
+                }
+                container.emergency.vm.onToggleHelperMode(enable: false)
+                try? Auth.auth().signOut()
             }
         } message: {
             Text("Deseja realmente sair?")

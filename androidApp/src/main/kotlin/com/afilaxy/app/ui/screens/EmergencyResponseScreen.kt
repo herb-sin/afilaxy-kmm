@@ -26,10 +26,12 @@ fun EmergencyResponseScreen(
     val state by viewModel.state.collectAsState()
     var secondsLeft by remember { mutableStateOf(180) }
 
-    // Sincroniza countdown com expiresAt real da emergência no Firestore
+    // Sincroniza countdown e pré-carrega estado da emergência no ViewModel
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyResponseScreen", "opened emergencyId=$emergencyId")
         viewModel.fetchEmergencyExpiresAt(emergencyId)
+        // Garante que o ViewModel conhece o emergencyId mesmo em cold start via notificação
+        viewModel.preloadEmergencyId(emergencyId)
     }
 
     LaunchedEffect(state.emergencyExpiresAt) {

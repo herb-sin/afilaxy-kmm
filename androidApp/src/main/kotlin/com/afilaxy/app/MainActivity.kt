@@ -44,13 +44,11 @@ class MainActivity : ComponentActivity() {
             else android.util.Log.e("FCM", "Falha ao obter token")
         }
 
-        if (FirebaseAuth.getInstance().currentUser != null &&
-            emergencyViewModel.state.value.isHelperMode
-        ) {
+        resolveIntent(intent)
+
+        if (FirebaseAuth.getInstance().currentUser != null) {
             startEmergencyObserver()
         }
-
-        resolveIntent(intent)
 
         setContent {
             KoinAndroidContext {
