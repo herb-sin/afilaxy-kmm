@@ -15,6 +15,7 @@ final class EmergencyViewModelWrapper: ObservableObject {
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
         self.state = vm.state.value as? EmergencyState
+        // Timer agendado no RunLoop.main — callback sempre na main thread, acesso KMM seguro
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
             guard var s = vm.state.value as? EmergencyState else { return }
@@ -22,50 +23,31 @@ final class EmergencyViewModelWrapper: ObservableObject {
                 guard !s.hasActiveEmergency else { return }
                 self.localOverride = false
             }
-            // Bloqueia restauração de emergência já cancelada pelo usuário
             if let eid = s.emergencyId as? String, self.cancelledEmergencyIds.contains(eid) {
                 s = EmergencyState(
-                    currentEmergency: nil,
-                    emergencyId: nil,
-                    emergencyStatus: nil,
-                    emergencyExpiresAt: nil,
-                    nearbyHelpers: s.nearbyHelpers,
-                    incomingEmergencies: s.incomingEmergencies,
-                    isLoading: false,
-                    isCreatingEmergency: false,
-                    error: nil,
-                    isHelperMode: s.isHelperMode,
-                    hasActiveEmergency: false,
-                    isRequester: false,
-                    userLatitude: s.userLatitude,
-                    userLongitude: s.userLongitude
+                    currentEmergency: nil, emergencyId: nil, emergencyStatus: nil,
+                    emergencyExpiresAt: nil, nearbyHelpers: s.nearbyHelpers,
+                    incomingEmergencies: s.incomingEmergencies, isLoading: false,
+                    isCreatingEmergency: false, error: nil, isHelperMode: s.isHelperMode,
+                    hasActiveEmergency: false, isRequester: false,
+                    userLatitude: s.userLatitude, userLongitude: s.userLongitude
                 )
             }
-            // Preserva helper mode local se o KMM ainda não confirmou
             if self.helperModeOverride && !s.isHelperMode {
                 s = EmergencyState(
-                    currentEmergency: s.currentEmergency,
-                    emergencyId: s.emergencyId,
-                    emergencyStatus: s.emergencyStatus,
-                    emergencyExpiresAt: s.emergencyExpiresAt,
-                    nearbyHelpers: s.nearbyHelpers,
-                    incomingEmergencies: s.incomingEmergencies,
-                    isLoading: s.isLoading,
-                    isCreatingEmergency: s.isCreatingEmergency,
-                    error: s.error,
-                    isHelperMode: true,
-                    hasActiveEmergency: s.hasActiveEmergency,
-                    isRequester: s.isRequester,
-                    userLatitude: s.userLatitude,
-                    userLongitude: s.userLongitude
+                    currentEmergency: s.currentEmergency, emergencyId: s.emergencyId,
+                    emergencyStatus: s.emergencyStatus, emergencyExpiresAt: s.emergencyExpiresAt,
+                    nearbyHelpers: s.nearbyHelpers, incomingEmergencies: s.incomingEmergencies,
+                    isLoading: s.isLoading, isCreatingEmergency: s.isCreatingEmergency,
+                    error: s.error, isHelperMode: true, hasActiveEmergency: s.hasActiveEmergency,
+                    isRequester: s.isRequester, userLatitude: s.userLatitude, userLongitude: s.userLongitude
                 )
             } else if self.helperModeOverride && s.isHelperMode {
                 self.helperModeOverride = false
             }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, !self.frozen else { return }
-                self.state = s
-            }
+            // Atualiza diretamente — já estamos na main thread, sem DispatchQueue.main.async
+            guard !self.frozen else { return }
+            self.state = s
         }
     }
     deinit { timer?.invalidate() }
@@ -146,10 +128,8 @@ final class AuthViewModelWrapper: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? AuthState else { return }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, !self.frozen else { return }
-                self.state = s
-            }
+            guard !self.frozen else { return }
+            self.state = s
         }
     }
     deinit { timer?.invalidate() }
@@ -176,10 +156,8 @@ final class HistoryViewModelWrapper: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? HistoryState else { return }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, !self.frozen else { return }
-                self.state = s
-            }
+            guard !self.frozen else { return }
+            self.state = s
         }
     }
     deinit { timer?.invalidate() }
@@ -198,10 +176,8 @@ final class ProfileViewModelWrapper: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? ProfileState else { return }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, !self.frozen else { return }
-                self.state = s
-            }
+            guard !self.frozen else { return }
+            self.state = s
         }
     }
     deinit { timer?.invalidate() }
@@ -220,10 +196,8 @@ final class ProfessionalListViewModelWrapper: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? ProfessionalListState else { return }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, !self.frozen else { return }
-                self.state = s
-            }
+            guard !self.frozen else { return }
+            self.state = s
         }
     }
     deinit { timer?.invalidate() }
@@ -242,10 +216,8 @@ final class ProfessionalDetailViewModelWrapper: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? ProfessionalDetailState else { return }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, !self.frozen else { return }
-                self.state = s
-            }
+            guard !self.frozen else { return }
+            self.state = s
         }
     }
     deinit { timer?.invalidate() }
