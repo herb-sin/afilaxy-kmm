@@ -576,6 +576,165 @@ export const scheduleEmergencyExpiry = functions.firestore
         return null;
     });
 
+// ============================================
+// AGREGAÇÃO — OPERACIONAL + GOVERNANÇA
+// ============================================
+
+/**
+ * Trigger quando uma emergência é finalizada (active: true → false).
+ * Agrega em:
+ *   user_stats/{userId}          — operacional (app lê para alertas ao paciente)
+ *   emergency_analytics/{region} — governança (dashboard de gestores)
+ */
+export const onEmergencyFinalized = functions.firestore
+    .document('emergency_requests/{emergencyId}')
+    .onUpdate(async (change, context) => {
+        const before = change.before.data();
+        const after  = change.after.data();
+
+        // Só processa quando active muda de true para false
+        if (before.active !== true || after.active !== false) return null;
+
+        const emergencyId = context.params.emergencyId;
+        const requesterId: string = after.requesterId;
+        const helperId: string | undefined = after.helperId;
+        const status: string = after.status || 'unknown';
+        const timestamp: number = after.timestamp || Date.now();
+        const resolvedAt: number | undefined = after.resolvedAt;
+        const matchedAt: number | undefined = after.matchedAt;
+        const lat: number = after.latitude || 0;
+        const lon: number = after.longitude || 0;
+
+        // Geohash de precisão 4 (~40km) — granularidade adequada para BI regional
+        const regionHash = geofireCommon.geohashForLocation([lat, lon]).substring(0, 4);
+
+        // Semana ISO (ex: "2026-W12")
+        const d = new Date(timestamp);
+        const startOfYear = new Date(d.getFullYear(), 0, 1);
+        const week = Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+        const weekKey = `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+
+        const db = admin.firestore();
+        const inc = admin.firestore.FieldValue.increment;
+        const now = admin.firestore.FieldValue.serverTimestamp;
+
+        const batch = db.batch();
+
+        // ── user_stats/{requesterId} ──────────────────────────────────────────
+        const statsRef = db.collection('user_stats').doc(requesterId);
+        const statsUpdate: Record<string, any> = {
+            totalEmergencies:          inc(1),
+            [`weeklyCount.${weekKey}`]: inc(1),
+            lastEmergencyAt:           timestamp,
+            updatedAt:                 now(),
+        };
+        if (status === 'resolved') statsUpdate.totalResolved = inc(1);
+        if (status === 'cancelled') statsUpdate.totalCancelled = inc(1);
+        if (status === 'expired')   statsUpdate.totalExpired   = inc(1);
+        if (resolvedAt && matchedAt) {
+            // Tempo de atendimento em segundos
+            statsUpdate.totalResponseTimeSec = inc(Math.round((resolvedAt - matchedAt) / 1000));
+            statsUpdate.totalResponseCount   = inc(1);
+        }
+        batch.set(statsRef, statsUpdate, { merge: true });
+
+        // ── emergency_analytics/{region}_{weekKey} ────────────────────────────
+        const analyticsRef = db.collection('emergency_analytics').doc(`${regionHash}_${weekKey}`);
+        const analyticsUpdate: Record<string, any> = {
+            region:   regionHash,
+            week:     weekKey,
+            total:    inc(1),
+            updatedAt: now(),
+        };
+        if (status === 'resolved')  analyticsUpdate.resolved  = inc(1);
+        if (status === 'cancelled') analyticsUpdate.cancelled = inc(1);
+        if (status === 'expired')   analyticsUpdate.expired   = inc(1);
+        if (matchedAt) analyticsUpdate.matched = inc(1);
+        if (resolvedAt && matchedAt) {
+            analyticsUpdate.totalResponseTimeSec = inc(Math.round((resolvedAt - matchedAt) / 1000));
+            analyticsUpdate.totalResponseCount   = inc(1);
+        }
+        batch.set(analyticsRef, analyticsUpdate, { merge: true });
+
+        // ── helper_stats/{helperId} (se houve atendimento) ───────────────────
+        if (helperId && status === 'resolved') {
+            const helperStatsRef = db.collection('user_stats').doc(helperId);
+            batch.set(helperStatsRef, {
+                totalHelped:  inc(1),
+                lastHelpedAt: timestamp,
+                updatedAt:    now(),
+            }, { merge: true });
+        }
+
+        await batch.commit();
+        console.log(`✅ onEmergencyFinalized: ${emergencyId} status=${status} region=${regionHash} week=${weekKey}`);
+        return null;
+    });
+
+/**
+ * Cron semanal — toda segunda-feira às 08:00 BRT.
+ * Lê user_stats e envia notificação push para pacientes
+ * com ≥2 emergências na semana anterior (risco elevado).
+ */
+export const weeklyRiskAlert = functions.pubsub
+    .schedule('0 11 * * 1') // 08:00 BRT = 11:00 UTC
+    .timeZone('UTC')
+    .onRun(async () => {
+        const db = admin.firestore();
+
+        // Semana anterior
+        const now = new Date();
+        const prevMonday = new Date(now);
+        prevMonday.setDate(now.getDate() - 7);
+        const startOfYear = new Date(prevMonday.getFullYear(), 0, 1);
+        const week = Math.ceil(((prevMonday.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+        const weekKey = `${prevMonday.getFullYear()}-W${String(week).padStart(2, '0')}`;
+        const fieldPath = `weeklyCount.${weekKey}`;
+
+        console.log(`weeklyRiskAlert: verificando semana ${weekKey}`);
+
+        // Pacientes com ≥2 emergências na semana
+        const snapshot = await db.collection('user_stats')
+            .where(fieldPath, '>=', 2)
+            .get();
+
+        if (snapshot.empty) {
+            console.log('Nenhum paciente em alerta esta semana');
+            return null;
+        }
+
+        let sent = 0;
+        for (const doc of snapshot.docs) {
+            const userId = doc.id;
+            const count: number = doc.data()?.weeklyCount?.[weekKey] ?? 0;
+
+            try {
+                const userDoc = await db.collection('users').doc(userId).get();
+                const fcmToken: string | undefined = userDoc.data()?.fcmToken;
+                if (!fcmToken) continue;
+
+                await admin.messaging().send({
+                    token: fcmToken,
+                    notification: {
+                        title: '⚠️ Atenção à sua saúde',
+                        body: `Você teve ${count} crises esta semana. Considere consultar um especialista.`,
+                    },
+                    data: {
+                        type: 'risk_alert',
+                        weekKey,
+                        count: String(count),
+                    },
+                });
+                sent++;
+            } catch (e) {
+                console.error(`Erro ao notificar ${userId}:`, e);
+            }
+        }
+
+        console.log(`✅ weeklyRiskAlert: ${sent} pacientes notificados (semana ${weekKey})`);
+        return null;
+    });
+
 /**
  * Trigger quando um helper é ativado ou atualiza sua localização
  * Calcula e salva o geohash automaticamente na coleção 'helpers'
