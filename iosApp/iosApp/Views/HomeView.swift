@@ -126,6 +126,8 @@ struct HomeView: View {
             Section {
                 NavigationLink(value: AppRoute.history)      { Label("Histórico", systemImage: "clock.fill") }
                 NavigationLink(value: AppRoute.professionals){ Label("Profissionais", systemImage: "stethoscope") }
+                NavigationLink(value: AppRoute.community)    { Label("Comunidade", systemImage: "person.3.fill") }
+                NavigationLink(value: AppRoute.autocuidado)  { Label("Autocuidado", systemImage: "heart.text.square.fill") }
                 NavigationLink(value: AppRoute.notifications){ Label("Notificações", systemImage: "bell.fill") }
                 NavigationLink(value: AppRoute.profile)      { Label("Meu Perfil", systemImage: "person.fill") }
                 NavigationLink(value: AppRoute.settings)     { Label("Configurações", systemImage: "gearshape.fill") }
