@@ -17,6 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
 import com.afilaxy.presentation.chat.ChatViewModel
@@ -55,6 +57,7 @@ fun ChatScreen(
     }
     
     Scaffold(
+        contentWindowInsets = WindowInsets.ime,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.chat_title)) },
@@ -76,7 +79,6 @@ fun ChatScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .imePadding()
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

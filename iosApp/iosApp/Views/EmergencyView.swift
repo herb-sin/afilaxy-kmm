@@ -61,7 +61,8 @@ struct EmergencyView: View {
     }
 
     private func startCountdown(expiresAt: Int64?) {
-        countdownTimer?.invalidate()
+        // Não reinicia se já está rodando com o mesmo expiry
+        guard countdownTimer == nil else { return }
         let expiry: Date
         if let ms = expiresAt, ms > 0 {
             expiry = Date(timeIntervalSince1970: Double(ms) / 1000)
@@ -71,8 +72,12 @@ struct EmergencyView: View {
         let initial = max(0, Int(expiry.timeIntervalSinceNow))
         secondsLeft = initial
         if initial == 0 {
+            guard !isCancelling else { return }
+            isCancelling = true
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown already expired on start — auto cancel")
-            if let eid = container.emergency.state?.emergencyId as? String { cancelEmergencyNative(emergencyId: eid) }
+            if let eid = container.emergency.state?.emergencyId as? String {
+                cancelEmergencyNative(emergencyId: eid)
+            }
             return
         }
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
@@ -82,12 +87,11 @@ struct EmergencyView: View {
                 if remaining == 0 {
                     countdownTimer?.invalidate()
                     countdownTimer = nil
-                    // Só cancela se ainda não houve match
-                    if !chatNavigated {
-                        FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown expired — auto cancel")
-                        if let eid = container.emergency.state?.emergencyId as? String { cancelEmergencyNative(emergencyId: eid) }
-                    } else {
-                        FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown expired but already matched — ignoring")
+                    guard !chatNavigated, !isCancelling else { return }
+                    isCancelling = true
+                    FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown expired — auto cancel")
+                    if let eid = container.emergency.state?.emergencyId as? String {
+                        cancelEmergencyNative(emergencyId: eid)
                     }
                 }
             }

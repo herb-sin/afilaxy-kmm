@@ -16,6 +16,8 @@ struct ContentView: View {
     @State private var emergencyRouteActive = false
     @State private var chatNavigatedId: String? = nil
 
+    @State private var wasActiveEmergency = false
+
     var body: some View {
         if isLoggedIn {
             NavigationStack(path: $path) {
@@ -53,6 +55,15 @@ struct ContentView: View {
                         LocationManager.shared.requestWhenInUse()
                     }
                 }
+            }
+            .onReceive(container.emergency.$state) { s in
+                let isActive = s?.hasActiveEmergency == true
+                if wasActiveEmergency && !isActive {
+                    // Emergência resolvida/cancelada — volta para home
+                    path.removeLast(path.count)
+                    chatNavigatedId = nil
+                }
+                wasActiveEmergency = isActive
             }
             .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenEmergency"))) { notification in
                 guard let emergencyId = notification.userInfo?["emergencyId"] as? String,
