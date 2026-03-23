@@ -28,7 +28,7 @@ struct RegisterView: View {
                 Section { Text("As senhas não coincidem").foregroundColor(.red).font(.caption) }
             }
             if let error = state?.error {
-                Section { Text(error).foregroundColor(.red).font(.caption) }
+                Section { Text(friendlyError(error)).foregroundColor(.red).font(.caption) }
             }
             Section {
                 Button(action: register) {
@@ -40,6 +40,14 @@ struct RegisterView: View {
         }
         .navigationTitle("Criar Conta")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancelar") { dismiss() }
+            }
+        }
+        .onAppear {
+            container.auth.vm.clearError()
+        }
         .onReceive(container.auth.$state) { s in
             if s?.isAuthenticated == true { dismiss() }
         }
@@ -47,6 +55,14 @@ struct RegisterView: View {
 
     private func register() {
         container.auth.vm.onRegister(email: email, password: password, name: name)
+    }
+
+    private func friendlyError(_ raw: String) -> String {
+        if raw.contains("email-already-in-use") || raw.contains("already in use") { return "Este e-mail já está cadastrado." }
+        if raw.contains("badly formatted") || raw.contains("invalid-email") { return "E-mail inválido." }
+        if raw.contains("weak-password") || raw.contains("weak password") { return "Senha muito fraca. Use ao menos 6 caracteres." }
+        if raw.contains("network") || raw.contains("Network") { return "Sem conexão. Verifique sua internet." }
+        return "Erro ao criar conta. Tente novamente."
     }
 }
 
