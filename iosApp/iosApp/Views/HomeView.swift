@@ -59,7 +59,7 @@ struct HomeView: View {
             LocationManagerBridge.shared.disableHelperMode()
         }
         container.emergency.clearEmergencyStateSwift()
-        container.auth.signOutSwift()
+        container.freezeAll()
         try? Auth.auth().signOut()
         onLogout()
     }
