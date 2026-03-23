@@ -188,7 +188,6 @@ fun HomeScreen(
                         selected = false,
                         onClick = {
                             viewModel.onLogout()
-                            authViewModel.onLogout()
                             onLogout()
                         }
                     )
@@ -217,7 +216,6 @@ fun HomeScreen(
                         }
                         IconButton(onClick = {
                             viewModel.onLogout()
-                            authViewModel.onLogout()
                             onLogout()
                         }) {
                             Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sair")

@@ -25,6 +25,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.koin.android.ext.android.get
 import org.koin.androidx.compose.KoinAndroidContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -40,8 +41,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) android.util.Log.d("FCM", "Token obtido com sucesso")
-            else android.util.Log.e("FCM", "Falha ao obter token")
+            if (task.isSuccessful) {
+                android.util.Log.d("FCM", "Token obtido com sucesso")
+                // Atualiza token no Firestore sempre que o app inicia com usuário autenticado
+                if (FirebaseAuth.getInstance().currentUser != null) {
+                    val token = task.result
+                    lifecycleScope.launch {
+                        try {
+                            get<com.afilaxy.domain.repository.AuthRepository>().updateFcmToken(token)
+                        } catch (e: Exception) {
+                            android.util.Log.e("FCM", "Erro ao atualizar token no login", e)
+                        }
+                    }
+                }
+            } else android.util.Log.e("FCM", "Falha ao obter token")
         }
 
         resolveIntent(intent)

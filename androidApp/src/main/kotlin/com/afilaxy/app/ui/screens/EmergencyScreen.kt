@@ -124,14 +124,7 @@ fun EmergencyScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.nearbyHelpers) { helper ->
-                        HelperCard(
-                            helper = helper,
-                            onAccept = {
-                                viewModel.onAcceptEmergency(state.emergencyId ?: "")
-                                onNavigateToResponse(state.emergencyId ?: "")
-                            },
-                            canAccept = state.isHelperMode && !state.hasActiveEmergency
-                        )
+                        HelperCard(helper = helper)
                     }
                 }
             }
@@ -164,53 +157,21 @@ fun EmergencyScreen(
 }
 
 @Composable
-private fun HelperCard(
-    helper: Helper,
-    onAccept: () -> Unit,
-    canAccept: Boolean
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+private fun HelperCard(helper: Helper) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            
+            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
-            
             Column(modifier = Modifier.weight(1f)) {
+                Text(text = helper.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = helper.name,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = stringResource(
-                        R.string.emergency_distance,
-                        (helper.distance / 1000.0).roundToInt().toString()
-                    ),
+                    text = stringResource(R.string.emergency_distance, (helper.distance / 1000.0).roundToInt().toString()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            
-            if (canAccept) {
-                Button(
-                    onClick = onAccept,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-                ) {
-                    Text(stringResource(R.string.emergency_accept))
-                }
             }
         }
     }

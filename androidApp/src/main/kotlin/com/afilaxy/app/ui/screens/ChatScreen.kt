@@ -20,6 +20,7 @@ import androidx.activity.compose.BackHandler
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
 import com.afilaxy.presentation.chat.ChatViewModel
+import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -34,7 +35,8 @@ fun ChatScreen(
     emergencyId: String,
     onNavigateBack: () -> Unit,
     onNavigateToRating: (String, String) -> Unit = { _, _ -> },
-    viewModel: ChatViewModel = koinViewModel { parametersOf(emergencyId) }
+    viewModel: ChatViewModel = koinViewModel { parametersOf(emergencyId) },
+    emergencyViewModel: EmergencyViewModel? = null
 ) {
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
@@ -169,6 +171,7 @@ fun ChatScreen(
                 TextButton(
                     onClick = {
                         showResolveDialog = false
+                        emergencyViewModel?.onResolveEmergency()
                         onNavigateBack()
                     }
                 ) {
