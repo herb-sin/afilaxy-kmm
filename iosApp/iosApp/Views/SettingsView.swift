@@ -73,6 +73,7 @@ struct SettingsView: View {
                     LocationManagerBridge.shared.disableHelperMode()
                 }
                 container.emergency.clearEmergencyStateSwift()
+                container.auth.signOutSwift()
                 try? Auth.auth().signOut()
             }
         } message: {
