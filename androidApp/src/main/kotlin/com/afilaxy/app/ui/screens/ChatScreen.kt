@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.BackHandler
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
 import com.afilaxy.presentation.chat.ChatViewModel
@@ -40,6 +41,9 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
 
+    // Bloqueia back press — usuário deve resolver ou cancelar a emergência
+    BackHandler { showResolveDialog = true }
+
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "ChatScreen", "opened emergencyId=$emergencyId")
     }
@@ -53,7 +57,7 @@ fun ChatScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.chat_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { showResolveDialog = true }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
@@ -159,8 +163,8 @@ fun ChatScreen(
     if (showResolveDialog) {
         AlertDialog(
             onDismissRequest = { showResolveDialog = false },
-            title = { Text("Resolver Emergência") },
-            text = { Text("A emergência foi resolvida?") },
+            title = { Text("Encerrar Emergência") },
+            text = { Text("Você precisa resolver ou cancelar a emergência antes de sair.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -168,12 +172,12 @@ fun ChatScreen(
                         onNavigateBack()
                     }
                 ) {
-                    Text("Sim")
+                    Text("Resolver")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResolveDialog = false }) {
-                    Text("Não")
+                    Text("Continuar no Chat")
                 }
             }
         )

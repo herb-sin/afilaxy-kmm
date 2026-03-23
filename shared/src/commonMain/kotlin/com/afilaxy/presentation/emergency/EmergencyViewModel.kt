@@ -205,10 +205,9 @@ class EmergencyViewModel(
     fun onAcceptEmergency(emergencyId: String) {
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            
             emergencyRepository.acceptEmergency(emergencyId)
                 .onSuccess {
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             emergencyId = emergencyId,
                             hasActiveEmergency = true,
@@ -218,7 +217,7 @@ class EmergencyViewModel(
                     }
                 }
                 .onFailure { exception ->
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             isLoading = false,
                             error = exception.message ?: "Erro ao aceitar emergência"
@@ -227,26 +226,27 @@ class EmergencyViewModel(
                 }
         }
     }
-    
+
     fun onResolveEmergency() {
         val emergencyId = _state.value.emergencyId ?: return
-        
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            
             emergencyRepository.updateEmergencyStatus(emergencyId, EmergencyStatus.RESOLVED)
                 .onSuccess {
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             emergencyId = null,
                             hasActiveEmergency = false,
+                            isRequester = false,
                             isLoading = false,
-                            nearbyHelpers = emptyList()
+                            nearbyHelpers = emptyList(),
+                            emergencyStatus = null
                         )
                     }
+                    statusObservedId = null
                 }
                 .onFailure { exception ->
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             isLoading = false,
                             error = exception.message ?: "Erro ao resolver emergência"
