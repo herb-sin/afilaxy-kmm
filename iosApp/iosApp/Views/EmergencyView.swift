@@ -23,6 +23,11 @@ struct EmergencyView: View {
 
     private func requestLocationAndCreateEmergency() {
         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "requestLocationAndCreateEmergency hasPermission=\(locationManager.hasPermission) hasLocation=\(locationManager.currentLocation != nil)")
+        // Desativa helper mode ao solicitar ajuda — usuário não pode ser helper e requester
+        if container.emergency.state?.isHelperMode == true {
+            LocationManagerBridge.shared.disableHelperMode()
+            container.emergency.setHelperMode(false)
+        }
         if locationManager.hasPermission {
             LocationManagerBridge.shared.start()
             if locationManager.currentLocation != nil {
@@ -223,7 +228,6 @@ struct EmergencyView: View {
             guard !chatNavigated else { return }
             if statusListener == nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
-                LocationManagerBridge.shared.disableHelperMode()
                 startStatusObserver(emergencyId: eid)
             }
             let expiresAt = s.emergencyExpiresAt?.int64Value ?? 0
