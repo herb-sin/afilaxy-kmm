@@ -160,7 +160,8 @@ fun NavGraph(
             val emergencyId = backStackEntry.arguments?.getString("emergencyId") ?: ""
             ChatScreen(
                 emergencyId = emergencyId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                emergencyViewModel = emergencyViewModel
             )
         }
         
