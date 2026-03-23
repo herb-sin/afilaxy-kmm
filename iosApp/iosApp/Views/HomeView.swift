@@ -36,7 +36,6 @@ struct HomeView: View {
                 }
                 return
             }
-            // Firestore write via iOS SDK (não passa pelo Kotlin/Native)
             LocationManagerBridge.shared.enableHelperMode(lat: lat, lon: lon) { success in
                 if success {
                     self.container.emergency.vm.onToggleHelperMode(enable: true)
@@ -49,7 +48,6 @@ struct HomeView: View {
 
     private func performLogout() {
         let state = container.emergency.state
-        // Writes via iOS SDK nativo — evita SIGABRT do KMM no iOS
         if state?.hasActiveEmergency == true, let eid = state?.emergencyId as? String {
             Firestore.firestore().collection("emergency_requests").document(eid)
                 .updateData(["active": false, "status": "cancelled"])
@@ -64,6 +62,8 @@ struct HomeView: View {
         try? Auth.auth().signOut()
         onLogout()
     }
+
+    private func homeBody(state: EmergencyState) -> some View {
         List {
             Section {
                 Toggle(isOn: Binding(
@@ -122,7 +122,6 @@ struct HomeView: View {
             }
         } message: { Text("Deseja realmente sair?") }
         .onReceive(container.auth.$state) { s in
-            // Detecta logout disparado por views nested (ex: SettingsView)
             if s?.isAuthenticated == false { onLogout() }
         }
     }
