@@ -74,6 +74,7 @@ struct ContentView: View {
                 guard let emergencyId = notification.userInfo?["emergencyId"] as? String,
                       !emergencyRouteActive else { return }
                 emergencyRouteActive = true
+                container.dismissIncomingEmergency(id: emergencyId)
                 path.append(AppRoute.emergencyResponse(emergencyId))
             }
             .onReceive(container.$pendingChatId.compactMap { $0 }) { emergencyId in

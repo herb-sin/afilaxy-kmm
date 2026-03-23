@@ -89,6 +89,7 @@ class AppContainer: ObservableObject {
     @Published var pendingEmergencyId: String? = nil
     @Published var pendingChatId: String? = nil
     @Published var resolvedEmergencyId: String? = nil
+    @Published var pendingIncomingEmergencies: [(id: String, name: String)] = []
     private var emergencyListener: ListenerRegistration?
     private var notifiedEmergencyIds = Set<String>()
 
@@ -145,6 +146,9 @@ class AppContainer: ObservableObject {
                         self.notifiedEmergencyIds.insert(docId)
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
+                        DispatchQueue.main.async {
+                            self.pendingIncomingEmergencies.append((id: docId, name: name))
+                        }
                         self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: docId)
                     }
             }
@@ -157,6 +161,10 @@ class AppContainer: ObservableObject {
 
     func navigateToChat(emergencyId: String) {
         pendingChatId = emergencyId
+    }
+
+    func dismissIncomingEmergency(id: String) {
+        pendingIncomingEmergencies.removeAll { $0.id == id }
     }
 
     private func sendLocalNotification(title: String, body: String, emergencyId: String) {
