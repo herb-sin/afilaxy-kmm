@@ -86,6 +86,33 @@ struct HomeView: View {
                     .font(.caption).foregroundColor(.secondary)
             }
 
+            if !container.pendingIncomingEmergencies.isEmpty {
+                Section("Emergências Pendentes") {
+                    ForEach(container.pendingIncomingEmergencies, id: \.id) { emergency in
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(emergency.name) precisa de ajuda")
+                                    .font(.headline)
+                                Text("Toque para responder")
+                                    .font(.caption).foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button("Recusar") {
+                                container.dismissIncomingEmergency(id: emergency.id)
+                            }
+                            .foregroundColor(.red)
+                            .font(.caption)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            container.dismissIncomingEmergency(id: emergency.id)
+                            path.append(AppRoute.emergencyResponse(emergency.id))
+                        }
+                    }
+                }
+            }
+
             Section {
                 Button {
                     path.append(AppRoute.emergency)

@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.afilaxy.app.MainActivity
 import com.afilaxy.app.R
-import com.afilaxy.app.ui.screens.EmergencyOverlayActivity
 import com.afilaxy.domain.repository.AuthRepository
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -123,63 +122,36 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun showEmergencyNotification(title: String, body: String, emergencyId: String) {
         val channelId = "afilaxy_emergency"
-        
-        // Intent para abrir EmergencyOverlayActivity
-        val overlayIntent = Intent(this, EmergencyOverlayActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("emergency_id", emergencyId)
-            putExtra("requesterName", body.replace("precisa de ajuda próximo a você", "").trim())
-            putExtra("distance", "desconhecida")
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("emergencyId", emergencyId)
+            putExtra("openEmergencyResponse", true)
         }
-        
         val pendingIntent = PendingIntent.getActivity(
-            this, emergencyId.hashCode(), overlayIntent,
+            this, safeNotificationId(emergencyId), intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        
-        val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(pendingIntent, true)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setVibrate(longArrayOf(0, 1000, 500, 1000))
-            .setSound(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI)
-        
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Emergências",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notificações de emergências de asma"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 1000, 500, 1000)
-                setSound(
-                    android.provider.Settings.System.DEFAULT_NOTIFICATION_URI,
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_ALARM)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setAllowedCapturePolicy(android.media.AudioAttributes.ALLOW_CAPTURE_BY_NONE)
-                        .build()
-                )
-            }
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(
+                NotificationChannel(channelId, "Emergências", NotificationManager.IMPORTANCE_HIGH).apply {
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 1000, 500, 1000)
+                }
+            )
         }
-        
-        notificationManager.notify(safeNotificationId(emergencyId), notificationBuilder.build())
-        
-        // Tentar abrir overlay diretamente se app estiver em foreground
-        try {
-            startActivity(overlayIntent)
-        } catch (e: Exception) {
-            Log.e("FCM", "Não foi possível abrir overlay diretamente", e)
-        }
+        notificationManager.notify(
+            safeNotificationId(emergencyId),
+            NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .setVibrate(longArrayOf(0, 1000, 500, 1000))
+                .build()
+        )
     }
 
     /**
