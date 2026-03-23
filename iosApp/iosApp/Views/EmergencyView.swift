@@ -162,17 +162,21 @@ struct EmergencyView: View {
         }
         .onReceive(container.emergency.$state) { newState in
             guard let s = newState else { return }
-            // Resetar chatNavigated quando emergência não está mais ativa
-            if !s.hasActiveEmergency { chatNavigated = false }
-            guard !chatNavigated else { return }
-            if s.hasActiveEmergency, let eid = s.emergencyId, statusListener == nil {
+            if !s.hasActiveEmergency {
+                chatNavigated = false
+                return
+            }
+            guard !chatNavigated, let eid = s.emergencyId else { return }
+            // Reinicia observer e countdown sempre que emergencyId mudar
+            if statusListener == nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()
                 startStatusObserver(emergencyId: eid)
-                startCountdown(expiresAt: s.emergencyExpiresAt?.int64Value)
             }
-            if let error = s.error, !s.hasActiveEmergency {
-                FileLogger.shared.write(level: "ERROR", tag: "EmergencyView", message: "createEmergency error: \(error)")
+            // Sempre reinicia o countdown com o expiresAt atual
+            let expiresAt = s.emergencyExpiresAt?.int64Value ?? 0
+            if expiresAt > 0 {
+                startCountdown(expiresAt: expiresAt)
             }
         }
     }
