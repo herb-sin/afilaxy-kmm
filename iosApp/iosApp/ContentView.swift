@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var chatNavigatedId: String? = nil
 
     @State private var wasActiveEmergency = false
+    @State private var resolvedChatId: String? = nil
 
     var body: some View {
         if isLoggedIn {
@@ -58,12 +59,16 @@ struct ContentView: View {
             }
             .onReceive(container.emergency.$state) { s in
                 let isActive = s?.hasActiveEmergency == true
-                // Pop para home quando emergência termina (requester) OU quando chat estava ativo e emergência foi resolvida (helper)
-                if (wasActiveEmergency && !isActive) || (chatNavigatedId != nil && !isActive) {
+                if (wasActiveEmergency && !isActive) || (resolvedChatId != nil && !isActive) {
                     path.removeLast(path.count)
                     chatNavigatedId = nil
+                    resolvedChatId = nil
                 }
                 wasActiveEmergency = isActive
+            }
+            .onReceive(container.$resolvedEmergencyId.compactMap { $0 }) { _ in
+                resolvedChatId = chatNavigatedId
+                container.resolvedEmergencyId = nil
             }
             .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenEmergency"))) { notification in
                 guard let emergencyId = notification.userInfo?["emergencyId"] as? String,
@@ -74,6 +79,7 @@ struct ContentView: View {
             .onReceive(container.$pendingChatId.compactMap { $0 }) { emergencyId in
                 guard chatNavigatedId != emergencyId else { return }
                 chatNavigatedId = emergencyId
+                resolvedChatId = nil
                 path.append(AppRoute.chat(emergencyId))
                 container.pendingChatId = nil
             }
