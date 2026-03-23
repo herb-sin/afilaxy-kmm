@@ -28,7 +28,9 @@ object InputSanitizer {
 
     fun sanitizeName(name: String?): String {
         if (name.isNullOrBlank()) return ""
-        val cleaned = name.trim()
+        val trimmed = name.trim().take(50)
+        if (NOSQL_PATTERN.matcher(trimmed).find()) return ""
+        val cleaned = trimmed.replace(UNSAFE_CHARS, "")
         return if (NAME_PATTERN.matcher(cleaned).matches()) cleaned else ""
     }
 

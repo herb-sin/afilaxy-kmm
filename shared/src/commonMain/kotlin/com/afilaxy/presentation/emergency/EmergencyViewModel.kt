@@ -126,6 +126,21 @@ class EmergencyViewModel(
     fun markNavigatedToRequest(emergencyId: String) { _navigatedEmergencyIds.add(emergencyId) }
     fun wasNavigatedToRequest(emergencyId: String) = emergencyId in _navigatedEmergencyIds
 
+    /** Limpa apenas o estado local — sem I/O. Seguro para chamar do iOS. */
+    fun onClearEmergencyState() {
+        _state.update {
+            it.copy(
+                emergencyId = null,
+                hasActiveEmergency = false,
+                isLoading = false,
+                nearbyHelpers = emptyList(),
+                emergencyStatus = null,
+                isRequester = false
+            )
+        }
+        statusObservedId = null
+    }
+
     fun onCancelEmergency() {
         val emergencyId = _state.value.emergencyId ?: return
         // Limpa estado local imediatamente — independente do resultado do Firestore

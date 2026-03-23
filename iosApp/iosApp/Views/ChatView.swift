@@ -78,8 +78,7 @@ struct ChatView: View {
             .collection("emergency_requests")
             .document(emergencyId)
             .updateData(["status": "resolved", "active": false])
-        // Limpa estado local sem I/O via KMM
-        container.emergency.vm.onToggleHelperMode(enable: false)
+        container.emergency.clearEmergencyStateSwift()
         dismiss()
     }
 

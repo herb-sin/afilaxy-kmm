@@ -40,14 +40,18 @@ fun NavGraph(
     // Navegar quando onNewIntent entrega destino com app já aberto
     LaunchedEffect(pendingDestination?.value) {
         val dest = pendingDestination?.value ?: return@LaunchedEffect
-        if (navController.currentDestination != null) {
-            // Remove qualquer emergency_response anterior antes de navegar
-            navController.navigate(dest) {
-                launchSingleTop = true
-                popUpTo(AppRoutes.HOME) { saveState = false }
-            }
+        if (navController.currentDestination == null) return@LaunchedEffect
+        // Se já está no chat para esta emergência, ignora a notificação
+        val currentRoute = navController.currentDestination?.route
+        if (currentRoute?.startsWith("chat/") == true) {
             pendingDestination.value = null
+            return@LaunchedEffect
         }
+        navController.navigate(dest) {
+            launchSingleTop = true
+            popUpTo(AppRoutes.HOME) { saveState = false }
+        }
+        pendingDestination.value = null
     }
 
     // Dados da comunidade — centralizados aqui para reuso nas rotas de detalhe

@@ -23,6 +23,8 @@ class BiometricAuthManager(private val context: Context) {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
+        val safeTitle = sanitizePromptText(title, maxLength = 64)
+        val safeSubtitle = sanitizePromptText(subtitle, maxLength = 128)
         val executor = ContextCompat.getMainExecutor(context)
 
         val biometricPrompt = BiometricPrompt(activity, executor,
@@ -44,8 +46,8 @@ class BiometricAuthManager(private val context: Context) {
             })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle(sanitizePromptText(title, maxLength = 64))
-            .setSubtitle(sanitizePromptText(subtitle, maxLength = 128))
+            .setTitle(safeTitle)
+            .setSubtitle(safeSubtitle)
             .setNegativeButtonText("Cancelar")
             .build()
 
