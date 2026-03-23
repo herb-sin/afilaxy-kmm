@@ -1,5 +1,7 @@
 import SwiftUI
 import CoreLocation
+import FirebaseFirestore
+import FirebaseAuth
 import shared
 
 struct HomeView: View {
@@ -45,8 +47,23 @@ struct HomeView: View {
         }
     }
 
-    @ViewBuilder
-    private func homeBody(state: EmergencyState) -> some View {
+    private func performLogout() {
+        let state = container.emergency.state
+        // Writes via iOS SDK nativo — evita SIGABRT do KMM no iOS
+        if state?.hasActiveEmergency == true, let eid = state?.emergencyId as? String {
+            Firestore.firestore().collection("emergency_requests").document(eid)
+                .updateData(["active": false, "status": "cancelled"])
+        }
+        if state?.isHelperMode == true {
+            if let uid = Auth.auth().currentUser?.uid {
+                Firestore.firestore().collection("helpers").document(uid).delete()
+            }
+            LocationManagerBridge.shared.disableHelperMode()
+        }
+        container.emergency.vm.onToggleHelperMode(enable: false)
+        try? Auth.auth().signOut()
+        onLogout()
+    }
         List {
             Section {
                 Toggle(isOn: Binding(
@@ -101,9 +118,7 @@ struct HomeView: View {
         .alert("Sair", isPresented: $showLogoutAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Sair", role: .destructive) {
-                container.emergency.vm.onLogout()
-                container.auth.vm.onLogout()
-                onLogout()
+                performLogout()
             }
         } message: { Text("Deseja realmente sair?") }
         .onReceive(container.auth.$state) { s in
