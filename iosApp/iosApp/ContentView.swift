@@ -4,6 +4,7 @@ import shared
 enum AppRoute: Hashable {
     case home, emergency, history, profile, professionals
     case notifications, settings, about, terms, privacy, help
+    case community, autocuidado
     case emergencyResponse(String)
     case chat(String)
     case professionalDetail(String)
@@ -45,6 +46,8 @@ struct ContentView: View {
                     case .terms:       TermsView()
                     case .privacy:     PrivacyView()
                     case .help:        HelpView()
+                    case .community:   CommunityView()
+                    case .autocuidado: AutocuidadoView()
                     case .home:        EmptyView()
                     }
                 }
