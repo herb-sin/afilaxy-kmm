@@ -48,6 +48,16 @@ struct EmergencyView: View {
         }
     }
 
+    // Cancela emergência via Firestore nativo — evita SIGABRT do KMM no iOS
+    private func cancelEmergencyNative(emergencyId: String, status: String = "cancelled") {
+        Firestore.firestore()
+            .collection("emergency_requests")
+            .document(emergencyId)
+            .updateData(["active": false, "status": status])
+        // Limpa apenas estado local — sem I/O via KMM
+        container.emergency.vm.onToggleHelperMode(enable: false)
+    }
+
     private func startCountdown(expiresAt: Int64?) {
         countdownTimer?.invalidate()
         let expiry: Date
@@ -58,10 +68,9 @@ struct EmergencyView: View {
         }
         let initial = max(0, Int(expiry.timeIntervalSinceNow))
         secondsLeft = initial
-        // Já expirou antes mesmo de iniciar o timer
         if initial == 0 {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown already expired on start — auto cancel")
-            container.emergency.vm.onCancelEmergency()
+            if let eid = container.emergency.state?.emergencyId as? String { cancelEmergencyNative(emergencyId: eid) }
             return
         }
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
@@ -71,8 +80,13 @@ struct EmergencyView: View {
                 if remaining == 0 {
                     countdownTimer?.invalidate()
                     countdownTimer = nil
-                    FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown expired — auto cancel")
-                    container.emergency.vm.onCancelEmergency()
+                    // Só cancela se ainda não houve match
+                    if !chatNavigated {
+                        FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown expired — auto cancel")
+                        if let eid = container.emergency.state?.emergencyId as? String { cancelEmergencyNative(emergencyId: eid) }
+                    } else {
+                        FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown expired but already matched — ignoring")
+                    }
                 }
             }
         }
@@ -91,6 +105,9 @@ struct EmergencyView: View {
                     FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "status=matched — navigating to chat emergencyId=\(emergencyId)")
                     statusListener?.remove()
                     statusListener = nil
+                    // Para o countdown — emergência foi aceita, não deve expirar
+                    countdownTimer?.invalidate()
+                    countdownTimer = nil
                     chatNavigated = true
                     container.navigateToChat(emergencyId: emergencyId)
                 }
@@ -119,7 +136,7 @@ struct EmergencyView: View {
                         countdownTimer = nil
                         statusListener?.remove()
                         statusListener = nil
-                        container.emergency.vm.onCancelEmergency()
+                        if let eid = container.emergency.state?.emergencyId as? String { cancelEmergencyNative(emergencyId: eid) }
                     }
                 }
             } else {
@@ -165,7 +182,7 @@ struct EmergencyView: View {
                let ms = state.emergencyExpiresAt?.int64Value, ms > 0,
                Date(timeIntervalSince1970: Double(ms) / 1000) <= Date() {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "onAppear: emergency already expired — auto cancel")
-                container.emergency.vm.onCancelEmergency()
+                if let eid = container.emergency.state?.emergencyId as? String { cancelEmergencyNative(emergencyId: eid) }
             }
         }
         .onDisappear {
@@ -181,16 +198,18 @@ struct EmergencyView: View {
                 return
             }
             guard !chatNavigated, let eid = s.emergencyId else { return }
-            // Reinicia observer e countdown sempre que emergencyId mudar
-            if statusListener == nil {
+            // Reinicia observer e countdown apenas se ainda não houve match
+            if statusListener == nil && !chatNavigated {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()
                 startStatusObserver(emergencyId: eid)
             }
-            // Sempre reinicia o countdown com o expiresAt atual
-            let expiresAt = s.emergencyExpiresAt?.int64Value ?? 0
-            if expiresAt > 0 {
-                startCountdown(expiresAt: expiresAt)
+            // Só inicia countdown se ainda não houve match
+            if !chatNavigated {
+                let expiresAt = s.emergencyExpiresAt?.int64Value ?? 0
+                if expiresAt > 0 {
+                    startCountdown(expiresAt: expiresAt)
+                }
             }
         }
     }
