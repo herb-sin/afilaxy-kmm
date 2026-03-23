@@ -161,7 +161,10 @@ struct EmergencyView: View {
             countdownTimer = nil
         }
         .onReceive(container.emergency.$state) { newState in
-            guard let s = newState, !chatNavigated else { return }
+            guard let s = newState else { return }
+            // Resetar chatNavigated quando emergência não está mais ativa
+            if !s.hasActiveEmergency { chatNavigated = false }
+            guard !chatNavigated else { return }
             if s.hasActiveEmergency, let eid = s.emergencyId, statusListener == nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "emergency confirmed by server emergencyId=\(eid)")
                 LocationManagerBridge.shared.disableHelperMode()

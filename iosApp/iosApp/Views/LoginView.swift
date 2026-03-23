@@ -31,7 +31,7 @@ struct LoginView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
 
                     if let error = state?.error {
-                        Text(error).foregroundColor(.red).font(.caption)
+                        Text(friendlyError(error)).foregroundColor(.red).font(.caption)
                     }
 
                     Button(action: login) {
@@ -67,6 +67,15 @@ struct LoginView: View {
 
     private func login() {
         container.auth.vm.onLogin(email: email, password: password)
+    }
+
+    private func friendlyError(_ raw: String) -> String {
+        if raw.contains("badly formatted") || raw.contains("invalid-email") { return "E-mail inválido." }
+        if raw.contains("no user record") || raw.contains("user-not-found") { return "Usuário não encontrado." }
+        if raw.contains("wrong password") || raw.contains("invalid-credential") || raw.contains("INVALID_LOGIN_CREDENTIALS") { return "E-mail ou senha incorretos." }
+        if raw.contains("too-many-requests") { return "Muitas tentativas. Tente novamente mais tarde." }
+        if raw.contains("network") || raw.contains("Network") { return "Sem conexão. Verifique sua internet." }
+        return "Erro ao entrar. Tente novamente."
     }
 }
 
