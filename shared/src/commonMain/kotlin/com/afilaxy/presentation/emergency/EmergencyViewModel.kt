@@ -26,10 +26,11 @@ class EmergencyViewModel(
     private val _state = MutableStateFlow(EmergencyState())
     val state: StateFlow<EmergencyState> = _state.asStateFlow()
     
-    /** Pré-carrega o emergencyId no estado quando a tela abre via notificação (cold start). */
+    /** Pré-carrega o emergencyId no estado quando a tela abre via notificação.
+     *  Sempre sobrescreve — o ID anterior pode ser de uma emergência já encerrada. */
     fun preloadEmergencyId(emergencyId: String) {
-        if (_state.value.emergencyId == null) {
-            _state.update { it.copy(emergencyId = emergencyId) }
+        if (_state.value.emergencyId != emergencyId) {
+            _state.update { it.copy(emergencyId = emergencyId, hasActiveEmergency = false) }
         }
     }
 

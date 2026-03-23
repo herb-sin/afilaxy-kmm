@@ -56,7 +56,14 @@ struct EmergencyView: View {
         } else {
             expiry = Date().addingTimeInterval(180)
         }
-        secondsLeft = max(0, Int(expiry.timeIntervalSinceNow))
+        let initial = max(0, Int(expiry.timeIntervalSinceNow))
+        secondsLeft = initial
+        // Já expirou antes mesmo de iniciar o timer
+        if initial == 0 {
+            FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "countdown already expired on start — auto cancel")
+            container.emergency.vm.onCancelEmergency()
+            return
+        }
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             let remaining = max(0, Int(expiry.timeIntervalSinceNow))
             DispatchQueue.main.async {
@@ -153,6 +160,13 @@ struct EmergencyView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
+            // Cancela automaticamente se a emergência já expirou
+            if state.hasActiveEmergency,
+               let ms = state.emergencyExpiresAt?.int64Value, ms > 0,
+               Date(timeIntervalSince1970: Double(ms) / 1000) <= Date() {
+                FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "onAppear: emergency already expired — auto cancel")
+                container.emergency.vm.onCancelEmergency()
+            }
         }
         .onDisappear {
             statusListener?.remove()
