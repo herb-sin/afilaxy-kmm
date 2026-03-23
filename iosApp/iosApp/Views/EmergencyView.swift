@@ -11,6 +11,8 @@ struct EmergencyView: View {
     @State private var secondsLeft: Int = 180
     @State private var countdownTimer: Timer? = nil
 
+    @State private var isCancelling = false
+
     var body: some View {
         guard let state = container.emergency.state else {
             return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
@@ -54,8 +56,8 @@ struct EmergencyView: View {
             .collection("emergency_requests")
             .document(emergencyId)
             .updateData(["active": false, "status": status])
-        // Limpa apenas estado local — sem I/O via KMM
-        container.emergency.vm.onToggleHelperMode(enable: false)
+        container.emergency.clearEmergencyStateSwift()
+        isCancelling = false
     }
 
     private func startCountdown(expiresAt: Int64?) {
@@ -131,6 +133,8 @@ struct EmergencyView: View {
                             .monospacedDigit()
                     }
                     Button("Cancelar Emergência", role: .destructive) {
+                        guard !isCancelling else { return }
+                        isCancelling = true
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "cancelEmergency tapped")
                         countdownTimer?.invalidate()
                         countdownTimer = nil

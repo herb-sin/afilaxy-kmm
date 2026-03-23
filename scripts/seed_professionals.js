@@ -11,6 +11,7 @@
  */
 
 const admin = require('firebase-admin');
+const fs = require('fs');
 const path = require('path');
 
 if (process.argv.length < 3) {
@@ -18,7 +19,7 @@ if (process.argv.length < 3) {
   process.exit(1);
 }
 
-const serviceAccount = require(path.resolve(process.argv[2]));
+const serviceAccount = JSON.parse(fs.readFileSync(path.resolve(process.argv[2]), 'utf8'));
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 const db = admin.firestore();
 

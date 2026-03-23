@@ -22,7 +22,7 @@ if (process.argv.length < 3) {
 const serviceAccountPath = process.argv[2];
 
 // Inicializa Firebase Admin
-const serviceAccount = require(path.resolve(serviceAccountPath));
+const serviceAccount = JSON.parse(fs.readFileSync(path.resolve(serviceAccountPath), 'utf8'));
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });

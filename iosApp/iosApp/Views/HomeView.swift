@@ -38,7 +38,11 @@ struct HomeView: View {
             }
             LocationManagerBridge.shared.enableHelperMode(lat: lat, lon: lon) { success in
                 if success {
-                    self.container.emergency.vm.onToggleHelperMode(enable: true)
+                    self.container.emergency.clearEmergencyStateSwift()
+                    // Marca helper mode no estado Swift diretamente
+                    DispatchQueue.main.async {
+                        self.container.emergency.setHelperMode(true)
+                    }
                     self.container.startObservingNearbyEmergencies(lat: lat, lon: lon)
                 }
                 self.isTogglingHelper = false
@@ -58,7 +62,7 @@ struct HomeView: View {
             }
             LocationManagerBridge.shared.disableHelperMode()
         }
-        container.emergency.vm.onToggleHelperMode(enable: false)
+        container.emergency.clearEmergencyStateSwift()
         try? Auth.auth().signOut()
         onLogout()
     }
@@ -74,7 +78,7 @@ struct HomeView: View {
                             activateHelperMode()
                         } else {
                             LocationManagerBridge.shared.disableHelperMode()
-                            container.emergency.vm.onToggleHelperMode(enable: false)
+                            container.emergency.setHelperMode(false)
                             container.stopObservingNearbyEmergencies()
                         }
                     }

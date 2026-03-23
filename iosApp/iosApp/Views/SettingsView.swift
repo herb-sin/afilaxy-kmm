@@ -72,7 +72,7 @@ struct SettingsView: View {
                     Firestore.firestore().collection("helpers").document(uid).delete()
                     LocationManagerBridge.shared.disableHelperMode()
                 }
-                container.emergency.vm.onToggleHelperMode(enable: false)
+                container.emergency.clearEmergencyStateSwift()
                 try? Auth.auth().signOut()
             }
         } message: {

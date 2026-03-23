@@ -41,7 +41,7 @@ struct EmergencyResponseView: View {
                                 isAccepting = false
                                 if success {
                                     accepted = true
-                                    container.emergency.vm.onToggleHelperMode(enable: false)
+                                    container.emergency.setHelperMode(false)
                                     startStatusObserver()
                                 } else {
                                     errorMessage = error ?? "Erro ao aceitar emergência"

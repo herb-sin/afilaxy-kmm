@@ -15,6 +15,53 @@ final class EmergencyViewModelWrapper: ObservableObject {
         }
     }
     deinit { timer?.invalidate() }
+
+    /// Limpa o estado de emergência localmente no lado Swift — sem chamar nenhum método KMM.
+    /// Seguro para chamar do iOS (evita SIGABRT do MutableStateFlow KMM).
+    func clearEmergencyStateSwift() {
+        DispatchQueue.main.async {
+            guard let current = self.state else { return }
+            self.state = EmergencyState(
+                currentEmergency: nil,
+                emergencyId: nil,
+                emergencyStatus: nil,
+                emergencyExpiresAt: nil,
+                nearbyHelpers: current.nearbyHelpers,
+                incomingEmergencies: current.incomingEmergencies,
+                isLoading: false,
+                isCreatingEmergency: false,
+                error: nil,
+                isHelperMode: false,
+                hasActiveEmergency: false,
+                isRequester: false,
+                userLatitude: current.userLatitude,
+                userLongitude: current.userLongitude
+            )
+        }
+    }
+
+    /// Altera apenas isHelperMode no estado Swift — sem chamar nenhum método KMM.
+    func setHelperMode(_ enabled: Bool) {
+        DispatchQueue.main.async {
+            guard let current = self.state else { return }
+            self.state = EmergencyState(
+                currentEmergency: current.currentEmergency,
+                emergencyId: current.emergencyId,
+                emergencyStatus: current.emergencyStatus,
+                emergencyExpiresAt: current.emergencyExpiresAt,
+                nearbyHelpers: current.nearbyHelpers,
+                incomingEmergencies: current.incomingEmergencies,
+                isLoading: current.isLoading,
+                isCreatingEmergency: current.isCreatingEmergency,
+                error: current.error,
+                isHelperMode: enabled,
+                hasActiveEmergency: current.hasActiveEmergency,
+                isRequester: current.isRequester,
+                userLatitude: current.userLatitude,
+                userLongitude: current.userLongitude
+            )
+        }
+    }
 }
 
 final class AuthViewModelWrapper: ObservableObject {
