@@ -41,7 +41,11 @@ fun NavGraph(
     LaunchedEffect(pendingDestination?.value) {
         val dest = pendingDestination?.value ?: return@LaunchedEffect
         if (navController.currentDestination != null) {
-            navController.navigate(dest) { launchSingleTop = true }
+            // Remove qualquer emergency_response anterior antes de navegar
+            navController.navigate(dest) {
+                launchSingleTop = true
+                popUpTo(AppRoutes.HOME) { saveState = false }
+            }
             pendingDestination.value = null
         }
     }
