@@ -13,12 +13,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
+import android.view.WindowManager
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
 import com.afilaxy.presentation.chat.ChatViewModel
@@ -44,6 +46,17 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
+
+    // Muda softInputMode para adjustPan apenas nesta tela — teclado desliza sobre o chat
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        val window = (view.context as? android.app.Activity)?.window
+        val original = window?.attributes?.softInputMode
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+        onDispose {
+            original?.let { window.setSoftInputMode(it) }
+        }
+    }
 
     // Bloqueia back press — usuário deve resolver ou cancelar a emergência
     BackHandler { showResolveDialog = true }

@@ -88,6 +88,7 @@ class AppContainer: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     @Published var pendingEmergencyId: String? = nil
     @Published var pendingChatId: String? = nil
+    @Published var resolvedEmergencyId: String? = nil
     private var emergencyListener: ListenerRegistration?
     private var notifiedEmergencyIds = Set<String>()
 

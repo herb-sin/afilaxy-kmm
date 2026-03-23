@@ -8,16 +8,15 @@ final class EmergencyViewModelWrapper: ObservableObject {
     /// Quando true, o timer só retoma após o KMM confirmar hasActiveEmergency=false.
     /// Evita que o polling sobrescreva estado Swift local com KMM desatualizado.
     private var localOverride = false
-    /// Quando true, o polling preserva isHelperMode=true mesmo que o KMM diga false.
     private var helperModeOverride = false
-    /// IDs de emergência já cancelados/resolvidos localmente — bloqueados permanentemente no polling.
     private var cancelledEmergencyIds = Set<String>()
+    private var frozen = false
 
     init(_ vm: EmergencyViewModel) {
         self.vm = vm
         self.state = vm.state.value as? EmergencyState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self else { return }
+            guard let self, !self.frozen else { return }
             guard var s = vm.state.value as? EmergencyState else { return }
             if self.localOverride {
                 guard !s.hasActiveEmergency else { return }
@@ -61,9 +60,12 @@ final class EmergencyViewModelWrapper: ObservableObject {
                     userLongitude: s.userLongitude
                 )
             } else if self.helperModeOverride && s.isHelperMode {
-                self.helperModeOverride = false  // KMM confirmou
+                self.helperModeOverride = false
             }
-            DispatchQueue.main.async { self.state = s }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.frozen else { return }
+                self.state = s
+            }
         }
     }
     deinit { timer?.invalidate() }
@@ -71,11 +73,13 @@ final class EmergencyViewModelWrapper: ObservableObject {
     /// Aplica estado local e bloqueia polling até KMM confirmar hasActiveEmergency=false.
     private func applyLocalState(_ newState: EmergencyState, holdUntilKmmClears: Bool = false) {
         localOverride = holdUntilKmmClears
-        DispatchQueue.main.async { self.state = newState }
+        guard !frozen else { return }
+        state = newState
     }
 
     /// Para o timer permanentemente — deve ser chamado no logout antes de qualquer signOut.
     func freezeSwift() {
+        frozen = true
         timer?.invalidate()
         timer = nil
         localOverride = false
@@ -134,6 +138,7 @@ final class AuthViewModelWrapper: ObservableObject {
     let vm: AuthViewModel
     @Published private(set) var state: AuthState?
     private var timer: Timer?
+    private var frozen = false
 
     init(_ vm: AuthViewModel) {
         self.vm = vm
@@ -141,28 +146,21 @@ final class AuthViewModelWrapper: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? AuthState else { return }
-            DispatchQueue.main.async { self.state = s }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.frozen else { return }
+                self.state = s
+            }
         }
     }
     deinit { timer?.invalidate() }
 
-    private var frozen = false
-
-    /// Para o polling e publica isAuthenticated=false imediatamente.
-    /// Deve ser chamado ANTES de Auth.auth().signOut() para evitar que
-    /// o KMM observeAuthState() processe a mudança e cause SIGABRT.
+    /// Para o polling e publica isAuthenticated=false sincronamente.
+    /// Deve ser chamado ANTES de Auth.auth().signOut().
     func signOutSwift() {
         frozen = true
         timer?.invalidate()
         timer = nil
-        DispatchQueue.main.async {
-            self.state = AuthState(
-                user: nil,
-                isLoading: false,
-                error: nil,
-                isAuthenticated: false
-            )
-        }
+        state = AuthState(user: nil, isLoading: false, error: nil, isAuthenticated: false)
     }
 }
 
@@ -170,66 +168,86 @@ final class HistoryViewModelWrapper: ObservableObject {
     let vm: HistoryViewModel
     @Published private(set) var state: HistoryState?
     private var timer: Timer?
+    private var frozen = false
 
     init(_ vm: HistoryViewModel) {
         self.vm = vm
         self.state = vm.state.value as? HistoryState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? HistoryState else { return }
-            DispatchQueue.main.async { self?.state = s }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.frozen else { return }
+                self.state = s
+            }
         }
     }
     deinit { timer?.invalidate() }
-    func freeze() { timer?.invalidate(); timer = nil }
+    func freeze() { frozen = true; timer?.invalidate(); timer = nil }
 }
 
 final class ProfileViewModelWrapper: ObservableObject {
     let vm: ProfileViewModel
     @Published private(set) var state: ProfileState?
     private var timer: Timer?
+    private var frozen = false
 
     init(_ vm: ProfileViewModel) {
         self.vm = vm
         self.state = vm.state.value as? ProfileState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? ProfileState else { return }
-            DispatchQueue.main.async { self?.state = s }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.frozen else { return }
+                self.state = s
+            }
         }
     }
     deinit { timer?.invalidate() }
-    func freeze() { timer?.invalidate(); timer = nil }
+    func freeze() { frozen = true; timer?.invalidate(); timer = nil }
 }
 
 final class ProfessionalListViewModelWrapper: ObservableObject {
     let vm: ProfessionalListViewModel
     @Published private(set) var state: ProfessionalListState?
     private var timer: Timer?
+    private var frozen = false
 
     init(_ vm: ProfessionalListViewModel) {
         self.vm = vm
         self.state = vm.state.value as? ProfessionalListState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? ProfessionalListState else { return }
-            DispatchQueue.main.async { self?.state = s }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.frozen else { return }
+                self.state = s
+            }
         }
     }
     deinit { timer?.invalidate() }
-    func freeze() { timer?.invalidate(); timer = nil }
+    func freeze() { frozen = true; timer?.invalidate(); timer = nil }
 }
 
 final class ProfessionalDetailViewModelWrapper: ObservableObject {
     let vm: ProfessionalDetailViewModel
     @Published private(set) var state: ProfessionalDetailState?
     private var timer: Timer?
+    private var frozen = false
 
     init(_ vm: ProfessionalDetailViewModel) {
         self.vm = vm
         self.state = vm.state.value as? ProfessionalDetailState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self, !self.frozen else { return }
             guard let s = vm.state.value as? ProfessionalDetailState else { return }
-            DispatchQueue.main.async { self?.state = s }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.frozen else { return }
+                self.state = s
+            }
         }
     }
     deinit { timer?.invalidate() }
-    func freeze() { timer?.invalidate(); timer = nil }
+    func freeze() { frozen = true; timer?.invalidate(); timer = nil }
 }
