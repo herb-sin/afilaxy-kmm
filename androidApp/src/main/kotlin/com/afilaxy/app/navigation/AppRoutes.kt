@@ -18,6 +18,7 @@ object AppRoutes {
     const val AUTOCUIDADO = "autocuidado"
     const val PROFESSIONALS = "professionals"
     const val PROFESSIONAL_DETAIL = "professional_detail/{professionalId}"
+    const val CRM_LOOKUP = "crm_lookup"
     const val MAP = "map"
     const val NOTIFICATIONS = "notifications"
     const val HELP = "help"

@@ -18,7 +18,7 @@ import org.koin.androidx.compose.koinViewModel
 private val protectedRoutes = setOf(
     AppRoutes.HOME, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
     AppRoutes.SETTINGS, AppRoutes.COMMUNITY, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
-    AppRoutes.MAP, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
+    AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
     AppRoutes.TERMS, AppRoutes.PRIVACY, "emergency_request", "emergency_response", AppRoutes.CHAT
 )
 
@@ -217,8 +217,13 @@ fun NavGraph(
         composable(AppRoutes.PROFESSIONALS) {
             ProfessionalListScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToDetail = { id -> navController.navigate(AppRoutes.professionalDetail(id)) }
+                onNavigateToDetail = { id -> navController.navigate(AppRoutes.professionalDetail(id)) },
+                onNavigateToCrmLookup = { navController.navigate(AppRoutes.CRM_LOOKUP) }
             )
+        }
+
+        composable(AppRoutes.CRM_LOOKUP) {
+            CrmLookupScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(
