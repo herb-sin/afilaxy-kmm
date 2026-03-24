@@ -35,7 +35,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler(.noData)
             return
         }
-        let name = userInfo["requesterName"] as? String ?? "Algu\u00e9m"
+        let name = userInfo["requesterName"] as? String ?? "Alguém"
         // Post direto — didReceiveRemoteNotification é chamado na main thread pelo UIKit
         NotificationCenter.default.post(
             name: .init("AfilaxyIncomingEmergency"),
@@ -134,10 +134,10 @@ class AppContainer: ObservableObject {
                       let emergencyId = notification.userInfo?["emergencyId"] as? String,
                       !self.notifiedEmergencyIds.contains(emergencyId) else { return }
                 self.notifiedEmergencyIds.insert(emergencyId)
-                let name = notification.userInfo?["requesterName"] as? String ?? "Algu\u00e9m"
+                let name = notification.userInfo?["requesterName"] as? String ?? "Alguém"
                 FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency via FCM from \(name)")
                 self.pendingIncomingEmergencies.append((id: emergencyId, name: name))
-                self.sendLocalNotification(title: "\u{1F198} Nova Emerg\u00eancia", body: "\(name) precisa de ajuda!", emergencyId: emergencyId)
+                self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: emergencyId)
             }
             .store(in: &cancellables)
     }
