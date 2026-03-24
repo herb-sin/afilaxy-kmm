@@ -41,9 +41,14 @@ fun NavGraph(
     LaunchedEffect(pendingDestination?.value) {
         val dest = pendingDestination?.value ?: return@LaunchedEffect
         if (navController.currentDestination == null) return@LaunchedEffect
-        // Se já está no chat para esta emergência, ignora a notificação
+        // Se já está no destino correto (ex: chat para esta emergência), descarta
         val currentRoute = navController.currentDestination?.route
-        if (currentRoute?.startsWith("chat/") == true) {
+        val alreadyThere = when {
+            dest.startsWith("chat/") && currentRoute?.startsWith("chat/") == true ->
+                currentRoute == dest
+            else -> currentRoute == dest
+        }
+        if (alreadyThere) {
             pendingDestination.value = null
             return@LaunchedEffect
         }

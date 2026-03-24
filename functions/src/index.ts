@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import * as geofireCommon from 'geofire-common';
 
@@ -9,7 +9,8 @@ admin.initializeApp();
 let _stripe: any = null;
 function getStripe() {
     if (!_stripe) {
-        _stripe = require('stripe')(functions.config().stripe?.secret_key);
+        const key = process.env.STRIPE_SECRET_KEY || (functions as any).config?.()?.stripe?.secret_key;
+        _stripe = require('stripe')(key);
     }
     return _stripe;
 }
@@ -65,8 +66,8 @@ export const createCheckoutSession = functions.https.onCall(async (data, context
                 quantity: 1
             }],
             mode: 'subscription',
-            success_url: `${functions.config().app?.url || 'https://afilaxy.com'}/professional/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${functions.config().app?.url || 'https://afilaxy.com'}/professional/cancel`,
+            success_url: `${process.env.APP_URL || 'https://afilaxy.com'}/professional/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.APP_URL || 'https://afilaxy.com'}/professional/cancel`,
             customer_email: email,
             metadata: {
                 professionalId,
@@ -85,7 +86,7 @@ export const createCheckoutSession = functions.https.onCall(async (data, context
 });
 
 export const stripeWebhook = functions.https.onRequest(async (req, res) => {
-    const endpointSecret = functions.config().stripe?.webhook_secret;
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || (functions as any).config?.()?.stripe?.webhook_secret;
     const sig = req.headers['stripe-signature'];
     let event;
     try {
@@ -411,14 +412,26 @@ export const onEmergencyAccepted = functions.firestore
 
                 // Enviar notificação
                 const message = {
-                    notification: {
-                        title: '✅ Ajuda a Caminho!',
-                        body: `${helperName} aceitou sua emergência e está indo te ajudar!`,
-                    },
                     data: {
-                        type: 'emergency_accepted',
+                        type: 'helper_matched',
                         emergencyId: emergencyId,
                         helperName: helperName,
+                        title: 'Ajuda a Caminho!',
+                        body: `${helperName} aceitou sua emerg\u00eancia e est\u00e1 indo te ajudar!`,
+                    },
+                    android: { priority: 'high' as const },
+                    apns: {
+                        headers: { 'apns-priority': '10' },
+                        payload: {
+                            aps: {
+                                alert: {
+                                    title: 'Ajuda a Caminho!',
+                                    body: `${helperName} aceitou sua emerg\u00eancia e est\u00e1 indo te ajudar!`,
+                                },
+                                sound: 'default',
+                                contentAvailable: true,
+                            },
+                        },
                     },
                     token: requesterToken,
                 };
@@ -491,15 +504,28 @@ export const onChatMessage = functions.firestore
             }
 
             const notificationMessage = {
-                notification: {
-                    title: message.senderName || 'Nova mensagem',
-                    body: message.message || '',
-                },
                 data: {
                     type: 'chat',
                     emergencyId: emergencyId,
+                    openChat: 'true',
                     senderName: message.senderName || '',
                     message: message.message || '',
+                    title: message.senderName || 'Nova mensagem',
+                    body: message.message || '',
+                },
+                android: { priority: 'high' as const },
+                apns: {
+                    headers: { 'apns-priority': '10' },
+                    payload: {
+                        aps: {
+                            alert: {
+                                title: message.senderName || 'Nova mensagem',
+                                body: message.message || '',
+                            },
+                            sound: 'default',
+                            contentAvailable: true,
+                        },
+                    },
                 },
                 token: recipientToken,
             };

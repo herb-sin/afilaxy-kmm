@@ -113,9 +113,11 @@ class MainActivity : ComponentActivity() {
         val emergencyId = intent.getStringExtra("emergencyId")
             ?.takeIf { it.isNotBlank() && it.all { c -> c.isLetterOrDigit() || c == '-' || c == '_' } }
         val openEmergencyResponse = intent.getBooleanExtra("openEmergencyResponse", false)
-        val openEmergencyRequest = intent.getBooleanExtra("openEmergencyRequest", false)
+        val openEmergencyRequest  = intent.getBooleanExtra("openEmergencyRequest", false)
+        val openChat              = intent.getBooleanExtra("openChat", false)
 
         pendingDestination.value = when {
+            emergencyId != null && openChat              -> "chat/$emergencyId"
             emergencyId != null && openEmergencyResponse -> "emergency_response/$emergencyId"
             emergencyId != null && openEmergencyRequest  -> "emergency_request/$emergencyId"
             else -> null
