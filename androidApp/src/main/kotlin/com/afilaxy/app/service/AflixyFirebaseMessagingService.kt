@@ -32,7 +32,7 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
 
         remoteMessage.data.let { data ->
             when (data["type"]) {
-                "emergency_request" -> {
+                "emergency_request", "emergency" -> {
                     Log.d("FCM", "Emerg\u00eancia recebida")
                     val emergencyId = data["emergencyId"] ?: ""
                     val requesterName = data["requesterName"] ?: "Algu\u00e9m"
@@ -64,14 +64,7 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
                 else -> {
                     val title = data["title"] ?: "Afilaxy"
                     val body = data["body"] ?: ""
-                    val emergencyId = data["emergencyId"]
-                    if (emergencyId != null) {
-                        showHelperMatchedNotification(
-                            title.sanitizeForLog(), body.sanitizeForLog(), emergencyId.sanitizeForLog()
-                        )
-                    } else {
-                        showNotification(title.sanitizeForLog(), body.sanitizeForLog(), null)
-                    }
+                    showNotification(title.sanitizeForLog(), body.sanitizeForLog(), null)
                 }
             }
         }
