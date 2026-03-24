@@ -22,7 +22,6 @@ import coil.compose.AsyncImage
 import com.afilaxy.domain.model.HealthProfessional
 import com.afilaxy.domain.model.PlanTier
 import com.afilaxy.domain.model.Specialty
-import com.afilaxy.domain.model.SubscriptionPlan
 import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -190,9 +189,9 @@ fun ProfessionalCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(professional.name, style = MaterialTheme.typography.titleMedium)
-                            if (professional.subscriptionPlan.tier() == PlanTier.PREMIUM) {
+                            if (professional.subscriptionPlan.tier() != PlanTier.NONE) {
                                 Spacer(Modifier.width(4.dp))
-                                Icon(Icons.Default.Verified, contentDescription = "Premium",
+                                Icon(Icons.Default.Verified, contentDescription = "Perfil Verificado",
                                     tint = Color(0xFF1DA1F2), modifier = Modifier.size(20.dp))
                             }
                         }
@@ -204,15 +203,7 @@ fun ProfessionalCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (professional.subscriptionPlan.tier() != PlanTier.NONE) {
-                    AssistChip(
-                        onClick = { },
-                        label = { Text(getPlanBadge(professional.subscriptionPlan)) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = getPlanColor(professional.subscriptionPlan)
-                        )
-                    )
-                }
+                // Badge de plano removido da UI do paciente — plano é dado interno (conformidade CFM)
             }
 
             if (professional.bio.isNotEmpty()) {
@@ -252,24 +243,3 @@ private fun getSpecialtyName(specialty: Specialty): String = when (specialty) {
     Specialty.PHYSIOTHERAPIST -> "Fisioterapeuta"
 }
 
-private fun getPlanBadge(plan: SubscriptionPlan): String {
-    val duration = when (plan.durationMonths()) {
-        3 -> " · Trimestral"
-        6 -> " · Semestral"
-        12 -> " · Anual"
-        else -> ""
-    }
-    return when (plan.tier()) {
-        PlanTier.PREMIUM -> "⭐ Premium$duration"
-        PlanTier.PRO -> "✨ Pro$duration"
-        PlanTier.BASIC -> "Básico$duration"
-        PlanTier.NONE -> ""
-    }
-}
-
-private fun getPlanColor(plan: SubscriptionPlan): Color = when (plan.tier()) {
-    PlanTier.PREMIUM -> Color(0xFFFFD700)
-    PlanTier.PRO -> Color(0xFFC0C0C0)
-    PlanTier.BASIC -> Color(0xFFCD7F32)
-    PlanTier.NONE -> Color.Transparent
-}

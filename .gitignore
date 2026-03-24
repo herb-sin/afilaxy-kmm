@@ -73,3 +73,6 @@ keystore.properties
 *.key
 *.p12
 *.pem
+
+# Web hosting build output
+web-dist/

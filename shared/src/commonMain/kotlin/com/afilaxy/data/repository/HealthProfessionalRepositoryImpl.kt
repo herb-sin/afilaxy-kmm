@@ -117,13 +117,10 @@ class HealthProfessionalRepositoryImpl(
         )
     }
 
-    private fun calculatePriority(professional: HealthProfessional): Int {
-        return when (professional.subscriptionPlan.tier()) {
-            com.afilaxy.domain.model.PlanTier.PREMIUM -> 3
-            com.afilaxy.domain.model.PlanTier.PRO -> 2
-            com.afilaxy.domain.model.PlanTier.BASIC -> 1
-            com.afilaxy.domain.model.PlanTier.NONE -> 0
-        }
+    // Ordenação por critério técnico — plano de assinatura não influencia posição (CFM)
+    private fun calculatePriority(professional: HealthProfessional): Double {
+        val hasSubscription = if (professional.subscriptionPlan.tier() != com.afilaxy.domain.model.PlanTier.NONE) 0.001 else 0.0
+        return professional.rating + hasSubscription
     }
     
     private fun calculateDistance(loc1: Location, loc2: Location): Double {

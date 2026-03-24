@@ -24,6 +24,27 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
 
+    // FCM data-only em background — acorda o app e dispara notificação local
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard let emergencyId = userInfo["emergencyId"] as? String,
+              (userInfo["type"] as? String) == "emergency_request" else {
+            completionHandler(.noData)
+            return
+        }
+        let name = userInfo["requesterName"] as? String ?? "Algu\u00e9m"
+        // Post direto — didReceiveRemoteNotification é chamado na main thread pelo UIKit
+        NotificationCenter.default.post(
+            name: .init("AfilaxyIncomingEmergency"),
+            object: nil,
+            userInfo: ["emergencyId": emergencyId, "requesterName": name]
+        )
+        completionHandler(.newData)
+    }
+
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         Messaging.messaging().apnsToken = deviceToken
     }
@@ -51,14 +72,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
+        // Post direto — didReceive response é chamado na main thread pelo UIKit
         if let emergencyId = userInfo["emergencyId"] as? String {
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .init("AfilaxyOpenEmergency"),
-                    object: nil,
-                    userInfo: ["emergencyId": emergencyId]
-                )
-            }
+            NotificationCenter.default.post(
+                name: .init("AfilaxyOpenEmergency"),
+                object: nil,
+                userInfo: ["emergencyId": emergencyId]
+            )
         }
         completionHandler()
     }
@@ -105,6 +125,21 @@ class AppContainer: ObservableObject {
     func observeChildren() {
         emergency.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         auth.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+
+        // Emergências recebidas via FCM em background (didReceiveRemoteNotification)
+        // Sem receive(on:) — post já ocorre na main thread, enfileirar criaria janela pós-freezeAll
+        NotificationCenter.default.publisher(for: .init("AfilaxyIncomingEmergency"))
+            .sink { [weak self] notification in
+                guard let self,
+                      let emergencyId = notification.userInfo?["emergencyId"] as? String,
+                      !self.notifiedEmergencyIds.contains(emergencyId) else { return }
+                self.notifiedEmergencyIds.insert(emergencyId)
+                let name = notification.userInfo?["requesterName"] as? String ?? "Algu\u00e9m"
+                FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency via FCM from \(name)")
+                self.pendingIncomingEmergencies.append((id: emergencyId, name: name))
+                self.sendLocalNotification(title: "\u{1F198} Nova Emerg\u00eancia", body: "\(name) precisa de ajuda!", emergencyId: emergencyId)
+            }
+            .store(in: &cancellables)
     }
 
     /// Inicia listener Firestore nativo para emergências próximas (iOS-safe, sem KMM Flow)
@@ -146,9 +181,8 @@ class AppContainer: ObservableObject {
                         self.notifiedEmergencyIds.insert(docId)
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
-                        DispatchQueue.main.async {
-                            self.pendingIncomingEmergencies.append((id: docId, name: name))
-                        }
+                        // Atualiza diretamente — callback do Firestore já executa na main thread
+                        self.pendingIncomingEmergencies.append((id: docId, name: name))
                         self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: docId)
                     }
             }
@@ -208,19 +242,17 @@ struct AfilaxyApp: App {
         }
         .onChange(of: scenePhase) { phase in
             if phase == .background {
-                container.stopObservingNearbyEmergencies()
-                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=background — listener removido")
+                // Não remove o listener em background — FCM acorda o app via didReceiveRemoteNotification
+                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=background")
             } else if phase == .active {
                 let isHelper = container.emergency.state?.isHelperMode == true
                 if isHelper {
-                    // Sempre para antes de (re)iniciar — evita listeners órfãos
                     container.stopObservingNearbyEmergencies()
                     if let loc = LocationManager.shared.currentLocation {
                         container.startObservingNearbyEmergencies(lat: loc.coordinate.latitude,
                                                               lon: loc.coordinate.longitude)
                         FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=active — listener reiniciado lat=\(loc.coordinate.latitude)")
                     } else {
-                        // Localização não disponível após background longo — HomeView cobre ao activar helper mode
                         FileLogger.shared.write(level: "WARN", tag: "AfilaxyApp", message: "scenePhase=active — listener não reiniciado: sem localização")
                     }
                 }

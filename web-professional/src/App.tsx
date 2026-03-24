@@ -26,8 +26,8 @@ const tiers: PlanTier[] = [
       annual: 'price_basic_annual',
     },
     features: [
-      'Perfil listado no app',
-      'Badge verificado',
+      'Perfil completo no app',
+      'Badge de perfil verificado',
       'Contato direto via WhatsApp',
       'Indexado no Google',
       'Apoie a saúde pública',
@@ -44,9 +44,8 @@ const tiers: PlanTier[] = [
     },
     features: [
       'Tudo do Básico',
-      'Destaque na lista',
-      'Badge Pro ✨',
-      'Analytics básico de visualizações',
+      'Analytics de visualizações do perfil',
+      'Publicação de conteúdo educativo patrocinado',
       'Prioridade no suporte',
     ],
     popular: true,
@@ -62,8 +61,6 @@ const tiers: PlanTier[] = [
     },
     features: [
       'Tudo do Pro',
-      'Topo da lista por região',
-      'Badge Premium ⭐',
       'Analytics avançado',
       'Suporte prioritário',
       'Webinars exclusivos',

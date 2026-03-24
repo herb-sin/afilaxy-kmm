@@ -326,7 +326,16 @@ export const onEmergencyCreated = functions.firestore
                 },
                 apns: {
                     headers: { 'apns-priority': '10' },
-                    payload: { aps: { contentAvailable: true } },
+                    payload: {
+                        aps: {
+                            alert: {
+                                title: '\uD83C\uDD98 Nova Emerg\u00eancia de Asma',
+                                body: `${emergency.requesterName || 'Algu\u00e9m'} precisa de ajuda!`,
+                            },
+                            sound: 'default',
+                            contentAvailable: true,
+                        },
+                    },
                 },
                 tokens: tokens,
             };
