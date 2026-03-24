@@ -310,17 +310,23 @@ export const onEmergencyCreated = functions.firestore
             console.log(`✅ Notificando ${tokens.length} helper(s) dentro de ${radiusInKm}km`);
 
             // Enviar notificação multicast
+            // data-only + priority:high garante entrega via onMessageReceived mesmo com app killed/background
             const message = {
-                notification: {
-                    title: '🆘 Nova Emergência',
-                    body: `${emergency.requesterName || 'Alguém'} precisa de ajuda!`,
-                },
                 data: {
-                    type: 'emergency',
+                    type: 'emergency_request',
                     emergencyId: emergencyId,
                     requesterName: emergency.requesterName || '',
+                    title: '🆘 Nova Emergência de Asma',
+                    body: `${emergency.requesterName || 'Alguém'} precisa de ajuda!`,
                     latitude: String(emergency.latitude || ''),
                     longitude: String(emergency.longitude || ''),
+                },
+                android: {
+                    priority: 'high' as const,
+                },
+                apns: {
+                    headers: { 'apns-priority': '10' },
+                    payload: { aps: { contentAvailable: true } },
                 },
                 tokens: tokens,
             };
