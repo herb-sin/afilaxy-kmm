@@ -40,8 +40,8 @@ service cloud.firestore {
       allow get: if isAuthenticated()
         && (request.auth.uid == resource.data.requesterId
             || request.auth.uid == resource.data.helperId
-            // Helper pode ler emergências waiting para transação atómica de accept
-            || (resource.data.status == 'waiting' && resource.data.active == true));
+            // Helper pode ler qualquer emergência ativa para transação atômica de accept
+            || resource.data.active == true);
       allow create: if isAuthenticated()
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.latitude is number
@@ -53,8 +53,8 @@ service cloud.firestore {
           // Requester ou helper já atribuído podem actualizar livremente
           request.auth.uid == resource.data.requesterId
           || request.auth.uid == resource.data.helperId
-          // Helper a aceitar: campo helperId ausente ou null
-          || ((!('helperId' in resource.data) || resource.data.helperId == null)
+          // Helper a aceitar: helperId ausente, null ou string vazia
+          || ((!('helperId' in resource.data) || resource.data.helperId == null || resource.data.helperId == '')
               && request.resource.data.helperId == request.auth.uid
               && request.resource.data.status == 'matched'
               // requesterId imutável (defesa em profundidade)
