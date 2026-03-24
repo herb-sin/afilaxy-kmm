@@ -61,6 +61,13 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
                     val body = "$helperName está vindo te ajudar"
                     showHelperMatchedNotification(title.sanitizeForLog(), body.sanitizeForLog(), emergencyId.sanitizeForLog())
                 }
+                "chat" -> {
+                    Log.d("FCM", "Mensagem de chat recebida")
+                    val emergencyId = data["emergencyId"] ?: ""
+                    val senderName = data["senderName"] ?: "Mensagem"
+                    val body = data["message"] ?: ""
+                    showChatNotification(senderName.sanitizeForLog(), body.sanitizeForLog(), emergencyId.sanitizeForLog())
+                }
                 else -> {
                     val title = data["title"] ?: "Afilaxy"
                     val body = data["body"] ?: ""
@@ -83,6 +90,36 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
     
+    private fun showChatNotification(senderName: String, body: String, emergencyId: String) {
+        val channelId = "afilaxy_chat"
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("emergencyId", emergencyId)
+            putExtra("openChat", true)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, safeNotificationId("chat_$emergencyId"), intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.createNotificationChannel(
+                NotificationChannel(channelId, "Mensagens", NotificationManager.IMPORTANCE_DEFAULT)
+            )
+        }
+        notificationManager.notify(
+            safeNotificationId("chat_$emergencyId"),
+            NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(senderName)
+                .setContentText(body)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
+        )
+    }
+
     private fun showHelperMatchedNotification(title: String, body: String, emergencyId: String) {
         val channelId = "afilaxy_emergency"
         val intent = Intent(this, MainActivity::class.java).apply {
