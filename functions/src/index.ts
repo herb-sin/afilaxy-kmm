@@ -741,6 +741,54 @@ export const weeklyRiskAlert = functions.pubsub
         return null;
     });
 
+// ============================================
+// CONSULTA CRM
+// ============================================
+
+/**
+ * Consulta dados de um médico pelo CRM + UF na API pública do CFM.
+ * Não requer autenticação — feature pública para pacientes verificarem profissionais.
+ */
+export const validateCrm = functions.https.onCall(async (data) => {
+    const crm: string = (data.crm ?? '').toString().replace(/\D/g, '').slice(0, 10);
+    const uf: string = (data.uf ?? '').toString().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+
+    if (!crm || !uf) {
+        throw new functions.https.HttpsError('invalid-argument', 'crm e uf são obrigatórios');
+    }
+
+    try {
+        const url = `https://sistemas.cfm.org.br/api/medicos/consulta?crm=${crm}&uf=${uf}`;
+        const response = await fetch(url, {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(8000),
+        });
+
+        if (!response.ok) {
+            console.warn(`CFM API retornou ${response.status} para CRM ${crm}/${uf}`);
+            return { found: false };
+        }
+
+        const json: any = await response.json();
+        // A API do CFM retorna array — pega o primeiro resultado
+        const medico = Array.isArray(json) ? json[0] : json;
+
+        if (!medico) return { found: false };
+
+        return {
+            found: true,
+            name: medico.nome ?? medico.name ?? '',
+            specialty: medico.especialidade ?? medico.specialty ?? '',
+            situation: medico.situacao ?? medico.situation ?? '',
+            uf: medico.uf ?? uf,
+            crm: crm,
+        };
+    } catch (error: any) {
+        console.error('Erro ao consultar CFM:', error.message);
+        throw new functions.https.HttpsError('unavailable', 'Serviço do CFM indisponível no momento');
+    }
+});
+
 /**
  * Trigger quando um helper é ativado ou atualiza sua localização
  * Calcula e salva o geohash automaticamente na coleção 'helpers'

@@ -31,6 +31,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ProfessionalListScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToCrmLookup: () -> Unit = {},
     viewModel: ProfessionalListViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -48,6 +49,9 @@ fun ProfessionalListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToCrmLookup) {
+                        Icon(Icons.Default.Badge, "Consultar CRM")
+                    }
                     IconButton(onClick = { showFilterMenu = true }) {
                         Icon(Icons.Default.FilterList, "Filtrar")
                     }

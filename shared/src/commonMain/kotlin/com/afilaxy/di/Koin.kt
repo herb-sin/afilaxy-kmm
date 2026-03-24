@@ -24,6 +24,7 @@ import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
+import com.afilaxy.presentation.professional.CrmLookupViewModel
 import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
@@ -67,6 +68,7 @@ fun sharedModule(): Module = module {
     factory { HistoryViewModel(get(), get()) }
     factory { ProfessionalListViewModel(get()) }
     factory { ProfessionalDetailViewModel(get()) }
+    factory { CrmLookupViewModel() }
 }
 
 /**
