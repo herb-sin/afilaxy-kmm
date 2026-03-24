@@ -112,9 +112,13 @@ class MainActivity : ComponentActivity() {
     private fun resolveIntent(intent: Intent) {
         val emergencyId = intent.getStringExtra("emergencyId")
             ?.takeIf { it.isNotBlank() && it.all { c -> c.isLetterOrDigit() || c == '-' || c == '_' } }
+        // openEmergencyResponse pode vir como Boolean (extras Android) ou String "true" (FCM data payload)
         val openEmergencyResponse = intent.getBooleanExtra("openEmergencyResponse", false)
+            || intent.getStringExtra("openEmergencyResponse") == "true"
         val openEmergencyRequest  = intent.getBooleanExtra("openEmergencyRequest", false)
+            || intent.getStringExtra("openEmergencyRequest") == "true"
         val openChat              = intent.getBooleanExtra("openChat", false)
+            || intent.getStringExtra("openChat") == "true"
 
         pendingDestination.value = when {
             emergencyId != null && openChat              -> "chat/$emergencyId"

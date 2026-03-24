@@ -310,31 +310,40 @@ export const onEmergencyCreated = functions.firestore
 
             console.log(`✅ Notificando ${tokens.length} helper(s) dentro de ${radiusInKm}km`);
 
-            // Enviar notificação multicast
-            // data-only + priority:high garante entrega via onMessageReceived mesmo com app killed/background
+            // notification + data: o SO entrega a notificação imediatamente (sem depender do app)
+            // e os extras do data chegam no intent quando o usuário clica
             const message = {
+                notification: {
+                    title: 'Nova Emergência de Asma',
+                    body: `${emergency.requesterName || 'Alguém'} precisa de ajuda!`,
+                },
                 data: {
                     type: 'emergency_request',
                     emergencyId: emergencyId,
                     requesterName: emergency.requesterName || '',
-                    title: '🆘 Nova Emergência de Asma',
-                    body: `${emergency.requesterName || 'Alguém'} precisa de ajuda!`,
+                    openEmergencyResponse: 'true',
                     latitude: String(emergency.latitude || ''),
                     longitude: String(emergency.longitude || ''),
                 },
                 android: {
                     priority: 'high' as const,
+                    notification: {
+                        channelId: 'afilaxy_emergency',
+                        sound: 'default',
+                        defaultVibrateTimings: true,
+                        priority: 'high' as const,
+                    },
                 },
                 apns: {
                     headers: { 'apns-priority': '10' },
                     payload: {
                         aps: {
                             alert: {
-                                title: '\uD83C\uDD98 Nova Emerg\u00eancia de Asma',
-                                body: `${emergency.requesterName || 'Algu\u00e9m'} precisa de ajuda!`,
+                                title: 'Nova Emergência de Asma',
+                                body: `${emergency.requesterName || 'Alguém'} precisa de ajuda!`,
                             },
                             sound: 'default',
-                            contentAvailable: true,
+                            // sem contentAvailable — notificação visível tem prioridade máxima no APNs
                         },
                     },
                 },
