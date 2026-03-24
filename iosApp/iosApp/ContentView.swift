@@ -53,11 +53,11 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    FileLogger.shared.write(level: "INFO", tag: "ContentView", message: "requestWhenInUse authStatus=\(LocationManager.shared.authorizationStatus.rawValue)")
-                    if !LocationManager.shared.hasPermission {
-                        LocationManager.shared.requestWhenInUse()
-                    }
+                // Sem async — onAppear já executa na main thread
+                // asyncAfter criaria janela onde o bloco executa após freezeAll() → SIGABRT
+                FileLogger.shared.write(level: "INFO", tag: "ContentView", message: "requestWhenInUse authStatus=\(LocationManager.shared.authorizationStatus.rawValue)")
+                if !LocationManager.shared.hasPermission {
+                    LocationManager.shared.requestWhenInUse()
                 }
             }
             .onReceive(container.emergency.$state) { s in
@@ -89,7 +89,8 @@ struct ContentView: View {
             }
         } else {
             LoginView(onLoginSuccess: {
-                DispatchQueue.main.async { isLoggedIn = true }
+                // Sem async — callback do LoginView já executa na main thread
+                isLoggedIn = true
             })
         }
     }
