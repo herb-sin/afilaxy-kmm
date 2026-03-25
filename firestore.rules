@@ -113,6 +113,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Leads collection (website interest forms)
+    match /leads/{leadId} {
+      allow create: if isAuthenticated()
+        && isValidString(request.resource.data.name, 2, 200)
+        && isValidString(request.resource.data.email, 5, 100)
+        && isValidString(request.resource.data.plan, 1, 200)
+        && request.resource.data.type in ['medico', 'clinica'];
+      allow read, update, delete: if false;
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
