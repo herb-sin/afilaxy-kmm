@@ -18,7 +18,10 @@ final class EmergencyViewModelWrapper: ObservableObject {
         // Timer agendado no RunLoop.main — callback sempre na main thread, acesso KMM seguro
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
-            guard var s = vm.state.value as? EmergencyState else { return }
+            // Lê vm.state.value dentro do guard frozen — se freezeSwift() foi chamado entre
+            // o guard acima e aqui, o segundo check abaixo descarta o resultado
+            guard var s = self.frozen ? nil : vm.state.value as? EmergencyState else { return }
+            guard !self.frozen else { return }
             if self.localOverride {
                 guard !s.hasActiveEmergency else { return }
                 self.localOverride = false
@@ -45,7 +48,6 @@ final class EmergencyViewModelWrapper: ObservableObject {
             } else if self.helperModeOverride && s.isHelperMode {
                 self.helperModeOverride = false
             }
-            // Atualiza diretamente — já estamos na main thread, sem DispatchQueue.main.async
             guard !self.frozen else { return }
             self.state = s
         }
@@ -127,7 +129,7 @@ final class AuthViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? AuthState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
-            guard let s = vm.state.value as? AuthState else { return }
+            guard let s = self.frozen ? nil : vm.state.value as? AuthState else { return }
             guard !self.frozen else { return }
             self.state = s
         }
@@ -155,7 +157,7 @@ final class HistoryViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? HistoryState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
-            guard let s = vm.state.value as? HistoryState else { return }
+            guard let s = self.frozen ? nil : vm.state.value as? HistoryState else { return }
             guard !self.frozen else { return }
             self.state = s
         }
@@ -175,7 +177,7 @@ final class ProfileViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? ProfileState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
-            guard let s = vm.state.value as? ProfileState else { return }
+            guard let s = self.frozen ? nil : vm.state.value as? ProfileState else { return }
             guard !self.frozen else { return }
             self.state = s
         }
@@ -195,7 +197,7 @@ final class ProfessionalListViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? ProfessionalListState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
-            guard let s = vm.state.value as? ProfessionalListState else { return }
+            guard let s = self.frozen ? nil : vm.state.value as? ProfessionalListState else { return }
             guard !self.frozen else { return }
             self.state = s
         }
@@ -215,7 +217,7 @@ final class ProfessionalDetailViewModelWrapper: ObservableObject {
         self.state = vm.state.value as? ProfessionalDetailState
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self, !self.frozen else { return }
-            guard let s = vm.state.value as? ProfessionalDetailState else { return }
+            guard let s = self.frozen ? nil : vm.state.value as? ProfessionalDetailState else { return }
             guard !self.frozen else { return }
             self.state = s
         }
