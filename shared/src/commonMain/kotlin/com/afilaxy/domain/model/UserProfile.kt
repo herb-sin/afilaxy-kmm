@@ -10,7 +10,8 @@ data class UserProfile(
     val phone: String = "",
     val photoUrl: String? = null,
     val healthData: UserHealthData? = null,
-    val emergencyContact: EmergencyContact? = null
+    val emergencyContact: EmergencyContact? = null,
+    val isHealthProfessional: Boolean = false
 )
 
 @Serializable

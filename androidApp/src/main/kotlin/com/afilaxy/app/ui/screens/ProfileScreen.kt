@@ -17,7 +17,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(
+fun ProfileScreenOld(
     onNavigateBack: () -> Unit,
     viewModel: ProfileViewModel = koinViewModel()
 ) {

@@ -1,0 +1,120 @@
+name: 🔒 Secure Build & Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  security-check:
+    name: 🛡️ Security Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Check for hardcoded secrets
+      run: |
+        echo "🔍 Scanning for hardcoded credentials..."
+        # Verificar se não há chaves API hardcoded
+        if grep -r "AIzaSy" --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" .; then
+          echo "❌ Hardcoded API keys found!"
+          exit 1
+        fi
+        echo "✅ No hardcoded credentials detected"
+        
+    - name: Validate environment template
+      run: |
+        echo "📋 Validating .env.example..."
+        if [ ! -f ".env.example" ]; then
+          echo "❌ .env.example not found!"
+          exit 1
+        fi
+        
+        # Verificar se todas as variáveis necessárias estão no template
+        required_vars=("VITE_FIREBASE_API_KEY" "VITE_FIREBASE_AUTH_DOMAIN" "VITE_FIREBASE_PROJECT_ID")
+        for var in "${required_vars[@]}"; do
+          if ! grep -q "$var" .env.example; then
+            echo "❌ Missing $var in .env.example"
+            exit 1
+          fi
+        done
+        echo "✅ Environment template is valid"
+
+  build:
+    name: 🏗️ Build Application
+    runs-on: ubuntu-latest
+    needs: security-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create environment file
+      run: |
+        echo "🔧 Setting up environment variables..."
+        cat > .env.local << EOF
+        VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+        VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+        VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+        VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+        VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
+        EOF
+        
+    - name: Validate environment
+      run: bash scripts/validate-env.sh
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: dist/
+        retention-days: 30
+
+  deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: dist/
+        
+    - name: Deploy to Firebase Hosting
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: '${{ secrets.GITHUB_TOKEN }}'
+        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+        projectId: afilaxy-app
+        channelId: live
