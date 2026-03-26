@@ -1,0 +1,19 @@
+# Add to existing .gitignore to prevent committing sensitive environment files
+
+# Environment variables with sensitive data
+.env.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# Firebase configuration files with credentials
+firebase-config.local.js
+firebase-config.local.ts
+
+# Any files containing API keys or secrets
+**/secrets/
+**/*secret*
+**/*credential*
+**/*key*.json
+!**/*key*.example.json
+!**/*key*.template.json

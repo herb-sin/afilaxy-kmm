@@ -3,15 +3,19 @@ package com.afilaxy.app.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.afilaxy.app.ui.screens.*
+import com.afilaxy.app.ui.scaffold.AfilaxyAppScaffoldSimple
 import com.afilaxy.domain.model.Evento
 import com.afilaxy.domain.model.Produto
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import org.koin.androidx.compose.koinViewModel
 
@@ -19,7 +23,12 @@ private val protectedRoutes = setOf(
     AppRoutes.HOME, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
     AppRoutes.SETTINGS, AppRoutes.COMMUNITY, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
     AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
-    AppRoutes.TERMS, AppRoutes.PRIVACY, "emergency_request", "emergency_response", AppRoutes.CHAT
+    AppRoutes.TERMS, AppRoutes.PRIVACY, AppRoutes.PORTAL, "emergency_request", "emergency_response", AppRoutes.CHAT
+)
+
+// Rotas que usam o AfilaxyAppScaffold (tabs principais)
+private val tabRoutes = setOf(
+    AppRoutes.HOME, AppRoutes.MAP, AppRoutes.PROFILE, AppRoutes.PORTAL
 )
 
 @Composable
@@ -114,21 +123,57 @@ fun NavGraph(
             )
         }
         
+        // Tabs principais com AfilaxyAppScaffoldSimple
         composable(AppRoutes.HOME) {
-            HomeScreen(
-                onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
-                onNavigateToProfile = { navController.navigate(AppRoutes.PROFILE) },
-                onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
-                onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
-                onNavigateToCommunity = { navController.navigate(AppRoutes.COMMUNITY) },
-                onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
-                onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
-                onLogout = {
-                    navController.navigate(AppRoutes.LOGIN) {
-                        popUpTo(0) { inclusive = true }
+            AfilaxyAppScaffoldSimple(navController = navController) {
+                HomeScreenNew(
+                    onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
+                    onNavigateToProfile = { navController.navigate(AppRoutes.PROFILE) },
+                    onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
+                    onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
+                    onNavigateToCommunity = { navController.navigate(AppRoutes.COMMUNITY) },
+                    onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
+                    onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
+                    onNavigateToEducation = { navController.navigate("education") },
+                    onLogout = {
+                        navController.navigate(AppRoutes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
+                )
+            }
+        }
+        
+        composable(AppRoutes.MAP) {
+            AfilaxyAppScaffoldSimple(navController = navController) {
+                MapScreen(navController = navController)
+            }
+        }
+        
+        composable(AppRoutes.PROFILE) {
+            AfilaxyAppScaffoldSimple(navController = navController) {
+                ProfileScreenNew(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+        }
+        
+        // Tab Portal - Role-based routing
+        composable(AppRoutes.PORTAL) {
+            AfilaxyAppScaffoldSimple(navController = navController) {
+                val profileViewModel: ProfileViewModel = koinViewModel()
+                val profileState by profileViewModel.state.collectAsState()
+                
+                if (profileState.profile?.isHealthProfessional == true) {
+                    PortalScreen()
+                } else {
+                    ProfessionalsScreenNew(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToDetail = { id -> navController.navigate(AppRoutes.professionalDetail(id)) },
+                        onNavigateToCrmLookup = { navController.navigate(AppRoutes.CRM_LOOKUP) }
+                    )
                 }
-            )
+            }
         }
         
         composable(AppRoutes.EMERGENCY) {
@@ -179,20 +224,16 @@ fun NavGraph(
             )
         }
         
-        composable(AppRoutes.PROFILE) {
-            ProfileScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
+
         
         composable(AppRoutes.HISTORY) {
-            HistoryScreen(
+            HistoryScreenNew(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
         
         composable(AppRoutes.SETTINGS) {
-            SettingsScreen(navController = navController)
+            SettingsScreenNew(navController = navController)
         }
         
         composable(AppRoutes.TERMS) {
@@ -220,10 +261,16 @@ fun NavGraph(
         }
 
         composable(AppRoutes.PROFESSIONALS) {
-            ProfessionalListScreen(
+            ProfessionalsScreenNew(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToDetail = { id -> navController.navigate(AppRoutes.professionalDetail(id)) },
                 onNavigateToCrmLookup = { navController.navigate(AppRoutes.CRM_LOOKUP) }
+            )
+        }
+        
+        composable("education") {
+            EducationScreenNew(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

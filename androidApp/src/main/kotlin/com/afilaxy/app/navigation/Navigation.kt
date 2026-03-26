@@ -89,7 +89,7 @@ fun NavGraph(
         
         // Tela Home
         composable(Screen.Home.route) {
-            HomeScreen(
+            HomeScreenOld(
                 onNavigateToEmergency = {
                     navController.navigate(Screen.Emergency.route)
                 },
@@ -129,7 +129,7 @@ fun NavGraph(
         
         // Tela de Perfil
         composable(Screen.Profile.route) {
-            ProfileScreen(
+            ProfileScreenOld(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

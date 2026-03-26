@@ -115,6 +115,12 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // Material3 Adaptive — NOVO
+    implementation("androidx.compose.material3.adaptive:adaptive:1.1.0")
+    implementation("androidx.compose.material3.adaptive:adaptive-layout:1.1.0")
+    implementation("androidx.compose.material3.adaptive:adaptive-navigation:1.1.0")
+    implementation("androidx.window:window:1.3.0")
+
     // Coil — carregamento de imagens (AsyncImage)
     implementation("io.coil-kt:coil-compose:2.6.0")
 

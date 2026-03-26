@@ -9,8 +9,12 @@ import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,9 +24,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
@@ -41,7 +49,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun HomeScreen(
+fun HomeScreenOld(
     onNavigateToEmergency: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToHistory: () -> Unit,
@@ -61,7 +69,6 @@ fun HomeScreen(
     var locationPermissionKey by remember { mutableStateOf(0) }
     var showPermissionsRationale by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
 
     // Layer 3 — safety net: inicia/reinicia observer quando coordenadas ou helperMode mudam
     LaunchedEffect(state.isHelperMode, state.userLatitude, state.userLongitude) {
@@ -131,272 +138,104 @@ fun HomeScreen(
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Menu", style = MaterialTheme.typography.headlineSmall)
-                        IconButton(onClick = { scope.launch { drawerState.close() } }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Fechar")
-                        }
+    // NOVO DESIGN: Feed de Comunidade Editorial
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Hero Card
+        item {
+            HeroCard(onNavigateToEmergency = onNavigateToEmergency)
+        }
+        
+        // Modo Ajudante Card
+        item {
+            HelperModeCard(
+                isHelperMode = state.isHelperMode,
+                onToggleHelper = { checked ->
+                    if (checked) {
+                        pendingHelperMode = true
+                        locationPermissionKey++
+                        showLocationPermission = true
+                    } else {
+                        viewModel.deactivateHelper()
                     }
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Person, null) },
-                        label = { Text("Perfil") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToProfile()
-                            scope.launch { drawerState.close() }
-                        }
+                }
+            )
+        }
+        
+        // Emergency Cards
+        if (state.incomingEmergencies.isNotEmpty()) {
+            items(state.incomingEmergencies) { emergency ->
+                EmergencyCard(emergency = emergency)
+            }
+        }
+        
+        // Posts da Comunidade (placeholder)
+        item {
+            CommunityPostsSection()
+        }
+        
+        // Suporte Rápido
+        item {
+            QuickSupportSection(
+                onNavigateToHistory = onNavigateToHistory,
+                onNavigateToProfessionals = onNavigateToProfessionals
+            )
+        }
+        
+        // Banner de permissões se necessário
+        if (!hasAllPermissions) {
+            item {
+                PermissionsBanner(
+                    missingPermissions = missingPermissions.map { it.permission },
+                    onRequestPermissions = {
+                        permissionsState.launchMultiplePermissionRequest()
+                    }
+                )
+            }
+        }
+        
+        // Erro se houver
+        if (state.error != null) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Settings, null) },
-                        label = { Text("Configurações") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToSettings()
-                            scope.launch { drawerState.close() }
-                        }
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Favorite, null) },
-                        label = { Text("Comunidade") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToCommunity()
-                            scope.launch { drawerState.close() }
-                        }
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.FavoriteBorder, null) },
-                        label = { Text("Autocuidado") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToAutocuidado()
-                            scope.launch { drawerState.close() }
-                        }
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) },
-                        label = { Text("Sair") },
-                        selected = false,
-                        onClick = {
-                            viewModel.onLogout()
-                            onLogout()
-                        }
+                ) {
+                    Text(
+                        text = state.error ?: "",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
         }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🆘")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Afilaxy")
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = onNavigateToProfile) {
-                            Icon(Icons.Default.Person, contentDescription = "Perfil")
-                        }
-                        IconButton(onClick = {
-                            viewModel.onLogout()
-                            onLogout()
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sair")
-                        }
+    }
+
+    // Componentes auxiliares
+    if (showLocationPermission) {
+        key(locationPermissionKey) {
+            RequestLocationPermission(
+                onPermissionGranted = {
+                    showLocationPermission = false
+                    if (pendingHelperMode) {
+                        viewModel.activateHelperWithLocation()
+                        pendingHelperMode = false
                     }
-                )
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-
-                // Banner de aviso de permissões (persistente enquanto faltarem permissões)
-                AnimatedVisibility(visible = !hasAllPermissions) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = buildPermissionWarningText(missingPermissions.map { it.permission }),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                            TextButton(
-                                onClick = {
-                                    permissionsState.launchMultiplePermissionRequest()
-                                }
-                            ) {
-                                Text(
-                                    "Corrigir",
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                        }
-                    }
+                },
+                onPermissionDenied = {
+                    showLocationPermission = false
+                    pendingHelperMode = false
                 }
-
-                Text(
-                    "Sistema de Emergência",
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "Modo Ajudante",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                if (state.isHelperMode)
-                                    "Você está disponível para ajudar"
-                                else
-                                    "Ative para receber pedidos",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = state.isHelperMode,
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    pendingHelperMode = true
-                                    locationPermissionKey++
-                                    showLocationPermission = true
-                                } else {
-                                    viewModel.deactivateHelper()
-                                }
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Button(
-                    onClick = onNavigateToEmergency,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(
-                        "🆘 EMERGÊNCIA",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = onNavigateToHistory,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("📋 Histórico")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedButton(
-                    onClick = onNavigateToProfessionals,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.MedicalServices, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("👨‍⚕️ Profissionais")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (state.error != null) {
-                    Text(
-                        text = state.error ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                if (showLocationPermission) {
-                    key(locationPermissionKey) {
-                        RequestLocationPermission(
-                            onPermissionGranted = {
-                                showLocationPermission = false
-                                if (pendingHelperMode) {
-                                    viewModel.activateHelperWithLocation()
-                                    pendingHelperMode = false
-                                }
-                            },
-                            onPermissionDenied = {
-                                showLocationPermission = false
-                                pendingHelperMode = false
-                            }
-                        )
-                    }
-                }
-            }
+            )
         }
     }
 
@@ -428,6 +267,292 @@ fun HomeScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun HeroCard(onNavigateToEmergency: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF1E3A8A), // Azul escuro
+                            Color(0xFF3B82F6)  // Azul médio
+                        )
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                verticalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                Column {
+                    Text(
+                        text = "Bem-vindo à Comunidade",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Respire fundo. Você não está sozinho.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+                
+                Button(
+                    onClick = onNavigateToEmergency,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "🆘 Solicitar Ajuda",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HelperModeCard(
+    isHelperMode: Boolean,
+    onToggleHelper: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Modo Ajudante",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    if (isHelperMode)
+                        "Você está disponível para ajudar"
+                    else
+                        "Ative para receber pedidos de ajuda",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = isHelperMode,
+                onCheckedChange = onToggleHelper
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmergencyCard(emergency: Any) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            2.dp, 
+            MaterialTheme.colorScheme.error
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Emergência Próxima",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    "Alguém precisa de ajuda na sua região",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            FilledTonalButton(
+                onClick = { /* Navegar para resposta */ }
+            ) {
+                Text("Ajudar")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommunityPostsSection() {
+    Column {
+        Text(
+            text = "Comunidade",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        // Posts placeholder
+        val posts = listOf(
+            "Dica: Use o espaçador sempre que possível",
+            "Compartilhe: Como você controla sua asma?",
+            "Lembrete: Não esqueça da medicação de manutenção"
+        )
+        
+        posts.forEach { post ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Text(
+                    text = post,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickSupportSection(
+    onNavigateToHistory: () -> Unit,
+    onNavigateToProfessionals: () -> Unit
+) {
+    Column {
+        Text(
+            text = "Suporte Rápido",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onNavigateToHistory,
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.History, contentDescription = null)
+                    Text("Histórico", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            
+            OutlinedButton(
+                onClick = onNavigateToProfessionals,
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.MedicalServices, contentDescription = null)
+                    Text("Médicos", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            
+            OutlinedButton(
+                onClick = { /* Farmácias */ },
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.LocalPharmacy, contentDescription = null)
+                    Text("Farmácias", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionsBanner(
+    missingPermissions: List<String>,
+    onRequestPermissions: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = buildPermissionWarningText(missingPermissions),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+            TextButton(onClick = onRequestPermissions) {
+                Text(
+                    "Corrigir",
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
     }
 }
 
