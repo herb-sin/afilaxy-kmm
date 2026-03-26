@@ -48,7 +48,6 @@ service cloud.firestore {
         && request.resource.data.longitude is number
         && request.resource.data.active == true;
       allow update: if isAuthenticated()
-        && request.resource.data.requesterId == resource.data.requesterId
         && (
           // Requester ou helper já atribuído podem actualizar livremente
           request.auth.uid == resource.data.requesterId
