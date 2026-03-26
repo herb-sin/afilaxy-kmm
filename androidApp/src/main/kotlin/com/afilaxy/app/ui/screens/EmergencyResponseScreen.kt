@@ -46,7 +46,9 @@ fun EmergencyResponseScreen(
     }
 
     LaunchedEffect(state.emergencyExpiresAt) {
-        val expiresAt = state.emergencyExpiresAt ?: return@LaunchedEffect
+        val rawExpiresAt = state.emergencyExpiresAt ?: return@LaunchedEffect
+        // expiresAt pode vir em segundos (Firestore Timestamp) ou milissegundos — normaliza
+        val expiresAt = if (rawExpiresAt < 1_000_000_000_000L) rawExpiresAt * 1000L else rawExpiresAt
         // Emergência já expirada ao abrir — cancela notificação e volta imediatamente
         if (System.currentTimeMillis() >= expiresAt) {
             FileLogger.log("INFO", "EmergencyResponseScreen", "already expired on open — dismissing emergencyId=$emergencyId")
