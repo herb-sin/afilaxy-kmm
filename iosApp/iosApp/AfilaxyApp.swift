@@ -30,13 +30,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
+        let type = userInfo["type"] as? String ?? "unknown"
+        FileLogger.shared.write(level: "INFO", tag: "AppDelegate", message: "didReceiveRemoteNotification type=\(type) appState=\(application.applicationState.rawValue)")
         guard let emergencyId = userInfo["emergencyId"] as? String,
-              (userInfo["type"] as? String) == "emergency_request" else {
+              type == "emergency_request" else {
             completionHandler(.noData)
             return
         }
         let name = userInfo["requesterName"] as? String ?? "Alguém"
-        // Post direto — didReceiveRemoteNotification é chamado na main thread pelo UIKit
         NotificationCenter.default.post(
             name: .init("AfilaxyIncomingEmergency"),
             object: nil,
@@ -72,12 +73,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        // Post direto — didReceive response é chamado na main thread pelo UIKit
-        if let emergencyId = userInfo["emergencyId"] as? String {
+        let emergencyId = userInfo["emergencyId"] as? String ?? "nil"
+        FileLogger.shared.write(level: "INFO", tag: "AppDelegate", message: "didReceive notificationResponse emergencyId=\(emergencyId) action=\(response.actionIdentifier)")
+        if let eid = userInfo["emergencyId"] as? String {
             NotificationCenter.default.post(
                 name: .init("AfilaxyOpenEmergency"),
                 object: nil,
-                userInfo: ["emergencyId": emergencyId]
+                userInfo: ["emergencyId": eid]
             )
         }
         completionHandler()
@@ -245,6 +247,8 @@ struct AfilaxyApp: App {
                 // Não remove o listener em background — FCM acorda o app via didReceiveRemoteNotification
                 FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=background")
             } else if phase == .active {
+                let pendingCount = container.pendingIncomingEmergencies.count
+                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=active pendingEmergencies=\(pendingCount)")
                 // Garante que o FCM token está salvo para o uid atual ao voltar ao foreground
                 if let token = Messaging.messaging().fcmToken,
                    let uid = Auth.auth().currentUser?.uid {
