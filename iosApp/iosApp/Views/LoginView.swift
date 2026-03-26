@@ -1,4 +1,7 @@
 import SwiftUI
+import FirebaseMessaging
+import FirebaseAuth
+import FirebaseFirestore
 
 struct LoginView: View {
     let onLoginSuccess: () -> Void
@@ -61,7 +64,16 @@ struct LoginView: View {
             }
         }
         .onReceive(container.auth.$state) { s in
-            if s?.isAuthenticated == true { onLoginSuccess() }
+            if s?.isAuthenticated == true {
+                // Salva FCM token no login — garante que o token está associado ao uid atual
+                // (o callback messaging:didReceiveRegistrationToken só dispara quando o token é novo)
+                if let token = Messaging.messaging().fcmToken,
+                   let uid = Auth.auth().currentUser?.uid {
+                    Firestore.firestore().collection("users").document(uid)
+                        .setData(["fcmToken": token], merge: true)
+                }
+                onLoginSuccess()
+            }
         }
     }
 

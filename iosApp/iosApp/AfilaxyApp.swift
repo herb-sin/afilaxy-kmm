@@ -245,6 +245,12 @@ struct AfilaxyApp: App {
                 // Não remove o listener em background — FCM acorda o app via didReceiveRemoteNotification
                 FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=background")
             } else if phase == .active {
+                // Garante que o FCM token está salvo para o uid atual ao voltar ao foreground
+                if let token = Messaging.messaging().fcmToken,
+                   let uid = Auth.auth().currentUser?.uid {
+                    Firestore.firestore().collection("users").document(uid)
+                        .setData(["fcmToken": token], merge: true)
+                }
                 let isHelper = container.emergency.state?.isHelperMode == true
                 if isHelper {
                     container.stopObservingNearbyEmergencies()

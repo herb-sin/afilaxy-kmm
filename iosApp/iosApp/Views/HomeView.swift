@@ -48,6 +48,7 @@ struct HomeView: View {
 
     private func performLogout() {
         let state = container.emergency.state
+        // Firestore cleanup antes de congelar os ViewModels
         if state?.hasActiveEmergency == true, let eid = state?.emergencyId as? String {
             Firestore.firestore().collection("emergency_requests").document(eid)
                 .updateData(["active": false, "status": "cancelled"])
@@ -58,8 +59,10 @@ struct HomeView: View {
             }
             LocationManagerBridge.shared.disableHelperMode()
         }
-        container.emergency.clearEmergencyStateSwift()
+        // freezeAll primeiro — cancela coroutines KMM antes de qualquer update de estado
+        // clearEmergencyStateSwift depois do freeze evita bloco enfileirado na main queue pós-freeze
         container.freezeAll()
+        container.emergency.clearEmergencyStateSwift()
         try? Auth.auth().signOut()
         onLogout()
     }
