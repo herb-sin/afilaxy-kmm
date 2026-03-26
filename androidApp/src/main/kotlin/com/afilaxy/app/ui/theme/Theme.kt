@@ -73,10 +73,14 @@ fun AflixyTheme(
         SideEffect {
             val activity = view.context as ComponentActivity
             activity.enableEdgeToEdge(
-                statusBarStyle = SystemBarStyle.auto(
-                    lightScrim = colorScheme.primary.toArgb(),
-                    darkScrim = colorScheme.primary.toArgb()
-                ) { !darkTheme }
+                statusBarStyle = SystemBarStyle.light(
+                    scrim = android.graphics.Color.TRANSPARENT,
+                    darkScrim = android.graphics.Color.TRANSPARENT
+                ),
+                navigationBarStyle = SystemBarStyle.light(
+                    scrim = android.graphics.Color.TRANSPARENT,
+                    darkScrim = android.graphics.Color.TRANSPARENT
+                )
             )
         }
     }
