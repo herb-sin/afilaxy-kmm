@@ -350,7 +350,7 @@ export const onEmergencyCreated = functions.firestore
                 tokens: tokens,
             };
 
-            const response = await admin.messaging().sendMulticast(message);
+            const response = await admin.messaging().sendEachForMulticast(message);
 
             console.log(`Notificação enviada: ${response.successCount} enviadas, ${response.failureCount} falhas`);
 
