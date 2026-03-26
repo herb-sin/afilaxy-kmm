@@ -29,6 +29,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun ProfileScreenNew(
     onNavigateBack: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -67,16 +68,30 @@ fun ProfileScreenNew(
         
         // Botão Editar
         item {
-            Button(
-                onClick = { showEditDialog = true },
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.Edit, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Editar Perfil")
+                Button(
+                    onClick = { showEditDialog = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Editar Perfil")
+                }
+                
+                OutlinedButton(
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Configurações")
+                }
             }
         }
         

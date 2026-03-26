@@ -153,7 +153,8 @@ fun NavGraph(
         composable(AppRoutes.PROFILE) {
             AfilaxyAppScaffoldSimple(navController = navController) {
                 ProfileScreenNew(
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) }
                 )
             }
         }
