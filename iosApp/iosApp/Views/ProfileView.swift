@@ -75,7 +75,8 @@ struct ProfileView: View {
             ),
             emergencyContact: EmergencyContact(
                 name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
-            )
+            ),
+            isHealthProfessional: profile.isHealthProfessional
         )
         container.profile.vm.updateProfile(profile: updated)
     }
