@@ -55,11 +55,11 @@ struct ContentView: View {
     @State private var resolvedChatId: String? = nil
     
     // MARK: - Adaptive Tab View Style
-    private var adaptiveTabViewStyle: any TabViewStyle {
+    private var adaptiveTabViewStyle: AnyTabViewStyle {
         if #available(iOS 18.0, *) {
-            return .sidebarAdaptable
+            return AnyTabViewStyle(.sidebarAdaptable)
         } else {
-            return .automatic
+            return AnyTabViewStyle(.automatic)
         }
     }
 
@@ -114,7 +114,7 @@ struct ContentView: View {
                 }
                 .tag(Tab.portal)
             }
-            .tint(.afiPrimary)
+            .tint(.blue)
             // iOS 18+ adaptive sidebar for iPad
             .tabViewStyle(adaptiveTabViewStyle)
             .onAppear {

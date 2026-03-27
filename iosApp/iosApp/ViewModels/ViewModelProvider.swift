@@ -3,6 +3,18 @@ import shared
 
 class ViewModelProvider {
     static let shared = ViewModelProvider()
+    
+    var homeViewModel: HomeViewModel {
+        return getHomeViewModel()
+    }
+    
+    var medicalProfileViewModel: MedicalProfileViewModel {
+        return getMedicalProfileViewModel()
+    }
+    
+    var professionalDashboardViewModel: ProfessionalDashboardViewModel {
+        return getProfessionalDashboardViewModel()
+    }
 
     // Usa funções safeGet* marcadas com @Throws em vez de getKoin().get()
     // para que exceções Kotlin não cruzem o boundary e causem abort().
@@ -34,6 +46,21 @@ class ViewModelProvider {
     func getProfessionalDetailViewModel() -> ProfessionalDetailViewModel {
         do { return try KoinHelperKt.safeGetProfessionalDetailViewModel() }
         catch { fatalError("❌ Koin: ProfessionalDetailViewModel failed — \(error)") }
+    }
+
+    func getHomeViewModel() -> HomeViewModel {
+        do { return try KoinHelperKt.safeGetHomeViewModel() }
+        catch { fatalError("❌ Koin: HomeViewModel failed — \(error)") }
+    }
+    
+    func getMedicalProfileViewModel() -> MedicalProfileViewModel {
+        do { return try KoinHelperKt.safeGetMedicalProfileViewModel() }
+        catch { fatalError("❌ Koin: MedicalProfileViewModel failed — \(error)") }
+    }
+    
+    func getProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel {
+        do { return try KoinHelperKt.safeGetProfessionalDashboardViewModel() }
+        catch { fatalError("❌ Koin: ProfessionalDashboardViewModel failed — \(error)") }
     }
 
     func getChatViewModel(emergencyId: String) -> ChatViewModel {

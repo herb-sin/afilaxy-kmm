@@ -202,7 +202,7 @@ struct EmergencyProtocolCardView: View {
                     .foregroundColor(.red)
             }
             
-            ForEach(Array(steps.enumerated()), id: \\.offset) { index, step in
+            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                 HStack(alignment: .top, spacing: 12) {
                     Circle()
                         .fill(Color.red)
@@ -234,7 +234,7 @@ struct EmergencyProtocolCardView: View {
 }
 
 struct EmergencyContactsCardView: View {
-    let contacts: [EmergencyContact]
+    let contacts: [MedicalEmergencyContact]
     let onAddContact: () -> Void
     
     var body: some View {
@@ -259,7 +259,7 @@ struct EmergencyContactsCardView: View {
                 }
             }
             
-            ForEach(contacts, id: \\.id) { contact in
+            ForEach(contacts, id: \.id) { contact in
                 ContactItemView(contact: contact)
             }
         }
@@ -271,7 +271,7 @@ struct EmergencyContactsCardView: View {
 }
 
 struct ContactItemView: View {
-    let contact: EmergencyContact
+    let contact: MedicalEmergencyContact
     
     var body: some View {
         HStack(spacing: 12) {
@@ -320,7 +320,7 @@ struct MedicationsCardView: View {
                 .font(.caption)
             }
             
-            ForEach(medications, id: \\.id) { medication in
+            ForEach(medications, id: \.id) { medication in
                 MedicationItemView(medication: medication)
             }
             
