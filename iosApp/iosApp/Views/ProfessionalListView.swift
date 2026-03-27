@@ -68,16 +68,16 @@ struct ProfessionalListView: View {
         if !searchText.isEmpty {
             filtered = filtered.filter { professional in
                 professional.name.localizedCaseInsensitiveContains(searchText) ||
-                specialtyLabel(professional.specialty).localizedCaseInsensitiveContains(searchText)
+                specialtyLabel(String(describing: professional.specialty)).localizedCaseInsensitiveContains(searchText)
             }
         }
         
-        // Filter by specialty - using string comparison
+        // Filter by specialty - convert enum to string for comparison
         if let specialty = selectedSpecialty {
             filtered = filtered.filter { professional in
                 // Convert Specialty enum to string for comparison
-                let specialtyString = professional.specialty.rawValue
-                return specialtyString == specialty
+                let specialtyString = String(describing: professional.specialty).lowercased()
+                return specialtyString == specialty.lowercased()
             }
         }
         
@@ -112,10 +112,10 @@ struct ProfessionalListView: View {
     
     private func specialtyLabel(_ specialty: ProfessionalSpecialty) -> String {
         // Convert specialty string to readable label
-        switch specialty {
-        case "pneumologist": return "Pneumologista"
-        case "allergist": return "Alergista"
-        case "physiotherapist": return "Fisioterapeuta"
+        switch specialty.uppercased() {
+        case "PNEUMOLOGIST": return "Pneumologista"
+        case "ALLERGIST": return "Alergista"
+        case "PHYSIOTHERAPIST": return "Fisioterapeuta"
         default: return specialty.capitalized
         }
     }
@@ -179,9 +179,9 @@ struct FilterControlsCard: View {
     
     private let specialties: [(ProfessionalSpecialty?, String, String)] = [
         (nil, "Todos", "person.3.fill"),
-        ("pneumologist", "Pneumo", "lungs.fill"),
-        ("allergist", "Alergia", "allergens"),
-        ("physiotherapist", "Fisio", "figure.walk")
+        ("PNEUMOLOGIST", "Pneumo", "lungs.fill"),
+        ("ALLERGIST", "Alergia", "allergens"),
+        ("PHYSIOTHERAPIST", "Fisio", "figure.walk")
     ]
     
     var body: some View {
