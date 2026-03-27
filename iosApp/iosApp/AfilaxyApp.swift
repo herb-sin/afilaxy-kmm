@@ -6,6 +6,7 @@ import FirebaseMessaging
 import FirebaseFirestore
 import UserNotifications
 import Combine
+import GoogleMaps
 
 // MARK: - AppDelegate (APNs + FCM)
 
@@ -228,6 +229,19 @@ struct AfilaxyApp: App {
 
     init() {
         FirebaseApp.configure()
+        
+        // Inicializar Google Maps SDK
+        if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+           let plist = NSDictionary(contentsOfFile: path),
+           let apiKey = plist["API_KEY"] as? String {
+            GMSServices.provideAPIKey(apiKey)
+        } else {
+            // Fallback: usar API key diretamente do Info.plist
+            if let apiKey = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String {
+                GMSServices.provideAPIKey(apiKey)
+            }
+        }
+        
         KoinHelperKt.doInitKoin()
         LocationManagerBridge.shared.start()
         container.observeChildren()

@@ -52,7 +52,7 @@ struct HistoryView: View {
     
     private func groupedHistory(_ history: [EmergencyHistory]) -> [(key: String, value: [EmergencyHistory])] {
         let grouped = Dictionary(grouping: history) { item in
-            formatDateGroup(item.createdAt)
+            formatDateGroup(item.timestamp)
         }
         return grouped.sorted { $0.key > $1.key }
     }
@@ -189,10 +189,10 @@ struct FilterChip: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(
-                isSelected ? AfilaxyColors.primary : AfilaxyColors.surface
+                isSelected ? Color.afiPrimary : Color.afiSurface
             )
             .foregroundColor(
-                isSelected ? .white : AfilaxyColors.onSurface
+                isSelected ? .white : Color.afiOnSurface
             )
             .clipShape(Capsule())
         }
@@ -206,7 +206,7 @@ struct TimelineHeaderCard: View {
         AfilaxyCard {
             HStack {
                 Image(systemName: "timeline.selection")
-                    .foregroundColor(AfilaxyColors.primary)
+                    .foregroundColor(Color.afiprimary)
                     .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -215,17 +215,17 @@ struct TimelineHeaderCard: View {
                         .fontWeight(.semibold)
                     Text("\(count) emergência(s) encontrada(s)")
                         .font(.caption)
-                        .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                        .foregroundColor(Color.afionSurface.opacity(0.6))
                 }
                 
                 Spacer()
                 
                 Text("Mais Recentes")
                     .font(.caption)
-                    .foregroundColor(AfilaxyColors.primary)
+                    .foregroundColor(Color.afiprimary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(AfilaxyColors.primary.opacity(0.1))
+                    .background(Color.afiprimary.opacity(0.1))
                     .clipShape(Capsule())
             }
         }
@@ -243,19 +243,19 @@ struct TimelineGroupCard: View {
                 Text(date)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(AfilaxyColors.primary)
+                    .foregroundColor(Color.afiprimary)
                 
                 Rectangle()
-                    .fill(AfilaxyColors.primary.opacity(0.3))
+                    .fill(Color.afiprimary.opacity(0.3))
                     .frame(height: 1)
                 
                 Text("\(items.count)")
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundColor(AfilaxyColors.primary)
+                    .foregroundColor(Color.afiprimary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(AfilaxyColors.primary.opacity(0.1))
+                    .background(Color.afiprimary.opacity(0.1))
                     .clipShape(Circle())
             }
             
@@ -277,12 +277,12 @@ struct TimelineItemCard: View {
         case "resolved":  return ("Resolvida", .green, "checkmark.circle.fill")
         case "cancelled": return ("Cancelada", .red, "xmark.circle.fill")
         case "matched":   return ("Em Atendimento", .orange, "person.2.fill")
-        default:          return (item.status, AfilaxyColors.onSurface.opacity(0.6), "clock.fill")
+        default:          return (item.status, Color.afionSurface.opacity(0.6), "clock.fill")
         }
     }
     
     private var timeString: String {
-        let date = Date(timeIntervalSince1970: TimeInterval(item.createdAt / 1000))
+        let date = Date(timeIntervalSince1970: TimeInterval(item.timestamp / 1000))
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
@@ -308,14 +308,14 @@ struct TimelineItemCard: View {
                     
                     Text(timeString)
                         .font(.caption)
-                        .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                        .foregroundColor(Color.afionSurface.opacity(0.6))
                 }
                 
                 // Content
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Image(systemName: "person.fill")
-                            .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                            .foregroundColor(Color.afionSurface.opacity(0.6))
                             .font(.caption)
                             .frame(width: 16)
                         
@@ -326,26 +326,26 @@ struct TimelineItemCard: View {
                     if let helper = item.helperName {
                         HStack {
                             Image(systemName: "heart.fill")
-                                .foregroundColor(AfilaxyColors.primary)
+                                .foregroundColor(Color.afiprimary)
                                 .font(.caption)
                                 .frame(width: 16)
                             
                             Text("Helper: \(helper)")
                                 .font(.subheadline)
-                                .foregroundColor(AfilaxyColors.primary)
+                                .foregroundColor(Color.afiprimary)
                         }
                     }
                     
                     if let location = item.location {
                         HStack {
                             Image(systemName: "location.fill")
-                                .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                                .foregroundColor(Color.afionSurface.opacity(0.6))
                                 .font(.caption)
                                 .frame(width: 16)
                             
                             Text("\(location.latitude, specifier: "%.4f"), \(location.longitude, specifier: "%.4f")")
                                 .font(.caption)
-                                .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                                .foregroundColor(Color.afionSurface.opacity(0.6))
                         }
                     }
                 }
@@ -360,7 +360,7 @@ struct EmptyHistoryCard: View {
             VStack(spacing: 16) {
                 Image(systemName: "clock.badge.questionmark")
                     .font(.system(size: 48))
-                    .foregroundColor(AfilaxyColors.onSurface.opacity(0.4))
+                    .foregroundColor(Color.afionSurface.opacity(0.4))
                 
                 VStack(spacing: 8) {
                     Text("Nenhuma Emergência")
@@ -369,7 +369,7 @@ struct EmptyHistoryCard: View {
                     
                     Text("Seu histórico aparecerá aqui quando você solicitar ou ajudar em emergências")
                         .font(.subheadline)
-                        .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                        .foregroundColor(Color.afionSurface.opacity(0.6))
                         .multilineTextAlignment(.center)
                 }
                 
@@ -378,10 +378,10 @@ struct EmptyHistoryCard: View {
                 }
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(AfilaxyColors.primary)
+                .foregroundColor(Color.afiprimary)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
-                .background(AfilaxyColors.primary.opacity(0.1))
+                .background(Color.afiprimary.opacity(0.1))
                 .clipShape(Capsule())
             }
             .padding(.vertical, 20)

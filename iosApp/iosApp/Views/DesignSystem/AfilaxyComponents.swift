@@ -194,7 +194,7 @@ struct MetricCard: View {
             Spacer()
         }
         .padding()
-        .background(.afiCardBackground)
+        .background(Color.afiCardBackground)
         .overlay(
             // Top border if needed
             borderPosition == .top ?
@@ -238,7 +238,7 @@ struct ActionCard: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(.afiCardBackground)
+            .background(Color.afiCardBackground)
             .cornerRadius(12)
             .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         }
@@ -267,7 +267,7 @@ struct EmergencyButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(isActive ? .afiStatusCritical : .afiError)
+            .background(isActive ? Color.afiStatusCritical : Color.afiError)
             .cornerRadius(16)
             .shadow(color: .afiError.opacity(0.3), radius: 8, x: 0, y: 4)
         }
@@ -357,7 +357,7 @@ struct InfoGridItem: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.afiCardBackground)
+        .background(Color.afiCardBackground)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }

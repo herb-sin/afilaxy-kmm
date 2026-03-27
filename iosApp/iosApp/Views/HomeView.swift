@@ -383,7 +383,7 @@ struct HomeView: View {
 // MARK: - Supporting Views
 
 struct PendingEmergencyRow: View {
-    let emergency: IncomingEmergency
+    let emergency: Any // Placeholder type
     let onAccept: () -> Void
     let onDismiss: () -> Void
     

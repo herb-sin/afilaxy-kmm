@@ -14,6 +14,9 @@ target 'iosApp' do
   # Mantido pela comunidade: https://github.com/invertase/firestore-ios-sdk-frameworks
   pod 'FirebaseFirestore', :git => 'https://github.com/invertase/firestore-ios-sdk-frameworks.git', :tag => '11.10.0'
 
+  # Google Maps SDK for iOS
+  pod 'GoogleMaps', '~> 8.4'
+
 end
 
 post_install do |installer|

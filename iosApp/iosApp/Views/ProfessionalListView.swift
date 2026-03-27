@@ -457,3 +457,5 @@ enum SortOption: String, CaseIterable {
         }
     }
 }
+// Placeholder types for missing models
+typealias ProfessionalSpecialty = String
