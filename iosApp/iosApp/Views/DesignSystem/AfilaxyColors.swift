@@ -111,9 +111,7 @@ extension Color {
     static let afiButtonSecondary = Color.afiSecondary
     static let afiButtonDanger = Color.afiError
     
-    // MARK: - Badge Colors
-    static let afiBadgeSuccess = Color.afiSuccess
-    static let afiBadgeWarning = Color.afiWarning
-    static let afiBadgeError = Color.afiError
-    static let afiBadgeInfo = Color.afiPrimary
+    // MARK: - Legacy Color Aliases (for backward compatibility)
+    static let afiprimary = Color.afiPrimary
+    static let afionSurface = Color.afiOnSurface
 }

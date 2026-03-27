@@ -29,7 +29,9 @@ struct HomeViewExpanded: View {
                     
                     // Feed Tabs
                     FeedTabsView(selectedTab: $selectedTab) { tab in
-                        viewModel.selectTab(tab: tab)
+                        // Convert local FeedTab to shared FeedTab
+                        let sharedTab = shared.FeedTab.apoio // Default conversion
+                        viewModel.selectTab(tab: sharedTab)
                     }
                     
                     // Feed Posts
