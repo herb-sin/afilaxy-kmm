@@ -110,7 +110,7 @@ struct ProfileView: View {
                             }
                         }
                         .padding()
-                        .background(.afiCardBackground)
+                        .background(Color.afiSurface)
                         .cornerRadius(12)
                         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
                         .gridCellColumns(2)
@@ -178,18 +178,19 @@ struct ProfileView: View {
                 onSave: saveProfile
             )
         }
-        .onReceive(container.profile.$state) { s in
-            guard !fieldsLoaded, let p = s?.profile else { return }
+        .onReceive(container.profile.objectWillChange) { _ in
+            guard !fieldsLoaded, let p = container.profile.state?.profile else { return }
+            let p = container.profile.state?.profile
             fieldsLoaded = true
-            name = p.name; phone = p.phone
-            bloodType = p.healthData?.bloodType ?? ""
-            allergies = p.healthData?.allergies.joined(separator: ", ") ?? ""
-            medications = p.healthData?.medications.joined(separator: ", ") ?? ""
-            conditions = p.healthData?.conditions.joined(separator: ", ") ?? ""
-            healthNotes = p.healthData?.notes ?? ""
-            emergencyName = p.emergencyContact?.name ?? ""
-            emergencyPhone = p.emergencyContact?.phone ?? ""
-            emergencyRelationship = p.emergencyContact?.relationship ?? ""
+            name = p?.name ?? ""; phone = p?.phone ?? ""
+            bloodType = p?.healthData?.bloodType ?? ""
+            allergies = p?.healthData?.allergies.joined(separator: ", ") ?? ""
+            medications = p?.healthData?.medications.joined(separator: ", ") ?? ""
+            conditions = p?.healthData?.conditions.joined(separator: ", ") ?? ""
+            healthNotes = p?.healthData?.notes ?? ""
+            emergencyName = p?.emergencyContact?.name ?? ""
+            emergencyPhone = p?.emergencyContact?.phone ?? ""
+            emergencyRelationship = p?.emergencyContact?.relationship ?? ""
         }
     }
 

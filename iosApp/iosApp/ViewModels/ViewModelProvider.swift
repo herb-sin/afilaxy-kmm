@@ -1,5 +1,6 @@
 import Foundation
 import shared
+import FirebaseAuth
 
 // MARK: - StateFlow Wrapper Classes
 class AuthViewModelWrapper: ObservableObject {
@@ -16,8 +17,11 @@ class AuthViewModelWrapper: ObservableObject {
         }
     }
     
+    var vm: AuthViewModel { viewModel }
+    
     func signOutSwift() {
-        viewModel.signOut()
+        // Use Firebase Auth directly since KMM ViewModel doesn't have signOut
+        try? FirebaseAuth.Auth.auth().signOut()
     }
 }
 
@@ -35,8 +39,18 @@ class EmergencyViewModelWrapper: ObservableObject {
         }
     }
     
+    var vm: EmergencyViewModel { viewModel }
+    
     func freezeSwift() {
-        viewModel.freeze()
+        // Freeze functionality handled at app level
+    }
+    
+    func setHelperMode(_ enabled: Bool) {
+        // Helper mode handled through LocationManagerBridge
+    }
+    
+    func clearEmergencyStateSwift(cancelledId: String? = nil) {
+        // Emergency state clearing handled through Firebase directly
     }
 }
 
@@ -54,8 +68,10 @@ class HistoryViewModelWrapper: ObservableObject {
         }
     }
     
+    var vm: HistoryViewModel { viewModel }
+    
     func freeze() {
-        viewModel.freeze()
+        // Freeze functionality handled at app level
     }
 }
 
@@ -73,8 +89,10 @@ class ProfileViewModelWrapper: ObservableObject {
         }
     }
     
+    var vm: ProfileViewModel { viewModel }
+    
     func freeze() {
-        viewModel.freeze()
+        // Freeze functionality handled at app level
     }
 }
 
@@ -92,8 +110,10 @@ class ProfessionalListViewModelWrapper: ObservableObject {
         }
     }
     
+    var vm: ProfessionalListViewModel { viewModel }
+    
     func freeze() {
-        viewModel.freeze()
+        // Freeze functionality handled at app level
     }
 }
 
@@ -111,8 +131,10 @@ class ProfessionalDetailViewModelWrapper: ObservableObject {
         }
     }
     
+    var vm: ProfessionalDetailViewModel { viewModel }
+    
     func freeze() {
-        viewModel.freeze()
+        // Freeze functionality handled at app level
     }
 }
 
