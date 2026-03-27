@@ -4,9 +4,19 @@ import shared
 // Wrapper para ViewModels KMM que não são ObservableObject
 class MedicalProfileViewModelWrapper: ObservableObject {
     let viewModel: MedicalProfileViewModel
+    @Published var profileState: MedicalProfileState?
+    
+    private var stateObserver: StateFlowObserver<MedicalProfileState>?
     
     init() {
         self.viewModel = ViewModelProvider.shared.medicalProfileViewModel
+        
+        // Observa o StateFlow do ViewModel
+        self.stateObserver = StateFlowObserver(viewModel.state)
+        
+        // Conecta o observer ao @Published
+        stateObserver?.$value
+            .assign(to: &$profileState)
     }
 }
 
@@ -17,24 +27,28 @@ struct ProfileViewExpanded: View {
         wrapper.viewModel
     }
     
+    private var profileState: MedicalProfileState? {
+        wrapper.profileState
+    }
+    
     var body: some View {
         NavigationView {
             ScrollView {
                 LazyVStack(spacing: 16) {
                     // Patient Profile Header
                     PatientProfileCardView(
-                        profile: viewModel.state.medicalProfile
+                        profile: profileState?.medicalProfile
                     ) {
                         // Edit profile action
                     }
                     
                     // Asma Type Info
-                    if let profile = viewModel.state.medicalProfile {
+                    if let profile = profileState?.medicalProfile {
                         AsmaTypeCardView(profile: profile)
                     }
                     
                     // Last Exam
-                    if let exam = viewModel.state.medicalProfile?.lastExam {
+                    if let exam = profileState?.medicalProfile?.lastExam {
                         LastExamCardView(exam: exam)
                     }
                     
@@ -42,17 +56,21 @@ struct ProfileViewExpanded: View {
                     EmergencyProtocolCardView()
                     
                     // Emergency Contacts
-                    EmergencyContactsCardView(
-                        contacts: viewModel.state.emergencyContacts
-                    ) {
-                        // Add contact action
+                    if let contacts = profileState?.emergencyContacts {
+                        EmergencyContactsCardView(
+                            contacts: contacts
+                        ) {
+                            // Add contact action
+                        }
                     }
                     
                     // Medications
-                    MedicationsCardView(
-                        medications: viewModel.state.medications
-                    ) {
-                        // Add medication action
+                    if let medications = profileState?.medications {
+                        MedicationsCardView(
+                            medications: medications
+                        ) {
+                            // Add medication action
+                        }
                     }
                 }
                 .padding(16)
@@ -406,6 +424,7 @@ extension AsmaType {
         case .persistenteLeve: return "Persistente Leve"
         case .persistenteModerada: return "Persistente Moderada"
         case .persistenteGrave: return "Persistente Grave"
+        default: return "Não Especificado"
         }
     }
 }
@@ -417,6 +436,7 @@ extension ExamType {
         case .raioX: return "Raio-X"
         case .testeAlergia: return "Teste de Alergia"
         case .consultaRotina: return "Consulta de Rotina"
+        default: return "Exame"
         }
     }
 }
@@ -427,6 +447,7 @@ extension MedicationType {
         case .controle: return "CONTROLE"
         case .manutencao: return "MANUTENÇÃO"
         case .resgate: return "RESGATE"
+        default: return "MEDICAÇÃO"
         }
     }
     
@@ -435,6 +456,7 @@ extension MedicationType {
         case .controle: return .blue
         case .manutencao: return .cyan
         case .resgate: return .red
+        default: return .gray
         }
     }
     
@@ -443,6 +465,7 @@ extension MedicationType {
         case .controle: return "link"
         case .manutencao: return "arrow.clockwise"
         case .resgate: return "bolt.fill"
+        default: return "pills"
         }
     }
 }

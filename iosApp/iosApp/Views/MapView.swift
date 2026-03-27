@@ -10,7 +10,7 @@ struct MapView: View {
     )
     @State private var showHelperMode = false
     @State private var trackingMode: MapUserTrackingMode = .none
-    @State private var mapStyle: MapStyle = .standard
+    @State private var isHelperModeActive = false // Local state fallback
     
     var body: some View {
         ZStack {
@@ -23,7 +23,6 @@ struct MapView: View {
                     HelperAnnotationView(helper: helper)
                 }
             }
-            .mapStyle(mapStyle)
             .ignoresSafeArea(.all, edges: .top)
             
             // Overlay UI
@@ -41,7 +40,7 @@ struct MapView: View {
                 
                 // Bottom Action Cards
                 VStack(spacing: 12) {
-                    if container.emergency.state?.isHelperModeActive == true {
+                    if isHelperModeActive {
                         HelperModeActiveCard()
                     }
                     
@@ -200,24 +199,15 @@ struct HelperToggleCard: View {
                     Text("Modo Helper")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text(container.emergency.state?.isHelperModeActive == true ? "Ativo" : "Inativo")
+                    Text(isHelperModeActive ? "Ativo" : "Inativo")
                         .font(.caption)
                         .foregroundColor(Color.afionSurface.opacity(0.6))
                 }
                 
                 Spacer()
                 
-                Toggle("", isOn: Binding(
-                    get: { container.emergency.state?.isHelperModeActive == true },
-                    set: { isOn in
-                        if isOn {
-                            container.emergency.vm.activateHelperMode()
-                        } else {
-                            container.emergency.vm.deactivateHelperMode()
-                        }
-                    }
-                ))
-                .toggleStyle(SwitchToggleStyle(tint: Color.afiprimary))
+                Toggle("", isOn: $isHelperModeActive)
+                    .toggleStyle(SwitchToggleStyle(tint: Color.afiprimary))
             }
         }
         .frame(maxWidth: .infinity)

@@ -37,7 +37,7 @@ struct ProfileView: View {
                                 }
                             
                             VStack(spacing: 8) {
-                                Text(profile.displayName ?? profile.name)
+                                Text(profile.name) // Using name instead of displayName
                                     .font(.title2)
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)

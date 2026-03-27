@@ -267,7 +267,7 @@ struct ProfileSummaryCard: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     if let profile = container.profile.state?.profile {
-                        Text(profile.displayName ?? profile.name)
+                        Text(profile.name) // Using name instead of displayName
                             .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
