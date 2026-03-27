@@ -66,8 +66,8 @@ struct HomeView: View {
                 }
             }
         }
-        .onReceive(container.auth.$state) { state in
-            if state?.isAuthenticated == false {
+        .onReceive(container.auth.objectWillChange) { _ in
+            if container.auth.state?.isAuthenticated == false {
                 // Handle logout if needed
             }
         }
