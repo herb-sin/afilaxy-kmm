@@ -62,8 +62,8 @@ fun sharedModule(): Module = module {
     
     // New ViewModels for expanded features
     factory { HomeViewModel(get(), get(), get()) }
-    factory { (userId: String) -> MedicalProfileViewModel(get(), userId) }
-    factory { (professionalId: String) -> ProfessionalDashboardViewModel(get(), professionalId) }
+    factory { MedicalProfileViewModel(get(), "default_user") }
+    factory { ProfessionalDashboardViewModel(get(), "default_professional") }
 }
 
 /**
