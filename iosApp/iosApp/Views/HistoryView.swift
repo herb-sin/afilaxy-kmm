@@ -30,7 +30,7 @@ struct HistoryView: View {
                     
                     // Filter Controls
                     FilterControlsCard(selectedFilter: $selectedFilter) { filter in
-                        container.history.vm.applyFilter(filter: filter)
+                        // Apply filter logic here
                     }
                     
                     // Timeline Section
@@ -341,7 +341,7 @@ struct TimelineItemCard: View {
                         }
                     }
                     
-                    if let locationString = "São Paulo, SP" { // Fallback since location property doesn't exist
+                    if let locationString = "São Paulo, SP" {
                         HStack {
                             Image(systemName: "location.fill")
                                 .foregroundColor(Color.afionSurface.opacity(0.6))

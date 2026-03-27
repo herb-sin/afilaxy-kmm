@@ -116,8 +116,8 @@ struct ContentView: View {
             .onAppear {
                 setupLocationPermissions()
             }
-            .onReceive(container.emergency.$state) { state in
-                handleEmergencyStateChange(state)
+            .onReceive(container.emergency.objectWillChange) { _ in
+                handleEmergencyStateChange(container.emergency.state)
             }
             .onReceive(container.$resolvedEmergencyId.compactMap { $0 }) { _ in
                 handleEmergencyResolved()

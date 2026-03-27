@@ -133,7 +133,7 @@ class AppContainer: ObservableObject {
         // Sem receive(on:) — post já ocorre na main thread, enfileirar criaria janela pós-freezeAll
         NotificationCenter.default.publisher(for: .init("AfilaxyIncomingEmergency"))
             .sink { [weak self] notification in
-                guard let self,
+                guard let self = self,
                       let emergencyId = notification.userInfo?["emergencyId"] as? String,
                       !self.notifiedEmergencyIds.contains(emergencyId) else { return }
                 self.notifiedEmergencyIds.insert(emergencyId)
@@ -156,7 +156,7 @@ class AppContainer: ObservableObject {
             .whereField("latitude", isGreaterThanOrEqualTo: lat - deltaLat)
             .whereField("latitude", isLessThanOrEqualTo: lat + deltaLat)
             .addSnapshotListener { [weak self] snapshot, error in
-                guard let self, let snapshot else { return }
+                guard let self = self, let snapshot = snapshot else { return }
                 let uid = Auth.auth().currentUser?.uid
                 snapshot.documentChanges
                     .filter { $0.type == .added }
