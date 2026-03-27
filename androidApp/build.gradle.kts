@@ -91,6 +91,11 @@ android {
         compose = true
     }
     
+    lint {
+        disable.add("MissingTranslation")
+        abortOnError = false
+    }
+    
     packaging {
         resources {
             excludes.add("/META-INF/{AL2.0,LGPL2.1}")

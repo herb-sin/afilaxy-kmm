@@ -79,7 +79,12 @@ class EmergencyOverlayActivity : ComponentActivity() {
             ?.takeIf { it.matches(Regex("\\d+(\\.\\d+)?")) } ?: "0"
         
         val filter = IntentFilter("com.afilaxy.CANCEL_EMERGENCY")
-        registerReceiver(cancelReceiver, filter, "com.afilaxy.permission.CANCEL_EMERGENCY", null)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(cancelReceiver, filter, "com.afilaxy.permission.CANCEL_EMERGENCY", null, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(cancelReceiver, filter, "com.afilaxy.permission.CANCEL_EMERGENCY", null)
+        }
         
         setContent {
             AflixyTheme {

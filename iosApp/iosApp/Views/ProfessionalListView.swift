@@ -75,9 +75,9 @@ struct ProfessionalListView: View {
         // Filter by specialty - using string comparison
         if let specialty = selectedSpecialty {
             filtered = filtered.filter { professional in
-                // Convert specialty to string for comparison
-                let specialtyString = String(describing: professional.specialty)
-                return specialtyString.contains(specialty) || specialty.contains(specialtyString)
+                // Convert Specialty enum to string for comparison
+                let specialtyString = professional.specialty.rawValue
+                return specialtyString == specialty
             }
         }
         
@@ -111,8 +111,13 @@ struct ProfessionalListView: View {
     }
     
     private func specialtyLabel(_ specialty: ProfessionalSpecialty) -> String {
-        // Mock specialty labels since enum doesn't exist
-        return specialty
+        // Convert specialty string to readable label
+        switch specialty {
+        case "pneumologist": return "Pneumologista"
+        case "allergist": return "Alergista"
+        case "physiotherapist": return "Fisioterapeuta"
+        default: return specialty.capitalized
+        }
     }
 }
 

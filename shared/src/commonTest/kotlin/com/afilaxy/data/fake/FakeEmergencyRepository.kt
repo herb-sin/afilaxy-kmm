@@ -104,6 +104,10 @@ class FakeEmergencyRepository(
         ) else Result.failure(Exception("Erro ao carregar histórico"))
     }
 
+    override fun observeNearbyEmergencies(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Emergency>> {
+        return MutableStateFlow(emptyList())
+    }
+
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> = statusFlow
 
     override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? = null
