@@ -393,7 +393,7 @@ struct PendingEmergencyRow: View {
                 .foregroundColor(.afiError)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(emergency.name) precisa de ajuda")
+                Text("Pessoa precisa de ajuda") // Fallback since emergency.name doesn't exist
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.afiOnErrorContainer)

@@ -4,9 +4,19 @@ import shared
 // Wrapper para ViewModels KMM que não são ObservableObject
 class HomeViewModelWrapper: ObservableObject {
     let viewModel: HomeViewModel
+    @Published var homeState: HomeState?
+    
+    private var stateObserver: StateFlowObserver<HomeState>?
     
     init() {
         self.viewModel = ViewModelProvider.shared.homeViewModel
+        
+        // Observa o StateFlow do ViewModel
+        self.stateObserver = StateFlowObserver(viewModel.state)
+        
+        // Conecta o observer ao @Published
+        stateObserver?.$value
+            .assign(to: &$homeState)
     }
 }
 
@@ -16,6 +26,10 @@ struct HomeViewExpanded: View {
     
     private var viewModel: HomeViewModel {
         wrapper.viewModel
+    }
+    
+    private var homeState: HomeState? {
+        wrapper.homeState
     }
     
     var body: some View {
@@ -35,24 +49,28 @@ struct HomeViewExpanded: View {
                     }
                     
                     // Feed Posts
-                    ForEach(viewModel.state.feedPosts, id: \.id) { post in
-                        PostCardView(post: post) {
-                            viewModel.likePost(postId: post.id, userId: "currentUserId")
+                    if let posts = homeState?.feedPosts {
+                        ForEach(posts, id: \.id) { post in
+                            PostCardView(post: post) {
+                                viewModel.likePost(postId: post.id, userId: "currentUserId")
+                            }
                         }
                     }
                     
                     // Air Quality
-                    if let airQuality = viewModel.state.airQuality {
+                    if let airQuality = homeState?.airQuality {
                         AirQualityCardView(airQuality: airQuality)
                     }
                     
                     // Quick Actions
-                    QuickActionsCardView(actions: viewModel.state.quickActions) { action in
-                        viewModel.executeQuickAction(action: action)
+                    if let actions = homeState?.quickActions {
+                        QuickActionsCardView(actions: actions) { action in
+                            viewModel.executeQuickAction(action: action)
+                        }
                     }
                     
                     // Community Stats
-                    if let stats = viewModel.state.communityStats {
+                    if let stats = homeState?.communityStats {
                         CommunityStatsCardView(stats: stats)
                     }
                 }

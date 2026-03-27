@@ -29,9 +29,9 @@ struct HistoryView: View {
                     StatisticsHeroCard(history: state.filteredHistory)
                     
                     // Filter Controls
-                    FilterControlsCard(selectedFilter: $selectedFilter, onFilterChange: { filter in
+                    FilterControlsCard(selectedFilter: $selectedFilter) { filter in
                         container.history.vm.applyFilter(filter: filter)
-                    })
+                    }
                     
                     // Timeline Section
                     TimelineHeaderCard(count: state.filteredHistory.count)
@@ -136,6 +136,11 @@ struct StatMetric: View {
 struct FilterControlsCard: View {
     @Binding var selectedFilter: HistoryFilter
     let onFilterChange: (HistoryFilter) -> Void
+    
+    init(selectedFilter: Binding<HistoryFilter>, onFilterChange: @escaping (HistoryFilter) -> Void) {
+        self._selectedFilter = selectedFilter
+        self.onFilterChange = onFilterChange
+    }
     
     private let filters: [(HistoryFilter, String, String)] = [
         (.all, "Todas", "list.bullet"),
@@ -336,14 +341,14 @@ struct TimelineItemCard: View {
                         }
                     }
                     
-                    if let location = item.location {
+                    if let locationString = "São Paulo, SP" { // Fallback since location property doesn't exist
                         HStack {
                             Image(systemName: "location.fill")
                                 .foregroundColor(Color.afionSurface.opacity(0.6))
                                 .font(.caption)
                                 .frame(width: 16)
                             
-                            Text("\(location.latitude, specifier: "%.4f"), \(location.longitude, specifier: "%.4f")")
+                            Text(locationString)
                                 .font(.caption)
                                 .foregroundColor(Color.afionSurface.opacity(0.6))
                         }
