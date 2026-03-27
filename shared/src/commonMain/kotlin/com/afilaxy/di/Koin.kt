@@ -1,33 +1,17 @@
 package com.afilaxy.di
 
-import com.afilaxy.data.repository.AuthRepositoryImpl
-import com.afilaxy.data.repository.ChatRepositoryImpl
-import com.afilaxy.data.repository.EmergencyRepositoryImpl
-import com.afilaxy.data.repository.HealthProfessionalRepositoryImpl
-import com.afilaxy.data.repository.LocationRepositoryImpl
-import com.afilaxy.data.repository.NotificationRepositoryImpl
-import com.afilaxy.data.repository.PreferencesRepositoryImpl
-import com.afilaxy.data.repository.ProfileRepositoryImpl
-import com.afilaxy.domain.repository.AuthRepository
-import com.afilaxy.domain.repository.ChatRepository
-import com.afilaxy.domain.repository.EmergencyRepository
-import com.afilaxy.domain.repository.HealthProfessionalRepository
-import com.afilaxy.domain.repository.LocationRepository
-import com.afilaxy.domain.repository.NotificationRepository
-import com.afilaxy.domain.repository.PreferencesRepository
-import com.afilaxy.domain.repository.ProfileRepository
-import com.afilaxy.domain.usecase.CreateEmergencyUseCase
-import com.afilaxy.domain.usecase.FindHelpersUseCase
-import com.afilaxy.domain.usecase.SendChatMessageUseCase
+import com.afilaxy.data.repository.*
+import com.afilaxy.domain.repository.*
+import com.afilaxy.domain.usecase.*
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
-import com.afilaxy.presentation.professional.CrmLookupViewModel
-import com.afilaxy.presentation.professional.ProfessionalListViewModel
-import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
+import com.afilaxy.presentation.professional.*
 import com.afilaxy.presentation.profile.ProfileViewModel
+import com.afilaxy.presentation.home.HomeViewModel
+import com.afilaxy.presentation.medical.MedicalProfileViewModel
 import com.russhwolf.settings.Settings
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
@@ -52,6 +36,12 @@ fun sharedModule(): Module = module {
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
     single<NotificationRepository> { NotificationRepositoryImpl(get()) }
     single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get(), get()) }
+    
+    // New repositories for expanded features
+    single<MedicalRepository> { MedicalRepositoryImpl(get()) }
+    single<SocialRepository> { SocialRepositoryImpl(get()) }
+    single<ProfessionalRepository> { ProfessionalRepositoryImpl(get()) }
+    
     // LocationRepository é injetado no platformModule()
     
     // Use Cases
@@ -69,6 +59,11 @@ fun sharedModule(): Module = module {
     factory { ProfessionalListViewModel(get()) }
     factory { ProfessionalDetailViewModel(get()) }
     factory { CrmLookupViewModel() }
+    
+    // New ViewModels for expanded features
+    factory { HomeViewModel(get(), get(), get()) }
+    factory { (userId: String) -> MedicalProfileViewModel(get(), userId) }
+    factory { (professionalId: String) -> ProfessionalDashboardViewModel(get(), professionalId) }
 }
 
 /**

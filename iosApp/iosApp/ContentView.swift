@@ -55,11 +55,11 @@ struct ContentView: View {
     @State private var resolvedChatId: String? = nil
     
     // MARK: - Adaptive Tab View Style
-    private var adaptiveTabViewStyle: AnyTabViewStyle {
+    private var adaptiveTabViewStyle: any TabViewStyle {
         if #available(iOS 18.0, *) {
-            return AnyTabViewStyle(.sidebarAdaptable)
+            return .sidebarAdaptable
         } else {
-            return AnyTabViewStyle(.automatic)
+            return .automatic
         }
     }
 
