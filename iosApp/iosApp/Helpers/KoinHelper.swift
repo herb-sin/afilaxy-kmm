@@ -2,52 +2,42 @@ import Foundation
 import shared
 
 // Safe getters para ViewModels - evita crashes no boundary Kotlin/Swift
-@_cdecl("safeGetLoginViewModel")
-public func safeGetLoginViewModel() throws -> LoginViewModel {
+func safeGetLoginViewModel() -> LoginViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! LoginViewModel
 }
 
-@_cdecl("safeGetAuthViewModel") 
-public func safeGetAuthViewModel() throws -> AuthViewModel {
+func safeGetAuthViewModel() -> AuthViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! AuthViewModel
 }
 
-@_cdecl("safeGetEmergencyViewModel")
-public func safeGetEmergencyViewModel() throws -> EmergencyViewModel {
+func safeGetEmergencyViewModel() -> EmergencyViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! EmergencyViewModel
 }
 
-@_cdecl("safeGetProfileViewModel")
-public func safeGetProfileViewModel() throws -> ProfileViewModel {
+func safeGetProfileViewModel() -> ProfileViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfileViewModel
 }
 
-@_cdecl("safeGetHistoryViewModel")
-public func safeGetHistoryViewModel() throws -> HistoryViewModel {
+func safeGetHistoryViewModel() -> HistoryViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! HistoryViewModel
 }
 
-@_cdecl("safeGetProfessionalListViewModel")
-public func safeGetProfessionalListViewModel() throws -> ProfessionalListViewModel {
+func safeGetProfessionalListViewModel() -> ProfessionalListViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfessionalListViewModel
 }
 
-@_cdecl("safeGetProfessionalDetailViewModel")
-public func safeGetProfessionalDetailViewModel() throws -> ProfessionalDetailViewModel {
+func safeGetProfessionalDetailViewModel() -> ProfessionalDetailViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfessionalDetailViewModel
 }
 
-@_cdecl("safeGetHomeViewModel")
-public func safeGetHomeViewModel() throws -> HomeViewModel {
+func safeGetHomeViewModel() -> HomeViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! HomeViewModel
 }
 
-@_cdecl("safeGetMedicalProfileViewModel")
-public func safeGetMedicalProfileViewModel() throws -> MedicalProfileViewModel {
+func safeGetMedicalProfileViewModel() -> MedicalProfileViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! MedicalProfileViewModel
 }
 
-@_cdecl("safeGetProfessionalDashboardViewModel")
-public func safeGetProfessionalDashboardViewModel() throws -> ProfessionalDashboardViewModel {
+func safeGetProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel {
     return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfessionalDashboardViewModel
 }

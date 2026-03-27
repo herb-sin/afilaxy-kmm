@@ -1,9 +1,22 @@
 import SwiftUI
 import shared
 
+// Wrapper para ViewModels KMM que não são ObservableObject
+class HomeViewModelWrapper: ObservableObject {
+    let viewModel: HomeViewModel
+    
+    init() {
+        self.viewModel = ViewModelProvider.shared.homeViewModel
+    }
+}
+
 struct HomeViewExpanded: View {
-    @StateObject private var viewModel = ViewModelProvider.shared.homeViewModel
+    @StateObject private var wrapper = HomeViewModelWrapper()
     @State private var selectedTab: FeedTab = .apoio
+    
+    private var viewModel: HomeViewModel {
+        wrapper.viewModel
+    }
     
     var body: some View {
         NavigationView {

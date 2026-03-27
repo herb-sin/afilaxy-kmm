@@ -19,48 +19,38 @@ class ViewModelProvider {
     // Usa funções safeGet* marcadas com @Throws em vez de getKoin().get()
     // para que exceções Kotlin não cruzem o boundary e causem abort().
     func getLoginViewModel() -> LoginViewModel {
-        do { return try KoinHelperKt.safeGetLoginViewModel() }
-        catch { fatalError("❌ Koin: LoginViewModel failed — \(error)") }
+        return safeGetLoginViewModel()
     }
     func getAuthViewModel() -> AuthViewModel {
-        do { return try KoinHelperKt.safeGetAuthViewModel() }
-        catch { fatalError("❌ Koin: AuthViewModel failed — \(error)") }
+        return safeGetAuthViewModel()
     }
     func getEmergencyViewModel() -> EmergencyViewModel {
-        do { return try KoinHelperKt.safeGetEmergencyViewModel() }
-        catch { fatalError("❌ Koin: EmergencyViewModel failed — \(error)") }
+        return safeGetEmergencyViewModel()
     }
     func getProfileViewModel() -> ProfileViewModel {
-        do { return try KoinHelperKt.safeGetProfileViewModel() }
-        catch { fatalError("❌ Koin: ProfileViewModel failed — \(error)") }
+        return safeGetProfileViewModel()
     }
     func getHistoryViewModel() -> HistoryViewModel {
-        do { return try KoinHelperKt.safeGetHistoryViewModel() }
-        catch { fatalError("❌ Koin: HistoryViewModel failed — \(error)") }
+        return safeGetHistoryViewModel()
     }
     func getProfessionalListViewModel() -> ProfessionalListViewModel {
-        do { return try KoinHelperKt.safeGetProfessionalListViewModel() }
-        catch { fatalError("❌ Koin: ProfessionalListViewModel failed — \(error)") }
+        return safeGetProfessionalListViewModel()
     }
 
     func getProfessionalDetailViewModel() -> ProfessionalDetailViewModel {
-        do { return try KoinHelperKt.safeGetProfessionalDetailViewModel() }
-        catch { fatalError("❌ Koin: ProfessionalDetailViewModel failed — \(error)") }
+        return safeGetProfessionalDetailViewModel()
     }
 
     func getHomeViewModel() -> HomeViewModel {
-        do { return try KoinHelperKt.safeGetHomeViewModel() }
-        catch { fatalError("❌ Koin: HomeViewModel failed — \(error)") }
+        return safeGetHomeViewModel()
     }
     
     func getMedicalProfileViewModel() -> MedicalProfileViewModel {
-        do { return try KoinHelperKt.safeGetMedicalProfileViewModel() }
-        catch { fatalError("❌ Koin: MedicalProfileViewModel failed — \(error)") }
+        return safeGetMedicalProfileViewModel()
     }
     
     func getProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel {
-        do { return try KoinHelperKt.safeGetProfessionalDashboardViewModel() }
-        catch { fatalError("❌ Koin: ProfessionalDashboardViewModel failed — \(error)") }
+        return safeGetProfessionalDashboardViewModel()
     }
 
     func getChatViewModel(emergencyId: String) -> ChatViewModel {
