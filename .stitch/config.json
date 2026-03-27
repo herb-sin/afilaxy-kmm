@@ -1,0 +1,24 @@
+{
+  "projectId": "14004449678458817852",
+  "name": "Afilaxy Health Equity",
+  "description": "KMM app for asthma emergency P2P network",
+  "language": "kotlin",
+  "framework": "kmm",
+  "context": {
+    "architecture": "Clean Architecture + MVVM",
+    "platforms": ["android", "ios"],
+    "sharedCode": "80%+",
+    "mainFeatures": [
+      "Emergency P2P network",
+      "Real-time chat",
+      "Geolocation",
+      "Firebase integration",
+      "Professional subscriptions"
+    ]
+  },
+  "paths": {
+    "shared": "shared/src/commonMain/kotlin/com/afilaxy",
+    "android": "androidApp/src/main",
+    "ios": "iosApp/iosApp"
+  }
+}
