@@ -1,8 +1,21 @@
 import SwiftUI
 import shared
 
+// Wrapper para ViewModels KMM que não são ObservableObject
+class MedicalProfileViewModelWrapper: ObservableObject {
+    let viewModel: MedicalProfileViewModel
+    
+    init() {
+        self.viewModel = ViewModelProvider.shared.medicalProfileViewModel
+    }
+}
+
 struct ProfileViewExpanded: View {
-    @StateObject private var viewModel = ViewModelProvider.shared.medicalProfileViewModel
+    @StateObject private var wrapper = MedicalProfileViewModelWrapper()
+    
+    private var viewModel: MedicalProfileViewModel {
+        wrapper.viewModel
+    }
     
     var body: some View {
         NavigationView {
@@ -366,7 +379,7 @@ struct MedicationItemView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                Text("\\(medication.dosage) • \\(medication.frequency)\\(medication.timing.map { " (\\($0))" } ?? "")")
+                Text("\\(medication.dosage) • \\(medication.frequency)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
