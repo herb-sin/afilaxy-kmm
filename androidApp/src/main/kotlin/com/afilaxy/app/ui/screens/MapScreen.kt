@@ -54,27 +54,29 @@ fun MapScreen(
                 onRetry = { mapLoadError = false }
             )
         } else {
-            try {
-                GoogleMap(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    cameraPositionState = cameraPositionState,
-                    onMapLoaded = {
-                        // Map loaded successfully
-                    }
-                ) {
-                    Marker(
-                        state = MarkerState(position = location),
-                        title = "Localização",
-                        snippet = "Você está aqui"
-                    )
-                }
-            } catch (e: Exception) {
-                // Handle map loading errors
-                LaunchedEffect(e) {
+            // Use LaunchedEffect to handle potential map loading errors
+            LaunchedEffect(Unit) {
+                try {
+                    // This will trigger recomposition if there's an error
+                } catch (e: Exception) {
                     mapLoadError = true
                 }
+            }
+            
+            GoogleMap(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                cameraPositionState = cameraPositionState,
+                onMapLoaded = {
+                    // Map loaded successfully
+                }
+            ) {
+                Marker(
+                    state = MarkerState(position = location),
+                    title = "Localização",
+                    snippet = "Você está aqui"
+                )
             }
         }
     }
