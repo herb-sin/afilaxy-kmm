@@ -20,7 +20,7 @@ struct HomeViewExpanded: View {
                     }
                     
                     // Feed Posts
-                    ForEach(viewModel.state.feedPosts, id: \\.id) { post in
+                    ForEach(viewModel.state.feedPosts, id: \.id) { post in
                         PostCardView(post: post) {
                             viewModel.likePost(postId: post.id, userId: "currentUserId")
                         }
@@ -96,7 +96,7 @@ struct FeedTabsView: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            ForEach([FeedTab.apoio, FeedTab.recentes, FeedTab.destaques], id: \\.self) { tab in
+            ForEach([FeedTab.apoio, FeedTab.recentes, FeedTab.destaques], id: \.self) { tab in
                 Button(action: {
                     selectedTab = tab
                     onTabSelected(tab)
@@ -232,7 +232,7 @@ struct QuickActionsCardView: View {
                 .font(.headline)
                 .fontWeight(.bold)
             
-            ForEach(actions, id: \\.id) { action in
+            ForEach(actions, id: \.id) { action in
                 Button(action: {
                     onActionClick(action.action)
                 }) {
@@ -276,8 +276,18 @@ struct CommunityStatsCardView: View {
     }
 }
 
-enum FeedTab: CaseIterable {
+enum FeedTab: CaseIterable, Identifiable {
     case apoio, recentes, destaques
+    
+    var id: String { rawValue }
+    
+    var rawValue: String {
+        switch self {
+        case .apoio: return "apoio"
+        case .recentes: return "recentes"
+        case .destaques: return "destaques"
+        }
+    }
     
     var displayName: String {
         switch self {
