@@ -41,7 +41,7 @@ struct MapView: View {
                 
                 // Bottom Action Cards
                 VStack(spacing: 12) {
-                    if container.helper.state?.isHelperModeActive == true {
+                    if container.emergency.state?.isHelperModeActive == true {
                         HelperModeActiveCard()
                     }
                     
@@ -79,7 +79,7 @@ struct MapView: View {
     
     private func updateLocationIfNeeded() {
         if LocationManager.shared.hasPermission {
-            LocationManager.shared.requestLocation()
+            // LocationManager.shared.requestLocation()
         }
     }
 }
@@ -91,13 +91,13 @@ struct LocationStatusCard: View {
         AfilaxyCard {
             HStack(spacing: 8) {
                 Image(systemName: "location.fill")
-                    .foregroundColor(AfilaxyColors.primary)
+                    .foregroundColor(Color.afiprimary)
                     .font(.caption)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Localização Atual")
                         .font(.caption2)
-                        .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                        .foregroundColor(Color.afionSurface.opacity(0.6))
                     Text("São Paulo, SP")
                         .font(.caption)
                         .fontWeight(.medium)
@@ -122,13 +122,13 @@ struct MapControlsCard: View {
                 Button(action: { /* Center on user */ }) {
                     Image(systemName: "location.circle")
                         .font(.title3)
-                        .foregroundColor(AfilaxyColors.primary)
+                        .foregroundColor(Color.afiprimary)
                 }
                 
                 Button(action: { showMapOptions.toggle() }) {
                     Image(systemName: "map")
                         .font(.title3)
-                        .foregroundColor(AfilaxyColors.primary)
+                        .foregroundColor(Color.afiprimary)
                 }
             }
         }
@@ -168,7 +168,7 @@ struct HelperModeActiveCard: View {
                         .foregroundColor(.green)
                     Text("Você está disponível para ajudar")
                         .font(.caption)
-                        .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                        .foregroundColor(Color.afionSurface.opacity(0.6))
                 }
                 
                 Spacer()
@@ -193,31 +193,31 @@ struct HelperToggleCard: View {
         AfilaxyCard {
             HStack {
                 Image(systemName: "heart.fill")
-                    .foregroundColor(AfilaxyColors.primary)
+                    .foregroundColor(Color.afiprimary)
                     .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Modo Helper")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text(container.helper.state?.isHelperModeActive == true ? "Ativo" : "Inativo")
+                    Text(container.emergency.state?.isHelperModeActive == true ? "Ativo" : "Inativo")
                         .font(.caption)
-                        .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                        .foregroundColor(Color.afionSurface.opacity(0.6))
                 }
                 
                 Spacer()
                 
                 Toggle("", isOn: Binding(
-                    get: { container.helper.state?.isHelperModeActive == true },
+                    get: { container.emergency.state?.isHelperModeActive == true },
                     set: { isOn in
                         if isOn {
-                            container.helper.vm.activateHelperMode()
+                            container.emergency.vm.activateHelperMode()
                         } else {
-                            container.helper.vm.deactivateHelperMode()
+                            container.emergency.vm.deactivateHelperMode()
                         }
                     }
                 ))
-                .toggleStyle(SwitchToggleStyle(tint: AfilaxyColors.primary))
+                .toggleStyle(SwitchToggleStyle(tint: Color.afiprimary))
             }
         }
         .frame(maxWidth: .infinity)
@@ -266,10 +266,10 @@ struct NearbyHelpersCard: View {
                     
                     Text("3 disponíveis")
                         .font(.caption)
-                        .foregroundColor(AfilaxyColors.primary)
+                        .foregroundColor(Color.afiprimary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(AfilaxyColors.primary.opacity(0.1))
+                        .background(Color.afiprimary.opacity(0.1))
                         .clipShape(Capsule())
                 }
                 
@@ -277,17 +277,17 @@ struct NearbyHelpersCard: View {
                     ForEach(0..<3, id: \.self) { index in
                         VStack(spacing: 4) {
                             Circle()
-                                .fill(AfilaxyColors.primary.opacity(0.2))
+                                .fill(Color.afiprimary.opacity(0.2))
                                 .frame(width: 32, height: 32)
                                 .overlay {
                                     Image(systemName: "person.fill")
                                         .font(.caption)
-                                        .foregroundColor(AfilaxyColors.primary)
+                                        .foregroundColor(Color.afiprimary)
                                 }
                             
                             Text("\(0.8 + Double(index) * 0.4, specifier: "%.1f")km")
                                 .font(.caption2)
-                                .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                                .foregroundColor(Color.afionSurface.opacity(0.6))
                         }
                     }
                     
@@ -297,7 +297,7 @@ struct NearbyHelpersCard: View {
                         // Show helpers list
                     }
                     .font(.caption)
-                    .foregroundColor(AfilaxyColors.primary)
+                    .foregroundColor(Color.afiprimary)
                 }
             }
         }
@@ -310,7 +310,7 @@ struct HelperAnnotationView: View {
     var body: some View {
         VStack(spacing: 4) {
             Circle()
-                .fill(AfilaxyColors.primary)
+                .fill(Color.afiprimary)
                 .frame(width: 24, height: 24)
                 .overlay {
                     Image(systemName: "heart.fill")
