@@ -5,30 +5,312 @@ import FirebaseAuth
 import shared
 
 struct HomeView: View {
-    @Binding var path: NavigationPath
-    let onLogout: () -> Void
     @EnvironmentObject var container: AppContainer
+    @Environment(\.dismiss) private var dismiss
     @State private var showLogoutAlert = false
     @State private var helperToggle = false
     @State private var isTogglingHelper = false
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        guard let state = container.emergency.state else {
-            return AnyView(ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity))
+        NavigationView {
+            NavigationStack(path: $navigationPath) {
+                ScrollView {
+                    LazyVStack(spacing: 20) {
+                        // Hero Section
+                        heroSection
+                        
+                        // Emergency Button
+                        emergencyButton
+                        
+                        // Helper Mode Toggle
+                        helperModeCard
+                        
+                        // Pending Emergencies (if any)
+                        if !container.pendingIncomingEmergencies.isEmpty {
+                            pendingEmergenciesSection
+                        }
+                        
+                        // Quick Actions Grid
+                        quickActionsGrid
+                        
+                        // Community Feed Preview
+                        communityFeedPreview
+                        
+                        // Support Links
+                        supportLinksSection
+                    }
+                    .padding()
+                }
+                .background(Color.afiBackground)
+                .navigationTitle("Afilaxy")
+                .navigationBarTitleDisplayMode(.large)
+                .navigationDestination(for: AppRoute.self) { route in
+                    destinationView(for: route)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button { showLogoutAlert = true } label: {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .foregroundColor(.afiPrimary)
+                        }
+                    }
+                }
+                .alert("Sair", isPresented: $showLogoutAlert) {
+                    Button("Cancelar", role: .cancel) {}
+                    Button("Sair", role: .destructive) {
+                        performLogout()
+                    }
+                } message: { 
+                    Text("Deseja realmente sair?") 
+                }
+            }
         }
-        return AnyView(homeBody(state: state))
+        .onReceive(container.auth.$state) { state in
+            if state?.isAuthenticated == false {
+                // Handle logout if needed
+            }
+        }
     }
-
+    
+    // MARK: - Hero Section
+    private var heroSection: some View {
+        HeroGradientCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "lungs.fill")
+                        .font(.title)
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    if let state = container.emergency.state, state.hasActiveEmergency {
+                        StatusBadge(text: "Emergência Ativa", status: .error)
+                    }
+                }
+                
+                Text("Respire fundo.\nVocê não está sozinho.")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.leading)
+                
+                Text("Conectamos pessoas com asma para apoio mútuo e acesso rápido à ajuda quando mais precisam.")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.9))
+                    .lineLimit(3)
+            }
+        }
+    }
+    
+    // MARK: - Emergency Button
+    private var emergencyButton: some View {
+        let state = container.emergency.state
+        let isActive = state?.hasActiveEmergency == true
+        
+        return EmergencyButton(
+            title: isActive ? "Emergência Ativa" : "🆘 Solicitar Ajuda",
+            isActive: isActive
+        ) {
+            if isActive {
+                // Navigate to active emergency
+                if let emergencyId = state?.emergencyId as? String {
+                    // This will be handled by the parent ContentView navigation
+                    NotificationCenter.default.post(
+                        name: .init("AfilaxyOpenEmergency"),
+                        object: nil,
+                        userInfo: ["emergencyId": emergencyId]
+                    )
+                }
+            } else {
+                // Navigate to emergency creation screen
+                // This will be handled by the parent ContentView navigation
+                // For now, we'll use a simple navigation approach
+            }
+        }
+    }
+    
+    // MARK: - Helper Mode Card
+    private var helperModeCard: some View {
+        let state = container.emergency.state
+        let isHelperMode = state?.isHelperMode == true
+        
+        return ToggleCard(
+            title: "Modo Ajudante",
+            subtitle: isHelperMode ? "Você está disponível para ajudar" : "Ative para receber pedidos de ajuda",
+            icon: "heart.fill",
+            isOn: .constant(isHelperMode)
+        ) { newValue in
+            if newValue {
+                activateHelperMode()
+            } else {
+                deactivateHelperMode()
+            }
+        }
+    }
+    
+    // MARK: - Pending Emergencies
+    private var pendingEmergenciesSection: some View {
+        AfilaxyCard(backgroundColor: .afiErrorContainer) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.afiError)
+                    
+                    Text("Emergências Pendentes")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.afiOnErrorContainer)
+                    
+                    Spacer()
+                }
+                
+                ForEach(container.pendingIncomingEmergencies, id: \.id) { emergency in
+                    PendingEmergencyRow(emergency: emergency) {
+                        // Accept emergency
+                        container.dismissIncomingEmergency(id: emergency.id)
+                        // TODO: Navigate to emergency response
+                    } onDismiss: {
+                        // Dismiss emergency
+                        container.dismissIncomingEmergency(id: emergency.id)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Quick Actions Grid
+    private var quickActionsGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+            ActionCard(
+                title: "Histórico",
+                subtitle: "Suas emergências anteriores",
+                icon: "clock.fill"
+            ) {
+                navigationPath.append(AppRoute.history)
+            }
+            
+            ActionCard(
+                title: "Profissionais",
+                subtitle: "Encontre especialistas",
+                icon: "stethoscope"
+            ) {
+                navigationPath.append(AppRoute.professionals)
+            }
+            
+            ActionCard(
+                title: "Educação",
+                subtitle: "Aprenda sobre asma",
+                icon: "graduationcap.fill"
+            ) {
+                navigationPath.append(AppRoute.education)
+            }
+            
+            ActionCard(
+                title: "Comunidade",
+                subtitle: "Conecte-se com outros",
+                icon: "person.3.fill"
+            ) {
+                navigationPath.append(AppRoute.community)
+            }
+        }
+    }
+    
+    // MARK: - Community Feed Preview
+    private var communityFeedPreview: some View {
+        AfilaxyCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Comunidade")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.afiTextPrimary)
+                    
+                    Spacer()
+                    
+                    Button("Ver Mais") {
+                        navigationPath.append(AppRoute.community)
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.afiPrimary)
+                }
+                
+                VStack(spacing: 8) {
+                    CommunityPostPreview(
+                        author: "Maria S.",
+                        content: "Consegui controlar melhor minha asma seguindo as dicas do app! 💪",
+                        timeAgo: "2h"
+                    )
+                    
+                    CommunityPostPreview(
+                        author: "João P.",
+                        content: "Alguém sabe onde encontrar bombinha mais barata na região?",
+                        timeAgo: "4h"
+                    )
+                }
+            }
+        }
+    }
+    
+    // MARK: - Support Links
+    private var supportLinksSection: some View {
+        AfilaxyCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Suporte Rápido")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.afiTextPrimary)
+                
+                VStack(spacing: 8) {
+                    SupportLinkRow(
+                        title: "Farmácias 24h",
+                        subtitle: "Encontre medicamentos",
+                        icon: "cross.fill",
+                        color: .afiSuccess
+                    ) {
+                        // Open Maps app to search for pharmacies
+                        if let url = URL(string: "maps://?q=farmácia") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    
+                    SupportLinkRow(
+                        title: "Protocolo de Crise",
+                        subtitle: "Passos para emergência",
+                        icon: "list.clipboard.fill",
+                        color: .afiWarning
+                    ) {
+                        navigationPath.append(AppRoute.help)
+                    }
+                    
+                    SupportLinkRow(
+                        title: "SAMU 192",
+                        subtitle: "Emergência médica",
+                        icon: "phone.fill",
+                        color: .afiError
+                    ) {
+                        if let url = URL(string: "tel://192") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
     private func activateHelperMode() {
         guard !isTogglingHelper else { return }
         isTogglingHelper = true
         FileLogger.shared.write(level: "INFO", tag: "HomeView", message: "activateHelperMode start")
         LocationManager.shared.requestWhenInUse()
+        
         Task {
             let location = await LocationManager.shared.fetchCurrentLocation()
             let lat = location?.coordinate.latitude ?? 0
             let lon = location?.coordinate.longitude ?? 0
             FileLogger.shared.write(level: "INFO", tag: "HomeView", message: "fetchCurrentLocation result: \(lat), \(lon)")
+            
             guard LocationManager.shared.hasPermission, lat != 0 else {
                 await MainActor.run {
                     FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "No permission or location after fetch")
@@ -36,6 +318,7 @@ struct HomeView: View {
                 }
                 return
             }
+            
             LocationManagerBridge.shared.enableHelperMode(lat: lat, lon: lon) { success in
                 if success {
                     self.container.emergency.setHelperMode(true)
@@ -45,117 +328,175 @@ struct HomeView: View {
             }
         }
     }
-
+    
+    private func deactivateHelperMode() {
+        LocationManagerBridge.shared.disableHelperMode()
+        container.emergency.setHelperMode(false)
+        container.stopObservingNearbyEmergencies()
+    }
+    
     private func performLogout() {
         let state = container.emergency.state
+        
         // Firestore cleanup antes de congelar os ViewModels
         if state?.hasActiveEmergency == true, let eid = state?.emergencyId as? String {
             Firestore.firestore().collection("emergency_requests").document(eid)
                 .updateData(["active": false, "status": "cancelled"])
         }
+        
         if state?.isHelperMode == true {
             if let uid = Auth.auth().currentUser?.uid {
                 Firestore.firestore().collection("helpers").document(uid).delete()
             }
             LocationManagerBridge.shared.disableHelperMode()
         }
+        
         // freezeAll primeiro — cancela coroutines KMM antes de qualquer update de estado
-        // clearEmergencyStateSwift depois do freeze evita bloco enfileirado na main queue pós-freeze
         container.freezeAll()
         container.emergency.clearEmergencyStateSwift()
         try? Auth.auth().signOut()
-        onLogout()
+        // onLogout() - removed since we're using TabView now
     }
+    
+    // MARK: - Navigation Destination Builder
+    @ViewBuilder
+    private func destinationView(for route: AppRoute) -> some View {
+        switch route {
+        case .history:
+            HistoryView()
+        case .professionals:
+            ProfessionalListView()
+        case .education:
+            EducationView()
+        case .community:
+            CommunityView()
+        case .help:
+            HelpView()
+        case .professionalDetail(let id):
+            ProfessionalDetailView(professionalId: id)
+        default:
+            EmptyView()
+        }
+    }
+}
 
-    private func homeBody(state: EmergencyState) -> some View {
-        List {
-            Section {
-                Toggle(isOn: Binding(
-                    get: { state.isHelperMode },
-                    set: { newValue in
-                        guard !isTogglingHelper else { return }
-                        if newValue {
-                            activateHelperMode()
-                        } else {
-                            LocationManagerBridge.shared.disableHelperMode()
-                            container.emergency.setHelperMode(false)
-                            container.stopObservingNearbyEmergencies()
-                        }
-                    }
-                )) {
-                    Label("Modo Ajudante", systemImage: "heart.fill")
+// MARK: - Supporting Views
+
+struct PendingEmergencyRow: View {
+    let emergency: IncomingEmergency
+    let onAccept: () -> Void
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.afiError)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(emergency.name) precisa de ajuda")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.afiOnErrorContainer)
+                
+                Text("Toque para responder")
+                    .font(.caption)
+                    .foregroundColor(.afiOnErrorContainer.opacity(0.8))
+            }
+            
+            Spacer()
+            
+            HStack(spacing: 8) {
+                Button("Recusar") {
+                    onDismiss()
                 }
-                Text(state.isHelperMode ? "Você está disponível para ajudar" : "Ative para receber pedidos")
-                    .font(.caption).foregroundColor(.secondary)
-            }
-
-            if !container.pendingIncomingEmergencies.isEmpty {
-                Section("Emergências Pendentes") {
-                    ForEach(container.pendingIncomingEmergencies, id: \.id) { emergency in
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(emergency.name) precisa de ajuda")
-                                    .font(.headline)
-                                Text("Toque para responder")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Button("Recusar") {
-                                container.dismissIncomingEmergency(id: emergency.id)
-                            }
-                            .foregroundColor(.red)
-                            .font(.caption)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            container.dismissIncomingEmergency(id: emergency.id)
-                            path.append(AppRoute.emergencyResponse(emergency.id))
-                        }
-                    }
+                .font(.caption)
+                .foregroundColor(.afiError)
+                
+                Button("Ajudar") {
+                    onAccept()
                 }
-            }
-
-            Section {
-                Button {
-                    path.append(AppRoute.emergency)
-                } label: {
-                    Label("🆘 EMERGÊNCIA", systemImage: "exclamationmark.triangle.fill")
-                        .frame(maxWidth: .infinity).foregroundColor(.white).padding(.vertical, 8)
-                }
-                .listRowBackground(Color.red)
-            }
-
-            Section {
-                NavigationLink(value: AppRoute.history)      { Label("Histórico", systemImage: "clock.fill") }
-                NavigationLink(value: AppRoute.professionals){ Label("Profissionais", systemImage: "stethoscope") }
-                NavigationLink(value: AppRoute.community)    { Label("Comunidade", systemImage: "person.3.fill") }
-                NavigationLink(value: AppRoute.autocuidado)  { Label("Autocuidado", systemImage: "heart.text.square.fill") }
-                NavigationLink(value: AppRoute.notifications){ Label("Notificações", systemImage: "bell.fill") }
-                NavigationLink(value: AppRoute.profile)      { Label("Meu Perfil", systemImage: "person.fill") }
-                NavigationLink(value: AppRoute.settings)     { Label("Configurações", systemImage: "gearshape.fill") }
-            }
-
-            if let error = state.error {
-                Section { Text(error).foregroundColor(.red).font(.caption) }
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.afiSuccess)
             }
         }
-        .navigationTitle("Afilaxy")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showLogoutAlert = true } label: {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
+        .padding(.vertical, 4)
+    }
+}
+
+struct CommunityPostPreview: View {
+    let author: String
+    let content: String
+    let timeAgo: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(Color.afiPrimary.opacity(0.2))
+                .frame(width: 32, height: 32)
+                .overlay(
+                    Text(String(author.prefix(1)))
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.afiPrimary)
+                )
+            
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text(author)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.afiTextPrimary)
+                    
+                    Text(timeAgo)
+                        .font(.caption2)
+                        .foregroundColor(.afiTextSecondary)
                 }
+                
+                Text(content)
+                    .font(.caption)
+                    .foregroundColor(.afiTextSecondary)
+                    .lineLimit(2)
+            }
+            
+            Spacer()
+        }
+    }
+}
+
+struct SupportLinkRow: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(color)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.afiTextPrimary)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.afiTextSecondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.afiTextSecondary)
             }
         }
-        .alert("Sair", isPresented: $showLogoutAlert) {
-            Button("Cancelar", role: .cancel) {}
-            Button("Sair", role: .destructive) {
-                performLogout()
-            }
-        } message: { Text("Deseja realmente sair?") }
-        .onReceive(container.auth.$state) { s in
-            if s?.isAuthenticated == false { onLogout() }
-        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
