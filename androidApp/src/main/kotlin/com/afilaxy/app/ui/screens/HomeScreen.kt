@@ -49,7 +49,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun HomeScreenOld(
+fun HomeScreenNew(
     onNavigateToEmergency: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToHistory: () -> Unit,
@@ -57,6 +57,7 @@ fun HomeScreenOld(
     onNavigateToCommunity: () -> Unit = {},
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToProfessionals: () -> Unit = {},
+    onNavigateToEducation: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()

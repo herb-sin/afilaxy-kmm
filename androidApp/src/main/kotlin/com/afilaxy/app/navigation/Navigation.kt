@@ -42,7 +42,7 @@ sealed class Screen(val route: String) {
  * Grafo de navegação principal
  */
 @Composable
-fun NavGraph(
+fun LegacyNavGraph(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = koinViewModel()
 ) {
@@ -89,7 +89,7 @@ fun NavGraph(
         
         // Tela Home
         composable(Screen.Home.route) {
-            HomeScreenOld(
+            HomeScreenNew(
                 onNavigateToEmergency = {
                     navController.navigate(Screen.Emergency.route)
                 },
@@ -129,7 +129,7 @@ fun NavGraph(
         
         // Tela de Perfil
         composable(Screen.Profile.route) {
-            ProfileScreenOld(
+            ProfileScreenNew(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

@@ -70,7 +70,7 @@ fun SettingsScreenNew(
         ) {
             item {
                 UserProfileCard(
-                    userName = authState.user?.displayName ?: "Usuário",
+                    userName = authState.user?.name ?: "Usuário",
                     userEmail = authState.user?.email ?: "",
                     onEditProfile = { navController.navigate(AppRoutes.PROFILE) }
                 )
