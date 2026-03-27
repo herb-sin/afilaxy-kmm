@@ -10,11 +10,9 @@ class AuthViewModelWrapper: ObservableObject {
     
     init(_ viewModel: AuthViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(stateFlow: viewModel.state, callback: { [weak self] state in
-            DispatchQueue.main.async {
-                self?.state = state
-            }
-        })
+        self.observer = StateFlowObserver(viewModel.state)
+        // Observe changes manually
+        self.state = viewModel.state.value as? AuthState
     }
     
     var vm: AuthViewModel { viewModel }
@@ -32,11 +30,8 @@ class EmergencyViewModelWrapper: ObservableObject {
     
     init(_ viewModel: EmergencyViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(stateFlow: viewModel.state, callback: { [weak self] state in
-            DispatchQueue.main.async {
-                self?.state = state
-            }
-        })
+        self.observer = StateFlowObserver(viewModel.state)
+        self.state = viewModel.state.value as? EmergencyState
     }
     
     var vm: EmergencyViewModel { viewModel }
@@ -61,11 +56,8 @@ class HistoryViewModelWrapper: ObservableObject {
     
     init(_ viewModel: HistoryViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(stateFlow: viewModel.state, callback: { [weak self] state in
-            DispatchQueue.main.async {
-                self?.state = state
-            }
-        })
+        self.observer = StateFlowObserver(viewModel.state)
+        self.state = viewModel.state.value as? HistoryState
     }
     
     var vm: HistoryViewModel { viewModel }
@@ -82,11 +74,8 @@ class ProfileViewModelWrapper: ObservableObject {
     
     init(_ viewModel: ProfileViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(stateFlow: viewModel.state, callback: { [weak self] state in
-            DispatchQueue.main.async {
-                self?.state = state
-            }
-        })
+        self.observer = StateFlowObserver(viewModel.state)
+        self.state = viewModel.state.value as? ProfileState
     }
     
     var vm: ProfileViewModel { viewModel }
@@ -103,11 +92,8 @@ class ProfessionalListViewModelWrapper: ObservableObject {
     
     init(_ viewModel: ProfessionalListViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(stateFlow: viewModel.state, callback: { [weak self] state in
-            DispatchQueue.main.async {
-                self?.state = state
-            }
-        })
+        self.observer = StateFlowObserver(viewModel.state)
+        self.state = viewModel.state.value as? ProfessionalListState
     }
     
     var vm: ProfessionalListViewModel { viewModel }
@@ -124,11 +110,8 @@ class ProfessionalDetailViewModelWrapper: ObservableObject {
     
     init(_ viewModel: ProfessionalDetailViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(stateFlow: viewModel.state, callback: { [weak self] state in
-            DispatchQueue.main.async {
-                self?.state = state
-            }
-        })
+        self.observer = StateFlowObserver(viewModel.state)
+        self.state = viewModel.state.value as? ProfessionalDetailState
     }
     
     var vm: ProfessionalDetailViewModel { viewModel }
