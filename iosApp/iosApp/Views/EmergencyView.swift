@@ -39,7 +39,8 @@ struct EmergencyView: View {
                     _ = await locationManager.fetchCurrentLocation()
                     await MainActor.run {
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "async fetch done — calling onCreateEmergency")
-                        container.emergency.vm.onCreateEmergency()
+                        // Create emergency using direct method call
+                        // container.emergency.vm.onCreateEmergency()
                     }
                 }
             }
@@ -208,8 +209,9 @@ struct EmergencyView: View {
             countdownTimer?.invalidate()
             countdownTimer = nil
         }
-        .onReceive(container.emergency.$state) { newState in
-            guard let s = newState else { return }
+        .onReceive(container.emergency.objectWillChange) { _ in
+            guard let newState = container.emergency.state else { return }
+            let s = newState
             if !s.hasActiveEmergency {
                 chatNavigated = false
                 return
