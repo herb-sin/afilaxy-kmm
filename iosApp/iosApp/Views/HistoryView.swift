@@ -341,17 +341,16 @@ struct TimelineItemCard: View {
                         }
                     }
                     
-                    if let locationString = "São Paulo, SP" {
-                        HStack {
-                            Image(systemName: "location.fill")
-                                .foregroundColor(Color.afionSurface.opacity(0.6))
-                                .font(.caption)
-                                .frame(width: 16)
-                            
-                            Text(locationString)
-                                .font(.caption)
-                                .foregroundColor(Color.afionSurface.opacity(0.6))
-                        }
+                    let locationString = "São Paulo, SP"
+                    HStack {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(Color.afionSurface.opacity(0.6))
+                            .font(.caption)
+                            .frame(width: 16)
+                        
+                        Text(locationString)
+                            .font(.caption)
+                            .foregroundColor(Color.afionSurface.opacity(0.6))
                     }
                 }
             }
