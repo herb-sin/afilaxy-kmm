@@ -72,10 +72,13 @@ struct ProfessionalListView: View {
             }
         }
         
-        // Filter by specialty
+        // Filter by specialty - using string comparison
         if let specialty = selectedSpecialty {
-            // Mock specialty filtering since property types don't match
-            filtered = filtered.filter { _ in true }
+            filtered = filtered.filter { professional in
+                // Convert specialty to string for comparison
+                let specialtyString = String(describing: professional.specialty)
+                return specialtyString.contains(specialty) || specialty.contains(specialtyString)
+            }
         }
         
         // Filter by plan
