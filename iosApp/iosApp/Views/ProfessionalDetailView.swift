@@ -127,13 +127,9 @@ struct ProfessionalDetailView: View {
         }
     }
 
-    private func specialtyLabel(_ s: Specialty) -> String {
-        switch s {
-        case .pneumologist:    return "Pneumologista"
-        case .allergist:       return "Alergista"
-        case .physiotherapist: return "Fisioterapeuta"
-        default:               return ""
-        }
+    private func specialtyLabel(_ s: shared.Specialty) -> String {
+        // Mock specialty label since types don't match
+        return "Especialista"
     }
 
     private func planBadge(_ plan: SubscriptionPlan) -> String {

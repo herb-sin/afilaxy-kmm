@@ -12,11 +12,11 @@ class MedicalProfileViewModelWrapper: ObservableObject {
         self.viewModel = ViewModelProvider.shared.medicalProfileViewModel
         
         // Observa o StateFlow do ViewModel
-        self.stateObserver = StateFlowObserver(stateFlow: viewModel.state) { [weak self] state in
+        self.stateObserver = StateFlowObserver(stateFlow: viewModel.state, callback: { [weak self] state in
             DispatchQueue.main.async {
                 self?.profileState = state
             }
-        }
+        })
     }
 }
 

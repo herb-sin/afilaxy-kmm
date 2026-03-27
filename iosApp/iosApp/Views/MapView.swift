@@ -187,6 +187,7 @@ struct HelperModeActiveCard: View {
 
 struct HelperToggleCard: View {
     @EnvironmentObject var container: AppContainer
+    @State private var isHelperModeActive = false // Local state fallback
     
     var body: some View {
         AfilaxyCard {
