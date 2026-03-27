@@ -179,18 +179,17 @@ struct ProfileView: View {
             )
         }
         .onReceive(container.profile.objectWillChange) { _ in
-            guard !fieldsLoaded, let p = container.profile.state?.profile else { return }
-            let p = container.profile.state?.profile
+            guard !fieldsLoaded, let profile = container.profile.state?.profile else { return }
             fieldsLoaded = true
-            name = p?.name ?? ""; phone = p?.phone ?? ""
-            bloodType = p?.healthData?.bloodType ?? ""
-            allergies = p?.healthData?.allergies.joined(separator: ", ") ?? ""
-            medications = p?.healthData?.medications.joined(separator: ", ") ?? ""
-            conditions = p?.healthData?.conditions.joined(separator: ", ") ?? ""
-            healthNotes = p?.healthData?.notes ?? ""
-            emergencyName = p?.emergencyContact?.name ?? ""
-            emergencyPhone = p?.emergencyContact?.phone ?? ""
-            emergencyRelationship = p?.emergencyContact?.relationship ?? ""
+            name = profile.name; phone = profile.phone
+            bloodType = profile.healthData?.bloodType ?? ""
+            allergies = profile.healthData?.allergies.joined(separator: ", ") ?? ""
+            medications = profile.healthData?.medications.joined(separator: ", ") ?? ""
+            conditions = profile.healthData?.conditions.joined(separator: ", ") ?? ""
+            healthNotes = profile.healthData?.notes ?? ""
+            emergencyName = profile.emergencyContact?.name ?? ""
+            emergencyPhone = profile.emergencyContact?.phone ?? ""
+            emergencyRelationship = profile.emergencyContact?.relationship ?? ""
         }
     }
 

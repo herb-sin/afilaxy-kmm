@@ -98,6 +98,16 @@ open iosApp.xcworkspace
 1. Adicione `google-services.json` em `androidApp/`
 2. Adicione `GoogleService-Info.plist` em `iosApp/`
 
+### Configurar Google Maps
+
+1. Copie `local.properties.example` para `local.properties`
+2. Adicione sua API key do Google Maps:
+```properties
+MAPS_API_KEY=SUA_API_KEY_AQUI
+```
+
+📖 **Guia completo**: [SETUP_MAPS.md](SETUP_MAPS.md)
+
 ---
 
 ## 🔑 Features

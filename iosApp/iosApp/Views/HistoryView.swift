@@ -28,9 +28,42 @@ struct HistoryView: View {
                     // Statistics Hero Card
                     StatisticsHeroCard(history: state.filteredHistory)
                     
-                    // Filter Controls
-                    FilterControlsCard(selectedFilter: $selectedFilter) { filter in
-                        // Apply filter logic here
+                    // Filter Controls - Simplified for History
+                    AfilaxyCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Filtros")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    FilterChip(
+                                        title: "Todas",
+                                        icon: "list.bullet",
+                                        isSelected: selectedFilter == .all
+                                    ) {
+                                        selectedFilter = .all
+                                    }
+                                    
+                                    FilterChip(
+                                        title: "Resolvidas",
+                                        icon: "checkmark.circle",
+                                        isSelected: selectedFilter == .resolved
+                                    ) {
+                                        selectedFilter = .resolved
+                                    }
+                                    
+                                    FilterChip(
+                                        title: "Canceladas",
+                                        icon: "xmark.circle",
+                                        isSelected: selectedFilter == .cancelled
+                                    ) {
+                                        selectedFilter = .cancelled
+                                    }
+                                }
+                                .padding(.horizontal, 4)
+                            }
+                        }
                     }
                     
                     // Timeline Section
