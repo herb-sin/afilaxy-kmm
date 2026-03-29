@@ -208,7 +208,7 @@ struct ProfileView: View {
             ),
             isHealthProfessional: profile.isHealthProfessional
         )
-        container.profile.vm.updateProfile(profile: updated)
+        container.profile.vm?.updateProfile(profile: updated)
         showEditSheet = false
     }
 

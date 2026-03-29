@@ -367,15 +367,10 @@ struct AfilaxyApp: App {
     private func initializeKoin() {
         DispatchQueue.global(qos: .userInitiated).async {
             // 1. Registrar módulos Koin
-            do {
-                KoinHelperKt.doInitKoin()
-                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados")
-            } catch {
-                let msg = "Koin init falhou: \(error)"
-                FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: msg)
-                DispatchQueue.main.async { self.container.initError = msg }
-                return
-            }
+            // Nota: doInitKoin() não é @Throws para Swift — erros Kotlin/Native causam abort()
+            // se não forem tratados. O warmUp() logo abaixo captura falhas de resolução de DI.
+            KoinHelperKt.doInitKoin()
+            FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados")
 
             // 2. Pré-aquecer ViewModels — erros capturados AQUI, não na UI
             let success = self.container.warmUp()

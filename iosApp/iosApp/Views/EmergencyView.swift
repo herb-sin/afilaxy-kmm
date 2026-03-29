@@ -32,7 +32,7 @@ struct EmergencyView: View {
             LocationManagerBridge.shared.start()
             if locationManager.currentLocation != nil {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "using cached location — calling onCreateEmergency")
-                container.emergency.vm.onCreateEmergency()
+                container.emergency.vm?.onCreateEmergency()
             } else {
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "no cached location — fetching async")
                 Task {
@@ -51,7 +51,7 @@ struct EmergencyView: View {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 await MainActor.run {
                     FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "calling onCreateEmergency after permission wait")
-                    container.emergency.vm.onCreateEmergency()
+                    container.emergency.vm?.onCreateEmergency()
                 }
             }
         }

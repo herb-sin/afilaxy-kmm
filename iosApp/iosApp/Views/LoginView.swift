@@ -78,7 +78,7 @@ struct LoginView: View {
     }
 
     private func login() {
-        container.auth.vm.onLogin(email: email, password: password)
+        container.auth.vm?.onLogin(email: email, password: password)
     }
 
     private func friendlyError(_ raw: String) -> String {

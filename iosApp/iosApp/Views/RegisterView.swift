@@ -46,7 +46,7 @@ struct RegisterView: View {
             }
         }
         .onAppear {
-            container.auth.vm.clearError()
+            container.auth.vm?.clearError()
         }
         .onReceive(container.auth.$state) { s in
             if s?.isAuthenticated == true { dismiss() }
@@ -54,7 +54,7 @@ struct RegisterView: View {
     }
 
     private func register() {
-        container.auth.vm.onRegister(email: email, password: password, name: name)
+        container.auth.vm?.onRegister(email: email, password: password, name: name)
     }
 
     private func friendlyError(_ raw: String) -> String {

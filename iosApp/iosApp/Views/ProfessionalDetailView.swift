@@ -23,7 +23,7 @@ struct ProfessionalDetailView: View {
         }
         .navigationTitle("Profissional")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { wrapper.vm.loadProfessional(id: professionalId) }
+        .onAppear { wrapper.vm?.loadProfessional(id: professionalId) }
     }
 
     @ViewBuilder
