@@ -100,13 +100,63 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 // MARK: - AppContainer
 
 class AppContainer: ObservableObject {
-    lazy var auth      = AuthViewModelWrapper(ViewModelProvider.shared.getAuthViewModel())
-    lazy var emergency = EmergencyViewModelWrapper(ViewModelProvider.shared.getEmergencyViewModel())
-    lazy var history   = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
-    lazy var profile   = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
-    lazy var professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
-    lazy var professionalDetail = ProfessionalDetailViewModelWrapper(ViewModelProvider.shared.getProfessionalDetailViewModel())
-    lazy var loginViewModel: LoginViewModel = ViewModelProvider.shared.getLoginViewModel()
+    // Make ViewModels truly lazy and safe
+    private var _auth: AuthViewModelWrapper?
+    private var _emergency: EmergencyViewModelWrapper?
+    private var _history: HistoryViewModelWrapper?
+    private var _profile: ProfileViewModelWrapper?
+    private var _professionals: ProfessionalListViewModelWrapper?
+    private var _professionalDetail: ProfessionalDetailViewModelWrapper?
+    private var _loginViewModel: LoginViewModel?
+    
+    var auth: AuthViewModelWrapper {
+        if _auth == nil {
+            _auth = AuthViewModelWrapper(ViewModelProvider.shared.getAuthViewModel())
+        }
+        return _auth!
+    }
+    
+    var emergency: EmergencyViewModelWrapper {
+        if _emergency == nil {
+            _emergency = EmergencyViewModelWrapper(ViewModelProvider.shared.getEmergencyViewModel())
+        }
+        return _emergency!
+    }
+    
+    var history: HistoryViewModelWrapper {
+        if _history == nil {
+            _history = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
+        }
+        return _history!
+    }
+    
+    var profile: ProfileViewModelWrapper {
+        if _profile == nil {
+            _profile = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
+        }
+        return _profile!
+    }
+    
+    var professionals: ProfessionalListViewModelWrapper {
+        if _professionals == nil {
+            _professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
+        }
+        return _professionals!
+    }
+    
+    var professionalDetail: ProfessionalDetailViewModelWrapper {
+        if _professionalDetail == nil {
+            _professionalDetail = ProfessionalDetailViewModelWrapper(ViewModelProvider.shared.getProfessionalDetailViewModel())
+        }
+        return _professionalDetail!
+    }
+    
+    var loginViewModel: LoginViewModel {
+        if _loginViewModel == nil {
+            _loginViewModel = ViewModelProvider.shared.getLoginViewModel()
+        }
+        return _loginViewModel!
+    }
 
     private var cancellables = Set<AnyCancellable>()
     @Published var pendingEmergencyId: String? = nil
@@ -228,9 +278,10 @@ struct AfilaxyApp: App {
     let container = AppContainer()
 
     init() {
+        // Initialize Firebase first
         FirebaseApp.configure()
         
-        // Inicializar Google Maps SDK
+        // Initialize Google Maps SDK
         if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
            let plist = NSDictionary(contentsOfFile: path),
            let apiKey = plist["API_KEY"] as? String {
@@ -242,7 +293,16 @@ struct AfilaxyApp: App {
             }
         }
         
-        KoinHelperKt.doInitKoin()
+        // Initialize Koin with error handling
+        do {
+            KoinHelperKt.doInitKoin()
+            FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin initialized successfully")
+        } catch {
+            FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "Koin initialization failed: \(error)")
+            fatalError("Failed to initialize Koin: \(error)")
+        }
+        
+        // Initialize other components
         LocationManagerBridge.shared.start()
         container.observeChildren()
         Logger.shared.fileLogHook = { level, tag, message in
