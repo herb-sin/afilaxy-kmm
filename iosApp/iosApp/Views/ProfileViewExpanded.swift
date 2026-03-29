@@ -21,7 +21,7 @@ class MedicalProfileViewModelWrapper: ObservableObject {
 struct ProfileViewExpanded: View {
     @StateObject private var wrapper = MedicalProfileViewModelWrapper()
     
-    private var viewModel: MedicalProfileViewModel {
+    private var viewModel: MedicalProfileViewModel? {
         wrapper.viewModel
     }
     
