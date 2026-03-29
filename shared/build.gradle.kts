@@ -69,12 +69,14 @@ kotlin {
             implementation("com.google.android.gms:play-services-location:21.3.0")
         }
 
-        
+        // iosMain — intermediário que agrega os 3 targets iOS
+        // Nota: em Kotlin 2.x com acessores new-style (commonMain.dependencies {}),
+        // commonMain é NamedDomainObjectProvider e precisa de .get() na referência direta.
         val iosX64Main by getting
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting
         val iosMain by creating {
-            dependsOn(commonMain)
+            dependsOn(commonMain.get())
             iosX64Main.dependsOn(this)
             iosArm64Main.dependsOn(this)
             iosSimulatorArm64Main.dependsOn(this)
@@ -82,7 +84,8 @@ kotlin {
     }
 }
 
-android {
+@Suppress("UnstableApiUsage")
+configure<com.android.build.api.dsl.LibraryExtension> {
     namespace = "com.afilaxy.shared"
     compileSdk = 35
     defaultConfig {
