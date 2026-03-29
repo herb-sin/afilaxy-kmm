@@ -22,10 +22,10 @@ struct HomeViewExpanded: View {
     @StateObject private var wrapper = HomeViewModelWrapper()
     @State private var selectedTab: FeedTab = .apoio
     
-    private var viewModel: HomeViewModel {
+    private var viewModel: HomeViewModel? {
         wrapper.viewModel
     }
-    
+
     private var homeState: HomeState? {
         wrapper.homeState
     }
@@ -36,21 +36,20 @@ struct HomeViewExpanded: View {
                 LazyVStack(spacing: 16) {
                     // Hero Card
                     HeroCardView {
-                        viewModel.requestHelp()
+                        viewModel?.requestHelp()
                     }
                     
                     // Feed Tabs
                     FeedTabsView(selectedTab: $selectedTab) { tab in
-                        // Convert local FeedTab to shared FeedTab
-                        let sharedTab = shared.FeedTab.apoio // Default conversion
-                        viewModel.selectTab(tab: sharedTab)
+                        let sharedTab = shared.FeedTab.apoio
+                        viewModel?.selectTab(tab: sharedTab)
                     }
                     
                     // Feed Posts
                     if let posts = homeState?.feedPosts {
                         ForEach(posts, id: \.id) { post in
                             PostCardView(post: post) {
-                                viewModel.likePost(postId: post.id, userId: "currentUserId")
+                                viewModel?.likePost(postId: post.id, userId: "currentUserId")
                             }
                         }
                     }
