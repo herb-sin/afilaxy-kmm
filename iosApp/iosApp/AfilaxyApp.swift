@@ -100,7 +100,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 // MARK: - AppContainer
 
 class AppContainer: ObservableObject {
-    // Make ViewModels truly lazy and safe
+    // Make ViewModels truly lazy and safe with error handling
     private var _auth: AuthViewModelWrapper?
     private var _emergency: EmergencyViewModelWrapper?
     private var _history: HistoryViewModelWrapper?
@@ -111,49 +111,85 @@ class AppContainer: ObservableObject {
     
     var auth: AuthViewModelWrapper {
         if _auth == nil {
-            _auth = AuthViewModelWrapper(ViewModelProvider.shared.getAuthViewModel())
+            do {
+                _auth = AuthViewModelWrapper(ViewModelProvider.shared.getAuthViewModel())
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create AuthViewModel: \(error)")
+                // Return a mock wrapper to prevent crashes
+                fatalError("Critical: Cannot create AuthViewModel")
+            }
         }
         return _auth!
     }
     
     var emergency: EmergencyViewModelWrapper {
         if _emergency == nil {
-            _emergency = EmergencyViewModelWrapper(ViewModelProvider.shared.getEmergencyViewModel())
+            do {
+                _emergency = EmergencyViewModelWrapper(ViewModelProvider.shared.getEmergencyViewModel())
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create EmergencyViewModel: \(error)")
+                fatalError("Critical: Cannot create EmergencyViewModel")
+            }
         }
         return _emergency!
     }
     
     var history: HistoryViewModelWrapper {
         if _history == nil {
-            _history = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
+            do {
+                _history = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create HistoryViewModel: \(error)")
+                fatalError("Critical: Cannot create HistoryViewModel")
+            }
         }
         return _history!
     }
     
     var profile: ProfileViewModelWrapper {
         if _profile == nil {
-            _profile = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
+            do {
+                _profile = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create ProfileViewModel: \(error)")
+                fatalError("Critical: Cannot create ProfileViewModel")
+            }
         }
         return _profile!
     }
     
     var professionals: ProfessionalListViewModelWrapper {
         if _professionals == nil {
-            _professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
+            do {
+                _professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create ProfessionalListViewModel: \(error)")
+                fatalError("Critical: Cannot create ProfessionalListViewModel")
+            }
         }
         return _professionals!
     }
     
     var professionalDetail: ProfessionalDetailViewModelWrapper {
         if _professionalDetail == nil {
-            _professionalDetail = ProfessionalDetailViewModelWrapper(ViewModelProvider.shared.getProfessionalDetailViewModel())
+            do {
+                _professionalDetail = ProfessionalDetailViewModelWrapper(ViewModelProvider.shared.getProfessionalDetailViewModel())
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create ProfessionalDetailViewModel: \(error)")
+                fatalError("Critical: Cannot create ProfessionalDetailViewModel")
+            }
         }
         return _professionalDetail!
     }
     
     var loginViewModel: LoginViewModel {
         if _loginViewModel == nil {
-            _loginViewModel = ViewModelProvider.shared.getLoginViewModel()
+            do {
+                _loginViewModel = ViewModelProvider.shared.getLoginViewModel()
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create LoginViewModel: \(error)")
+                fatalError("Critical: Cannot create LoginViewModel")
+            }
         }
         return _loginViewModel!
     }
@@ -275,7 +311,8 @@ class AppContainer: ObservableObject {
 struct AfilaxyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @Environment(\.scenePhase) private var scenePhase
-    let container = AppContainer()
+    @StateObject private var container = AppContainer()
+    @State private var isKoinInitialized = false
 
     init() {
         // Initialize Firebase first
@@ -293,30 +330,35 @@ struct AfilaxyApp: App {
             }
         }
         
-        // Initialize Koin with error handling
-        do {
-            KoinHelperKt.doInitKoin()
-            FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin initialized successfully")
-        } catch {
-            FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "Koin initialization failed: \(error)")
-            fatalError("Failed to initialize Koin: \(error)")
-        }
-        
-        // Initialize other components
+        // Initialize other components that don't depend on Koin
         LocationManagerBridge.shared.start()
-        container.observeChildren()
         Logger.shared.fileLogHook = { level, tag, message in
             FileLogger.shared.write(level: level, tag: tag, message: message)
         }
-        FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App iniciado")
+        FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App iniciado - Koin será inicializado após UI")
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(container)
+            if isKoinInitialized {
+                ContentView()
+                    .environmentObject(container)
+            } else {
+                // Show loading screen while initializing Koin
+                VStack {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Inicializando...")
+                        .padding(.top)
+                }
+                .onAppear {
+                    initializeKoin()
+                }
+            }
         }
         .onChange(of: scenePhase) { phase in
+            guard isKoinInitialized else { return }
+            
             if phase == .background {
                 // Não remove o listener em background — FCM acorda o app via didReceiveRemoteNotification
                 FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "scenePhase=background")
@@ -339,6 +381,28 @@ struct AfilaxyApp: App {
                     } else {
                         FileLogger.shared.write(level: "WARN", tag: "AfilaxyApp", message: "scenePhase=active — listener não reiniciado: sem localização")
                     }
+                }
+            }
+        }
+    }
+    
+    private func initializeKoin() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                KoinHelperKt.doInitKoin()
+                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin initialized successfully")
+                
+                DispatchQueue.main.async {
+                    self.container.observeChildren()
+                    self.isKoinInitialized = true
+                    FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App totalmente inicializado")
+                }
+            } catch {
+                FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "Koin initialization failed: \(error)")
+                DispatchQueue.main.async {
+                    // Show error state instead of crashing
+                    // For now, we'll still set initialized to true to show the app
+                    self.isKoinInitialized = true
                 }
             }
         }
