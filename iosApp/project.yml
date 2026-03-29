@@ -1,7 +1,7 @@
 name: iosApp
 options:
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "15.0"
   xcodeVersion: "16.4"
 
 settings:
@@ -12,7 +12,7 @@ targets:
   iosApp:
     type: application
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "15.0"
     sources:
       - path: iosApp
     resources:
@@ -26,7 +26,7 @@ targets:
         PRODUCT_NAME: Afilaxy
         INFOPLIST_FILE: iosApp/Info.plist
         SWIFT_VERSION: "5.9"
-        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         DEVELOPMENT_TEAM: "$(DEVELOPMENT_TEAM)"
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "Apple Distribution"
