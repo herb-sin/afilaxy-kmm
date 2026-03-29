@@ -100,98 +100,70 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 // MARK: - AppContainer
 
 class AppContainer: ObservableObject {
-    // Make ViewModels truly lazy and safe with error handling
-    private var _auth: AuthViewModelWrapper?
-    private var _emergency: EmergencyViewModelWrapper?
-    private var _history: HistoryViewModelWrapper?
-    private var _profile: ProfileViewModelWrapper?
-    private var _professionals: ProfessionalListViewModelWrapper?
-    private var _professionalDetail: ProfessionalDetailViewModelWrapper?
-    private var _loginViewModel: LoginViewModel?
-    
-    var auth: AuthViewModelWrapper {
-        if _auth == nil {
-            do {
-                _auth = AuthViewModelWrapper(ViewModelProvider.shared.getAuthViewModel())
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create AuthViewModel: \(error)")
-                // Return a mock wrapper to prevent crashes
-                fatalError("Critical: Cannot create AuthViewModel")
-            }
+    // ViewModels opcionais — nunca crasham na criação
+    // São pré-aquecidos em warmUp() após o Koin inicializar
+    private(set) var _auth: AuthViewModelWrapper?
+    private(set) var _emergency: EmergencyViewModelWrapper?
+    private(set) var _history: HistoryViewModelWrapper?
+    private(set) var _profile: ProfileViewModelWrapper?
+    private(set) var _professionals: ProfessionalListViewModelWrapper?
+    private(set) var _professionalDetail: ProfessionalDetailViewModelWrapper?
+    private(set) var _loginViewModel: LoginViewModel?
+
+    // Estado de erro publicado — substituiu fatalError()
+    @Published var initError: String? = nil
+
+    // Acesso seguro com fallback mínimo (sem crash)
+    var auth: AuthViewModelWrapper { _auth ?? AuthViewModelWrapper.empty() }
+    var emergency: EmergencyViewModelWrapper { _emergency ?? EmergencyViewModelWrapper.empty() }
+    var history: HistoryViewModelWrapper { _history ?? HistoryViewModelWrapper.empty() }
+    var profile: ProfileViewModelWrapper { _profile ?? ProfileViewModelWrapper.empty() }
+    var professionals: ProfessionalListViewModelWrapper { _professionals ?? ProfessionalListViewModelWrapper.empty() }
+    var professionalDetail: ProfessionalDetailViewModelWrapper { _professionalDetail ?? ProfessionalDetailViewModelWrapper.empty() }
+    var loginViewModel: LoginViewModel? { _loginViewModel }
+
+    /// Pré-aquece todos os ViewModels logo após o Koin inicializar.
+    /// Chamado no background thread — falhas são capturadas sem crash.
+    /// Retorna `false` + popula `initError` se algum VM crítico falhar.
+    @discardableResult
+    func warmUp() -> Bool {
+        var failed = [String]()
+
+        if let vm = ViewModelProvider.shared.getAuthViewModel() {
+            _auth = AuthViewModelWrapper(vm)
+        } else { failed.append("AuthViewModel") }
+
+        if let vm = ViewModelProvider.shared.getEmergencyViewModel() {
+            _emergency = EmergencyViewModelWrapper(vm)
+        } else { failed.append("EmergencyViewModel") }
+
+        if let vm = ViewModelProvider.shared.getHistoryViewModel() {
+            _history = HistoryViewModelWrapper(vm)
+        } else { failed.append("HistoryViewModel") }
+
+        if let vm = ViewModelProvider.shared.getProfileViewModel() {
+            _profile = ProfileViewModelWrapper(vm)
+        } else { failed.append("ProfileViewModel") }
+
+        if let vm = ViewModelProvider.shared.getProfessionalListViewModel() {
+            _professionals = ProfessionalListViewModelWrapper(vm)
+        } else { failed.append("ProfessionalListViewModel") }
+
+        if let vm = ViewModelProvider.shared.getProfessionalDetailViewModel() {
+            _professionalDetail = ProfessionalDetailViewModelWrapper(vm)
+        } else { failed.append("ProfessionalDetailViewModel") }
+
+        _loginViewModel = ViewModelProvider.shared.getLoginViewModel()
+
+        if !failed.isEmpty {
+            let msg = "Falha ao inicializar: \(failed.joined(separator: ", "))"
+            FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: msg)
+            DispatchQueue.main.async { self.initError = msg }
+            return false
         }
-        return _auth!
-    }
-    
-    var emergency: EmergencyViewModelWrapper {
-        if _emergency == nil {
-            do {
-                _emergency = EmergencyViewModelWrapper(ViewModelProvider.shared.getEmergencyViewModel())
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create EmergencyViewModel: \(error)")
-                fatalError("Critical: Cannot create EmergencyViewModel")
-            }
-        }
-        return _emergency!
-    }
-    
-    var history: HistoryViewModelWrapper {
-        if _history == nil {
-            do {
-                _history = HistoryViewModelWrapper(ViewModelProvider.shared.getHistoryViewModel())
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create HistoryViewModel: \(error)")
-                fatalError("Critical: Cannot create HistoryViewModel")
-            }
-        }
-        return _history!
-    }
-    
-    var profile: ProfileViewModelWrapper {
-        if _profile == nil {
-            do {
-                _profile = ProfileViewModelWrapper(ViewModelProvider.shared.getProfileViewModel())
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create ProfileViewModel: \(error)")
-                fatalError("Critical: Cannot create ProfileViewModel")
-            }
-        }
-        return _profile!
-    }
-    
-    var professionals: ProfessionalListViewModelWrapper {
-        if _professionals == nil {
-            do {
-                _professionals = ProfessionalListViewModelWrapper(ViewModelProvider.shared.getProfessionalListViewModel())
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create ProfessionalListViewModel: \(error)")
-                fatalError("Critical: Cannot create ProfessionalListViewModel")
-            }
-        }
-        return _professionals!
-    }
-    
-    var professionalDetail: ProfessionalDetailViewModelWrapper {
-        if _professionalDetail == nil {
-            do {
-                _professionalDetail = ProfessionalDetailViewModelWrapper(ViewModelProvider.shared.getProfessionalDetailViewModel())
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create ProfessionalDetailViewModel: \(error)")
-                fatalError("Critical: Cannot create ProfessionalDetailViewModel")
-            }
-        }
-        return _professionalDetail!
-    }
-    
-    var loginViewModel: LoginViewModel {
-        if _loginViewModel == nil {
-            do {
-                _loginViewModel = ViewModelProvider.shared.getLoginViewModel()
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AppContainer", message: "Failed to create LoginViewModel: \(error)")
-                fatalError("Critical: Cannot create LoginViewModel")
-            }
-        }
-        return _loginViewModel!
+
+        FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "warmUp: todos os ViewModels prontos")
+        return true
     }
 
     private var cancellables = Set<AnyCancellable>()
@@ -203,20 +175,18 @@ class AppContainer: ObservableObject {
     private var notifiedEmergencyIds = Set<String>()
 
     func freezeAll() {
-        emergency.freezeSwift()
-        auth.signOutSwift()
-        history.freeze()
-        profile.freeze()
-        professionals.freeze()
-        professionalDetail.freeze()
+        _emergency?.freezeSwift()
+        _auth?.signOutSwift()
+        _history?.freeze()
+        _profile?.freeze()
+        _professionals?.freeze()
+        _professionalDetail?.freeze()
     }
 
     func observeChildren() {
-        emergency.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
-        auth.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        _emergency?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        _auth?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
 
-        // Emergências recebidas via FCM em background (didReceiveRemoteNotification)
-        // Sem receive(on:) — post já ocorre na main thread, enfileirar criaria janela pós-freezeAll
         NotificationCenter.default.publisher(for: .init("AfilaxyIncomingEmergency"))
             .sink { [weak self] notification in
                 guard let self = self,
@@ -231,7 +201,6 @@ class AppContainer: ObservableObject {
             .store(in: &cancellables)
     }
 
-    /// Inicia listener Firestore nativo para emergências próximas (iOS-safe, sem KMM Flow)
     func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 5.0) {
         emergencyListener?.remove()
         let deltaLat = radiusKm / 111.0
@@ -253,24 +222,19 @@ class AppContainer: ObservableObject {
                               requesterId != uid,
                               !self.notifiedEmergencyIds.contains(docId),
                               (data["status"] as? String) == "waiting" else { return }
-                        // Ignorar documentos sem timestamp ou anteriores ao início do listener
                         let docDate: Date
                         if let ts = data["timestamp"] as? Timestamp {
-                            // Firestore nativo Timestamp (criado por Android SDK)
                             docDate = ts.dateValue()
                         } else if let ms = (data["timestamp"] as? Int64)
                                     ?? (data["timestamp"] as? Int).map(Int64.init)
                                     ?? (data["timestamp"] as? Double).map(Int64.init) {
                             guard ms > 0 else { return }
                             docDate = Date(timeIntervalSince1970: Double(ms) / 1000)
-                        } else {
-                            return  // sem timestamp válido → descarta
-                        }
-                        if docDate < startTime { return }  // doc antigo (pré-listener) → ignora
+                        } else { return }
+                        if docDate < startTime { return }
                         self.notifiedEmergencyIds.insert(docId)
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
-                        // Atualiza diretamente — callback do Firestore já executa na main thread
                         self.pendingIncomingEmergencies.append((id: docId, name: name))
                         self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: docId)
                     }
@@ -282,9 +246,7 @@ class AppContainer: ObservableObject {
         emergencyListener = nil
     }
 
-    func navigateToChat(emergencyId: String) {
-        pendingChatId = emergencyId
-    }
+    func navigateToChat(emergencyId: String) { pendingChatId = emergencyId }
 
     func dismissIncomingEmergency(id: String) {
         pendingIncomingEmergencies.removeAll { $0.id == id }
@@ -296,11 +258,7 @@ class AppContainer: ObservableObject {
         content.body = body
         content.sound = .default
         content.userInfo = ["emergencyId": emergencyId]
-        let request = UNNotificationRequest(
-            identifier: emergencyId,
-            content: content,
-            trigger: nil
-        )
+        let request = UNNotificationRequest(identifier: emergencyId, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
 }
@@ -340,16 +298,36 @@ struct AfilaxyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if isKoinInitialized {
+            if let errorMsg = container.initError {
+                // Tela de erro recuperável — sem crash
+                VStack(spacing: 24) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 56))
+                        .foregroundColor(.orange)
+                    Text("Erro ao inicializar")
+                        .font(.title2.bold())
+                    Text(errorMsg)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    Button("Tentar Novamente") {
+                        container.initError = nil
+                        isKoinInitialized = false
+                        initializeKoin()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+            } else if isKoinInitialized {
                 ContentView()
                     .environmentObject(container)
             } else {
-                // Show loading screen while initializing Koin
-                VStack {
+                VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.5)
                     Text("Inicializando...")
-                        .padding(.top)
+                        .foregroundColor(.secondary)
                 }
                 .onAppear {
                     initializeKoin()
@@ -388,21 +366,28 @@ struct AfilaxyApp: App {
     
     private func initializeKoin() {
         DispatchQueue.global(qos: .userInitiated).async {
+            // 1. Registrar módulos Koin
             do {
                 KoinHelperKt.doInitKoin()
-                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin initialized successfully")
-                
-                DispatchQueue.main.async {
+                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados")
+            } catch {
+                let msg = "Koin init falhou: \(error)"
+                FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: msg)
+                DispatchQueue.main.async { self.container.initError = msg }
+                return
+            }
+
+            // 2. Pré-aquecer ViewModels — erros capturados AQUI, não na UI
+            let success = self.container.warmUp()
+
+            DispatchQueue.main.async {
+                if success {
                     self.container.observeChildren()
                     self.isKoinInitialized = true
                     FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App totalmente inicializado")
-                }
-            } catch {
-                FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "Koin initialization failed: \(error)")
-                DispatchQueue.main.async {
-                    // Show error state instead of crashing
-                    // For now, we'll still set initialized to true to show the app
-                    self.isKoinInitialized = true
+                } else {
+                    // initError já foi setado pelo warmUp()
+                    FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "warmUp falhou — tela de erro exibida")
                 }
             }
         }
