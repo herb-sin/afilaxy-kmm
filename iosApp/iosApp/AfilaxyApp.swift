@@ -365,23 +365,24 @@ struct AfilaxyApp: App {
     }
     
     private func initializeKoin() {
+        // CRÍTICO: doInitKoin() deve rodar na main thread.
+        // O Kotlin/Native inicializa seu runtime na thread que o chama primeira vez.
+        // Chamar de um background thread (DispatchQueue.global) causa abort() no iOS 26.
+        // O warmUp() (resolve DIs) pode ser feito em background com segurança.
+        assert(Thread.isMainThread, "initializeKoin deve ser chamado da main thread")
+
+        KoinHelperKt.doInitKoin()
+        FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados (main thread)")
+
+        // Pré-aquece ViewModels em background — koinGet usa as? e não crasha
         DispatchQueue.global(qos: .userInitiated).async {
-            // 1. Registrar módulos Koin
-            // Nota: doInitKoin() não é @Throws para Swift — erros Kotlin/Native causam abort()
-            // se não forem tratados. O warmUp() logo abaixo captura falhas de resolução de DI.
-            KoinHelperKt.doInitKoin()
-            FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados")
-
-            // 2. Pré-aquecer ViewModels — erros capturados AQUI, não na UI
             let success = self.container.warmUp()
-
             DispatchQueue.main.async {
                 if success {
                     self.container.observeChildren()
                     self.isKoinInitialized = true
                     FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App totalmente inicializado")
                 } else {
-                    // initError já foi setado pelo warmUp()
                     FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "warmUp falhou — tela de erro exibida")
                 }
             }
