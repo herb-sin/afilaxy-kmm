@@ -377,8 +377,7 @@ struct AfilaxyApp: App {
         FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados (main thread)")
 
         // Passo 2: pré-aquece ViewModels — também na main thread (Firebase exige isso)
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+        DispatchQueue.main.async {
             let success = self.container.warmUp()
             if success {
                 self.container.observeChildren()
