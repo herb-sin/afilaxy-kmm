@@ -1,19 +1,20 @@
 import SwiftUI
 import shared
 
-// Wrapper para ViewModels KMM que não são ObservableObject
+// Wrapper para HomeViewModel — criado localmente porque não é gerenciado pelo AppContainer
 class HomeViewModelWrapper: ObservableObject {
-    let viewModel: HomeViewModel
+    let viewModel: HomeViewModel?
     @Published var homeState: HomeState?
-    
+
     private var stateObserver: StateFlowObserver<HomeState>?
-    
+
     init() {
-        self.viewModel = ViewModelProvider.shared.homeViewModel
-        
-        // Observa o StateFlow do ViewModel
-        self.stateObserver = StateFlowObserver(viewModel.state)
-        self.homeState = viewModel.state.value as? HomeState
+        let vm = ViewModelProvider.shared.getHomeViewModel()
+        self.viewModel = vm
+        if let vm = vm {
+            self.stateObserver = StateFlowObserver(vm.state)
+            self.homeState = vm.state.value as? HomeState
+        }
     }
 }
 

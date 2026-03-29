@@ -1,19 +1,20 @@
 import SwiftUI
 import shared
 
-// Wrapper para ViewModels KMM que não são ObservableObject
+// Wrapper para MedicalProfileViewModel — criado localmente, não gerenciado pelo AppContainer
 class MedicalProfileViewModelWrapper: ObservableObject {
-    let viewModel: MedicalProfileViewModel
+    let viewModel: MedicalProfileViewModel?
     @Published var profileState: MedicalProfileState?
-    
+
     private var stateObserver: StateFlowObserver<MedicalProfileState>?
-    
+
     init() {
-        self.viewModel = ViewModelProvider.shared.medicalProfileViewModel
-        
-        // Observa o StateFlow do ViewModel
-        self.stateObserver = StateFlowObserver(viewModel.state)
-        self.profileState = viewModel.state.value as? MedicalProfileState
+        let vm = ViewModelProvider.shared.getMedicalProfileViewModel()
+        self.viewModel = vm
+        if let vm = vm {
+            self.stateObserver = StateFlowObserver(vm.state)
+            self.profileState = vm.state.value as? MedicalProfileState
+        }
     }
 }
 

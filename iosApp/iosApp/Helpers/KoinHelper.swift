@@ -6,10 +6,10 @@ import shared
 // ou quando exceções Kotlin/Native cruzam o boundary Swift sem serem capturadas
 // (comportamento observado no iOS 26+ com KMM-ViewModel ALPHA-16).
 
-private func koinGet<T: AnyObject>(_ type: T.Type, tag: String) -> T? {
+private func koinGet<T: AnyObject>(_ targetType: T.Type, tag: String) -> T? {
     let result = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil)
     guard let vm = result as? T else {
-        let msg = "KoinHelper: falha ao resolver \(tag) — resultado: \(type(of: result))"
+        let msg = "KoinHelper: falha ao resolver \(tag) — recebido: \(Swift.type(of: result))"
         FileLogger.shared.write(level: "ERROR", tag: "KoinHelper", message: msg)
         return nil
     }
