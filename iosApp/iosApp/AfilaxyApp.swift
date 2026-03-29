@@ -365,26 +365,27 @@ struct AfilaxyApp: App {
     }
     
     private func initializeKoin() {
-        // CRÍTICO: doInitKoin() deve rodar na main thread.
-        // O Kotlin/Native inicializa seu runtime na thread que o chama primeira vez.
-        // Chamar de um background thread (DispatchQueue.global) causa abort() no iOS 26.
-        // O warmUp() (resolve DIs) pode ser feito em background com segurança.
+        // CRÍTICO: TODO código Kotlin/Native deve rodar na main thread no iOS 26.
+        // O dev.gitlive:firebase-auth acessa o Firebase iOS SDK durante a resolução
+        // do Koin, e o Firebase iOS SDK exige main thread em iOS 26.
+        // DispatchQueue.main.async é não-bloqueante: o SwiftUI continua renderizando
+        // o ProgressView entre os ciclos do run loop — não há congelamento visual.
         assert(Thread.isMainThread, "initializeKoin deve ser chamado da main thread")
 
+        // Passo 1: registra módulos Koin (síncrono, já estamos na main thread)
         KoinHelperKt.doInitKoin()
         FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados (main thread)")
 
-        // Pré-aquece ViewModels em background — koinGet usa as? e não crasha
-        DispatchQueue.global(qos: .userInitiated).async {
+        // Passo 2: pré-aquece ViewModels — também na main thread (Firebase exige isso)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             let success = self.container.warmUp()
-            DispatchQueue.main.async {
-                if success {
-                    self.container.observeChildren()
-                    self.isKoinInitialized = true
-                    FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App totalmente inicializado")
-                } else {
-                    FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "warmUp falhou — tela de erro exibida")
-                }
+            if success {
+                self.container.observeChildren()
+                self.isKoinInitialized = true
+                FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App totalmente inicializado")
+            } else {
+                FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "warmUp falhou — tela de erro exibida")
             }
         }
     }
