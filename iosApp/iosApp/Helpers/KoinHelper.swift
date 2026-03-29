@@ -1,43 +1,57 @@
 import Foundation
 import shared
 
-// Safe getters para ViewModels - evita crashes no boundary Kotlin/Swift
-func safeGetLoginViewModel() -> LoginViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! LoginViewModel
+// MARK: - Koin Safe Getters
+// Usa `as?` em vez de `as!` para evitar SIGABRT quando o Koin retorna nil
+// ou quando exceções Kotlin/Native cruzam o boundary Swift sem serem capturadas
+// (comportamento observado no iOS 26+ com KMM-ViewModel ALPHA-16).
+
+private func koinGet<T: AnyObject>(_ type: T.Type, tag: String) -> T? {
+    let result = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil)
+    guard let vm = result as? T else {
+        let msg = "KoinHelper: falha ao resolver \(tag) — resultado: \(type(of: result))"
+        FileLogger.shared.write(level: "ERROR", tag: "KoinHelper", message: msg)
+        return nil
+    }
+    return vm
 }
 
-func safeGetAuthViewModel() -> AuthViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! AuthViewModel
+func safeGetLoginViewModel() -> LoginViewModel? {
+    return koinGet(LoginViewModel.self, tag: "LoginViewModel")
 }
 
-func safeGetEmergencyViewModel() -> EmergencyViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! EmergencyViewModel
+func safeGetAuthViewModel() -> AuthViewModel? {
+    return koinGet(AuthViewModel.self, tag: "AuthViewModel")
 }
 
-func safeGetProfileViewModel() -> ProfileViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfileViewModel
+func safeGetEmergencyViewModel() -> EmergencyViewModel? {
+    return koinGet(EmergencyViewModel.self, tag: "EmergencyViewModel")
 }
 
-func safeGetHistoryViewModel() -> HistoryViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! HistoryViewModel
+func safeGetProfileViewModel() -> ProfileViewModel? {
+    return koinGet(ProfileViewModel.self, tag: "ProfileViewModel")
 }
 
-func safeGetProfessionalListViewModel() -> ProfessionalListViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfessionalListViewModel
+func safeGetHistoryViewModel() -> HistoryViewModel? {
+    return koinGet(HistoryViewModel.self, tag: "HistoryViewModel")
 }
 
-func safeGetProfessionalDetailViewModel() -> ProfessionalDetailViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfessionalDetailViewModel
+func safeGetProfessionalListViewModel() -> ProfessionalListViewModel? {
+    return koinGet(ProfessionalListViewModel.self, tag: "ProfessionalListViewModel")
 }
 
-func safeGetHomeViewModel() -> HomeViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! HomeViewModel
+func safeGetProfessionalDetailViewModel() -> ProfessionalDetailViewModel? {
+    return koinGet(ProfessionalDetailViewModel.self, tag: "ProfessionalDetailViewModel")
 }
 
-func safeGetMedicalProfileViewModel() -> MedicalProfileViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! MedicalProfileViewModel
+func safeGetHomeViewModel() -> HomeViewModel? {
+    return koinGet(HomeViewModel.self, tag: "HomeViewModel")
 }
 
-func safeGetProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel {
-    return KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as! ProfessionalDashboardViewModel
+func safeGetMedicalProfileViewModel() -> MedicalProfileViewModel? {
+    return koinGet(MedicalProfileViewModel.self, tag: "MedicalProfileViewModel")
+}
+
+func safeGetProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel? {
+    return koinGet(ProfessionalDashboardViewModel.self, tag: "ProfessionalDashboardViewModel")
 }
