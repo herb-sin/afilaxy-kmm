@@ -34,46 +34,41 @@ kotlin {
     }
     
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                // Coroutines
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-                
-                // Serialization
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-                
-                // DateTime
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                
-                // Firebase KMM (apenas essenciais para MVP)
-                implementation("dev.gitlive:firebase-auth:2.1.0")
-                implementation("dev.gitlive:firebase-firestore:2.1.0")
-                
-                // Settings (SharedPreferences substitute)
-                implementation("com.russhwolf:multiplatform-settings:1.1.1")
-                
-                // Koin DI
-                implementation("io.insert-koin:koin-core:3.5.0")
-                
-                // KMM-ViewModel
-                implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16")
-            }
+        commonMain.dependencies {
+            // Coroutines — 1.10.1 resolve incompatibilidade com iOS 26 + Kotlin/Native 2.x
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+
+            // Serialization
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+
+            // DateTime
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
+
+            // Firebase KMM — 2.7.0 é compatível com coroutines 1.10+
+            implementation("dev.gitlive:firebase-auth:2.7.0")
+            implementation("dev.gitlive:firebase-firestore:2.7.0")
+
+            // Settings
+            implementation("com.russhwolf:multiplatform-settings:1.3.0")
+
+            // Koin DI — 3.6.0 compatível com Kotlin 2.x
+            implementation("io.insert-koin:koin-core:3.6.0")
+
+            // KMM-ViewModel — ALPHA-22 compatível com koin 3.6 e coroutines 1.10
+            implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-22")
         }
         
-        val commonTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-                implementation("app.cash.turbine:turbine:1.0.0")
-            }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
+            implementation("app.cash.turbine:turbine:1.1.0")
         }
-        
-        val androidMain by getting {
-            dependencies {
-                implementation("io.insert-koin:koin-android:3.5.0")
-                implementation("com.google.android.gms:play-services-location:21.3.0")
-            }
+
+        androidMain.dependencies {
+            implementation("io.insert-koin:koin-android:3.6.0")
+            implementation("com.google.android.gms:play-services-location:21.3.0")
         }
+
         
         val iosX64Main by getting
         val iosArm64Main by getting
