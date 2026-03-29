@@ -17,6 +17,7 @@ import org.koin.core.context.startKoin
 private const val TAG = "KoinHelper"
 private var koinInstance: Koin? = null
 
+@Throws(Exception::class)
 fun doInitKoin() {
     try {
         koinInstance = startKoin {
@@ -24,7 +25,10 @@ fun doInitKoin() {
         }.koin
         Logger.i(TAG, "Koin initialized successfully")
     } catch (e: Exception) {
-        Logger.e(TAG, "Koin initialization failed", e)
+        Logger.e(TAG, "Koin initialization failed: ${e.message}")
+        // Não re-throw: permite que Swift capture via @Throws e exiba a tela de erro
+        // em vez de abort(). koinInstance permanece null — os @Throws getters
+        // retornarão erro via Swift try/catch normalmente.
         throw e
     }
 }

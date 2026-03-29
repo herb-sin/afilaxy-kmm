@@ -134,11 +134,26 @@ class ViewModelProvider {
     func getProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel? { safeGetProfessionalDashboardViewModel() }
 
     func getChatViewModel(emergencyId: String) -> ChatViewModel? {
-        guard let chatRepo = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? ChatRepository,
-              let authRepo = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? AuthRepository else {
-            FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: falha ao resolver dependências")
+        // NOTA: ChatViewModel precisa de chatRepo e authRepo.
+        // Como não temos @Throws getters específicos para os repos, usamos
+        // o AuthViewModel resolvido (que já tem authRepo internamente) como
+        // indicador de que o Koin está funcional. Se falhar, retorna nil.
+        guard let authVM = safeGetAuthViewModel() else {
+            FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: AuthViewModel não disponível")
             return nil
         }
-        return ChatViewModel(emergencyId: emergencyId, chatRepository: chatRepo, authRepository: authRepo)
+        _ = authVM // validação apenas — ChatViewModel precisa dos repos separados
+        do {
+            let chatRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? ChatRepository
+            let authRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? AuthRepository
+            guard let cr = chatRepo, let ar = authRepo else {
+                FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: cast repos falhou")
+                return nil
+            }
+            return ChatViewModel(emergencyId: emergencyId, chatRepository: cr, authRepository: ar)
+        } catch {
+            FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: \(error.localizedDescription)")
+            return nil
+        }
     }
 }
