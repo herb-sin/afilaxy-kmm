@@ -372,9 +372,17 @@ struct AfilaxyApp: App {
         // o ProgressView entre os ciclos do run loop — não há congelamento visual.
         assert(Thread.isMainThread, "initializeKoin deve ser chamado da main thread")
 
-        // Passo 1: registra módulos Koin (síncrono, já estamos na main thread)
-        KoinHelperKt.doInitKoin()
-        FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados (main thread)")
+        // Passo 1: registra módulos Koin — @Throws no Kotlin → Swift try/catch captura
+        // qualquer falha (startKoin, módulos) sem abort().
+        do {
+            try KoinHelperKt.doInitKoin()
+            FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "Koin modules registrados (main thread)")
+        } catch {
+            let msg = "doInitKoin falhou: \(error.localizedDescription)"
+            FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: msg)
+            container.initError = msg
+            return
+        }
 
         // Passo 2: pré-aquece ViewModels — também na main thread (Firebase exige isso)
         DispatchQueue.main.async {

@@ -2,56 +2,63 @@ import Foundation
 import shared
 
 // MARK: - Koin Safe Getters
-// Usa `as?` em vez de `as!` para evitar SIGABRT quando o Koin retorna nil
-// ou quando exceções Kotlin/Native cruzam o boundary Swift sem serem capturadas
-// (comportamento observado no iOS 26+ com KMM-ViewModel ALPHA-16).
+//
+// REGRA DE OURO: NUNCA chame KoinHelperKt.getKoin().get() diretamente do Swift.
+// O Koin.get() é Kotlin puro sem @Throws — qualquer exceção (NoBeanDefFoundException,
+// IllegalStateException, etc.) se torna abort() ao cruzar a boundary Kotlin/Native → Swift.
+//
+// As funções abaixo delegam para os wrappers Kotlin @Throws(..) que convertem
+// Kotlin exceptions em NSError catchable pelo Swift try/catch.
 
-private func koinGet<T: AnyObject>(_ targetType: T.Type, tag: String) -> T? {
-    let result = KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil)
-    guard let vm = result as? T else {
-        let msg = "KoinHelper: falha ao resolver \(tag) — recebido: \(Swift.type(of: result))"
-        FileLogger.shared.write(level: "ERROR", tag: "KoinHelper", message: msg)
+private func koinGet<T>(_ kotlinGetter: () throws -> T, tag: String) -> T? {
+    do {
+        return try kotlinGetter()
+    } catch {
+        FileLogger.shared.write(
+            level: "ERROR",
+            tag: "KoinHelper",
+            message: "\(tag) falhou: \(error.localizedDescription)"
+        )
         return nil
     }
-    return vm
 }
 
 func safeGetLoginViewModel() -> LoginViewModel? {
-    return koinGet(LoginViewModel.self, tag: "LoginViewModel")
+    koinGet({ try KoinHelperKt.safeGetLoginViewModel() }, tag: "LoginViewModel")
 }
 
 func safeGetAuthViewModel() -> AuthViewModel? {
-    return koinGet(AuthViewModel.self, tag: "AuthViewModel")
+    koinGet({ try KoinHelperKt.safeGetAuthViewModel() }, tag: "AuthViewModel")
 }
 
 func safeGetEmergencyViewModel() -> EmergencyViewModel? {
-    return koinGet(EmergencyViewModel.self, tag: "EmergencyViewModel")
+    koinGet({ try KoinHelperKt.safeGetEmergencyViewModel() }, tag: "EmergencyViewModel")
 }
 
 func safeGetProfileViewModel() -> ProfileViewModel? {
-    return koinGet(ProfileViewModel.self, tag: "ProfileViewModel")
+    koinGet({ try KoinHelperKt.safeGetProfileViewModel() }, tag: "ProfileViewModel")
 }
 
 func safeGetHistoryViewModel() -> HistoryViewModel? {
-    return koinGet(HistoryViewModel.self, tag: "HistoryViewModel")
+    koinGet({ try KoinHelperKt.safeGetHistoryViewModel() }, tag: "HistoryViewModel")
 }
 
 func safeGetProfessionalListViewModel() -> ProfessionalListViewModel? {
-    return koinGet(ProfessionalListViewModel.self, tag: "ProfessionalListViewModel")
+    koinGet({ try KoinHelperKt.safeGetProfessionalListViewModel() }, tag: "ProfessionalListViewModel")
 }
 
 func safeGetProfessionalDetailViewModel() -> ProfessionalDetailViewModel? {
-    return koinGet(ProfessionalDetailViewModel.self, tag: "ProfessionalDetailViewModel")
+    koinGet({ try KoinHelperKt.safeGetProfessionalDetailViewModel() }, tag: "ProfessionalDetailViewModel")
 }
 
 func safeGetHomeViewModel() -> HomeViewModel? {
-    return koinGet(HomeViewModel.self, tag: "HomeViewModel")
+    koinGet({ try KoinHelperKt.safeGetHomeViewModel() }, tag: "HomeViewModel")
 }
 
 func safeGetMedicalProfileViewModel() -> MedicalProfileViewModel? {
-    return koinGet(MedicalProfileViewModel.self, tag: "MedicalProfileViewModel")
+    koinGet({ try KoinHelperKt.safeGetMedicalProfileViewModel() }, tag: "MedicalProfileViewModel")
 }
 
 func safeGetProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel? {
-    return koinGet(ProfessionalDashboardViewModel.self, tag: "ProfessionalDashboardViewModel")
+    koinGet({ try KoinHelperKt.safeGetProfessionalDashboardViewModel() }, tag: "ProfessionalDashboardViewModel")
 }
