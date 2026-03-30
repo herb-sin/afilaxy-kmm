@@ -211,12 +211,18 @@ struct EmergencyView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
-            guard state.hasActiveEmergency,
+            guard state.hasActiveEmergency, !chatNavigated else { return }
+            guard let ms = state.emergencyExpiresAt?.int64Value, ms > 0 else { return }
+            let expiry = Date(timeIntervalSince1970: Double(ms) / 1000)
+            // Reinicia o countdown se o timer foi destruído pelo onDisappear temporário
+            // e o estado já está estável (não virão mais objectWillChange para recriá-lo)
+            if countdownTimer == nil && expiry > Date() {
+                startCountdown(expiresAt: ms)
+            }
+            // Auto-cancela se a emergência expirou enquanto a view estava fora de tela
+            guard expiry <= Date(),
                   let eid = state.emergencyId as? String,
-                  let ms = state.emergencyExpiresAt?.int64Value, ms > 0,
-                  Date(timeIntervalSince1970: Double(ms) / 1000) <= Date() else { return }
-            // Só auto-cancela se for a mesma emergência que já estava ativa
-            guard eid == lastEmergencyId else { return }
+                  eid == lastEmergencyId else { return }
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "onAppear: emergency already expired — auto cancel")
             guard !isCancelling else { return }
             isCancelling = true

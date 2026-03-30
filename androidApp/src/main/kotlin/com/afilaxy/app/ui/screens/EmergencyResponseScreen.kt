@@ -47,6 +47,13 @@ fun EmergencyResponseScreen(
 
     LaunchedEffect(state.emergencyExpiresAt) {
         val rawExpiresAt = state.emergencyExpiresAt ?: return@LaunchedEffect
+        // Defesa de segunda linha: ignora expiresAt que pertence a uma emergência
+        // diferente desta tela. Ocorre quando o ViewModel ainda tem estado de uma
+        // emergência anterior cancelada (race entre preloadEmergencyId e esta LaunchedEffect).
+        if (state.emergencyId != null && state.emergencyId != emergencyId) {
+            FileLogger.log("WARN", "EmergencyResponseScreen", "ignored stale expiresAt from emergencyId=${state.emergencyId} (expected=$emergencyId)")
+            return@LaunchedEffect
+        }
         // expiresAt pode vir em segundos (Firestore Timestamp) ou milissegundos — normaliza
         val expiresAt = if (rawExpiresAt < 1_000_000_000_000L) rawExpiresAt * 1000L else rawExpiresAt
         // Emergência já expirada ao abrir — cancela notificação e volta imediatamente
