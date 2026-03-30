@@ -279,6 +279,13 @@ export const onEmergencyCreated = functions.firestore
 
                     console.log(`Helper ${helper.email || doc.id}: ${distanceInKm.toFixed(2)}km`);
 
+                    // Exclui o próprio requester — um dispositivo nunca deve receber
+                    // sua própria emergência, mesmo que estivesse registrado como helper.
+                    if (doc.id === emergency.requesterId) {
+                        console.log(`Ignorando requester ${doc.id} da lista de helpers`);
+                        continue;
+                    }
+
                     if (distanceInKm <= radiusInKm) {
                         nearbyHelpers.push({ ...helper, id: doc.id, distance: distanceInKm });
                     }
