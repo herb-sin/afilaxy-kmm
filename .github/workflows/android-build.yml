@@ -34,7 +34,7 @@ jobs:
     # Injeta MAPS_API_KEY e VERSION_CODE no local.properties para o build
     - name: Inject build properties
       run: |
-        echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}" >> local.properties
+        echo "MAPS_API_KEY_ANDROID=${{ secrets.MAPS_API_KEY_ANDROID }}" >> local.properties
         echo "VERSION_CODE=${{ github.run_number }}" >> local.properties
     
     - name: Run shared module tests
