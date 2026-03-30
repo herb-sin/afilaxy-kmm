@@ -53,6 +53,10 @@ struct ContentView: View {
     @State private var chatNavigatedId: String? = nil
     @State private var wasActiveEmergency = false
     @State private var resolvedChatId: String? = nil
+    // In-app banner para emergências recebidas pelo Firestore listener
+    @State private var showIncomingAlert = false
+    @State private var incomingAlertEmergencyId: String? = nil
+    @State private var incomingAlertName: String = ""
     
     // MARK: - Adaptive Tab View Style
     private var adaptiveTabViewStyle: DefaultTabViewStyle {
@@ -131,6 +135,32 @@ struct ContentView: View {
             }
             .onReceive(container.$pendingChatId.compactMap { $0 }) { emergencyId in
                 handlePendingChat(emergencyId)
+            }
+            .onReceive(container.$pendingIncomingEmergencies) { emergencies in
+                // Exibe alerta in-app quando chega uma emergência via Firestore listener
+                // (cobre o caso de app em foreground onde o banner push pode ser ignorado)
+                guard !showIncomingAlert, let first = emergencies.first else { return }
+                incomingAlertEmergencyId = first.id
+                incomingAlertName = first.name
+                showIncomingAlert = true
+            }
+            .alert("\ud83c\udd98 Pedido de Ajuda", isPresented: $showIncomingAlert) {
+                Button("Aceitar") {
+                    guard let eid = incomingAlertEmergencyId else { return }
+                    container.dismissIncomingEmergency(id: eid)
+                    emergencyRouteActive = false  // reseta para permitir navegação
+                    handleEmergencyNotification(
+                        Notification(name: .init("AfilaxyOpenEmergency"),
+                                     object: nil,
+                                     userInfo: ["emergencyId": eid])
+                    )
+                }
+                Button("Ignorar", role: .cancel) {
+                    guard let eid = incomingAlertEmergencyId else { return }
+                    container.dismissIncomingEmergency(id: eid)
+                }
+            } message: {
+                Text("\(incomingAlertName) precisa de ajuda! Deseja aceitar?")
             }
             .onReceive(container.auth.$state) { authState in
                 // Detecta logout — performLogout() sinaliza via Firebase → Kotlin → StateFlow → polling

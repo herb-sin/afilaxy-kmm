@@ -101,19 +101,24 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler()
             return
         }
-        // Roteamento por tipo: chat → ChatView, demais → EmergencyResponseView
-        if type == "chat" {
-            NotificationCenter.default.post(
-                name: .init("AfilaxyOpenChat"),
-                object: nil,
-                userInfo: ["emergencyId": eid]
-            )
-        } else {
-            NotificationCenter.default.post(
-                name: .init("AfilaxyOpenEmergency"),
-                object: nil,
-                userInfo: ["emergencyId": eid]
-            )
+        // Delay de 1s: dá tempo ao SwiftUI de concluir a transição background→foreground
+        // antes de processar a navegação. Sem o delay, NavigationPath.append pode
+        // ser descartado durante a animação de ativação da cena.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            if type == "chat" {
+                NotificationCenter.default.post(
+                    name: .init("AfilaxyOpenChat"),
+                    object: nil,
+                    userInfo: ["emergencyId": eid]
+                )
+            } else {
+                // emergency_request, helper_matched ou unknown — todos abrem EmergencyResponse
+                NotificationCenter.default.post(
+                    name: .init("AfilaxyOpenEmergency"),
+                    object: nil,
+                    userInfo: ["emergencyId": eid]
+                )
+            }
         }
         completionHandler()
     }
@@ -289,7 +294,8 @@ class AppContainer: ObservableObject {
         content.title = title
         content.body = body
         content.sound = .default
-        content.userInfo = ["emergencyId": emergencyId]
+        // type é necessário: sem ele, didReceive notificationResponse recebe type=unknown
+        content.userInfo = ["emergencyId": emergencyId, "type": "emergency_request"]
         let request = UNNotificationRequest(identifier: emergencyId, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
