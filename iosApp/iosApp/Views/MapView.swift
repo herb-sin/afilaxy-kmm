@@ -4,12 +4,13 @@ import shared
 
 struct MapView: View {
     @EnvironmentObject var container: AppContainer
+    @StateObject private var locationManager = LocationManager.shared
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: -23.5505, longitude: -46.6333), // São Paulo
+        center: CLLocationCoordinate2D(latitude: -23.5505, longitude: -46.6333), // fallback São Paulo
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
     @State private var showHelperMode = false
-    @State private var trackingMode: MapUserTrackingMode = .none
+    @State private var trackingMode: MapUserTrackingMode = .follow  // auto-centraliza no GPS
     @State private var isHelperModeActive = false // Local state fallback
     
     var body: some View {
@@ -77,8 +78,16 @@ struct MapView: View {
     }
     
     private func updateLocationIfNeeded() {
+        // Centra o mapa imediatamente se já temos uma localização cacheada
+        if let current = LocationManager.shared.currentLocation {
+            region.center = current.coordinate
+            trackingMode = .follow
+        }
+        // Solicita permissão se necessário e inicia atualizações de GPS
         if LocationManager.shared.hasPermission {
-            // LocationManager.shared.requestLocation()
+            LocationManager.shared.startUpdating()
+        } else {
+            LocationManager.shared.requestWhenInUse()
         }
     }
 }
@@ -86,26 +95,37 @@ struct MapView: View {
 // MARK: - Supporting Views
 
 struct LocationStatusCard: View {
+    @StateObject private var locationManager = LocationManager.shared
+
     var body: some View {
         AfilaxyCard {
             HStack(spacing: 8) {
                 Image(systemName: "location.fill")
                     .foregroundColor(Color.afiprimary)
                     .font(.caption)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Localização Atual")
                         .font(.caption2)
                         .foregroundColor(Color.afionSurface.opacity(0.6))
-                    Text("São Paulo, SP")
-                        .font(.caption)
-                        .fontWeight(.medium)
+                    if let loc = locationManager.currentLocation {
+                        Text(String(format: "%.4f, %.4f",
+                             loc.coordinate.latitude,
+                             loc.coordinate.longitude))
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                    } else {
+                        Text("Obtendo localização...")
+                            .font(.caption)
+                            .foregroundColor(Color.afionSurface.opacity(0.5))
+                    }
                 }
-                
+
                 Spacer()
-                
+
                 Circle()
-                    .fill(Color.green)
+                    .fill(locationManager.currentLocation != nil ? Color.green : Color.orange)
                     .frame(width: 8, height: 8)
             }
         }

@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var showLogoutAlert = false
     @State private var helperToggle = false
     @State private var isTogglingHelper = false
+    @State private var helperIntendedValue = false  // valor visual enquanto opção está pendente
     @State private var navigationPath = NavigationPath()
 
 
@@ -146,11 +147,16 @@ struct HomeView: View {
         let state = container.emergency.state
         let isHelperMode = state?.isHelperMode == true
 
-        // Binding mutável: o SwiftUI Toggle exige escrita — .constant() reverte o toggle
-        // sem disparar nada. Aqui a escrita aciona diretamente activate/deactivate.
         let helperBinding = Binding<Bool>(
-            get: { isHelperMode },
+            get: {
+                // Enquanto a operação está pendente, mostra o valor pretendido pelo usuário
+                // Em vez de reverter visualmente enquanto o Firestore confirma
+                isTogglingHelper ? helperIntendedValue : isHelperMode
+            },
             set: { newValue in
+                // Impede toques duplos durante operação em andamento
+                guard !isTogglingHelper else { return }
+                helperIntendedValue = newValue
                 if newValue { activateHelperMode() } else { deactivateHelperMode() }
             }
         )
@@ -328,6 +334,7 @@ struct HomeView: View {
             guard LocationManager.shared.hasPermission, lat != 0 else {
                 await MainActor.run {
                     FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "No permission or location after fetch")
+                    helperIntendedValue = false  // reverte visual se falhou
                     isTogglingHelper = false
                 }
                 return
@@ -337,6 +344,9 @@ struct HomeView: View {
                 if success {
                     self.container.emergency.setHelperMode(true)
                     self.container.startObservingNearbyEmergencies(lat: lat, lon: lon)
+                } else {
+                    // Falhou ou foi cancelado — reverte o visual
+                    self.helperIntendedValue = false
                 }
                 self.isTogglingHelper = false
             }
@@ -344,6 +354,8 @@ struct HomeView: View {
     }
     
     private func deactivateHelperMode() {
+        helperIntendedValue = false
+        LocationManagerBridge.shared.cancelPendingHelperActivation()
         LocationManagerBridge.shared.disableHelperMode()
         container.emergency.setHelperMode(false)
         container.stopObservingNearbyEmergencies()

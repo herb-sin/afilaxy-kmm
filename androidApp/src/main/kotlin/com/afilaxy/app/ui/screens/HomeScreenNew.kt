@@ -36,6 +36,16 @@ fun HomeScreenNew(
 ) {
     val emergencyState by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
+    // Estado local otimista: muda o Switch visual imediatamente ao toque,
+    // sem esperar a confirmação do Firestore (mesmo padrão do fix iOS).
+    var isHelperPending by remember { mutableStateOf(false) }
+    var helperIntended by remember { mutableStateOf(false) }
+
+    // Sincroniza o estado local com o ViewModel quando a operação conclui.
+    LaunchedEffect(emergencyState.isHelperMode) {
+        isHelperPending = false
+        helperIntended = emergencyState.isHelperMode
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -48,8 +58,13 @@ fun HomeScreenNew(
         item {
             HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
-                isHelperMode = emergencyState.isHelperMode,
+                // Enquanto pendente, mostra o valor pretendido pelo usuário.
+                // Após o ViewModel confirmar, LaunchedEffect zera isHelperPending.
+                isHelperMode = if (isHelperPending) helperIntended else emergencyState.isHelperMode,
                 onHelperModeToggle = { enable ->
+                    if (isHelperPending) return@HomeWelcomeCard  // ignora tap duplo
+                    isHelperPending = true
+                    helperIntended = enable
                     if (enable) viewModel.activateHelperWithLocation()
                     else viewModel.deactivateHelper()
                 }
