@@ -1,20 +1,25 @@
 import Foundation
 import shared
 import FirebaseAuth
+import Combine
 
-// MARK: - StateFlow Wrapper Classes
+// MARK: - AuthViewModelWrapper
 class AuthViewModelWrapper: ObservableObject {
     private let viewModel: AuthViewModel?
     @Published var state: AuthState?
     private var observer: StateFlowObserver<AuthState>?
+    private var cancellable: AnyCancellable?
 
     init(_ viewModel: AuthViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(viewModel.state)
-        self.state = viewModel.state.value as? AuthState
+        let obs = StateFlowObserver<AuthState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
     }
 
-    // Wrapper vazio — usado quando o Koin falha (não crasha a UI)
     static func empty() -> AuthViewModelWrapper { AuthViewModelWrapper() }
     private init() { self.viewModel = nil }
 
@@ -25,15 +30,21 @@ class AuthViewModelWrapper: ObservableObject {
     }
 }
 
+// MARK: - EmergencyViewModelWrapper
 class EmergencyViewModelWrapper: ObservableObject {
     private let viewModel: EmergencyViewModel?
     @Published var state: EmergencyState?
     private var observer: StateFlowObserver<EmergencyState>?
+    private var cancellable: AnyCancellable?
 
     init(_ viewModel: EmergencyViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(viewModel.state)
-        self.state = viewModel.state.value as? EmergencyState
+        let obs = StateFlowObserver<EmergencyState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
     }
 
     static func empty() -> EmergencyViewModelWrapper { EmergencyViewModelWrapper() }
@@ -46,15 +57,21 @@ class EmergencyViewModelWrapper: ObservableObject {
     func clearEmergencyStateSwift(cancelledId: String? = nil) { viewModel?.onClearEmergencyState() }
 }
 
+// MARK: - HistoryViewModelWrapper
 class HistoryViewModelWrapper: ObservableObject {
     private let viewModel: HistoryViewModel?
     @Published var state: HistoryState?
     private var observer: StateFlowObserver<HistoryState>?
+    private var cancellable: AnyCancellable?
 
     init(_ viewModel: HistoryViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(viewModel.state)
-        self.state = viewModel.state.value as? HistoryState
+        let obs = StateFlowObserver<HistoryState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
     }
 
     static func empty() -> HistoryViewModelWrapper { HistoryViewModelWrapper() }
@@ -64,15 +81,21 @@ class HistoryViewModelWrapper: ObservableObject {
     func freeze() {}
 }
 
+// MARK: - ProfileViewModelWrapper
 class ProfileViewModelWrapper: ObservableObject {
     private let viewModel: ProfileViewModel?
     @Published var state: ProfileState?
     private var observer: StateFlowObserver<ProfileState>?
+    private var cancellable: AnyCancellable?
 
     init(_ viewModel: ProfileViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(viewModel.state)
-        self.state = viewModel.state.value as? ProfileState
+        let obs = StateFlowObserver<ProfileState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
     }
 
     static func empty() -> ProfileViewModelWrapper { ProfileViewModelWrapper() }
@@ -82,15 +105,21 @@ class ProfileViewModelWrapper: ObservableObject {
     func freeze() {}
 }
 
+// MARK: - ProfessionalListViewModelWrapper
 class ProfessionalListViewModelWrapper: ObservableObject {
     private let viewModel: ProfessionalListViewModel?
     @Published var state: ProfessionalListState?
     private var observer: StateFlowObserver<ProfessionalListState>?
+    private var cancellable: AnyCancellable?
 
     init(_ viewModel: ProfessionalListViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(viewModel.state)
-        self.state = viewModel.state.value as? ProfessionalListState
+        let obs = StateFlowObserver<ProfessionalListState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
     }
 
     static func empty() -> ProfessionalListViewModelWrapper { ProfessionalListViewModelWrapper() }
@@ -100,15 +129,21 @@ class ProfessionalListViewModelWrapper: ObservableObject {
     func freeze() {}
 }
 
+// MARK: - ProfessionalDetailViewModelWrapper
 class ProfessionalDetailViewModelWrapper: ObservableObject {
     private let viewModel: ProfessionalDetailViewModel?
     @Published var state: ProfessionalDetailState?
     private var observer: StateFlowObserver<ProfessionalDetailState>?
+    private var cancellable: AnyCancellable?
 
     init(_ viewModel: ProfessionalDetailViewModel) {
         self.viewModel = viewModel
-        self.observer = StateFlowObserver(viewModel.state)
-        self.state = viewModel.state.value as? ProfessionalDetailState
+        let obs = StateFlowObserver<ProfessionalDetailState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
     }
 
     static func empty() -> ProfessionalDetailViewModelWrapper { ProfessionalDetailViewModelWrapper() }
@@ -118,10 +153,10 @@ class ProfessionalDetailViewModelWrapper: ObservableObject {
     func freeze() {}
 }
 
+// MARK: - ViewModelProvider
 class ViewModelProvider {
     static let shared = ViewModelProvider()
 
-    // MARK: - Optional getters (seguros para iOS 26 + KMM-ViewModel ALPHA)
     func getLoginViewModel() -> LoginViewModel? { safeGetLoginViewModel() }
     func getAuthViewModel() -> AuthViewModel? { safeGetAuthViewModel() }
     func getEmergencyViewModel() -> EmergencyViewModel? { safeGetEmergencyViewModel() }
@@ -134,15 +169,10 @@ class ViewModelProvider {
     func getProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel? { safeGetProfessionalDashboardViewModel() }
 
     func getChatViewModel(emergencyId: String) -> ChatViewModel? {
-        // NOTA: ChatViewModel precisa de chatRepo e authRepo.
-        // Como não temos @Throws getters específicos para os repos, usamos
-        // o AuthViewModel resolvido (que já tem authRepo internamente) como
-        // indicador de que o Koin está funcional. Se falhar, retorna nil.
-        guard let authVM = safeGetAuthViewModel() else {
-            FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: AuthViewModel não disponível")
+        guard safeGetAuthViewModel() != nil else {
+            FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: Koin não disponível")
             return nil
         }
-        _ = authVM // validação apenas — ChatViewModel precisa dos repos separados
         do {
             let chatRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? ChatRepository
             let authRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? AuthRepository
