@@ -144,7 +144,7 @@ struct ContentView: View {
                 incomingAlertName = first.name
                 showIncomingAlert = true
             }
-            .alert("\ud83c\udd98 Pedido de Ajuda", isPresented: $showIncomingAlert) {
+            .alert("🆘 Pedido de Ajuda", isPresented: $showIncomingAlert) {
                 Button("Aceitar") {
                     guard let eid = incomingAlertEmergencyId else { return }
                     container.dismissIncomingEmergency(id: eid)
