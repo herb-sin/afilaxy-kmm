@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import android.view.WindowManager
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
@@ -86,8 +85,60 @@ fun ChatScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Área de mensagens — ocupa todo espaço restante acima do input
+            Box(modifier = Modifier.weight(1f)) {
+                if (state.messages.isEmpty()) {
+                    // Estado vazio
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    // Lista de mensagens (reversa para mostrar mais recentes embaixo)
+                    LazyColumn(
+                        state = listState,
+                        reverseLayout = true,
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(
+                            items = state.messages,
+                            key = { it.timestamp }
+                        ) { message ->
+                            MessageBubble(
+                                message = message,
+                                currentUserId = state.currentUserId
+                            )
+                        }
+                    }
+                }
+                
+                // Indicador de carregamento
+                if (state.isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                    )
+                }
+            }
+
+            // Campo de input — empurrado para cima pelo teclado via imePadding()
             Surface(shadowElevation = 8.dp) {
                 Row(
                     modifier = Modifier
@@ -126,56 +177,6 @@ fun ChatScreen(
                         )
                     }
                 }
-            }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .imePadding()
-        ) {
-            if (state.messages.isEmpty()) {
-                // Estado vazio
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.chat_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                // Lista de mensagens (reversa para mostrar mais recentes embaixo)
-                LazyColumn(
-                    state = listState,
-                    reverseLayout = true,
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(
-                        items = state.messages,
-                        key = { it.timestamp }
-                    ) { message ->
-                        MessageBubble(
-                            message = message,
-                            currentUserId = state.currentUserId
-                        )
-                    }
-                }
-            }
-            
-            // Indicador de carregamento
-            if (state.isLoading) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                )
             }
         }
     }

@@ -105,14 +105,17 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // antes de processar a navegação. Sem o delay, NavigationPath.append pode
         // ser descartado durante a animação de ativação da cena.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            if type == "chat" {
+            if type == "chat" || type == "helper_matched" {
+                // chat      → nova mensagem: abre o chat
+                // helper_matched → REQUESTER foi aceito por um helper: abre o chat
+                // (EmergencyResponseView é a tela do HELPER, não do requester)
                 NotificationCenter.default.post(
                     name: .init("AfilaxyOpenChat"),
                     object: nil,
                     userInfo: ["emergencyId": eid]
                 )
             } else {
-                // emergency_request, helper_matched ou unknown — todos abrem EmergencyResponse
+                // emergency_request → HELPER recebeu pedido de ajuda: abre EmergencyResponse
                 NotificationCenter.default.post(
                     name: .init("AfilaxyOpenEmergency"),
                     object: nil,
