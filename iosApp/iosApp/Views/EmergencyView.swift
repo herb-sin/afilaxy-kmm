@@ -24,12 +24,13 @@ struct EmergencyView: View {
     private func requestLocationAndCreateEmergency() {
         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "requestLocationAndCreateEmergency hasPermission=\(locationManager.hasPermission) hasLocation=\(locationManager.currentLocation != nil)")
 
+        // Limpa emergências pendentes de outros — usuário está criando a própria emergência
+        container.pendingIncomingEmergencies.removeAll()
+
         // CRÍTICO: cancela qualquer ativação de helper mode em andamento.
-        // Sem isso, o callback do Firestore pode registrar o dispositivo como helper
-        // da própria emergência (race condition confirmada nos logs de 2026-03-30).
         LocationManagerBridge.shared.cancelPendingHelperActivation()
 
-        // Desativa helper mode ao solicitar ajuda — usuário não pode ser helper e requester
+        // Desativa helper mode ao solicitar ajuda
         if container.emergency.state?.isHelperMode == true {
             LocationManagerBridge.shared.disableHelperMode()
             container.emergency.setHelperMode(false)
@@ -140,7 +141,7 @@ struct EmergencyView: View {
                 Section {
                     Label("Emergência Ativa", systemImage: "exclamationmark.triangle.fill")
                         .foregroundColor(.red)
-                    if state.currentEmergency?.assignedHelperId == nil {
+                    if state.currentEmergency?.assignedHelperId == nil && !chatNavigated {
                         HStack { ProgressView(); Text("Aguardando helper...").foregroundColor(.secondary) }
                         let minutes = secondsLeft / 60
                         let seconds = secondsLeft % 60
@@ -148,6 +149,18 @@ struct EmergencyView: View {
                             .font(.headline)
                             .foregroundColor(secondsLeft <= 30 ? .red : .orange)
                             .monospacedDigit()
+                    }
+                    // Botão de fallback: visível quando o match ocorreu mas a navegação falhou
+                    if chatNavigated {
+                        Button {
+                            if let eid = container.emergency.state?.emergencyId as? String {
+                                container.navigateToChat(emergencyId: eid)
+                            }
+                        } label: {
+                            Label("Ir ao Chat", systemImage: "message.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                     Button("Cancelar Emergência", role: .destructive) {
                         guard !isCancelling else { return }
@@ -210,8 +223,12 @@ struct EmergencyView: View {
             cancelEmergencyNative(emergencyId: eid)
         }
         .onDisappear {
-            statusListener?.remove()
-            statusListener = nil
+            // NÃO remove o statusListener aqui.
+            // Se outra view for empurrada sobre EmergencyView (ex: EmergencyResponseView
+            // do in-app alert), onDisappear dispara mas a view ainda está na stack.
+            // Remover o listener aqui impede detectar o match enquanto não visível.
+            // O @State preserva o listener enquanto a view está na NavigationStack.
+            // A limpeza explícita acontece no botão cancelar e após chatNavigated=true.
             countdownTimer?.invalidate()
             countdownTimer = nil
         }
