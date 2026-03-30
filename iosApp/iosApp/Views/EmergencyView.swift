@@ -23,6 +23,12 @@ struct EmergencyView: View {
 
     private func requestLocationAndCreateEmergency() {
         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "requestLocationAndCreateEmergency hasPermission=\(locationManager.hasPermission) hasLocation=\(locationManager.currentLocation != nil)")
+
+        // CRÍTICO: cancela qualquer ativação de helper mode em andamento.
+        // Sem isso, o callback do Firestore pode registrar o dispositivo como helper
+        // da própria emergência (race condition confirmada nos logs de 2026-03-30).
+        LocationManagerBridge.shared.cancelPendingHelperActivation()
+
         // Desativa helper mode ao solicitar ajuda — usuário não pode ser helper e requester
         if container.emergency.state?.isHelperMode == true {
             LocationManagerBridge.shared.disableHelperMode()

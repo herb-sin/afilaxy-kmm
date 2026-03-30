@@ -53,8 +53,19 @@ class EmergencyViewModelWrapper: ObservableObject {
     var vm: EmergencyViewModel? { viewModel }
 
     func freezeSwift() {}
-    func setHelperMode(_ enabled: Bool) {}
-    func clearEmergencyStateSwift(cancelledId: String? = nil) { viewModel?.onClearEmergencyState() }
+
+    /// Atualiza isHelperMode no shared ViewModel.
+    /// Antes estava vazio — o toggle nunca refletia o estado correto no iOS.
+    func setHelperMode(_ enabled: Bool) {
+        viewModel?.onToggleHelperMode(enable: enabled)
+    }
+
+    /// Limpa o estado de emergência local. Garante que hasActiveEmergency e
+    /// isHelperMode fiquem false para evitar botão "Ativa" preso.
+    func clearEmergencyStateSwift(cancelledId: String? = nil) {
+        viewModel?.onClearEmergencyState()
+        viewModel?.onToggleHelperMode(enable: false) // garante helper mode limpo
+    }
 }
 
 // MARK: - HistoryViewModelWrapper

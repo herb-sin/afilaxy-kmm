@@ -8,6 +8,9 @@ final class LocationManagerBridge {
     static let shared = LocationManagerBridge()
     
     private let locationManager = LocationManager.shared
+    /// Controla se uma ativação de helper mode está em andamento.
+    /// Setado para false por `cancelPendingHelperActivation()` antes de criar emergência.
+    private var pendingHelperActivation = false
     
     private init() {}
     
@@ -32,8 +35,10 @@ final class LocationManagerBridge {
     /// e chama completion na main thread quando concluído.
     func enableHelperMode(lat: Double, lon: Double, completion: @escaping (Bool) -> Void) {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "enableHelperMode hasPermission=\(locationManager.hasPermission)")
+        pendingHelperActivation = true
         locationManager.startUpdating()
         guard let uid = Auth.auth().currentUser?.uid else {
+            pendingHelperActivation = false
             completion(false)
             return
         }
@@ -48,6 +53,14 @@ final class LocationManagerBridge {
         ]
         Firestore.firestore().collection("helpers").document(uid).setData(data, merge: true) { error in
             DispatchQueue.main.async {
+                // Se foi cancelado (emergência criada durante a espera), ignora o resultado
+                guard self.pendingHelperActivation else {
+                    FileLogger.shared.write(level: "INFO", tag: "LocationBridge",
+                        message: "enableHelperMode ignorada — operação cancelada antes do Firestore confirmar")
+                    completion(false)
+                    return
+                }
+                self.pendingHelperActivation = false
                 if let error = error {
                     FileLogger.shared.write(level: "ERROR", tag: "LocationBridge", message: "enableHelperMode Firestore error: \(error.localizedDescription)")
                     completion(false)
@@ -56,6 +69,16 @@ final class LocationManagerBridge {
                 }
             }
         }
+    }
+
+    /// Cancela uma ativação de helper mode ainda pendente no Firestore.
+    /// Deve ser chamado antes de `onCreateEmergency()` para evitar race condition
+    /// onde o dispositivo se registra como helper da própria emergência.
+    func cancelPendingHelperActivation() {
+        guard pendingHelperActivation else { return }
+        pendingHelperActivation = false
+        FileLogger.shared.write(level: "INFO", tag: "LocationBridge",
+            message: "cancelPendingHelperActivation — callback de helper mode será ignorado")
     }
 
     // Geohash precision=9 — compatível com geofire-common

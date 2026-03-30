@@ -13,24 +13,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.afilaxy.domain.repository.LocationRepository
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    navController: NavController,
-    latitude: Double = -23.5505,
-    longitude: Double = -46.6333
+    navController: NavController
 ) {
-    val location = LatLng(latitude, longitude)
+    val locationRepository: LocationRepository = koinInject()
+
+    // São Paulo como fallback — substituído pela localização real via LaunchedEffect
+    val saoPaulo = LatLng(-23.5505, -46.6333)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(location, 15f)
+        position = CameraPosition.fromLatLngZoom(saoPaulo, 15f)
     }
-    
+
+    // Localização real do dispositivo
+    var userLocation by remember { mutableStateOf<LatLng?>(null) }
     var mapLoadError by remember { mutableStateOf(false) }
     var mapLoaded by remember { mutableStateOf(false) }
+
+    // Busca a localização real ao abrir a tela
+    LaunchedEffect(Unit) {
+        val loc = locationRepository.getCurrentLocation()
+        if (loc != null) {
+            val realLatLng = LatLng(loc.latitude, loc.longitude)
+            userLocation = realLatLng
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(realLatLng, 15f)
+            )
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -47,8 +65,8 @@ fun MapScreen(
         if (mapLoadError) {
             MapErrorFallback(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                latitude = latitude,
-                longitude = longitude,
+                latitude = userLocation?.latitude ?: saoPaulo.latitude,
+                longitude = userLocation?.longitude ?: saoPaulo.longitude,
                 onRetry = {
                     mapLoadError = false
                     mapLoaded = false
@@ -63,10 +81,15 @@ fun MapScreen(
                     cameraPositionState = cameraPositionState,
                     onMapLoaded = { mapLoaded = true }
                 ) {
+                    // Marca a posição real do usuário (ou São Paulo como fallback)
+                    val markerPos = userLocation ?: saoPaulo
                     Marker(
-                        state = MarkerState(position = location),
-                        title = "Localização",
-                        snippet = "Você está aqui"
+                        state = MarkerState(position = markerPos),
+                        title = if (userLocation != null) "Você está aqui" else "Posição padrão (GPS indisponível)",
+                        snippet = if (userLocation != null)
+                            "${String.format("%.5f", markerPos.latitude)}, ${String.format("%.5f", markerPos.longitude)}"
+                        else
+                            "São Paulo, SP"
                     )
                 }
 
