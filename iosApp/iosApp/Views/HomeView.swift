@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var isTogglingHelper = false
     @State private var navigationPath = NavigationPath()
 
+
     var body: some View {
         NavigationView {
             NavigationStack(path: $navigationPath) {
@@ -49,6 +50,14 @@ struct HomeView: View {
                     destinationView(for: route)
                 }
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button {
+                            exportLogs()
+                        } label: {
+                            Image(systemName: "doc.text.fill")
+                                .foregroundColor(.afiPrimary)
+                        }
+                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button { showLogoutAlert = true } label: {
                             Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -67,10 +76,9 @@ struct HomeView: View {
             }
         }
         .onReceive(container.auth.objectWillChange) { _ in
-            if container.auth.state?.isAuthenticated == false {
-                // Handle logout if needed
-            }
+            // ContentView já gerencia a navegação pós-logout
         }
+
     }
     
     // MARK: - Hero Section
@@ -113,9 +121,8 @@ struct HomeView: View {
             isActive: isActive
         ) {
             if isActive {
-                // Navigate to active emergency
+                // Navega para a emergência ativa
                 if let emergencyId = state?.emergencyId as? String {
-                    // This will be handled by the parent ContentView navigation
                     NotificationCenter.default.post(
                         name: .init("AfilaxyOpenEmergency"),
                         object: nil,
@@ -123,30 +130,31 @@ struct HomeView: View {
                     )
                 }
             } else {
-                // Navigate to emergency creation screen
-                // This will be handled by the parent ContentView navigation
-                // For now, we'll use a simple navigation approach
+                // Abre a tela de criação de emergência
+                navigationPath.append(AppRoute.emergency)
             }
         }
     }
     
-    // MARK: - Helper Mode Card
     private var helperModeCard: some View {
         let state = container.emergency.state
         let isHelperMode = state?.isHelperMode == true
-        
+
+        // Binding mutável: o SwiftUI Toggle exige escrita — .constant() reverte o toggle
+        // sem disparar nada. Aqui a escrita aciona diretamente activate/deactivate.
+        let helperBinding = Binding<Bool>(
+            get: { isHelperMode },
+            set: { newValue in
+                if newValue { activateHelperMode() } else { deactivateHelperMode() }
+            }
+        )
+
         return ToggleCard(
             title: "Modo Ajudante",
             subtitle: isHelperMode ? "Você está disponível para ajudar" : "Ative para receber pedidos de ajuda",
             icon: "heart.fill",
-            isOn: .constant(isHelperMode)
-        ) { newValue in
-            if newValue {
-                activateHelperMode()
-            } else {
-                deactivateHelperMode()
-            }
-        }
+            isOn: helperBinding
+        ) { _ in } // binding set: já cuida da lógica
     }
     
     // MARK: - Pending Emergencies
@@ -358,10 +366,24 @@ struct HomeView: View {
         // onLogout() - removed since we're using TabView now
     }
     
+    private func exportLogs() {
+        let urls = FileLogger.shared.getAllLogFileURLs()
+        let content = urls.compactMap { try? String(contentsOf: $0, encoding: .utf8) }
+                          .joined(separator: "\n\n--- next file ---\n\n")
+        guard !content.isEmpty else { return }
+        let av = UIActivityViewController(activityItems: [content], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            root.present(av, animated: true)
+        }
+    }
+    
     // MARK: - Navigation Destination Builder
     @ViewBuilder
     private func destinationView(for route: AppRoute) -> some View {
         switch route {
+        case .emergency:
+            EmergencyView()
         case .history:
             HistoryView()
         case .professionals:

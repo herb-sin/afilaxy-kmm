@@ -39,8 +39,13 @@ android {
             useSupportLibrary = true
         }
 
-        // Maps API Key from local.properties
-        val mapsApiKey = properties.getProperty("MAPS_API_KEY") ?: "YOUR_MAPS_API_KEY_HERE"
+        // Maps API Key: env var (CI) > local.properties (local) > placeholder (fallback)
+        val mapsApiKey = System.getenv("MAPS_API_KEY")
+            ?: properties.getProperty("MAPS_API_KEY")?.takeIf { it.isNotBlank() }
+            ?: run {
+                println("⚠️  MAPS_API_KEY não encontrada — mapa não funcionará neste build")
+                "MISSING_MAPS_API_KEY"
+            }
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 

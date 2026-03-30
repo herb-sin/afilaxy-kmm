@@ -30,7 +30,8 @@ fun MapScreen(
     }
     
     var mapLoadError by remember { mutableStateOf(false) }
-    
+    var mapLoaded by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -44,39 +45,48 @@ fun MapScreen(
         }
     ) { padding ->
         if (mapLoadError) {
-            // Fallback UI when Google Maps fails to load
             MapErrorFallback(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize().padding(padding),
                 latitude = latitude,
                 longitude = longitude,
-                onRetry = { mapLoadError = false }
+                onRetry = {
+                    mapLoadError = false
+                    mapLoaded = false
+                }
             )
         } else {
-            // Use LaunchedEffect to handle potential map loading errors
-            LaunchedEffect(Unit) {
-                try {
-                    // This will trigger recomposition if there's an error
-                } catch (e: Exception) {
-                    mapLoadError = true
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding)
+            ) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    onMapLoaded = { mapLoaded = true }
+                ) {
+                    Marker(
+                        state = MarkerState(position = location),
+                        title = "Localização",
+                        snippet = "Você está aqui"
+                    )
+                }
+
+                // Loading overlay — some após 8s sem onMapLoaded → mapLoadError
+                if (!mapLoaded) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
             }
-            
-            GoogleMap(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                cameraPositionState = cameraPositionState,
-                onMapLoaded = {
-                    // Map loaded successfully
+
+            // Timeout: se o mapa não carregar em 8s, exibe o fallback de erro
+            LaunchedEffect(mapLoaded) {
+                if (!mapLoaded) {
+                    kotlinx.coroutines.delay(8_000)
+                    if (!mapLoaded) mapLoadError = true
                 }
-            ) {
-                Marker(
-                    state = MarkerState(position = location),
-                    title = "Localização",
-                    snippet = "Você está aqui"
-                )
             }
         }
     }

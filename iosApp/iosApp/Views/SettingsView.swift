@@ -126,25 +126,23 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Developer Section (Debug)
-                if ProcessInfo.processInfo.environment["DEBUG_MODE"] != nil {
-                    SettingsSectionCard(title: "Desenvolvedor", icon: "hammer.fill") {
-                        VStack(spacing: 8) {
-                            SettingsActionRow(
-                                title: "Exportar Logs",
-                                subtitle: "\(formatBytes(FileLogger.shared.getTotalLogSize()))",
-                                icon: "square.and.arrow.up.fill",
-                                action: exportLogs
-                            )
-                            
-                            SettingsActionRow(
-                                title: "Limpar Logs",
-                                subtitle: "Remover todos os arquivos de log",
-                                icon: "trash.fill",
-                                isDestructive: true,
-                                action: { showClearLogsAlert = true }
-                            )
-                        }
+                // Developer Section (sempre visível — útil para diagnóstico em campo)
+                SettingsSectionCard(title: "Desenvolvedor", icon: "hammer.fill") {
+                    VStack(spacing: 8) {
+                        SettingsActionRow(
+                            title: "Exportar Logs",
+                            subtitle: "\(formatBytes(FileLogger.shared.getTotalLogSize()))",
+                            icon: "square.and.arrow.up.fill",
+                            action: exportLogs
+                        )
+                        
+                        SettingsActionRow(
+                            title: "Limpar Logs",
+                            subtitle: "Remover todos os arquivos de log",
+                            icon: "trash.fill",
+                            isDestructive: true,
+                            action: { showClearLogsAlert = true }
+                        )
                     }
                 }
                 
