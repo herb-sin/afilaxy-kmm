@@ -47,9 +47,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             )
             completionHandler(.newData)
         case "helper_matched":
-            // App em foreground: navega direto para EmergencyResponseView
+            // Enviado ao REQUESTER: helper aceitou, navega para o chat
             NotificationCenter.default.post(
-                name: .init("AfilaxyOpenEmergency"),
+                name: .init("AfilaxyOpenChat"),
                 object: nil,
                 userInfo: ["emergencyId": emergencyId]
             )

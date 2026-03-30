@@ -47,12 +47,13 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
 
-    // Muda softInputMode para adjustPan apenas nesta tela — teclado desliza sobre o chat
+    // Edge-to-edge: não usa adjustPan (empurra a lista toda para cima).
+    // imePadding() no bottomBar e no Box de conteúdo já lidam com o teclado corretamente.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
         val original = window?.attributes?.softInputMode
-        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
         onDispose {
             original?.let { window.setSoftInputMode(it) }
         }
@@ -132,6 +133,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
         ) {
             if (state.messages.isEmpty()) {
                 // Estado vazio
