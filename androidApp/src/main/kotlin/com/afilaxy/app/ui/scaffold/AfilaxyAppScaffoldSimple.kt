@@ -1,5 +1,6 @@
 package com.afilaxy.app.ui.scaffold
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -60,7 +61,13 @@ fun AfilaxyAppScaffoldSimple(
         },
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            content()
+        }
     }
 }
 

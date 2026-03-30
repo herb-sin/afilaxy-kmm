@@ -3,9 +3,6 @@ package com.afilaxy.app.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -25,7 +21,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreenBento(
+fun HomeScreenNew(
     onNavigateToEmergency: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToHistory: () -> Unit,
@@ -40,8 +36,7 @@ fun HomeScreenBento(
 ) {
     val emergencyState by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
-    var isHelperMode by remember { mutableStateOf(false) }
-    
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -49,103 +44,118 @@ fun HomeScreenBento(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header com saudação
+        // Hero Header com saudação + Helper Mode
         item {
-            WelcomeHeader(
+            HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
-                isHelperMode = isHelperMode,
-                onHelperModeToggle = { isHelperMode = it }
+                isHelperMode = emergencyState.isHelperMode,
+                onHelperModeToggle = { enable ->
+                    if (enable) viewModel.activateHelperWithLocation()
+                    else viewModel.deactivateHelper()
+                }
             )
         }
-        
+
         // Botão de Emergência Principal
         item {
-            EmergencyButton(
+            HomeEmergencyButton(
                 onClick = onNavigateToEmergency,
                 isActive = emergencyState.currentEmergency != null
             )
         }
-        
-        // Bento Grid - Ações Rápidas
+
+        // Atalhos rápidos — Row + Row em vez de LazyVerticalGrid aninhado
         item {
-            QuickActionsBentoGrid(
+            HomeQuickActions(
                 onNavigateToProfessionals = onNavigateToProfessionals,
                 onNavigateToEducation = onNavigateToEducation,
                 onNavigateToHistory = onNavigateToHistory,
                 onNavigateToProfile = onNavigateToProfile
             )
         }
-        
-        // Estatísticas
+
+        // Estatísticas da comunidade
         item {
-            StatsSection()
+            HomeStatsCard()
         }
     }
 }
 
+// ---------------------------------------------------------------------------
+// Componentes privados
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun WelcomeHeader(
+private fun HomeWelcomeCard(
     userName: String,
     isHelperMode: Boolean,
     onHelperModeToggle: (Boolean) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(20.dp)
-        ) {
-            Column {
-                Text(
-                    text = "Olá, $userName!",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Modo Helper",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
                     )
-                    
-                    Switch(
-                        checked = isHelperMode,
-                        onCheckedChange = onHelperModeToggle,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color.White.copy(alpha = 0.3f)
-                        )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(20.dp)
+    ) {
+        Column {
+            Text(
+                text = "Olá, $userName!",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Respire fundo. Você não está sozinho.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Modo Ajudante",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = if (isHelperMode) "Ativo — você pode receber pedidos" else "Desativado",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.75f)
                     )
                 }
+                Switch(
+                    checked = isHelperMode,
+                    onCheckedChange = onHelperModeToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = Color.White,
+                        uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.3f)
+                    )
+                )
             }
         }
     }
 }
 
 @Composable
-private fun EmergencyButton(
+private fun HomeEmergencyButton(
     onClick: () -> Unit,
     isActive: Boolean
 ) {
@@ -153,11 +163,12 @@ private fun EmergencyButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp),
+            .height(72.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error
+            containerColor = MaterialTheme.colorScheme.error
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -166,13 +177,13 @@ private fun EmergencyButton(
             Icon(
                 Icons.Default.Emergency,
                 contentDescription = null,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(28.dp),
                 tint = Color.White
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = if (isActive) "Emergência Ativa" else "Solicitar Ajuda",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
@@ -181,44 +192,65 @@ private fun EmergencyButton(
 }
 
 @Composable
-private fun QuickActionsBentoGrid(
+private fun HomeQuickActions(
     onNavigateToProfessionals: () -> Unit,
     onNavigateToEducation: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToProfile: () -> Unit
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier.height(200.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        val actions = listOf(
-            ActionItem("Profissionais", Icons.Default.MedicalServices, onNavigateToProfessionals),
-            ActionItem("Educação", Icons.Default.School, onNavigateToEducation),
-            ActionItem("Histórico", Icons.Default.History, onNavigateToHistory),
-            ActionItem("Perfil", Icons.Default.Person, onNavigateToProfile)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Acesso Rápido",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
         )
-        
-        items(actions) { action ->
-            ActionCard(
-                title = action.title,
-                icon = action.icon,
-                onClick = action.onClick
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            HomeActionCard(
+                title = "Profissionais",
+                icon = Icons.Default.MedicalServices,
+                onClick = onNavigateToProfessionals,
+                modifier = Modifier.weight(1f)
+            )
+            HomeActionCard(
+                title = "Educação",
+                icon = Icons.Default.School,
+                onClick = onNavigateToEducation,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            HomeActionCard(
+                title = "Histórico",
+                icon = Icons.Default.History,
+                onClick = onNavigateToHistory,
+                modifier = Modifier.weight(1f)
+            )
+            HomeActionCard(
+                title = "Perfil",
+                icon = Icons.Default.Person,
+                onClick = onNavigateToProfile,
+                modifier = Modifier.weight(1f)
             )
         }
     }
 }
 
 @Composable
-private fun ActionCard(
+private fun HomeActionCard(
     title: String,
     icon: ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.height(80.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -233,10 +265,10 @@ private fun ActionCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(28.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -247,41 +279,35 @@ private fun ActionCard(
 }
 
 @Composable
-private fun StatsSection() {
+private fun HomeStatsCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Estatísticas",
+                text = "Comunidade Afilaxy",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            
             Spacer(modifier = Modifier.height(12.dp))
-            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StatItem("0", "Emergências")
-                StatItem("0", "Ajudas")
-                StatItem("0", "Conexões")
+                HomeStatItem("0", "Emergências")
+                HomeStatItem("0", "Ajudas")
+                HomeStatItem("0", "Membros")
             }
         }
     }
 }
 
 @Composable
-private fun StatItem(value: String, label: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+private fun HomeStatItem(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
             style = MaterialTheme.typography.headlineMedium,
@@ -295,9 +321,3 @@ private fun StatItem(value: String, label: String) {
         )
     }
 }
-
-private data class ActionItem(
-    val title: String,
-    val icon: ImageVector,
-    val onClick: () -> Unit
-)

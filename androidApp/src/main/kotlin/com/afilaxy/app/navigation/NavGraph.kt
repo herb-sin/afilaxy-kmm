@@ -290,10 +290,6 @@ fun NavGraph(
             )
         }
 
-        composable(AppRoutes.MAP) {
-            MapScreen(navController = navController)
-        }
-
         composable(AppRoutes.NOTIFICATIONS) {
             NotificationsScreen(navController = navController)
         }
