@@ -3,9 +3,6 @@ package com.afilaxy.app.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -193,41 +190,39 @@ private fun HealthInfoBentoGrid(
     healthData: UserHealthData?,
     emergencyContact: EmergencyContact?
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier.height(280.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             InfoCard(
                 title = "Tipo de Asma",
                 value = healthData?.conditions?.firstOrNull() ?: "Não informado",
-                icon = Icons.Default.Favorite
+                icon = Icons.Default.Favorite,
+                modifier = Modifier.weight(1f)
             )
-        }
-        
-        item {
             InfoCard(
                 title = "Último Exame",
                 value = healthData?.notes?.take(20) ?: "Não informado",
-                icon = Icons.Default.Assignment
+                icon = Icons.Default.Assignment,
+                modifier = Modifier.weight(1f)
             )
         }
-        
-        item {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             InfoCard(
                 title = "Tipo Sanguíneo",
                 value = healthData?.bloodType ?: "Não informado",
-                icon = Icons.Default.Bloodtype
+                icon = Icons.Default.Bloodtype,
+                modifier = Modifier.weight(1f)
             )
-        }
-        
-        item {
             InfoCard(
                 title = "Contato Emergência",
                 value = emergencyContact?.name ?: "Não informado",
-                icon = Icons.Default.ContactPhone
+                icon = Icons.Default.ContactPhone,
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -237,10 +232,11 @@ private fun HealthInfoBentoGrid(
 private fun InfoCard(
     title: String,
     value: String,
-    icon: ImageVector
+    icon: ImageVector,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.height(90.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
