@@ -50,17 +50,23 @@ struct HomeView: View {
                     destinationView(for: route)
                 }
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button {
-                            exportLogs()
-                        } label: {
-                            Image(systemName: "doc.text.fill")
-                                .foregroundColor(.afiPrimary)
-                        }
-                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button { showLogoutAlert = true } label: {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Menu {
+                            Button {
+                                exportLogs()
+                            } label: {
+                                Label("Exportar Logs", systemImage: "doc.text.fill")
+                            }
+
+                            Divider()
+
+                            Button(role: .destructive) {
+                                showLogoutAlert = true
+                            } label: {
+                                Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle.fill")
                                 .foregroundColor(.afiPrimary)
                         }
                     }
