@@ -135,7 +135,8 @@ class EmergencyViewModel(
                 isLoading = false,
                 nearbyHelpers = emptyList(),
                 emergencyStatus = null,
-                isRequester = false
+                isRequester = false,
+                emergencyExpiresAt = null  // CRÍTICO: evita stale expiresAt de emergência anterior
             )
         }
         statusObservedId = null
@@ -150,7 +151,8 @@ class EmergencyViewModel(
                 hasActiveEmergency = false,
                 isLoading = false,
                 nearbyHelpers = emptyList(),
-                emergencyStatus = null
+                emergencyStatus = null,
+                emergencyExpiresAt = null  // CRÍTICO: evita stale expiresAt de emergência anterior
             )
         }
         statusObservedId = null

@@ -214,9 +214,17 @@ struct SettingsView: View {
             Firestore.firestore().collection("helpers").document(uid).delete()
             LocationManagerBridge.shared.disableHelperMode()
         }
+
+        // Passo 1: limpa o estado Kotlin — pode agendar blocos na main queue via Dispatchers.Main
         container.emergency.clearEmergencyStateSwift()
-        container.freezeAll()
-        try? Auth.auth().signOut()
+
+        // Passo 2: aguarda 0.5s para drenar a main dispatch queue antes de invalidar o
+        // contexto Firebase. Sem esse delay, os blocos Kotlin agendados executam APÓS
+        // o signOut() e tentam acessar Firebase sem auth válida → SIGABRT.
+        // freezeAll() já chama Auth.auth().signOut() internamente — sem duplicação.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak container] in
+            container?.freezeAll()
+        }
     }
     
     private func exportLogs() {
