@@ -128,10 +128,22 @@ struct ContentView: View {
             .onReceive(container.$pendingChatId.compactMap { $0 }) { emergencyId in
                 handlePendingChat(emergencyId)
             }
+            .onReceive(container.auth.$state) { authState in
+                // Detecta logout — performLogout() sinaliza via Firebase → Kotlin → StateFlow → polling
+                if authState?.isAuthenticated == false {
+                    isLoggedIn = false
+                }
+            }
         } else {
             LoginView(onLoginSuccess: {
                 isLoggedIn = true
             })
+            .onReceive(container.auth.$state) { authState in
+                // Auto-navega ao entrar (auth detectado via polling StateFlow)
+                if authState?.isAuthenticated == true {
+                    isLoggedIn = true
+                }
+            }
         }
     }
     
