@@ -125,6 +125,10 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenEmergency"))) { notification in
                 handleEmergencyNotification(notification)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenChat"))) { notification in
+                guard let emergencyId = notification.userInfo?["emergencyId"] as? String else { return }
+                handlePendingChat(emergencyId)
+            }
             .onReceive(container.$pendingChatId.compactMap { $0 }) { emergencyId in
                 handlePendingChat(emergencyId)
             }

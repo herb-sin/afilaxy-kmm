@@ -25,7 +25,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
 
-    // FCM data-only em background — acorda o app e dispara notificação local
+    // FCM data-only em background / foreground — roteia por tipo
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
@@ -33,18 +33,38 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     ) {
         let type = userInfo["type"] as? String ?? "unknown"
         FileLogger.shared.write(level: "INFO", tag: "AppDelegate", message: "didReceiveRemoteNotification type=\(type) appState=\(application.applicationState.rawValue)")
-        guard let emergencyId = userInfo["emergencyId"] as? String,
-              type == "emergency_request" else {
+        guard let emergencyId = userInfo["emergencyId"] as? String else {
             completionHandler(.noData)
             return
         }
-        let name = userInfo["requesterName"] as? String ?? "Alguém"
-        NotificationCenter.default.post(
-            name: .init("AfilaxyIncomingEmergency"),
-            object: nil,
-            userInfo: ["emergencyId": emergencyId, "requesterName": name]
-        )
-        completionHandler(.newData)
+        switch type {
+        case "emergency_request":
+            let name = userInfo["requesterName"] as? String ?? "Alguém"
+            NotificationCenter.default.post(
+                name: .init("AfilaxyIncomingEmergency"),
+                object: nil,
+                userInfo: ["emergencyId": emergencyId, "requesterName": name]
+            )
+            completionHandler(.newData)
+        case "helper_matched":
+            // App em foreground: navega direto para EmergencyResponseView
+            NotificationCenter.default.post(
+                name: .init("AfilaxyOpenEmergency"),
+                object: nil,
+                userInfo: ["emergencyId": emergencyId]
+            )
+            completionHandler(.newData)
+        case "chat":
+            // App em foreground: navega direto para ChatView
+            NotificationCenter.default.post(
+                name: .init("AfilaxyOpenChat"),
+                object: nil,
+                userInfo: ["emergencyId": emergencyId]
+            )
+            completionHandler(.newData)
+        default:
+            completionHandler(.noData)
+        }
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -74,9 +94,21 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
+        let type = userInfo["type"] as? String ?? "unknown"
         let emergencyId = userInfo["emergencyId"] as? String ?? "nil"
-        FileLogger.shared.write(level: "INFO", tag: "AppDelegate", message: "didReceive notificationResponse emergencyId=\(emergencyId) action=\(response.actionIdentifier)")
-        if let eid = userInfo["emergencyId"] as? String {
+        FileLogger.shared.write(level: "INFO", tag: "AppDelegate", message: "didReceive notificationResponse type=\(type) emergencyId=\(emergencyId) action=\(response.actionIdentifier)")
+        guard let eid = userInfo["emergencyId"] as? String else {
+            completionHandler()
+            return
+        }
+        // Roteamento por tipo: chat → ChatView, demais → EmergencyResponseView
+        if type == "chat" {
+            NotificationCenter.default.post(
+                name: .init("AfilaxyOpenChat"),
+                object: nil,
+                userInfo: ["emergencyId": eid]
+            )
+        } else {
             NotificationCenter.default.post(
                 name: .init("AfilaxyOpenEmergency"),
                 object: nil,
