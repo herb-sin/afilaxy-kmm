@@ -60,6 +60,12 @@ class EmergencyViewModelWrapper: ObservableObject {
         viewModel?.onToggleHelperMode(enable: enabled)
     }
 
+    /// Inicia o observer em tempo real de helpers próximos via KMM ViewModel.
+    /// Chamado pelo MapView ao abrir o mapa se a localização já estiver disponível.
+    func startObservingNearbyHelpers(latitude: Double, longitude: Double) {
+        viewModel?.startObservingNearbyHelpers(latitude: latitude, longitude: longitude)
+    }
+
     /// Limpa o estado de emergência local. Garante que hasActiveEmergency e
     /// isHelperMode fiquem false para evitar botão "Ativa" preso.
     func clearEmergencyStateSwift(cancelledId: String? = nil) {

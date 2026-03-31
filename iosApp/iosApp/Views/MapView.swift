@@ -69,13 +69,12 @@ struct MapView: View {
     }
     
     private var nearbyHelpers: [MapHelper] {
-        // nearbyHelpers vem do KMM como NSArray (bridge Kotlin List → Swift)
-        guard let state = container.emergency.state,
-              let rawList = state.nearbyHelpers as? NSArray else {
-            return []
-        }
-        return rawList.compactMap { obj -> MapHelper? in
-            guard let helper = obj as? shared.Helper else { return nil }
+        // EmergencyState.nearbyHelpers é List<Helper> no KMM.
+        // Na bridge ObjC/Swift, List<T> é exposto como NSArray<SharedHelper *>
+        // que o Swift trata como [shared.Helper] diretamente.
+        guard let state = container.emergency.state else { return [] }
+        let helpers = state.nearbyHelpers as [shared.Helper]
+        return helpers.compactMap { helper -> MapHelper? in
             let lat = helper.latitude
             let lon = helper.longitude
             guard lat != 0 || lon != 0 else { return nil }
