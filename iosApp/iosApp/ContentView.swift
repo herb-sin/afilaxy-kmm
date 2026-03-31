@@ -133,17 +133,20 @@ struct ContentView: View {
                 handlePendingChat(emergencyId)
             }
             .onReceive(container.$pendingIncomingEmergencies) { emergencies in
-                // Navega diretamente para EmergencyResponseView sem dialog intermediário.
-                // O dialog de dois passos (alert + EmergencyResponseView) confundia:
-                // o Firestore listener disparava em background, setava showIncomingAlert=true,
-                // e o alerta aparecia SOBRE a EmergencyResponseView aberta pela notificação push.
-                // Agora: notification tap OU in-foreground update → EmergencyResponseView diretamente.
-                guard !emergencyRouteActive, let first = emergencies.first else { return }
-                handleEmergencyNotification(
-                    Notification(name: .init("AfilaxyOpenEmergency"),
-                                 object: nil,
-                                 userInfo: ["emergencyId": first.id])
-                )
+                guard let first = emergencies.first else { return }
+                if emergencyRouteActive {
+                    // Já navegamos para EmergencyResponseView (via notificação ou Firestore listener).
+                    // Descarta o pending sem navegar novamente — evita que pendingEmergencies
+                    // fique preso em 1 para sempre após o aceite.
+                    container.dismissIncomingEmergency(id: first.id)
+                } else {
+                    // Navega diretamente para EmergencyResponseView sem dialog intermediário.
+                    handleEmergencyNotification(
+                        Notification(name: .init("AfilaxyOpenEmergency"),
+                                     object: nil,
+                                     userInfo: ["emergencyId": first.id])
+                    )
+                }
             }
             .onReceive(container.auth.$state) { authState in
                 // Detecta logout — performLogout() sinaliza via Firebase → Kotlin → StateFlow → polling

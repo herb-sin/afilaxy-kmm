@@ -46,6 +46,18 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
 
+    // Detecta emergência encerrada via EmergencyViewModel.
+    // wasEmergencyActive: marca se já vimos esse emergencyId ativo em algum momento.
+    // Quando currentEmergency some ou não bate mais com o emergencyId, isResolved=true.
+    val emergencyVmState by (emergencyViewModel?.state?.collectAsState())
+        ?: remember { mutableStateOf(null) }
+    var wasEmergencyActive by remember { mutableStateOf(false) }
+    LaunchedEffect(emergencyVmState?.currentEmergency) {
+        if (emergencyVmState?.currentEmergency?.id == emergencyId) wasEmergencyActive = true
+    }
+    val isResolved = wasEmergencyActive && emergencyVmState?.currentEmergency?.id != emergencyId
+        || (emergencyVmState?.currentEmergency == null && state.messages.isNotEmpty() && emergencyVmState != null)
+
     // Para Compose + edge-to-edge (Android 11+ / API 30+), ADJUST_RESIZE não funciona
     // porque o window não redimensiona mais. A abordagem correta é:
     //   ADJUST_NOTHING — impede o sistema de mover qualquer coisa
@@ -62,8 +74,11 @@ fun ChatScreen(
         }
     }
 
-    // Bloqueia back press — usuário deve resolver ou cancelar a emergência
-    BackHandler { showResolveDialog = true }
+    // Bloqueia back press — se emergência já encerrada, retorna direto
+    BackHandler {
+        if (isResolved) onNavigateBack()
+        else showResolveDialog = true
+    }
 
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "ChatScreen", "opened emergencyId=$emergencyId")
@@ -75,7 +90,6 @@ fun ChatScreen(
     }
     
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.chat_title)) },
@@ -96,8 +110,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .imePadding()  // encolhe a Column pelo tamanho do teclado;
-                               // Box(weight=1f) absorve e o Surface sobe ^
+                // paddingValues já inclui nav bar + IME do Scaffold quando o teclado abre
         ) {
             // Área de mensagens — ocupa todo espaço restante acima do input
             Box(modifier = Modifier.weight(1f)) {
@@ -144,39 +157,64 @@ fun ChatScreen(
                 }
             }
 
+            // Banner de emergência encerrada
+            if (isResolved) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shadowElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "✅ Emergência encerrada — chat bloqueado",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
             Surface(shadowElevation = 8.dp) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedTextField(
                         value = messageText,
-                        onValueChange = { messageText = it },
-                        placeholder = { Text(stringResource(R.string.chat_type_message)) },
+                        onValueChange = { if (!isResolved) messageText = it },
+                        placeholder = {
+                            Text(if (isResolved) "Emergência encerrada"
+                                 else stringResource(R.string.chat_type_message))
+                        },
+                        enabled = !isResolved,
                         modifier = Modifier.weight(1f),
                         maxLines = 3
                     )
-                    
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    
+
                     IconButton(
                         onClick = {
-                            if (messageText.isNotBlank()) {
+                            if (messageText.isNotBlank() && !isResolved) {
                                 viewModel.sendMessage(messageText)
                                 messageText = ""
                             }
                         },
-                        enabled = messageText.isNotBlank()
+                        enabled = messageText.isNotBlank() && !isResolved
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
                             contentDescription = stringResource(R.string.chat_send),
-                            tint = if (messageText.isNotBlank()) 
-                                MaterialTheme.colorScheme.primary 
-                            else 
+                            tint = if (messageText.isNotBlank() && !isResolved)
+                                MaterialTheme.colorScheme.primary
+                            else
                                 MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
