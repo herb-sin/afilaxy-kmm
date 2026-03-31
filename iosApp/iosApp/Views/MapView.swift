@@ -69,12 +69,23 @@ struct MapView: View {
     }
     
     private var nearbyHelpers: [MapHelper] {
-        // Mock data - replace with actual helpers from container
-        [
-            MapHelper(id: "1", name: "Ana Silva", coordinate: CLLocationCoordinate2D(latitude: -23.5515, longitude: -46.6343), distance: 0.8),
-            MapHelper(id: "2", name: "João Santos", coordinate: CLLocationCoordinate2D(latitude: -23.5495, longitude: -46.6323), distance: 1.2),
-            MapHelper(id: "3", name: "Maria Costa", coordinate: CLLocationCoordinate2D(latitude: -23.5525, longitude: -46.6353), distance: 1.5)
-        ]
+        // nearbyHelpers vem do KMM como NSArray (bridge Kotlin List → Swift)
+        guard let state = container.emergency.state,
+              let rawList = state.nearbyHelpers as? NSArray else {
+            return []
+        }
+        return rawList.compactMap { obj -> MapHelper? in
+            guard let helper = obj as? shared.Helper else { return nil }
+            let lat = helper.latitude
+            let lon = helper.longitude
+            guard lat != 0 || lon != 0 else { return nil }
+            return MapHelper(
+                id: helper.id,
+                name: helper.name.isEmpty ? "Ajudante" : helper.name,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                distance: helper.distance
+            )
+        }
     }
     
     private func updateLocationIfNeeded() {
@@ -82,6 +93,10 @@ struct MapView: View {
         if let current = LocationManager.shared.currentLocation {
             region.center = current.coordinate
             trackingMode = .follow
+            // Inicia observer de helpers próximos com coordenadas reais
+            let lat = current.coordinate.latitude
+            let lon = current.coordinate.longitude
+            container.emergency.startObservingNearbyHelpers(latitude: lat, longitude: lon)
         }
         // Solicita permissão se necessário e inicia atualizações de GPS
         if LocationManager.shared.hasPermission {

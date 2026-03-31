@@ -14,18 +14,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.afilaxy.domain.repository.LocationRepository
+import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import org.koin.compose.koinInject
+import org.koin.androidx.compose.koinInject
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    navController: NavController
+    navController: NavController,
+    emergencyViewModel: EmergencyViewModel = koinViewModel()
 ) {
     val locationRepository: LocationRepository = koinInject()
+    val emergencyState = emergencyViewModel.state.collectAsState().value
 
     // São Paulo como fallback — substituído pela localização real via LaunchedEffect
     val saoPaulo = LatLng(-23.5505, -46.6333)
@@ -38,7 +43,7 @@ fun MapScreen(
     var mapLoadError by remember { mutableStateOf(false) }
     var mapLoaded by remember { mutableStateOf(false) }
 
-    // Busca a localização real ao abrir a tela
+    // Busca a localização real e inicia observer de helpers próximos ao abrir
     LaunchedEffect(Unit) {
         val loc = locationRepository.getCurrentLocation()
         if (loc != null) {
@@ -47,6 +52,8 @@ fun MapScreen(
             cameraPositionState.animate(
                 CameraUpdateFactory.newLatLngZoom(realLatLng, 15f)
             )
+            // Inicia o observer de helpers próximos com as coordenadas reais
+            emergencyViewModel.startObservingNearbyHelpers(loc.latitude, loc.longitude)
         }
     }
 
@@ -57,6 +64,22 @@ fun MapScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
+                    }
+                },
+                actions = {
+                    // Legenda: quantidade de helpers próximos visíveis
+                    val count = emergencyState.nearbyHelpers.size
+                    if (count > 0) {
+                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                            Text("$count")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "$count ajudantes próximos",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(8.dp))
                     }
                 }
             )
@@ -81,7 +104,7 @@ fun MapScreen(
                     cameraPositionState = cameraPositionState,
                     onMapLoaded = { mapLoaded = true }
                 ) {
-                    // Marca a posição real do usuário (ou São Paulo como fallback)
+                    // Marker do próprio usuário
                     val markerPos = userLocation ?: saoPaulo
                     Marker(
                         state = MarkerState(position = markerPos),
@@ -91,13 +114,30 @@ fun MapScreen(
                         else
                             "São Paulo, SP"
                     )
+
+                    // Markers de helpers próximos em modo ajudante ativo
+                    // Cada marker mostra nome + distância aproximada no balloon
+                    emergencyState.nearbyHelpers.forEach { helper ->
+                        Marker(
+                            state = MarkerState(
+                                position = LatLng(helper.latitude, helper.longitude)
+                            ),
+                            title = if (helper.name.isNotBlank()) helper.name else "Ajudante próximo",
+                            snippet = if (helper.distance > 0)
+                                "${"%.1f".format(helper.distance)} km de distância"
+                            else "Localização aproximada",
+                            icon = BitmapDescriptorFactory.defaultMarker(
+                                BitmapDescriptorFactory.HUE_AZURE
+                            )
+                        )
+                    }
                 }
 
                 // Loading overlay — some após 8s sem onMapLoaded → mapLoadError
                 if (!mapLoaded) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = androidx.compose.ui.Alignment.Center
+                        contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }
@@ -114,6 +154,7 @@ fun MapScreen(
         }
     }
 }
+
 
 @Composable
 fun MapErrorFallback(

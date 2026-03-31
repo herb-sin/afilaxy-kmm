@@ -313,6 +313,30 @@ class EmergencyViewModel(
         }
     }
 
+    private var helpersObserverStarted = false
+
+    /** Inicia o observer em tempo real de helpers próximos.
+     *  Chamado pelo MapScreen (Android) e MapView (iOS) ao abrir o mapa.
+     *  Idempotente: chamadas repetidas são ignoradas. */
+    fun startObservingNearbyHelpers(latitude: Double, longitude: Double) {
+        if (helpersObserverStarted) return
+        helpersObserverStarted = true
+        viewModelScope.coroutineScope.launch {
+            try {
+                emergencyRepository.observeNearbyHelpers(latitude, longitude, 5.0)
+                    .collect { helpers ->
+                        _state.update { it.copy(nearbyHelpers = helpers) }
+                    }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.afilaxy.util.Logger.e("EmergencyViewModel", "startObservingNearbyHelpers failed: ${e.message}")
+            } finally {
+                helpersObserverStarted = false
+            }
+        }
+    }
+
     private fun findNearbyHelpers() {
         val latitude = _state.value.userLatitude
         val longitude = _state.value.userLongitude

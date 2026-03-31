@@ -16,8 +16,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.afilaxy.app.ui.components.RequestLocationPermission
+import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import org.koin.androidx.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,12 +39,15 @@ fun HomeScreenNew(
 ) {
     val emergencyState by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
+    val prefsRepo: PreferencesRepository = koinInject()
     // Estado local otimista: muda o Switch visual imediatamente ao toque,
     // sem esperar a confirmação do Firestore (mesmo padrão do fix iOS).
     var isHelperPending by remember { mutableStateOf(false) }
     var helperIntended by remember { mutableStateOf(false) }
     // Controla o fluxo de permissão de localização ao ativar o Modo Ajudante
     var showHelperPermission by remember { mutableStateOf(false) }
+    // Controla o dialog de consentimento LGPD (exibido apenas uma vez)
+    var showHelperConsentDialog by remember { mutableStateOf(false) }
 
     // Sincroniza o estado local com o ViewModel quando a operação conclui.
     LaunchedEffect(emergencyState.isHelperMode) {
@@ -67,9 +72,14 @@ fun HomeScreenNew(
                 onHelperModeToggle = { enable ->
                     if (isHelperPending) return@HomeWelcomeCard  // ignora tap duplo
                     if (enable) {
-                        // Solicita permissão antes de ativar — melhor UX do que pedir
-                        // na tela de emergência quando o usuário já está em apuros.
-                        showHelperPermission = true
+                        val consentGiven = prefsRepo.getBoolean("helper_map_consent_v1", false)
+                        if (consentGiven) {
+                            // Consentimento já dado anteriormente — vai direto para permissão
+                            showHelperPermission = true
+                        } else {
+                            // Primeira vez — exibe dialog LGPD antes de qualquer outra ação
+                            showHelperConsentDialog = true
+                        }
                     } else {
                         isHelperPending = true
                         helperIntended = false
@@ -101,6 +111,45 @@ fun HomeScreenNew(
         item {
             HomeStatsCard()
         }
+    }
+
+    // Dialog de consentimento LGPD — exibido apenas na primeira ativação.
+    // Explica que a localização aproximada fica visível para outros usuários.
+    if (showHelperConsentDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showHelperConsentDialog = false
+                helperIntended = emergencyState.isHelperMode
+            },
+            icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("Sua localização será visível") },
+            text = {
+                Text(
+                    "Ao ativar o Modo Ajudante, sua posição aproximada (precisão \u00b1100 m) " +
+                    "ficará visível no mapa para outros usuários do Afilaxy\n\n" +
+                    "Seus dados são anonimizados: nome de exibição e localização aproximada apenas. " +
+                    "Nenhum endereço ou dado pessoal sensível é compartilhado.\n\n" +
+                    "Você pode desativar o Modo Ajudante a qualquer momento."
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    prefsRepo.putBoolean("helper_map_consent_v1", true)
+                    showHelperConsentDialog = false
+                    showHelperPermission = true  // próximo passo: pedir permissão de localização
+                }) {
+                    Text("Concordar e Continuar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showHelperConsentDialog = false
+                    helperIntended = emergencyState.isHelperMode
+                }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     // Fluxo de permissão de localização ao ativar o Modo Ajudante.

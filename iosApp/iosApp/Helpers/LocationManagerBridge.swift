@@ -42,12 +42,18 @@ final class LocationManagerBridge {
             completion(false)
             return
         }
+        // LGPD: arredonda coordenadas para 0.001° ≈ 111m — sem expor endereço exato
+        let obfuscatedLat = (lat * 1000).rounded() / 1000.0
+        let obfuscatedLon = (lon * 1000).rounded() / 1000.0
+        // Nome de exibição para o marker do mapa (sem dados pessoais sensíveis)
+        let displayName = Auth.auth().currentUser?.displayName ?? "Ajudante"
         let data: [String: Any] = [
             "id": uid,
-            "location": GeoPoint(latitude: lat, longitude: lon),
-            "latitude": lat,
-            "longitude": lon,
-            "geohash": encodeGeohash(lat: lat, lon: lon),
+            "name": displayName,
+            "location": GeoPoint(latitude: obfuscatedLat, longitude: obfuscatedLon),
+            "latitude": obfuscatedLat,
+            "longitude": obfuscatedLon,
+            "geohash": encodeGeohash(lat: obfuscatedLat, lon: obfuscatedLon),
             "isActive": true,
             "lastUpdate": FieldValue.serverTimestamp()
         ]
@@ -65,6 +71,7 @@ final class LocationManagerBridge {
                     FileLogger.shared.write(level: "ERROR", tag: "LocationBridge", message: "enableHelperMode Firestore error: \(error.localizedDescription)")
                     completion(false)
                 } else {
+                    FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "enableHelperMode success uid=\(uid) lat=\(obfuscatedLat) lon=\(obfuscatedLon)")
                     completion(true)
                 }
             }

@@ -63,17 +63,16 @@ fun ChatScreen(
         && emergencyVmState != null
         && emergencyVmState?.currentEmergency == null
 
-    // Para Compose + edge-to-edge (Android 11+ / API 30+), ADJUST_RESIZE não funciona
-    // porque o window não redimensiona mais. A abordagem correta é:
-    //   ADJUST_NOTHING — impede o sistema de mover qualquer coisa
-    //   imePadding() na Column externa — Compose lê WindowInsets.ime e reduz
-    //   a Column pelo tamanho do teclado; Box(weight=1f) absorve o delta e
-    //   o Surface (input) sobe para o bottom da Column já reduzida.
+    // ADJUST_PAN: o Android sobe o window inteiro para manter o campo focado
+    // visível acima do teclado. É a abordagem mais compatível com Samsung e
+    // outros OEMs que não propagam corretamente os IME insets do Compose.
+    // Trade-off: o TopAppBar pode subir parcialmente, mas o input fica sempre
+    // acessível sem depender da API de WindowInsets.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
         val original = window?.attributes?.softInputMode
-        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
         onDispose {
             original?.let { window.setSoftInputMode(it) }
         }
