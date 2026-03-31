@@ -46,15 +46,17 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
 
-    // SOFT_INPUT_ADJUST_RESIZE: o window encolhe quando o teclado abre.
-    // A Column (Box peso 1f + Surface) se adapta naturalmente — o Surface
-    // (campo de input) permanece no bottom do conteúdo reduzido, acima do teclado.
-    // imePadding() não é necessário (e seria prejudicial) com ADJUST_RESIZE.
+    // Para Compose + edge-to-edge (Android 11+ / API 30+), ADJUST_RESIZE não funciona
+    // porque o window não redimensiona mais. A abordagem correta é:
+    //   ADJUST_NOTHING — impede o sistema de mover qualquer coisa
+    //   imePadding() na Column externa — Compose lê WindowInsets.ime e reduz
+    //   a Column pelo tamanho do teclado; Box(weight=1f) absorve o delta e
+    //   o Surface (input) sobe para o bottom da Column já reduzida.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
         val original = window?.attributes?.softInputMode
-        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
         onDispose {
             original?.let { window.setSoftInputMode(it) }
         }
@@ -94,6 +96,8 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()  // encolhe a Column pelo tamanho do teclado;
+                               // Box(weight=1f) absorve e o Surface sobe ^
         ) {
             // Área de mensagens — ocupa todo espaço restante acima do input
             Box(modifier = Modifier.weight(1f)) {
