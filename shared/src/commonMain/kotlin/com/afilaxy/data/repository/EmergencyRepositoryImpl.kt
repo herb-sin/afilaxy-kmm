@@ -287,11 +287,11 @@ class EmergencyRepositoryImpl(
                             Helper(
                                 id = id,
                                 name = doc.get("name") ?: "Helper",
-                                email = "", // email não gravado — campo vazio por desig
+                                email = "", // email não gravado — campo vazio por design (LGPD)
                                 latitude = geoPoint.latitude,
                                 longitude = geoPoint.longitude,
                                 isActive = doc.get("isActive") ?: false,
-                                lastUpdate = doc.get("lastUpdate") ?: 0L,
+                                lastUpdate = 0L, // não usado no mapa; evita crash Timestamp vs Long
                                 distance = distance
                             )
                         )
@@ -451,7 +451,7 @@ class EmergencyRepositoryImpl(
                         latitude = geoPoint.latitude,
                         longitude = geoPoint.longitude,
                         isActive = true,
-                        lastUpdate = doc.get("lastUpdate") ?: 0L,
+                        lastUpdate = 0L, // não usado no mapa; evita crash Timestamp vs Long
                         distance = distance
                     )
                 }.sortedBy { it.distance }
