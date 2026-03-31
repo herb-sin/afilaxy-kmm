@@ -11,81 +11,72 @@ struct HomeView: View {
     @State private var helperToggle = false
     @State private var isTogglingHelper = false
     @State private var helperIntendedValue = false  // valor visual enquanto opção está pendente
-    @State private var navigationPath = NavigationPath()
 
 
     var body: some View {
-        NavigationView {
-            NavigationStack(path: $navigationPath) {
-                ScrollView {
-                    LazyVStack(spacing: 20) {
-                        // Hero Section
-                        heroSection
-                        
-                        // Emergency Button
-                        emergencyButton
-                        
-                        // Helper Mode Toggle
-                        helperModeCard
-                        
-                        // Pending Emergencies (if any)
-                        if !container.pendingIncomingEmergencies.isEmpty {
-                            pendingEmergenciesSection
-                        }
-                        
-                        // Quick Actions Grid
-                        quickActionsGrid
-                        
-                        // Community Feed Preview
-                        communityFeedPreview
-                        
-                        // Support Links
-                        supportLinksSection
-                    }
-                    .padding()
-                }
-                .background(Color.afiBackground)
-                .navigationTitle("Afilaxy")
-                .navigationBarTitleDisplayMode(.large)
-                .navigationDestination(for: AppRoute.self) { route in
-                    destinationView(for: route)
-                }
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Menu {
-                            Button {
-                                exportLogs()
-                            } label: {
-                                Label("Exportar Logs", systemImage: "doc.text.fill")
-                            }
+        // NOTA: ContentView já envolve HomeView em NavigationStack(path: $homeNavigationPath).
+        // Não usar NavigationView nem NavigationStack aqui — aninhamento triplica os
+        // níveis de navegação e oculta os itens de toolbar desta view na barra errada.
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                // Hero Section
+                heroSection
 
-                            Divider()
+                // Emergency Button
+                emergencyButton
 
-                            Button(role: .destructive) {
-                                showLogoutAlert = true
-                            } label: {
-                                Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle.fill")
-                                .foregroundColor(.afiPrimary)
-                        }
-                    }
+                // Helper Mode Toggle
+                helperModeCard
+
+                // Pending Emergencies (if any)
+                if !container.pendingIncomingEmergencies.isEmpty {
+                    pendingEmergenciesSection
                 }
-                .alert("Sair", isPresented: $showLogoutAlert) {
-                    Button("Cancelar", role: .cancel) {}
-                    Button("Sair", role: .destructive) {
-                        performLogout()
+
+                // Quick Actions Grid
+                quickActionsGrid
+
+                // Community Feed Preview
+                communityFeedPreview
+
+                // Support Links
+                supportLinksSection
+            }
+            .padding()
+        }
+        .background(Color.afiBackground)
+        .navigationTitle("Afilaxy")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        exportLogs()
+                    } label: {
+                        Label("Exportar Logs", systemImage: "doc.text.fill")
                     }
-                } message: { 
-                    Text("Deseja realmente sair?") 
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        showLogoutAlert = true
+                    } label: {
+                        Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle.fill")
+                        .foregroundColor(.afiPrimary)
                 }
             }
         }
-        .onReceive(container.auth.objectWillChange) { _ in
-            // ContentView já gerencia a navegação pós-logout
+        .alert("Sair", isPresented: $showLogoutAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Sair", role: .destructive) {
+                performLogout()
+            }
+        } message: {
+            Text("Deseja realmente sair?")
         }
-
     }
     
     // MARK: - Hero Section
@@ -363,25 +354,30 @@ struct HomeView: View {
     
     private func performLogout() {
         let state = container.emergency.state
-        
+
         // Firestore cleanup antes de congelar os ViewModels
         if state?.hasActiveEmergency == true, let eid = state?.emergencyId as? String {
             Firestore.firestore().collection("emergency_requests").document(eid)
                 .updateData(["active": false, "status": "cancelled"])
         }
-        
+
         if state?.isHelperMode == true {
             if let uid = Auth.auth().currentUser?.uid {
                 Firestore.firestore().collection("helpers").document(uid).delete()
             }
             LocationManagerBridge.shared.disableHelperMode()
         }
-        
-        // freezeAll primeiro — cancela coroutines KMM antes de qualquer update de estado
-        container.freezeAll()
+
+        // Passo 1: limpa o estado Kotlin — pode agendar blocos na main queue via Dispatchers.Main
         container.emergency.clearEmergencyStateSwift()
-        try? Auth.auth().signOut()
-        // onLogout() - removed since we're using TabView now
+
+        // Passo 2: aguarda 0.5s para drenar a main dispatch queue antes de invalidar o
+        // contexto Firebase. Sem esse delay, os blocos Kotlin agendados executam APÓS
+        // o signOut() e tentam acessar Firebase sem auth válida → SIGABRT.
+        // freezeAll() já chama Auth.auth().signOut() internamente — sem duplicação.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak container] in
+            container?.freezeAll()
+        }
     }
     
     private func exportLogs() {
