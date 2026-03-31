@@ -12,6 +12,9 @@ struct HomeView: View {
     @State private var helperToggle = false
     @State private var isTogglingHelper = false
     @State private var helperIntendedValue = false  // valor visual enquanto opção está pendente
+    // Consentimento LGPD persistido entre sessões (UserDefaults via @AppStorage)
+    @AppStorage("helperMapConsentGiven") private var helperMapConsentGiven = false
+    @State private var showHelperConsentAlert = false
 
 
     var body: some View {
@@ -78,6 +81,23 @@ struct HomeView: View {
         } message: {
             Text("Deseja realmente sair?")
         }
+        // Dialog LGPD: exibido apenas na primeira ativação do Modo Ajudante
+        .alert("Sua localização será visível", isPresented: $showHelperConsentAlert) {
+            Button("Concordar e Continuar") {
+                helperMapConsentGiven = true
+                activateHelperMode()
+            }
+            Button("Cancelar", role: .cancel) {
+                helperIntendedValue = false  // reverte o toggle
+                isTogglingHelper = false
+            }
+        } message: {
+            Text(
+                "Ao ativar o Modo Ajudante, sua posição aproximada (±100 m) ficará visível " +
+                "no mapa para outros usuários Afilaxy.\nSeu nome de exibição é compartilhado; " +
+                "nenhum endereço ou dado sensível.\nDesative o modo a qualquer momento."
+            )
+        }
     }
     
     // MARK: - Hero Section
@@ -141,15 +161,22 @@ struct HomeView: View {
 
         let helperBinding = Binding<Bool>(
             get: {
-                // Enquanto a operação está pendente, mostra o valor pretendido pelo usuário
-                // Em vez de reverter visualmente enquanto o Firestore confirma
                 isTogglingHelper ? helperIntendedValue : isHelperMode
             },
             set: { newValue in
-                // Impede toques duplos durante operação em andamento
                 guard !isTogglingHelper else { return }
                 helperIntendedValue = newValue
-                if newValue { activateHelperMode() } else { deactivateHelperMode() }
+                if newValue {
+                    if helperMapConsentGiven {
+                        // Consentimento já dado — ativa diretamente
+                        activateHelperMode()
+                    } else {
+                        // Primeira vez — exibe dialog LGPD antes de qualquer ação
+                        showHelperConsentAlert = true
+                    }
+                } else {
+                    deactivateHelperMode()
+                }
             }
         )
 

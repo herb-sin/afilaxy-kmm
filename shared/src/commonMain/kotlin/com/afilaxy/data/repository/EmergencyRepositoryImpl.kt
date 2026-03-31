@@ -91,7 +91,11 @@ class EmergencyRepositoryImpl(
         return try {
             val userId = auth.currentUser?.uid 
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
-            val userEmail = auth.currentUser?.email ?: ""
+            
+            // LGPD: arredonda coordenadas para 0.001° ≈ 111m (latitude) / 78m (longitude em -23°)
+            // Impede exposição de endereço exato. Precisão suficiente para mapa de proximidade.
+            val obfuscatedLat = Math.round(latitude * 1000).toDouble() / 1000.0
+            val obfuscatedLon = Math.round(longitude * 1000).toDouble() / 1000.0
             
             try {
                 firestore.collection("users").document(userId)
@@ -99,14 +103,14 @@ class EmergencyRepositoryImpl(
             } catch (e: Exception) {
                 com.afilaxy.util.Logger.w("EmergencyRepo", "Falha ao atualizar localização em users/${userId}: ${e.message}")
             }
-            
+
+            // Grava coordenadas obfuscadas no Firestore — sem email (PII desnecessária para o mapa)
             val helperData = mapOf(
                 "id" to userId,
-                "email" to userEmail,
-                "location" to GeoPoint(latitude, longitude),
-                "latitude" to latitude,
-                "longitude" to longitude,
-                "geohash" to encodeGeohash(latitude, longitude),
+                "location" to GeoPoint(obfuscatedLat, obfuscatedLon),
+                "latitude" to obfuscatedLat,
+                "longitude" to obfuscatedLon,
+                "geohash" to encodeGeohash(obfuscatedLat, obfuscatedLon),
                 "isActive" to true,
                 "lastUpdate" to getCurrentTimeMillis()
             )
@@ -254,9 +258,9 @@ class EmergencyRepositoryImpl(
         return try {
             val latitude = location.latitude
             val longitude = location.longitude
+            val currentUserId = auth.currentUser?.uid
 
             // Pré-filtro por bounding box de latitude para reduzir leituras do Firestore
-            // 1 grau de latitude ≈ 111 km — calcula margem para o raio solicitado
             val deltaLat = radiusKm / 111.0
             val minLat = latitude - deltaLat
             val maxLat = latitude + deltaLat
@@ -268,6 +272,9 @@ class EmergencyRepositoryImpl(
             val helpers = mutableListOf<Helper>()
 
             for (doc in snapshot.documents) {
+                val id = doc.get<String?>("id") ?: continue
+                // Exclui o próprio usuário dos helpers visíveis
+                if (id == currentUserId) continue
                 val geoPoint = doc.get<GeoPoint?>("location")
                 if (geoPoint != null) {
                     val distance = calculateDistance(
@@ -278,9 +285,9 @@ class EmergencyRepositoryImpl(
                     if (distance <= radiusKm) {
                         helpers.add(
                             Helper(
-                                id = doc.get("id") ?: "",
+                                id = id,
                                 name = doc.get("name") ?: "Helper",
-                                email = doc.get("email") ?: "",
+                                email = "", // email não gravado — campo vazio por desig
                                 latitude = geoPoint.latitude,
                                 longitude = geoPoint.longitude,
                                 isActive = doc.get("isActive") ?: false,
@@ -408,6 +415,47 @@ class EmergencyRepositoryImpl(
             val doc = firestore.collection("emergency_requests").document(emergencyId).get()
             doc.get<Long?>("expiresAt")
         } catch (e: Exception) { null }
+    }
+
+    override fun observeNearbyHelpers(
+        latitude: Double,
+        longitude: Double,
+        radiusKm: Double
+    ): Flow<List<Helper>> {
+        val currentUserId = auth.currentUser?.uid
+        val deltaLat = radiusKm / 111.0
+        val minLat = latitude - deltaLat
+        val maxLat = latitude + deltaLat
+        return firestore.collection("helpers")
+            .where {
+                ("isActive" equalTo true) and
+                ("latitude" greaterThanOrEqualTo minLat) and
+                ("latitude" lessThanOrEqualTo maxLat)
+            }
+            .snapshots
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { doc ->
+                    val id = doc.get<String?>("id") ?: return@mapNotNull null
+                    // Exclui o próprio usuário do resultado
+                    if (id == currentUserId) return@mapNotNull null
+                    val geoPoint = doc.get<GeoPoint?>("location") ?: return@mapNotNull null
+                    val distance = calculateDistance(
+                        latitude, longitude,
+                        geoPoint.latitude, geoPoint.longitude
+                    )
+                    if (distance > radiusKm) return@mapNotNull null
+                    Helper(
+                        id = id,
+                        name = doc.get("name") ?: "Helper",
+                        email = "", // email não gravado por design (LGPD)
+                        latitude = geoPoint.latitude,
+                        longitude = geoPoint.longitude,
+                        isActive = true,
+                        lastUpdate = doc.get("lastUpdate") ?: 0L,
+                        distance = distance
+                    )
+                }.sortedBy { it.distance }
+            }
     }
 
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> {
