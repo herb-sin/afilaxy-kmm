@@ -68,7 +68,7 @@ struct ContentView: View {
             TabView(selection: $selectedTab) {
                 // MARK: - Home Tab
                 NavigationStack(path: $homeNavigationPath) {
-                    HomeView()
+                    HomeView(navigationPath: $homeNavigationPath)
                         .navigationDestination(for: AppRoute.self) { route in
                             destinationView(for: route)
                         }
