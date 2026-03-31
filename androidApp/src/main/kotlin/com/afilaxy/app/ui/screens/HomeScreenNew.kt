@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -40,6 +41,8 @@ fun HomeScreenNew(
     // sem esperar a confirmação do Firestore (mesmo padrão do fix iOS).
     var isHelperPending by remember { mutableStateOf(false) }
     var helperIntended by remember { mutableStateOf(false) }
+    // Controla o fluxo de permissão de localização ao ativar o Modo Ajudante
+    var showHelperPermission by remember { mutableStateOf(false) }
 
     // Sincroniza o estado local com o ViewModel quando a operação conclui.
     LaunchedEffect(emergencyState.isHelperMode) {
@@ -63,10 +66,15 @@ fun HomeScreenNew(
                 isHelperMode = if (isHelperPending) helperIntended else emergencyState.isHelperMode,
                 onHelperModeToggle = { enable ->
                     if (isHelperPending) return@HomeWelcomeCard  // ignora tap duplo
-                    isHelperPending = true
-                    helperIntended = enable
-                    if (enable) viewModel.activateHelperWithLocation()
-                    else viewModel.deactivateHelper()
+                    if (enable) {
+                        // Solicita permissão antes de ativar — melhor UX do que pedir
+                        // na tela de emergência quando o usuário já está em apuros.
+                        showHelperPermission = true
+                    } else {
+                        isHelperPending = true
+                        helperIntended = false
+                        viewModel.deactivateHelper()
+                    }
                 }
             )
         }
@@ -93,6 +101,26 @@ fun HomeScreenNew(
         item {
             HomeStatsCard()
         }
+    }
+
+    // Fluxo de permissão de localização ao ativar o Modo Ajudante.
+    // Não pode ficar dentro do LazyListScope (não é um item de lista).
+    // AlertDialog é um Popup overlay — funciona corretamente aqui, fora do LazyColumn.
+    if (showHelperPermission) {
+        RequestLocationPermission(
+            onPermissionGranted = {
+                showHelperPermission = false
+                isHelperPending = true
+                helperIntended = true
+                viewModel.activateHelperWithLocation()
+            },
+            onPermissionDenied = {
+                showHelperPermission = false
+                // Reverte visual: usuário negou a permissão
+                isHelperPending = false
+                helperIntended = emergencyState.isHelperMode
+            }
+        )
     }
 }
 

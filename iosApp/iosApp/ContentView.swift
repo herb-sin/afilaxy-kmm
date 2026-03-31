@@ -137,9 +137,10 @@ struct ContentView: View {
                 handlePendingChat(emergencyId)
             }
             .onReceive(container.$pendingIncomingEmergencies) { emergencies in
-                // Exibe alerta in-app quando chega uma emergência via Firestore listener
-                // (cobre o caso de app em foreground onde o banner push pode ser ignorado)
-                guard !showIncomingAlert, let first = emergencies.first else { return }
+                // Não mostra alerta in-app se o usuário já navegou para a tela de resposta
+                // via tap na notificação push (emergencyRouteActive=true). Sem esse guard,
+                // o alerta aparece SOBRE a EmergencyResponseView, gerando dupla aceitação.
+                guard !showIncomingAlert, !emergencyRouteActive, let first = emergencies.first else { return }
                 incomingAlertEmergencyId = first.id
                 incomingAlertName = first.name
                 showIncomingAlert = true
@@ -148,7 +149,8 @@ struct ContentView: View {
                 Button("Aceitar") {
                     guard let eid = incomingAlertEmergencyId else { return }
                     container.dismissIncomingEmergency(id: eid)
-                    emergencyRouteActive = false  // reseta para permitir navegação
+                    // Não reseta emergencyRouteActive — handleEmergencyNotification já tem
+                    // a guarda !emergencyRouteActive, impedindo navegação duplicada.
                     handleEmergencyNotification(
                         Notification(name: .init("AfilaxyOpenEmergency"),
                                      object: nil,
@@ -167,6 +169,12 @@ struct ContentView: View {
                 if authState?.isAuthenticated == false {
                     isLoggedIn = false
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyEmergencyResolved"))) { _ in
+                // ChatView disparou 'Resolver' — limpa toda a pilha de navegação de volta à home
+                homeNavigationPath.removeLast(homeNavigationPath.count)
+                chatNavigatedId = nil
+                emergencyRouteActive = false
             }
         } else {
             LoginView(onLoginSuccess: {

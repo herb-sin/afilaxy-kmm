@@ -80,6 +80,13 @@ struct ChatView: View {
             .updateData(["status": "resolved", "active": false])
         container.resolvedEmergencyId = emergencyId
         container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
+        // Dispara limpeza imediata da pilha de navegação em ContentView.
+        // Não depende de objectWillChange do Kotlin (que pode ter delay assíncrono).
+        NotificationCenter.default.post(
+            name: .init("AfilaxyEmergencyResolved"),
+            object: nil,
+            userInfo: ["emergencyId": emergencyId]
+        )
     }
 
     private func startListening() {
