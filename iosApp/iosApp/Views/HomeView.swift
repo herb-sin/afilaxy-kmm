@@ -7,6 +7,7 @@ import shared
 struct HomeView: View {
     @EnvironmentObject var container: AppContainer
     @Environment(\.dismiss) private var dismiss
+    @Binding var navigationPath: NavigationPath  // recebe homeNavigationPath do ContentView
     @State private var showLogoutAlert = false
     @State private var helperToggle = false
     @State private var isTogglingHelper = false
