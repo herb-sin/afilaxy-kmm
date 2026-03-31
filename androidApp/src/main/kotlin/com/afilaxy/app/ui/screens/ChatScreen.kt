@@ -48,15 +48,19 @@ fun ChatScreen(
 
     // Detecta emergência encerrada via EmergencyViewModel.
     // wasEmergencyActive: marca se já vimos esse emergencyId ativo em algum momento.
-    // Quando currentEmergency some ou não bate mais com o emergencyId, isResolved=true.
+    // isResolved = verdadeiro SOMENTE quando currentEmergency == null (emergência encerrada).
+    // NÃO marca como resolved se o ViewModel passou para uma ID diferente — isso acontece
+    // quando o device muda de papel (ex: helper vira requester numa nova emergência); o
+    // chat da emergência original continua válido até o resolve explícito.
     val emergencyVmState by (emergencyViewModel?.state?.collectAsState())
         ?: remember { mutableStateOf(null) }
     var wasEmergencyActive by remember { mutableStateOf(false) }
     LaunchedEffect(emergencyVmState?.currentEmergency) {
         if (emergencyVmState?.currentEmergency?.id == emergencyId) wasEmergencyActive = true
     }
-    val isResolved = wasEmergencyActive && emergencyVmState?.currentEmergency?.id != emergencyId
-        || (emergencyVmState?.currentEmergency == null && state.messages.isNotEmpty() && emergencyVmState != null)
+    val isResolved = wasEmergencyActive
+        && emergencyVmState != null
+        && emergencyVmState?.currentEmergency == null
 
     // Para Compose + edge-to-edge (Android 11+ / API 30+), ADJUST_RESIZE não funciona
     // porque o window não redimensiona mais. A abordagem correta é:

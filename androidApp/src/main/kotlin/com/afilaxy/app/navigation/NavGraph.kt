@@ -46,11 +46,10 @@ fun NavGraph(
         }
     }
 
-    // Navegar quando onNewIntent entrega destino com app já aberto
+    // Navega quando onNewIntent entrega destino com app já aberto (notificação push).
     LaunchedEffect(pendingDestination?.value) {
         val dest = pendingDestination?.value ?: return@LaunchedEffect
         if (navController.currentDestination == null) return@LaunchedEffect
-        // Se já está no destino correto (ex: chat para esta emergência), descarta
         val currentRoute = navController.currentDestination?.route
         val alreadyThere = when {
             dest.startsWith("chat/") && currentRoute?.startsWith("chat/") == true ->
@@ -67,6 +66,22 @@ fun NavGraph(
         }
         pendingDestination.value = null
     }
+
+    // Navega para EmergencyResponseScreen quando uma emergência chega via
+    // Firestore listener em foreground (sem depender de toque na notificação push).
+    // Guard: não navega se já estiver em emergency_response ou chat para evitar reentrada.
+    val incomingEmergencies by (emergencyViewModel?.state?.collectAsState())
+        .let { state -> derivedStateOf { state?.value?.incomingEmergencies ?: emptyList() } }
+    LaunchedEffect(incomingEmergencies) {
+        val incoming = incomingEmergencies.firstOrNull() ?: return@LaunchedEffect
+        if (navController.currentDestination == null) return@LaunchedEffect
+        val currentRoute = navController.currentDestination?.route ?: ""
+        if (currentRoute.startsWith("emergency_response") || currentRoute.startsWith("chat")) return@LaunchedEffect
+        navController.navigate("emergency_response/${incoming.id}") {
+            launchSingleTop = true
+        }
+    }
+
 
     // Dados da comunidade — centralizados aqui para reuso nas rotas de detalhe
     val produtos = listOf(
