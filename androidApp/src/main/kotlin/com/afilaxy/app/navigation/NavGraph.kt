@@ -69,9 +69,10 @@ fun NavGraph(
 
     // Navega para EmergencyResponseScreen quando uma emergência chega via
     // Firestore listener em foreground (sem depender de toque na notificação push).
-    // Guard: não navega se já estiver em emergency_response ou chat para evitar reentrada.
-    val incomingEmergencies by (emergencyViewModel?.state?.collectAsState())
-        .let { state -> derivedStateOf { state?.value?.incomingEmergencies ?: emptyList() } }
+    // Ler .value de um State<T> dentro de @Composable é reativo — registra o
+    // observer e recompõe quando incomingEmergencies mudar.
+    // Guard: não navega se já estiver em emergency_response ou chat.
+    val incomingEmergencies = emergencyViewModel?.state?.collectAsState()?.value?.incomingEmergencies ?: emptyList()
     LaunchedEffect(incomingEmergencies) {
         val incoming = incomingEmergencies.firstOrNull() ?: return@LaunchedEffect
         if (navController.currentDestination == null) return@LaunchedEffect

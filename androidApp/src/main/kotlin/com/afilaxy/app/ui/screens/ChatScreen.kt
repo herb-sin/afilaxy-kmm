@@ -52,8 +52,9 @@ fun ChatScreen(
     // NÃO marca como resolved se o ViewModel passou para uma ID diferente — isso acontece
     // quando o device muda de papel (ex: helper vira requester numa nova emergência); o
     // chat da emergência original continua válido até o resolve explícito.
-    val emergencyVmState by (emergencyViewModel?.state?.collectAsState())
-        ?: remember { mutableStateOf(null) }
+    // Usar .value diretamente (sem by) evita o erro de tipo State<T>? vs State<T?>.
+    // Ler .value dentro de @Composable é reativo — registra o observer de recomposição.
+    val emergencyVmState = emergencyViewModel?.state?.collectAsState()?.value
     var wasEmergencyActive by remember { mutableStateOf(false) }
     LaunchedEffect(emergencyVmState?.currentEmergency) {
         if (emergencyVmState?.currentEmergency?.id == emergencyId) wasEmergencyActive = true
