@@ -53,10 +53,6 @@ struct ContentView: View {
     @State private var chatNavigatedId: String? = nil
     @State private var wasActiveEmergency = false
     @State private var resolvedChatId: String? = nil
-    // In-app banner para emergências recebidas pelo Firestore listener
-    @State private var showIncomingAlert = false
-    @State private var incomingAlertEmergencyId: String? = nil
-    @State private var incomingAlertName: String = ""
     
     // MARK: - Adaptive Tab View Style
     private var adaptiveTabViewStyle: DefaultTabViewStyle {
@@ -137,32 +133,17 @@ struct ContentView: View {
                 handlePendingChat(emergencyId)
             }
             .onReceive(container.$pendingIncomingEmergencies) { emergencies in
-                // Não mostra alerta in-app se o usuário já navegou para a tela de resposta
-                // via tap na notificação push (emergencyRouteActive=true). Sem esse guard,
-                // o alerta aparece SOBRE a EmergencyResponseView, gerando dupla aceitação.
-                guard !showIncomingAlert, !emergencyRouteActive, let first = emergencies.first else { return }
-                incomingAlertEmergencyId = first.id
-                incomingAlertName = first.name
-                showIncomingAlert = true
-            }
-            .alert("🆘 Pedido de Ajuda", isPresented: $showIncomingAlert) {
-                Button("Aceitar") {
-                    guard let eid = incomingAlertEmergencyId else { return }
-                    container.dismissIncomingEmergency(id: eid)
-                    // Não reseta emergencyRouteActive — handleEmergencyNotification já tem
-                    // a guarda !emergencyRouteActive, impedindo navegação duplicada.
-                    handleEmergencyNotification(
-                        Notification(name: .init("AfilaxyOpenEmergency"),
-                                     object: nil,
-                                     userInfo: ["emergencyId": eid])
-                    )
-                }
-                Button("Ignorar", role: .cancel) {
-                    guard let eid = incomingAlertEmergencyId else { return }
-                    container.dismissIncomingEmergency(id: eid)
-                }
-            } message: {
-                Text("\(incomingAlertName) precisa de ajuda! Deseja aceitar?")
+                // Navega diretamente para EmergencyResponseView sem dialog intermediário.
+                // O dialog de dois passos (alert + EmergencyResponseView) confundia:
+                // o Firestore listener disparava em background, setava showIncomingAlert=true,
+                // e o alerta aparecia SOBRE a EmergencyResponseView aberta pela notificação push.
+                // Agora: notification tap OU in-foreground update → EmergencyResponseView diretamente.
+                guard !emergencyRouteActive, let first = emergencies.first else { return }
+                handleEmergencyNotification(
+                    Notification(name: .init("AfilaxyOpenEmergency"),
+                                 object: nil,
+                                 userInfo: ["emergencyId": first.id])
+                )
             }
             .onReceive(container.auth.$state) { authState in
                 // Detecta logout — performLogout() sinaliza via Firebase → Kotlin → StateFlow → polling
