@@ -46,13 +46,15 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
 
-    // Edge-to-edge: não usa adjustPan (empurra a lista toda para cima).
-    // imePadding() no bottomBar e no Box de conteúdo já lidam com o teclado corretamente.
+    // SOFT_INPUT_ADJUST_RESIZE: o window encolhe quando o teclado abre.
+    // A Column (Box peso 1f + Surface) se adapta naturalmente — o Surface
+    // (campo de input) permanece no bottom do conteúdo reduzido, acima do teclado.
+    // imePadding() não é necessário (e seria prejudicial) com ADJUST_RESIZE.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
         val original = window?.attributes?.softInputMode
-        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         onDispose {
             original?.let { window.setSoftInputMode(it) }
         }
@@ -66,7 +68,8 @@ fun ChatScreen(
     }
     LaunchedEffect(state.messages.size) {
         FileLogger.log("DEBUG", "ChatScreen", "messages count=${state.messages.size} currentUserId=${state.currentUserId}")
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(0)
+        // Scroll para o Último item (mais recente) — lista está em ordem ascendente de timestamp
+        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.size - 1)
     }
     
     Scaffold(
@@ -108,10 +111,9 @@ fun ChatScreen(
                         )
                     }
                 } else {
-                    // Lista de mensagens (reversa para mostrar mais recentes embaixo)
+                    // Lista de mensagens em ordem cronológica (mais antiga no topo, mais recente em baixo)
                     LazyColumn(
                         state = listState,
-                        reverseLayout = true,
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
@@ -138,12 +140,10 @@ fun ChatScreen(
                 }
             }
 
-            // Campo de input — empurrado para cima pelo teclado via imePadding()
             Surface(shadowElevation = 8.dp) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .imePadding()
                         .navigationBarsPadding()
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
