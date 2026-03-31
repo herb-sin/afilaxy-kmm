@@ -70,14 +70,39 @@ jobs:
           echo "Version: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' iosApp/Info.plist)"
           echo "Build: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' iosApp/Info.plist)"
 
+      # Cache do repositório de specs do CocoaPods (~/.cocoapods/repos).
+      # Evita baixar specs do GitHub CDN a cada run → elimina o erro 429.
+      # A chave inclui o hash do Podfile; muda de spec repo só quando deps mudam.
+      - name: Cache CocoaPods Specs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cocoapods
+          key: cocoapods-specs-${{ hashFiles('iosApp/Podfile') }}
+          restore-keys: |
+            cocoapods-specs-
+
+      # Cache dos Pods baixados — evita re-download de frameworks grandes
+      # (ex.: FirebaseFirestore ~200 MB) a cada run.
+      - name: Cache CocoaPods Pods
+        uses: actions/cache@v4
+        with:
+          path: iosApp/Pods
+          key: cocoapods-pods-${{ hashFiles('iosApp/Podfile.lock') }}
+          restore-keys: |
+            cocoapods-pods-
+
       # Instala os pods do iOS (depende do .xcodeproj já existir)
+      # --no-repo-update: usa specs cacheadas — sem chamadas ao CDN GitHub → sem 429
+      # Fallback --repo-update: só executa se um spec não for encontrado no cache.
       - name: Install CocoaPods
         run: |
           cd iosApp
-          rm -f Podfile.lock
-          pod cache clean --all
-          pod deintegrate || true
-          pod install --repo-update
+          if pod install --no-repo-update 2>&1 | tee /tmp/pod_install.log | grep -qE "(Unable to find|not found in any of)" ; then
+            echo "⚠️  Spec não encontrada no cache — fazendo repo-update..."
+            pod install --repo-update
+          else
+            cat /tmp/pod_install.log
+          fi
 
       # Importa o certificado de distribuição Apple (P12 em base64)
       - name: Import Apple Distribution Certificate
