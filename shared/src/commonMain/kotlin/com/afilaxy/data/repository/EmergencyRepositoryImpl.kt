@@ -94,8 +94,8 @@ class EmergencyRepositoryImpl(
             
             // LGPD: arredonda coordenadas para 0.001° ≈ 111m (latitude) / 78m (longitude em -23°)
             // Impede exposição de endereço exato. Precisão suficiente para mapa de proximidade.
-            val obfuscatedLat = Math.round(latitude * 1000).toDouble() / 1000.0
-            val obfuscatedLon = Math.round(longitude * 1000).toDouble() / 1000.0
+            val obfuscatedLat = round(latitude * 1000) / 1000.0
+            val obfuscatedLon = round(longitude * 1000) / 1000.0
             
             try {
                 firestore.collection("users").document(userId)
