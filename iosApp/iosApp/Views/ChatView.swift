@@ -61,6 +61,12 @@ struct ChatView: View {
                     Text(resolvedBannerText)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // Quando a outra parte encerrou: botão direto sem "Continuar no Chat"
+                    if resolvedByOther {
+                        Button("Encerrar") { dismiss() }
+                            .font(.subheadline.bold())
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -88,12 +94,18 @@ struct ChatView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button { showResolveDialog = true } label: {
+                // Se a outra parte já encerrou: dismiss direto, sem alert
+                Button {
+                    if resolvedByOther { dismiss() }
+                    else { showResolveDialog = true }
+                } label: {
                     Image(systemName: "chevron.left")
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Resolver") { showResolveDialog = true }
+            if !resolvedByOther {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Resolver") { showResolveDialog = true }
+                }
             }
         }
         .alert("Encerrar Emergência", isPresented: $showResolveDialog) {

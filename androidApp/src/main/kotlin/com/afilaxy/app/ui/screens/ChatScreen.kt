@@ -102,13 +102,19 @@ fun ChatScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.chat_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { showResolveDialog = true }) {
+                    IconButton(onClick = {
+                        // Se a outra parte já encerrou, não mostra dialog — encerra direto
+                        if (resolvedByOther) onNavigateBack()
+                        else showResolveDialog = true
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
-                    TextButton(onClick = { showResolveDialog = true }) {
-                        Text("Resolver", color = MaterialTheme.colorScheme.primary)
+                    if (!resolvedByOther) {
+                        TextButton(onClick = { showResolveDialog = true }) {
+                            Text("Resolver", color = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             )
@@ -183,6 +189,12 @@ fun ChatScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f)
                         )
+                        // Quando a outra parte encerrou: botão direto sem "Continuar no Chat"
+                        if (resolvedByOther) {
+                            TextButton(onClick = { onNavigateBack() }) {
+                                Text("Encerrar")
+                            }
+                        }
                     }
                 }
             }
