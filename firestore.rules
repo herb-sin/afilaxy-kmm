@@ -122,6 +122,13 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // User statistics — written exclusively by Cloud Functions (Admin SDK).
+    // Client only reads its own document to display weekly emergency count.
+    match /user_stats/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // Only Cloud Functions (Admin SDK) can write
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
