@@ -15,7 +15,8 @@ struct HomeView: View {
     // Consentimento LGPD persistido entre sessões (UserDefaults via @AppStorage)
     @AppStorage("helperMapConsentGiven") private var helperMapConsentGiven = false
     @State private var showHelperConsentAlert = false
-
+    @State private var weeklyCount: Int = -1     // -1 = ainda carregando
+    @State private var weeklyStatusLoaded = false
 
     var body: some View {
         // NOTA: ContentView já envolve HomeView em NavigationStack(path: $homeNavigationPath).
@@ -98,36 +99,38 @@ struct HomeView: View {
                 "nenhum endereço ou dado sensível.\nDesative o modo a qualquer momento."
             )
         }
+        .onAppear { fetchWeeklyStatus() }
     }
     
     // MARK: - Hero Section
+
     private var heroSection: some View {
-        HeroGradientCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Image(systemName: "lungs.fill")
-                        .font(.title)
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    if let state = container.emergency.state, state.hasActiveEmergency {
-                        StatusBadge(text: "Emergência Ativa", status: .error)
-                    }
+        WeeklyStatusCard(weeklyCount: weeklyCount)
+    }
+
+    // MARK: - Fetch weekly stats
+    private func fetchWeeklyStatus() {
+        guard !weeklyStatusLoaded, let uid = Auth.auth().currentUser?.uid else { return }
+        weeklyStatusLoaded = true
+
+        // Semana ISO atual (ex: "2026-W14")
+        let now = Date()
+        let cal = Calendar(identifier: .iso8601)
+        let week = cal.component(.weekOfYear, from: now)
+        let year = cal.component(.yearForWeekOfYear, from: now)
+        let weekKey = String(format: "%d-W%02d", year, week)
+
+        Firestore.firestore()
+            .collection("user_stats")
+            .document(uid)
+            .getDocument { snapshot, _ in
+                guard let data = snapshot?.data() else {
+                    weeklyCount = 0
+                    return
                 }
-                
-                Text("Respire fundo.\nVocê não está sozinho.")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.leading)
-                
-                Text("Conectamos pessoas com asma para apoio mútuo e acesso rápido à ajuda quando mais precisam.")
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.9))
-                    .lineLimit(3)
+                let weekly = data["weeklyCount"] as? [String: Any]
+                weeklyCount = weekly?[weekKey] as? Int ?? 0
             }
-        }
     }
     
     // MARK: - Emergency Button

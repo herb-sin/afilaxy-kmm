@@ -2,21 +2,44 @@ import SwiftUI
 import MapKit
 import shared
 
+// MARK: - Air Quality Model
+
+struct AirQualityData {
+    let aqi: Int           // European AQI (0–500+)
+    let pm25: Double       // µg/m³
+    let humidity: Double   // %
+    let label: String      // "Boa", "Moderada", "Ruim", "Muito Ruim"
+    let color: Color
+
+    static func from(aqi: Int, pm25: Double, humidity: Double) -> AirQualityData {
+        let (label, color): (String, Color) = switch aqi {
+        case 0...20:   ("Excelente", Color(red: 0.1, green: 0.75, blue: 0.4))
+        case 21...40:  ("Boa",       Color(red: 0.4, green: 0.8,  blue: 0.2))
+        case 41...60:  ("Moderada",  Color(red: 1.0, green: 0.75, blue: 0.0))
+        case 61...80:  ("Ruim",      Color(red: 1.0, green: 0.45, blue: 0.0))
+        default:       ("Muito Ruim",Color(red: 0.9, green: 0.1,  blue: 0.1))
+        }
+        return AirQualityData(aqi: aqi, pm25: pm25, humidity: humidity, label: label, color: color)
+    }
+}
+
+// MARK: - MapView
+
 struct MapView: View {
     @EnvironmentObject var container: AppContainer
     @StateObject private var locationManager = LocationManager.shared
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: -23.5505, longitude: -46.6333), // fallback São Paulo
+        center: CLLocationCoordinate2D(latitude: -23.5505, longitude: -46.6333),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
-    @State private var showHelperMode = false
-    @State private var trackingMode: MapUserTrackingMode = .follow  // auto-centraliza no GPS
-    @State private var isHelperModeActive = false // Local state fallback
-    
+    @State private var trackingMode: MapUserTrackingMode = .follow
+    @State private var airQuality: AirQualityData? = nil
+    @State private var airCardExpanded = false
+    @State private var isFetchingAir = false
+
     var body: some View {
         ZStack {
-            // Main Map
-            Map(coordinateRegion: $region, 
+            Map(coordinateRegion: $region,
                 showsUserLocation: true,
                 userTrackingMode: $trackingMode,
                 annotationItems: nearbyHelpers) { helper in
@@ -25,35 +48,20 @@ struct MapView: View {
                 }
             }
             .ignoresSafeArea(.all, edges: .top)
-            
-            // Overlay UI
+
+            // Single floating card — top-right
             VStack {
-                // Top Status Bar
                 HStack {
-                    LocationStatusCard()
                     Spacer()
-                    MapControlsCard()
+                    AirQualityCard(
+                        data: airQuality,
+                        isLoading: isFetchingAir,
+                        expanded: $airCardExpanded
+                    )
+                    .padding(.trailing, 16)
+                    .padding(.top, 8)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                
                 Spacer()
-                
-                // Bottom Action Cards
-                VStack(spacing: 12) {
-                    if isHelperModeActive {
-                        HelperModeActiveCard()
-                    }
-                    
-                    HStack(spacing: 12) {
-                        HelperToggleCard()
-                        EmergencyMapButton()
-                    }
-                    
-                    NearbyHelpersCard()
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 100)
             }
         }
         .navigationTitle("Mapa")
@@ -62,16 +70,18 @@ struct MapView: View {
             updateLocationIfNeeded()
         }
         .onReceive(LocationManager.shared.$currentLocation) { location in
-            if let location = location {
-                region.center = location.coordinate
+            guard let location else { return }
+            region.center = location.coordinate
+            if airQuality == nil && !isFetchingAir {
+                fetchAirQuality(lat: location.coordinate.latitude,
+                                lon: location.coordinate.longitude)
             }
         }
     }
-    
+
+    // MARK: - Helpers list
+
     private var nearbyHelpers: [MapHelper] {
-        // EmergencyState.nearbyHelpers é List<Helper> no KMM.
-        // Na bridge ObjC/Swift, List<T> é exposto como NSArray<SharedHelper *>
-        // que o Swift trata como [shared.Helper] diretamente.
         guard let state = container.emergency.state else { return [] }
         let helpers = state.nearbyHelpers as [shared.Helper]
         return helpers.compactMap { helper -> MapHelper? in
@@ -86,252 +96,190 @@ struct MapView: View {
             )
         }
     }
-    
+
+    // MARK: - Location init
+
     private func updateLocationIfNeeded() {
-        // Centra o mapa imediatamente se já temos uma localização cacheada
         if let current = LocationManager.shared.currentLocation {
             region.center = current.coordinate
             trackingMode = .follow
-            // Inicia observer de helpers próximos com coordenadas reais
             let lat = current.coordinate.latitude
             let lon = current.coordinate.longitude
             container.emergency.startObservingNearbyHelpers(latitude: lat, longitude: lon)
+            if airQuality == nil { fetchAirQuality(lat: lat, lon: lon) }
         }
-        // Solicita permissão se necessário e inicia atualizações de GPS
         if LocationManager.shared.hasPermission {
             LocationManager.shared.startUpdating()
         } else {
             LocationManager.shared.requestWhenInUse()
         }
     }
-}
 
-// MARK: - Supporting Views
+    // MARK: - Air Quality fetch (Open-Meteo, sem chave de API)
 
-struct LocationStatusCard: View {
-    @StateObject private var locationManager = LocationManager.shared
+    private func fetchAirQuality(lat: Double, lon: Double) {
+        isFetchingAir = true
+        let urlStr = "https://air-quality-api.open-meteo.com/v1/air-quality" +
+            "?latitude=\(lat)&longitude=\(lon)" +
+            "&current=european_aqi,pm2_5&hourly=relativehumidity_2m&forecast_days=1"
+        guard let url = URL(string: urlStr) else { isFetchingAir = false; return }
 
-    var body: some View {
-        AfilaxyCard {
-            HStack(spacing: 8) {
-                Image(systemName: "location.fill")
-                    .foregroundColor(Color.afiprimary)
-                    .font(.caption)
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            defer { DispatchQueue.main.async { isFetchingAir = false } }
+            guard let data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { return }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Localização Atual")
-                        .font(.caption2)
-                        .foregroundColor(Color.afionSurface.opacity(0.6))
-                    if let loc = locationManager.currentLocation {
-                        Text(String(format: "%.4f, %.4f",
-                             loc.coordinate.latitude,
-                             loc.coordinate.longitude))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .monospacedDigit()
-                    } else {
-                        Text("Obtendo localização...")
-                            .font(.caption)
-                            .foregroundColor(Color.afionSurface.opacity(0.5))
-                    }
-                }
+            // current values
+            let current  = json["current"] as? [String: Any]
+            let aqi      = current?["european_aqi"] as? Int    ?? 0
+            let pm25     = current?["pm2_5"]        as? Double ?? 0.0
 
-                Spacer()
+            // humidity — primeiro valor horário
+            let hourly   = json["hourly"] as? [String: Any]
+            let humArr   = hourly?["relativehumidity_2m"] as? [Double] ?? []
+            let humidity = humArr.first ?? 0.0
 
-                Circle()
-                    .fill(locationManager.currentLocation != nil ? Color.green : Color.orange)
-                    .frame(width: 8, height: 8)
+            DispatchQueue.main.async {
+                airQuality = AirQualityData.from(aqi: aqi, pm25: pm25, humidity: humidity)
             }
-        }
+        }.resume()
     }
 }
 
-struct MapControlsCard: View {
-    @State private var showMapOptions = false
-    
-    var body: some View {
-        AfilaxyCard {
-            HStack(spacing: 12) {
-                Button(action: { /* Center on user */ }) {
-                    Image(systemName: "location.circle")
-                        .font(.title3)
-                        .foregroundColor(Color.afiprimary)
-                }
-                
-                Button(action: { showMapOptions.toggle() }) {
-                    Image(systemName: "map")
-                        .font(.title3)
-                        .foregroundColor(Color.afiprimary)
-                }
-            }
-        }
-        .actionSheet(isPresented: $showMapOptions) {
-            ActionSheet(
-                title: Text("Estilo do Mapa"),
-                buttons: [
-                    .default(Text("Padrão")) { /* Set standard */ },
-                    .default(Text("Satélite")) { /* Set satellite */ },
-                    .default(Text("Híbrido")) { /* Set hybrid */ },
-                    .cancel()
-                ]
-            )
-        }
-    }
-}
+// MARK: - Air Quality Floating Card
 
-struct HelperModeActiveCard: View {
+struct AirQualityCard: View {
+    let data: AirQualityData?
+    let isLoading: Bool
+    @Binding var expanded: Bool
+
     var body: some View {
-        AfilaxyCard {
-            HStack {
-                Circle()
-                    .fill(Color.green)
-                    .frame(width: 12, height: 12)
-                    .overlay {
+        VStack(alignment: .trailing, spacing: 0) {
+            // Collapsed pill
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    expanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "wind")
+                        .font(.caption)
+                        .foregroundColor(data?.color ?? .secondary)
+
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    } else if let d = data {
+                        Text("Ar \(d.label)")
+                            .font(.caption.bold())
+                            .foregroundColor(d.color)
                         Circle()
-                            .fill(Color.green.opacity(0.3))
-                            .frame(width: 24, height: 24)
-                            .scaleEffect(1.0)
-                            .animation(.easeInOut(duration: 1.0).repeatForever(), value: true)
+                            .fill(d.color)
+                            .frame(width: 8, height: 8)
+                    } else {
+                        Text("Qualidade do Ar")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Modo Helper Ativo")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.green)
-                    Text("Você está disponível para ajudar")
-                        .font(.caption)
-                        .foregroundColor(Color.afionSurface.opacity(0.6))
                 }
-                
-                Spacer()
-                
-                Text("ONLINE")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.green)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.green.opacity(0.1))
-                    .clipShape(Capsule())
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+                .shadow(color: .black.opacity(0.12), radius: 6, x: 0, y: 3)
             }
-        }
-    }
-}
+            .buttonStyle(.plain)
 
-struct HelperToggleCard: View {
-    @EnvironmentObject var container: AppContainer
-    @State private var isHelperModeActive = false // Local state fallback
-    
-    var body: some View {
-        AfilaxyCard {
-            HStack {
-                Image(systemName: "heart.fill")
-                    .foregroundColor(Color.afiprimary)
-                    .font(.title3)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Modo Helper")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Text(isHelperModeActive ? "Ativo" : "Inativo")
-                        .font(.caption)
-                        .foregroundColor(Color.afionSurface.opacity(0.6))
-                }
-                
-                Spacer()
-                
-                Toggle("", isOn: $isHelperModeActive)
-                    .toggleStyle(SwitchToggleStyle(tint: Color.afiprimary))
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-struct EmergencyMapButton: View {
-    var body: some View {
-        Button(action: {
-            // Handle emergency action
-        }) {
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.white)
-                    .font(.title3)
-                
-                Text("SOS")
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    colors: [Color.red, Color.red.opacity(0.8)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-}
-
-struct NearbyHelpersCard: View {
-    var body: some View {
-        AfilaxyCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Helpers Próximos")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    
-                    Spacer()
-                    
-                    Text("3 disponíveis")
-                        .font(.caption)
-                        .foregroundColor(Color.afiprimary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.afiprimary.opacity(0.1))
-                        .clipShape(Capsule())
-                }
-                
-                HStack(spacing: 12) {
-                    ForEach(0..<3, id: \.self) { index in
-                        VStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.afiprimary.opacity(0.2))
-                                .frame(width: 32, height: 32)
-                                .overlay {
-                                    Image(systemName: "person.fill")
-                                        .font(.caption)
-                                        .foregroundColor(Color.afiprimary)
-                                }
-                            
-                            Text("\(0.8 + Double(index) * 0.4, specifier: "%.1f")km")
+            // Expanded detail panel
+            if expanded, let d = data {
+                VStack(alignment: .leading, spacing: 14) {
+                    // AQI gauge
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Índice Europeu de Qualidade do Ar")
                                 .font(.caption2)
-                                .foregroundColor(Color.afionSurface.opacity(0.6))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(d.aqi)")
+                                .font(.title2.bold())
+                                .foregroundColor(d.color)
                         }
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color(.systemGray5)).frame(height: 6)
+                                Capsule().fill(d.color)
+                                    .frame(width: geo.size.width * min(Double(d.aqi) / 100.0, 1.0),
+                                           height: 6)
+                            }
+                        }
+                        .frame(height: 6)
                     }
-                    
-                    Spacer()
-                    
-                    Button("Ver Todos") {
-                        // Show helpers list
+
+                    Divider()
+
+                    // Metrics
+                    HStack(spacing: 20) {
+                        MetricCell(
+                            icon: "smoke.fill",
+                            label: "PM2.5",
+                            value: String(format: "%.1f µg/m³", d.pm25),
+                            color: d.color
+                        )
+                        MetricCell(
+                            icon: "humidity.fill",
+                            label: "Humidade",
+                            value: String(format: "%.0f%%", d.humidity),
+                            color: .blue
+                        )
                     }
-                    .font(.caption)
-                    .foregroundColor(Color.afiprimary)
+
+                    Text("⚠️ Asmáticos devem evitar atividades ao ar livre quando o índice ultrapassar 50.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
                 }
+                .padding(16)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+                .frame(width: 260)
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .top)),
+                    removal:   .opacity.combined(with: .move(edge: .top))
+                ))
+                .padding(.top, 6)
             }
         }
     }
 }
+
+struct MetricCell: View {
+    let icon: String
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundColor(color)
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Text(value)
+                .font(.caption.bold())
+                .foregroundColor(.primary)
+        }
+    }
+}
+
+// MARK: - Helper Annotation
 
 struct HelperAnnotationView: View {
     let helper: MapHelper
-    
+
     var body: some View {
         VStack(spacing: 4) {
             Circle()
@@ -343,11 +291,10 @@ struct HelperAnnotationView: View {
                         .foregroundColor(.white)
                 }
                 .overlay {
-                    Circle()
-                        .stroke(Color.white, lineWidth: 2)
+                    Circle().stroke(Color.white, lineWidth: 2)
                 }
-            
-            Text("\(helper.distance, specifier: "%.1f")km")
+
+            Text(String(format: "%.0fm", helper.distance * 1000))
                 .font(.caption2)
                 .fontWeight(.medium)
                 .foregroundColor(.white)
@@ -359,7 +306,7 @@ struct HelperAnnotationView: View {
     }
 }
 
-// MARK: - Data Models
+// MARK: - Data Model
 
 struct MapHelper: Identifiable {
     let id: String
