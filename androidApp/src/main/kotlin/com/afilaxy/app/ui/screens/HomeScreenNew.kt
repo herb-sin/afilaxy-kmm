@@ -26,8 +26,11 @@ import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +55,29 @@ fun HomeScreenNew(
     var helperIntended by remember { mutableStateOf(false) }
     var showHelperPermission by remember { mutableStateOf(false) }
     var showHelperConsentDialog by remember { mutableStateOf(false) }
+    // -1 = carregando, 0 = nenhum pedido, 1+ = atenção/urgente
+    var weeklyCount by remember { mutableStateOf(-1) }
+
+    // Listener em tempo real: atualiza automaticamente quando a Cloud Function
+    // onEmergencyFinalized escrever em user_stats após a emergência ser resolvida.
+    DisposableEffect(Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid == null) { weeklyCount = 0; return@DisposableEffect onDispose {} }
+        val cal = Calendar.getInstance()
+        val week = cal.get(Calendar.WEEK_OF_YEAR)
+        val year = cal.get(Calendar.YEAR)
+        val weekKey = "%d-W%02d".format(year, week)
+        val listener = FirebaseFirestore.getInstance()
+            .collection("user_stats")
+            .document(uid)
+            .addSnapshotListener { doc, _ ->
+                @Suppress("UNCHECKED_CAST")
+                val weekly = doc?.get("weeklyCount") as? Map<String, Any>
+                weeklyCount = (weekly?.get(weekKey) as? Long)?.toInt() ?: 0
+            }
+        onDispose { listener.remove() }
+    }
+
     // Diálogo de explicação antes de solicitar localização em background
     var showBackgroundLocationRationale by remember { mutableStateOf(false) }
     // Launcher para ACCESS_BACKGROUND_LOCATION (solicitado separadamente no Android 10+)
@@ -83,6 +109,7 @@ fun HomeScreenNew(
         item {
             HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
+                weeklyCount = weeklyCount,
                 // Enquanto pendente, mostra o valor pretendido pelo usuário.
                 // Após o ViewModel confirmar, LaunchedEffect zera isHelperPending.
                 isHelperMode = if (isHelperPending) helperIntended else emergencyState.isHelperMode,
@@ -250,19 +277,39 @@ fun HomeScreenNew(
 @Composable
 private fun HomeWelcomeCard(
     userName: String,
+    weeklyCount: Int,
     isHelperMode: Boolean,
     onHelperModeToggle: (Boolean) -> Unit
 ) {
+    // Cor do gradiente e mensagens dependem da contagem semanal
+    val (gradientColors, headline, body) = when (weeklyCount) {
+        -1 -> Triple(
+            listOf(Color(0xFF1A73E8), Color(0xFF0D47A1)),
+            "Carregando seu status...",
+            ""
+        )
+        0 -> Triple(
+            listOf(Color(0xFF1976D2), Color(0xFF1565C0)),
+            "Essa semana nenhum pedido de socorro.",
+            "Sua asma parece controlada! Continue assim. 💙"
+        )
+        1 -> Triple(
+            listOf(Color(0xFFF4A825), Color(0xFFE65100)),
+            "Você já fez 1 pedido de emergência essa semana.",
+            "Se precisar da bombinha novamente, considere marcar uma consulta. 🩺"
+        )
+        else -> Triple(
+            listOf(Color(0xFFC62828), Color(0xFF7B1A1A)),
+            "Você já fez $weeklyCount pedidos de emergência essa semana.",
+            "Sua asma pode estar fora de controle. Agende uma consulta com urgência! ❗"
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-                    )
-                ),
+                brush = Brush.linearGradient(colors = gradientColors),
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(20.dp)
@@ -274,15 +321,58 @@ private fun HomeWelcomeCard(
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "Respire fundo. Você não está sozinho.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.padding(top = 4.dp)
-            )
+
+            // Status semanal
+            if (weeklyCount == -1) {
+                // Skeleton placeholder enquanto carrega
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(14.dp)
+                        .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                )
+            } else {
+                Text(
+                    text = headline,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                if (body.isNotEmpty()) {
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.88f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+                // Pill de contagem
+                if (weeklyCount >= 0) {
+                    val pillText = when (weeklyCount) {
+                        0    -> "0 pedidos esta semana"
+                        1    -> "1 pedido esta semana"
+                        else -> "$weeklyCount pedidos esta semana"
+                    }
+                    Surface(
+                        color = Color.White.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.padding(top = 10.dp)
+                    ) {
+                        Text(
+                            text = pillText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Helper toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
