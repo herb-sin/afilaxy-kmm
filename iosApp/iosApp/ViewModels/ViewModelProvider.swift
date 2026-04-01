@@ -53,12 +53,15 @@ class EmergencyViewModelWrapper: ObservableObject {
     var vm: EmergencyViewModel? { viewModel }
 
     func freezeSwift() {
-        // 1. Para a pipeline Combine — não mais atualizações no @Published state
+        // 1. Cancela os coroutines KMM PRIMEIRO — sem isso, um evento Firestore em voo
+        //    ainda tenta executar _state.update após o logout → SIGABRT (build 299 e 300)
+        viewModel?.cancelAllObservations()
+        // 2. Para a pipeline Combine — não mais atualizações no @Published state
         cancellable?.cancel()
         cancellable = nil
-        // 2. Remove a referência ao StateFlowObserver — libera a coleta do KMM StateFlow
+        // 3. Remove a referência ao StateFlowObserver — libera a coleta do KMM StateFlow
         observer = nil
-        // 3. Cancela coroutines KMM ativos (observeNearbyHelpers, observeEmergencyStatus)
+        // 4. Reseta o estado local do ViewModel
         viewModel?.onClearEmergencyState()
     }
 

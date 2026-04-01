@@ -1,5 +1,9 @@
 package com.afilaxy.app.ui.screens
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,8 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.PermissionChecker
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
@@ -37,17 +44,27 @@ fun HomeScreenNew(
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
 ) {
+    val context = LocalContext.current
     val emergencyState by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
     val prefsRepo: PreferencesRepository = koinInject()
-    // Estado local otimista: muda o Switch visual imediatamente ao toque,
-    // sem esperar a confirmação do Firestore (mesmo padrão do fix iOS).
     var isHelperPending by remember { mutableStateOf(false) }
     var helperIntended by remember { mutableStateOf(false) }
-    // Controla o fluxo de permissão de localização ao ativar o Modo Ajudante
     var showHelperPermission by remember { mutableStateOf(false) }
-    // Controla o dialog de consentimento LGPD (exibido apenas uma vez)
     var showHelperConsentDialog by remember { mutableStateOf(false) }
+    // Diálogo de explicação antes de solicitar localização em background
+    var showBackgroundLocationRationale by remember { mutableStateOf(false) }
+    // Launcher para ACCESS_BACKGROUND_LOCATION (solicitado separadamente no Android 10+)
+    val backgroundLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        // Independente do resultado (aceito ou negado), ativa o helper.
+        // Sem "Sempre": helper funciona só em foreground.
+        // Com "Sempre": helper funciona em background também.
+        isHelperPending = true
+        helperIntended = true
+        viewModel.activateHelperWithLocation()
+    }
 
     // Sincroniza o estado local com o ViewModel quando a operação conclui.
     LaunchedEffect(emergencyState.isHelperMode) {
@@ -152,22 +169,75 @@ fun HomeScreenNew(
         )
     }
 
-    // Fluxo de permissão de localização ao ativar o Modo Ajudante.
-    // Não pode ficar dentro do LazyListScope (não é um item de lista).
-    // AlertDialog é um Popup overlay — funciona corretamente aqui, fora do LazyColumn.
+    // Após a permissão foreground ser concedida, verifica se background também pode ser pedido.
     if (showHelperPermission) {
         RequestLocationPermission(
             onPermissionGranted = {
                 showHelperPermission = false
+                // Verifica se ACCESS_BACKGROUND_LOCATION já foi concedida ou se o Android
+                // é < 10 (sem conceito de background location separado).
+                val alreadyHasBackground = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    ) == PermissionChecker.PERMISSION_GRANTED
+                if (alreadyHasBackground) {
+                    // Já tem tudo — ativa direto
+                    isHelperPending = true
+                    helperIntended = true
+                    viewModel.activateHelperWithLocation()
+                } else {
+                    // Exibe diálogo de rationale antes do pedido de background
+                    showBackgroundLocationRationale = true
+                }
+            },
+            onPermissionDenied = {
+                showHelperPermission = false
+                isHelperPending = false
+                helperIntended = emergencyState.isHelperMode
+            }
+        )
+    }
+
+    // Diálogo de explicação do "Permitir sempre" antes de solicitar a permissão de background.
+    if (showBackgroundLocationRationale) {
+        AlertDialog(
+            onDismissRequest = {
+                // Usuário fechou sem decidir — ativa helper sem background
+                showBackgroundLocationRationale = false
                 isHelperPending = true
                 helperIntended = true
                 viewModel.activateHelperWithLocation()
             },
-            onPermissionDenied = {
-                showHelperPermission = false
-                // Reverte visual: usuário negou a permissão
-                isHelperPending = false
-                helperIntended = emergencyState.isHelperMode
+            icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("Localização em segundo plano") },
+            text = {
+                Text(
+                    "Para receber alertas de emergência mesmo quando o Afilaxy estiver fechado, " +
+                    "precisamos que você selecione \"Permitir sempre\" na próxima tela.\n\n" +
+                    "Sem essa permissão, o Modo Ajudante funciona apenas enquanto o app estiver aberto."
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showBackgroundLocationRationale = false
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    }
+                }) {
+                    Text("Entendi, Permitir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showBackgroundLocationRationale = false
+                    // Ativa sem background — funciona em foreground
+                    isHelperPending = true
+                    helperIntended = true
+                    viewModel.activateHelperWithLocation()
+                }) {
+                    Text("Agora não")
+                }
             }
         )
     }

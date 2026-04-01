@@ -7,6 +7,7 @@ import com.afilaxy.domain.repository.LocationRepository
 import com.afilaxy.domain.repository.NotificationRepository
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,11 +47,13 @@ class EmergencyViewModel(
     }
 
     private var statusObservedId: String? = null
+    private var statusObserverJob: Job? = null
 
     fun observeEmergencyStatus(emergencyId: String) {
         if (statusObservedId == emergencyId) return
         statusObservedId = emergencyId
-        viewModelScope.coroutineScope.launch {
+        statusObserverJob?.cancel()
+        statusObserverJob = viewModelScope.coroutineScope.launch {
             emergencyRepository.observeEmergencyStatus(emergencyId)
                 .collect { status ->
                     _state.update { it.copy(emergencyStatus = status) }
@@ -140,6 +143,26 @@ class EmergencyViewModel(
             )
         }
         statusObservedId = null
+    }
+
+    /**
+     * Cancela todos os coroutines de observação em longa duração.
+     * Chamado pelo iOS em freezeSwift() durante o logout, ANTES de onClearEmergencyState().
+     * Sem isso, os Jobs continuam rodando no viewModelScope e quando o Firestore emite um
+     * evento pós-logout o runtime Kotlin/Native aborta (SIGABRT).
+     */
+    fun cancelAllObservations() {
+        statusObserverJob?.cancel()
+        statusObserverJob = null
+        statusObservedId = null
+
+        incomingEmergenciesObserverJob?.cancel()
+        incomingEmergenciesObserverJob = null
+        emergencyObserverStarted = false
+
+        helpersObserverJob?.cancel()
+        helpersObserverJob = null
+        helpersObserverStarted = false
     }
 
     fun onCancelEmergency() {
@@ -274,6 +297,7 @@ class EmergencyViewModel(
     }
     
     private var emergencyObserverStarted = false
+    private var incomingEmergenciesObserverJob: Job? = null
 
     fun startObservingIncomingEmergencies(latitude: Double, longitude: Double) {
         if (emergencyObserverStarted) return
@@ -289,7 +313,8 @@ class EmergencyViewModel(
     fun markAsNotified(emergencyId: String) { _notifiedEmergencyIds.add(emergencyId) }
 
     private fun observeIncomingEmergencies(latitude: Double, longitude: Double) {
-        viewModelScope.coroutineScope.launch {
+        incomingEmergenciesObserverJob?.cancel()
+        incomingEmergenciesObserverJob = viewModelScope.coroutineScope.launch {
             try {
                 emergencyRepository.observeNearbyEmergencies(latitude, longitude, 5.0)
                     .collect { emergencies ->
@@ -314,6 +339,7 @@ class EmergencyViewModel(
     }
 
     private var helpersObserverStarted = false
+    private var helpersObserverJob: Job? = null
 
     /** Inicia o observer em tempo real de helpers próximos.
      *  Chamado pelo MapScreen (Android) e MapView (iOS) ao abrir o mapa.
@@ -321,7 +347,8 @@ class EmergencyViewModel(
     fun startObservingNearbyHelpers(latitude: Double, longitude: Double) {
         if (helpersObserverStarted) return
         helpersObserverStarted = true
-        viewModelScope.coroutineScope.launch {
+        helpersObserverJob?.cancel()
+        helpersObserverJob = viewModelScope.coroutineScope.launch {
             try {
                 emergencyRepository.observeNearbyHelpers(latitude, longitude, 5.0)
                     .collect { helpers ->
