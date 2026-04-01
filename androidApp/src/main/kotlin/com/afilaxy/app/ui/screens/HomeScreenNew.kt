@@ -27,6 +27,7 @@ import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
@@ -70,7 +71,7 @@ fun HomeScreenNew(
         val listener = FirebaseFirestore.getInstance()
             .collection("user_stats")
             .document(uid)
-            .addSnapshotListener { doc, _ ->
+            .addSnapshotListener { doc: DocumentSnapshot?, _ ->
                 @Suppress("UNCHECKED_CAST")
                 val weekly = doc?.get("weeklyCount") as? Map<String, Any>
                 weeklyCount = (weekly?.get(weekKey) as? Long)?.toInt() ?: 0
