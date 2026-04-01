@@ -241,7 +241,7 @@ export const onEmergencyCreated = functions.firestore
             }
 
             const center: [number, number] = [emergency.latitude, emergency.longitude];
-            const radiusInKm = 5; // 5km
+            const radiusInKm = 0.25; // 250m — helper a pé chega em ~3 minutos
             const radiusInM = radiusInKm * 1000;
 
             console.log(`Buscando helpers dentro de ${radiusInKm}km de [${center[0]}, ${center[1]}]`);

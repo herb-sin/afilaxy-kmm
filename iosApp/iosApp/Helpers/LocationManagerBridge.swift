@@ -36,7 +36,8 @@ final class LocationManagerBridge {
     func enableHelperMode(lat: Double, lon: Double, completion: @escaping (Bool) -> Void) {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "enableHelperMode hasPermission=\(locationManager.hasPermission)")
         pendingHelperActivation = true
-        locationManager.startUpdating()
+        // Usa precisão reduzida para poupar bateria — 100m é suficiente para o raio de 5km
+        locationManager.startUpdatingHelperMode()
         guard let uid = Auth.auth().currentUser?.uid else {
             pendingHelperActivation = false
             completion(false)
@@ -78,6 +79,11 @@ final class LocationManagerBridge {
         }
     }
 
+    /// Ativa/reinicia o GPS em modo econômico para helper mode (foreground ou retorno do background).
+    func startHelperModeGPS() {
+        locationManager.startUpdatingHelperMode()
+    }
+
     /// Cancela uma ativação de helper mode ainda pendente no Firestore.
     /// Deve ser chamado antes de `onCreateEmergency()` para evitar race condition
     /// onde o dispositivo se registra como helper da própria emergência.
@@ -111,7 +117,9 @@ final class LocationManagerBridge {
 
     func disableHelperMode() {
         FileLogger.shared.write(level: "INFO", tag: "LocationBridge", message: "disableHelperMode")
+        // Para as atualizações de localização — GPS não fica ativo após desativar o toggle
         locationManager.stopUpdating()
+        // Desativa background location — não mais necessário sem helper mode
         guard let uid = Auth.auth().currentUser?.uid else { return }
         Firestore.firestore().collection("helpers").document(uid).delete()
     }

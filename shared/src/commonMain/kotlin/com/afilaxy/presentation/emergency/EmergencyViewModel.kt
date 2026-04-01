@@ -46,6 +46,14 @@ class EmergencyViewModel(
         }
     }
 
+    /** Injetado quando o Firestore não retornou expiresAt (tipo incompatível ou campo ausente).
+     *  Usa 3 minutos a partir de agora como estimativa conservadora para destravar o countdown. */
+    fun applyFallbackExpiresAt() {
+        if (_state.value.emergencyExpiresAt == null) {
+            _state.update { it.copy(emergencyExpiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + 180_000L) }
+        }
+    }
+
     private var statusObservedId: String? = null
     private var statusObserverJob: Job? = null
 
@@ -316,7 +324,7 @@ class EmergencyViewModel(
         incomingEmergenciesObserverJob?.cancel()
         incomingEmergenciesObserverJob = viewModelScope.coroutineScope.launch {
             try {
-                emergencyRepository.observeNearbyEmergencies(latitude, longitude, 5.0)
+                emergencyRepository.observeNearbyEmergencies(latitude, longitude, 0.25)
                     .collect { emergencies ->
                         _state.update { it.copy(incomingEmergencies = emergencies) }
                     }

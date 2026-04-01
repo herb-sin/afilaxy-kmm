@@ -262,7 +262,7 @@ class AppContainer: ObservableObject {
             .store(in: &cancellables)
     }
 
-    func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 5.0) {
+    func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 0.25) {
         emergencyListener?.remove()
         let deltaLat = radiusKm / 111.0
         let startTime = Date()
@@ -417,6 +417,8 @@ struct AfilaxyApp: App {
                 }
                 let isHelper = container.emergency.state?.isHelperMode == true
                 if isHelper {
+                    // Reinicia GPS em modo econômico (precisão reduzida) — helper precisa de ≈100m
+                    LocationManagerBridge.shared.startHelperModeGPS()
                     container.stopObservingNearbyEmergencies()
                     if let loc = LocationManager.shared.currentLocation {
                         container.startObservingNearbyEmergencies(lat: loc.coordinate.latitude,

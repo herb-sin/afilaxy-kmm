@@ -413,7 +413,11 @@ class EmergencyRepositoryImpl(
     override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? {
         return try {
             val doc = firestore.collection("emergency_requests").document(emergencyId).get()
+            // O Firestore KMM às vezes serializa campos numéricos como Double em vez de Long.
+            // Tenta Long primeiro; fallback para Double.toLong() para garantir que o countdown
+            // da EmergencyResponseScreen (Android) receba um valor não-nulo e inicie corretamente.
             doc.get<Long?>("expiresAt")
+                ?: doc.get<Double?>("expiresAt")?.toLong()
         } catch (e: Exception) { null }
     }
 

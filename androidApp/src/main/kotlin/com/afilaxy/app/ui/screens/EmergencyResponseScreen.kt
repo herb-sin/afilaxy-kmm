@@ -43,6 +43,14 @@ fun EmergencyResponseScreen(
         viewModel.fetchEmergencyExpiresAt(emergencyId)
         // Garante que o ViewModel conhece o emergencyId mesmo em cold start via notificação
         viewModel.preloadEmergencyId(emergencyId)
+        // Fallback: se após 1,5s o expiresAt ainda for null (tipo Firestore incompatível ou
+        // campo ausente), injeta um valor estimado de 3 minutos a partir de agora.
+        // Garante que o countdown inicie e não fique travado em 3:00 estático.
+        kotlinx.coroutines.delay(1_500)
+        if (viewModel.state.value.emergencyExpiresAt == null) {
+            FileLogger.log("WARN", "EmergencyResponseScreen", "expiresAt still null after fetch — using local fallback emergencyId=$emergencyId")
+            viewModel.applyFallbackExpiresAt()
+        }
     }
 
     LaunchedEffect(state.emergencyExpiresAt) {
