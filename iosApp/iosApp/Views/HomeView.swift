@@ -16,7 +16,7 @@ struct HomeView: View {
     @AppStorage("helperMapConsentGiven") private var helperMapConsentGiven = false
     @State private var showHelperConsentAlert = false
     @State private var weeklyCount: Int = -1     // -1 = ainda carregando
-    @State private var weeklyStatusLoaded = false
+    @State private var statsListener: ListenerRegistration? = nil
 
     var body: some View {
         // NOTA: ContentView já envolve HomeView em NavigationStack(path: $homeNavigationPath).
@@ -100,6 +100,7 @@ struct HomeView: View {
             )
         }
         .onAppear { fetchWeeklyStatus() }
+        .onDisappear { statsListener?.remove() }
     }
     
     // MARK: - Hero Section
@@ -108,22 +109,26 @@ struct HomeView: View {
         WeeklyStatusCard(weeklyCount: weeklyCount)
     }
 
-    // MARK: - Fetch weekly stats
+    // MARK: - Fetch weekly stats (listener em tempo real)
     private func fetchWeeklyStatus() {
-        guard !weeklyStatusLoaded, let uid = Auth.auth().currentUser?.uid else { return }
-        weeklyStatusLoaded = true
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        // Cancela listener anterior se existir (evita duplicatas em reappear)
+        statsListener?.remove()
+        weeklyCount = -1  // mostra skeleton enquanto carrega
 
         // Semana ISO atual (ex: "2026-W14")
-        let now = Date()
         let cal = Calendar(identifier: .iso8601)
-        let week = cal.component(.weekOfYear, from: now)
-        let year = cal.component(.yearForWeekOfYear, from: now)
+        let week = cal.component(.weekOfYear, from: Date())
+        let year = cal.component(.yearForWeekOfYear, from: Date())
         let weekKey = String(format: "%d-W%02d", year, week)
 
-        Firestore.firestore()
+        // addSnapshotListener: atualiza automaticamente quando a Cloud Function
+        // onEmergencyFinalized escrever em user_stats após a emergência ser resolvida.
+        statsListener = Firestore.firestore()
             .collection("user_stats")
             .document(uid)
-            .getDocument { snapshot, _ in
+            .addSnapshotListener { snapshot, _ in
                 guard let data = snapshot?.data() else {
                     weeklyCount = 0
                     return

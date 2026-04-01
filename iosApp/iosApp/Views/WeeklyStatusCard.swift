@@ -126,11 +126,11 @@ private struct StatusConfig {
         case 0:
             return StatusConfig(
                 icon: "checkmark.seal.fill",
-                gradientColors: [Color(hex: "#00897B"), Color(hex: "#004D40")],
+                gradientColors: [Color(hex: "#1976D2"), Color(hex: "#1565C0")],
                 headline: "Essa semana você não fez nenhum pedido de socorro.",
-                body: "Sua asma parece controlada! Continue assim. 💚",
+                body: "Sua asma parece controlada! Continue assim. 💙",
                 pillText: "0 pedidos esta semana",
-                shadowColor: Color(hex: "#00897B").opacity(0.35)
+                shadowColor: Color(hex: "#1976D2").opacity(0.35)
             )
         case 1:
             return StatusConfig(
