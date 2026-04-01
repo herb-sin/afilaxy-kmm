@@ -237,6 +237,14 @@ fun NavGraph(
             ChatScreen(
                 emergencyId = emergencyId,
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateBackResolved = {
+                    // Encerrado pela outra parte: limpa estado KMM e retorna à home,
+                    // removendo EmergencyScreen/EmergencyRequestScreen da back stack.
+                    emergencyViewModel?.onClearEmergencyState()
+                    navController.navigate(AppRoutes.HOME) {
+                        popUpTo(AppRoutes.HOME) { inclusive = false }
+                    }
+                },
                 emergencyViewModel = emergencyViewModel
             )
         }

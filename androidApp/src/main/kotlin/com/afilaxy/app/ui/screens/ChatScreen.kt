@@ -39,6 +39,7 @@ import org.koin.core.parameter.parametersOf
 fun ChatScreen(
     emergencyId: String,
     onNavigateBack: () -> Unit,
+    onNavigateBackResolved: () -> Unit = onNavigateBack,
     onNavigateToRating: (String, String) -> Unit = { _, _ -> },
     viewModel: ChatViewModel = koinViewModel { parametersOf(emergencyId) },
     emergencyViewModel: EmergencyViewModel? = null
@@ -82,9 +83,9 @@ fun ChatScreen(
         }
     }
 
-    // Bloqueia back press — se emergência já encerrada, retorna direto
+    // Bloqueia back press — se emergência já encerrada pela outra parte, limpa estado e vai à home
     BackHandler {
-        if (isResolved) onNavigateBack()
+        if (isResolved) onNavigateBackResolved()
         else showResolveDialog = true
     }
 
@@ -103,8 +104,8 @@ fun ChatScreen(
                 title = { Text(stringResource(R.string.chat_title)) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        // Se a outra parte já encerrou, não mostra dialog — encerra direto
-                        if (resolvedByOther) onNavigateBack()
+                        // Se a outra parte já encerrou, limpa estado e vai direto à home
+                        if (resolvedByOther) onNavigateBackResolved()
                         else showResolveDialog = true
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -191,7 +192,7 @@ fun ChatScreen(
                         )
                         // Quando a outra parte encerrou: botão direto sem "Continuar no Chat"
                         if (resolvedByOther) {
-                            TextButton(onClick = { onNavigateBack() }) {
+                            TextButton(onClick = { onNavigateBackResolved() }) {
                                 Text("Encerrar")
                             }
                         }
