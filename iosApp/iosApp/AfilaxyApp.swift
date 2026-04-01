@@ -244,6 +244,15 @@ class AppContainer: ObservableObject {
                 guard let self = self,
                       let emergencyId = notification.userInfo?["emergencyId"] as? String,
                       !self.notifiedEmergencyIds.contains(emergencyId) else { return }
+                // Evita auto-match: ignora se o usuário é o requester desta emergência
+                // (pode acontecer quando o iOS estava na coleção helpers e criou a própria emergência)
+                let ownEmergencyId = self.emergency.state?.emergencyId as? String
+                if (ownEmergencyId != nil && emergencyId == ownEmergencyId)
+                    || self.emergency.state?.isRequester == true {
+                    FileLogger.shared.write(level: "WARN", tag: "AppContainer",
+                        message: "FCM: ignorando própria emergência emergencyId=\(emergencyId)")
+                    return
+                }
                 self.notifiedEmergencyIds.insert(emergencyId)
                 let name = notification.userInfo?["requesterName"] as? String ?? "Alguém"
                 FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency via FCM from \(name)")
@@ -264,14 +273,18 @@ class AppContainer: ObservableObject {
             .whereField("latitude", isLessThanOrEqualTo: lat + deltaLat)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self, let snapshot = snapshot else { return }
-                let uid = Auth.auth().currentUser?.uid
+                // guard let uid: se Firebase Auth ainda não restaurou a sessão (uid==nil),
+                // não processa eventos — evita auto-match onde requesterId!=nil≡true passaria.
+                guard let uid = Auth.auth().currentUser?.uid else { return }
+                let ownEmergencyId = self.emergency.state?.emergencyId as? String
                 snapshot.documentChanges
                     .filter { $0.type == .added }
                     .forEach { change in
                         let data = change.document.data()
                         let docId = change.document.documentID
                         guard let requesterId = data["requesterId"] as? String,
-                              requesterId != uid,
+                              requesterId != uid,       // não é emergência criada pelo próprio usuário
+                              docId != ownEmergencyId, // camada extra: ID não confere com ViewModel
                               !self.notifiedEmergencyIds.contains(docId),
                               (data["status"] as? String) == "waiting" else { return }
                         let docDate: Date
