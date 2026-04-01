@@ -64,7 +64,7 @@ struct ChatView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     // Quando a outra parte encerrou: botão direto sem "Continuar no Chat"
                     if resolvedByOther {
-                        Button("Encerrar") { dismiss() }
+                        Button("Encerrar") { dismissAndClearState() }
                             .font(.subheadline.bold())
                     }
                 }
@@ -96,7 +96,7 @@ struct ChatView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 // Se a outra parte já encerrou: dismiss direto, sem alert
                 Button {
-                    if resolvedByOther { dismiss() }
+                    if resolvedByOther { dismissAndClearState() }
                     else { showResolveDialog = true }
                 } label: {
                     Image(systemName: "chevron.left")
@@ -144,6 +144,16 @@ struct ChatView: View {
             .document(emergencyId)
             .updateData(["status": "resolved", "active": false])
         container.resolvedEmergencyId = emergencyId
+        container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
+        NotificationCenter.default.post(
+            name: .init("AfilaxyEmergencyResolved"),
+            object: nil,
+            userInfo: ["emergencyId": emergencyId]
+        )
+    }
+
+    /// Limpa estado e navega de volta à home quando foi a outra parte que encerrou.
+    private func dismissAndClearState() {
         container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
         NotificationCenter.default.post(
             name: .init("AfilaxyEmergencyResolved"),

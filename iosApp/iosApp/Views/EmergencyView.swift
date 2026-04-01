@@ -264,6 +264,10 @@ struct EmergencyView: View {
             let expiresAt = s.emergencyExpiresAt?.int64Value ?? 0
             if expiresAt > 0 {
                 startCountdown(expiresAt: expiresAt)
+            } else {
+                // Fallback: campo ausente ou tipo incompatível — inicia countdown local de 3 min
+                FileLogger.shared.write(level: "WARN", tag: "EmergencyView", message: "emergencyExpiresAt nil/zero — usando fallback local emergencyId=\(eid)")
+                startCountdown(expiresAt: nil)
             }
         }
     }

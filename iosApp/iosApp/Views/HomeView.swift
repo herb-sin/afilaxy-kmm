@@ -363,9 +363,12 @@ struct HomeView: View {
                 if success {
                     self.container.emergency.setHelperMode(true)
                     self.container.startObservingNearbyEmergencies(lat: lat, lon: lon)
+                    // Ativa background location em modo econômico (100m) para o helper
+                    // conseguir detectar emergências mesmo com app em background.
                     // Solicita upgrade WhenInUse→Always com delay para não conflitar
                     // com rerender SwiftUI em andamento (crash se apresentado imediatamente)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        LocationManager.shared.startBackgroundUpdating()
                         LocationManager.shared.requestAlwaysIfNeeded()
                     }
                 } else {

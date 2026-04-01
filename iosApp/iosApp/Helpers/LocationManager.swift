@@ -24,6 +24,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     private override init() {
         super.init()
         manager.delegate = self
+        // Precisão e filtro padrão para modo emergência (requester) — usa GPS de alta precisão
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 50
         // NÃO lê authorizationStatus aqui — o iOS ainda não carregou o estado.
@@ -57,12 +58,26 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     // MARK: - Localização
 
+    /// Modo padrão (emergência/requester): GPS de alta precisão.
     func startUpdating() {
         if hasPermission {
+            manager.desiredAccuracy = kCLLocationAccuracyBest
+            manager.distanceFilter = 50
             manager.startUpdatingLocation()
         } else {
             manager.requestWhenInUseAuthorization()
         }
+    }
+
+    /// Modo Ajudante: precisão reduzida para economizar bateria.
+    /// HundredMeters + 100m de filtro ≈ 50% menos wakeups de GPS.
+    /// Suficiente para detecção de emergências em raio de 5 km.
+    func startUpdatingHelperMode() {
+        guard hasPermission else { return }
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        manager.distanceFilter = 100
+        manager.startUpdatingLocation()
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "startUpdatingHelperMode — precision=HundredMeters filter=100m")
     }
 
     func startBackgroundUpdating() {
@@ -70,10 +85,14 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         // funcionar quando o app não está em foreground.
         // allowsBackgroundLocationUpdates requer UIBackgroundModes: location no Info.plist (já configurado).
         // showsBackgroundLocationIndicator exibe a barra azul do iOS (exigida pela Apple).
+        // Usa precisão reduzida em background para poupar bateria (chip GPS ativa menos vezes).
         if hasPermission {
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
+            manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            manager.distanceFilter = 100
             manager.startUpdatingLocation()
+            FileLogger.shared.write(level: "INFO", tag: "LocationManager", message: "startBackgroundUpdating — precision=HundredMeters filter=100m")
         }
     }
 
