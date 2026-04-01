@@ -22,10 +22,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import android.view.WindowManager
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
+import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 
 /**
@@ -46,33 +48,21 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
 
-    // Detecta emergência encerrada via EmergencyViewModel.
-    // wasEmergencyActive: marca se já vimos esse emergencyId ativo em algum momento.
-    // isResolved = verdadeiro SOMENTE quando currentEmergency == null (emergência encerrada).
-    // NÃO marca como resolved se o ViewModel passou para uma ID diferente — isso acontece
-    // quando o device muda de papel (ex: helper vira requester numa nova emergência); o
-    // chat da emergência original continua válido até o resolve explícito.
-    // Usar .value diretamente (sem by) evita o erro de tipo State<T>? vs State<T?>.
-    // Ler .value dentro de @Composable é reativo — registra o observer de recomposição.
-    val emergencyVmState = emergencyViewModel?.state?.collectAsState()?.value
-    var wasEmergencyActive by remember { mutableStateOf(false) }
-    LaunchedEffect(emergencyVmState?.currentEmergency) {
-        if (emergencyVmState?.currentEmergency?.id == emergencyId) wasEmergencyActive = true
-    }
-    // Detecta quando A OUTRA PARTE encerra a emergência via emergencyStatus do ViewModel.
-    // O ViewModel já observa observeEmergencyStatus(emergencyId) e atualiza o state.
-    // Não usa Firebase Android SDK diretamente (indisponível no androidApp como dep direta).
+    // Observa o status da emergência DIRETAMENTE via EmergencyRepository (Firestore snapshot).
+    // Mesmo padrão do statusListener do iOS ChatView — funciona para os dois lados
+    // (requester e helper) sem depender do ViewModel, evitando a race condition que
+    // existia antes entre emergencyStatus e currentEmergency chegando juntos.
+    val emergencyRepo: EmergencyRepository = koinInject()
     var resolvedByOther by remember { mutableStateOf(false) }
-    LaunchedEffect(emergencyVmState?.emergencyStatus) {
-        val s = emergencyVmState?.emergencyStatus
-        if ((s == "resolved" || s == "finished") && wasEmergencyActive) {
-            resolvedByOther = true
+    LaunchedEffect(emergencyId) {
+        emergencyRepo.observeEmergencyStatus(emergencyId).collect { status ->
+            if (status == "resolved" || status == "finished") {
+                resolvedByOther = true
+            }
         }
     }
 
-    // isResolved: local (ViewModel sem currentEmergency) OU remoto (Firestore status = resolved)
     val isResolved = resolvedByOther
-        || (wasEmergencyActive && emergencyVmState?.currentEmergency == null)
     val resolvedBannerText = when {
         resolvedByOther -> "✅ Emergência encerrada pela outra parte"
         else -> "✅ Emergência encerrada — chat bloqueado"

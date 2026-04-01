@@ -66,9 +66,25 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func startBackgroundUpdating() {
-        // WhenInUse é suficiente para o modo helper — não solicita Always
-        // para evitar crash ao apresentar diálogo de sistema durante rerender SwiftUI
-        manager.startUpdatingLocation()
+        // Ativa atualizações em segundo plano — necessário para o Modo Ajudante
+        // funcionar quando o app não está em foreground.
+        // allowsBackgroundLocationUpdates requer UIBackgroundModes: location no Info.plist (já configurado).
+        // showsBackgroundLocationIndicator exibe a barra azul do iOS (exigida pela Apple).
+        if hasPermission {
+            manager.allowsBackgroundLocationUpdates = true
+            manager.showsBackgroundLocationIndicator = true
+            manager.startUpdatingLocation()
+        }
+    }
+
+    /// Solicita upgrade de WhenInUse para Always (necessário para helper em background).
+    /// Chamado com asyncAfter(0.5s) para não conflitar com rerender SwiftUI.
+    func requestAlwaysIfNeeded() {
+        let status = manager.authorizationStatus
+        guard status == .authorizedWhenInUse else { return }
+        FileLogger.shared.write(level: "INFO", tag: "LocationManager",
+            message: "requestAlways upgrade (status=\(status.rawValue))")
+        manager.requestAlwaysAuthorization()
     }
 
     func stopUpdating() {
