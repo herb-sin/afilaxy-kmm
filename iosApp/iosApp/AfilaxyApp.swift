@@ -215,6 +215,18 @@ class AppContainer: ObservableObject {
     private var notifiedEmergencyIds = Set<String>()
 
     func freezeAll() {
+        // 1. Cancela todos os sinks Combine do AppContainer (objectWillChange e notificações).
+        //    Isso para qualquer update assíncrono que ainda possa estar em voo antes de limpar
+        //    os ViewModels KMM. Sem isso, um evento Firestore que chega após o freeze tenta
+        //    publicar num @Published ligado a um KMM object já destruído → SIGABRT.
+        cancellables = []
+        // 2. Para o listener Firestore de emergências próximas
+        emergencyListener?.remove()
+        emergencyListener = nil
+        notifiedEmergencyIds = []
+        pendingIncomingEmergencies = []
+        // 3. Agora é seguro encerrar cada ViewModel (seus Combine cancellables já foram
+        //    cancelados em passo 1; os freezes abaixo também têm seus próprios cancels)
         _emergency?.freezeSwift()
         _auth?.signOutSwift()
         _history?.freeze()
