@@ -9,10 +9,16 @@ struct ChatView: View {
     @State private var messages: [(id: String, senderId: String, senderName: String, text: String, timestamp: Date)] = []
     @State private var messageText = ""
     @State private var listener: ListenerRegistration? = nil
+    @State private var statusListener: ListenerRegistration? = nil
     @State private var showResolveDialog = false
+    @State private var isResolved = false
+    @State private var resolvedByOther = false
     @Environment(\.dismiss) private var dismiss
 
     private var currentUserId: String? { Auth.auth().currentUser?.uid }
+    private var resolvedBannerText: String {
+        resolvedByOther ? "✅ Emergência encerrada pela outra parte" : "✅ Emergência encerrada"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,12 +26,26 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         ForEach(messages, id: \.id) { msg in
-                            MessageBubble(
-                                text: msg.text,
-                                senderName: msg.senderName,
-                                isCurrentUser: msg.senderId == currentUserId
-                            )
-                            .id(msg.id)
+                            if msg.senderId == "system" {
+                                // Mensagens de sistema: centralizadas, sem bubble
+                                Text(msg.text)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 4)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal)
+                                    .id(msg.id)
+                            } else {
+                                MessageBubble(
+                                    text: msg.text,
+                                    senderName: msg.senderName,
+                                    isCurrentUser: msg.senderId == currentUserId
+                                )
+                                .id(msg.id)
+                            }
                         }
                     }
                     .padding()
@@ -35,17 +55,31 @@ struct ChatView: View {
                 }
             }
 
+            // Banner de emergência encerrada
+            if isResolved {
+                HStack {
+                    Text(resolvedBannerText)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemGray6))
+            }
+
             Divider()
 
             HStack(spacing: 8) {
-                TextField("Digite uma mensagem...", text: $messageText)
+                TextField(isResolved ? "Emergência encerrada" : "Digite uma mensagem...", text: $messageText)
                     .textFieldStyle(.roundedBorder)
+                    .disabled(isResolved)
                 Button {
                     sendMessage()
                 } label: {
                     Image(systemName: "paperplane.fill")
                 }
-                .disabled(messageText.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(messageText.trimmingCharacters(in: .whitespaces).isEmpty || isResolved)
             }
             .padding(8)
         }
@@ -65,23 +99,40 @@ struct ChatView: View {
         .alert("Encerrar Emergência", isPresented: $showResolveDialog) {
             Button("Resolver", role: .destructive) { resolveEmergency() }
             Button("Continuar no Chat", role: .cancel) {}
-        } message: { Text("Você precisa resolver a emergência antes de sair.") }
+        } message: { Text("A outra parte será avisada que a emergência foi encerrada.") }
         .onAppear { startListening() }
         .onDisappear {
             listener?.remove()
             listener = nil
+            statusListener?.remove()
+            statusListener = nil
         }
     }
 
     private func resolveEmergency() {
-        Firestore.firestore()
-            .collection("emergency_requests")
+        let db = Firestore.firestore()
+        // 1. Escreve mensagem de sistema visível para os dois lados
+        let msgId = UUID().uuidString
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        db.collection("emergency_chats")
+            .document(emergencyId)
+            .collection("messages")
+            .document(msgId)
+            .setData([
+                "id": msgId,
+                "emergencyId": emergencyId,
+                "senderId": "system",
+                "senderName": "Sistema",
+                "message": "✅ Emergência encerrada. O chat foi bloqueado.",
+                "timestamp": nowMs,
+                "isFromHelper": false
+            ])
+        // 2. Atualiza status da emergência
+        db.collection("emergency_requests")
             .document(emergencyId)
             .updateData(["status": "resolved", "active": false])
         container.resolvedEmergencyId = emergencyId
         container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
-        // Dispara limpeza imediata da pilha de navegação em ContentView.
-        // Não depende de objectWillChange do Kotlin (que pode ter delay assíncrono).
         NotificationCenter.default.post(
             name: .init("AfilaxyEmergencyResolved"),
             object: nil,
@@ -90,6 +141,7 @@ struct ChatView: View {
     }
 
     private func startListening() {
+        // Listener de mensagens do chat
         listener = Firestore.firestore()
             .collection("emergency_chats")
             .document(emergencyId)
@@ -109,6 +161,21 @@ struct ChatView: View {
                         else if let t = d["timestamp"] as? Timestamp { ts = t.dateValue() }
                         else { ts = Date() }
                         return (id: doc.documentID, senderId: senderId, senderName: senderName, text: text, timestamp: ts)
+                    }
+                }
+            }
+        // Listener do status da emergência — detecta quando A OUTRA PARTE resolve
+        statusListener = Firestore.firestore()
+            .collection("emergency_requests")
+            .document(emergencyId)
+            .addSnapshotListener { snapshot, _ in
+                guard let data = snapshot?.data(),
+                      let status = data["status"] as? String else { return }
+                let wasResolvedByOther = status == "resolved" || status == "finished"
+                DispatchQueue.main.async {
+                    if wasResolvedByOther && !isResolved {
+                        resolvedByOther = true
+                        isResolved = true
                     }
                 }
             }

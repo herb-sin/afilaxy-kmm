@@ -52,7 +52,15 @@ class EmergencyViewModelWrapper: ObservableObject {
 
     var vm: EmergencyViewModel? { viewModel }
 
-    func freezeSwift() {}
+    func freezeSwift() {
+        // 1. Para a pipeline Combine — não mais atualizações no @Published state
+        cancellable?.cancel()
+        cancellable = nil
+        // 2. Remove a referência ao StateFlowObserver — libera a coleta do KMM StateFlow
+        observer = nil
+        // 3. Cancela coroutines KMM ativos (observeNearbyHelpers, observeEmergencyStatus)
+        viewModel?.onClearEmergencyState()
+    }
 
     /// Atualiza isHelperMode no shared ViewModel.
     /// Antes estava vazio — o toggle nunca refletia o estado correto no iOS.
@@ -95,7 +103,11 @@ class HistoryViewModelWrapper: ObservableObject {
     private init() { self.viewModel = nil }
 
     var vm: HistoryViewModel? { viewModel }
-    func freeze() {}
+    func freeze() {
+        cancellable?.cancel()
+        cancellable = nil
+        observer = nil
+    }
 }
 
 // MARK: - ProfileViewModelWrapper
@@ -119,7 +131,11 @@ class ProfileViewModelWrapper: ObservableObject {
     private init() { self.viewModel = nil }
 
     var vm: ProfileViewModel? { viewModel }
-    func freeze() {}
+    func freeze() {
+        cancellable?.cancel()
+        cancellable = nil
+        observer = nil
+    }
 }
 
 // MARK: - ProfessionalListViewModelWrapper
@@ -143,7 +159,11 @@ class ProfessionalListViewModelWrapper: ObservableObject {
     private init() { self.viewModel = nil }
 
     var vm: ProfessionalListViewModel? { viewModel }
-    func freeze() {}
+    func freeze() {
+        cancellable?.cancel()
+        cancellable = nil
+        observer = nil
+    }
 }
 
 // MARK: - ProfessionalDetailViewModelWrapper
@@ -167,7 +187,11 @@ class ProfessionalDetailViewModelWrapper: ObservableObject {
     private init() { self.viewModel = nil }
 
     var vm: ProfessionalDetailViewModel? { viewModel }
-    func freeze() {}
+    func freeze() {
+        cancellable?.cancel()
+        cancellable = nil
+        observer = nil
+    }
 }
 
 // MARK: - ViewModelProvider

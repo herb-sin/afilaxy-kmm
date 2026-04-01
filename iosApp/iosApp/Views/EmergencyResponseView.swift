@@ -10,7 +10,9 @@ struct EmergencyResponseView: View {
     @State private var accepted = false
     @State private var errorMessage: String? = nil
     @State private var statusListener: ListenerRegistration? = nil
+    @State private var availabilityListener: ListenerRegistration? = nil
     @State private var chatNavigated = false
+    @State private var isUnavailable = false  // emergência cancelada/expirada/já aceita
 
     var body: some View {
         List {
@@ -24,7 +26,15 @@ struct EmergencyResponseView: View {
             }
 
             Section {
-                if accepted {
+                if isUnavailable {
+                Section {
+                    Label("Emergência não disponível", systemImage: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                    Text("Esta emergência foi cancelada ou já foi atendida por outra pessoa.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            } else if accepted {
                     Label("Você aceitou esta emergência", systemImage: "checkmark.circle.fill")
                         .foregroundColor(.green)
                     Text("Abrindo chat...")
@@ -44,7 +54,11 @@ struct EmergencyResponseView: View {
                                     container.emergency.setHelperMode(false)
                                     startStatusObserver()
                                 } else {
-                                    errorMessage = error ?? "Erro ao aceitar emergência"
+                                    // "Missing or insufficient permissions" = emergência já cancelada/aceita
+                                    let friendlyError = (error?.contains("permissions") == true || error?.contains("permission") == true)
+                                        ? "Esta emergência não está mais disponível."
+                                        : (error ?? "Erro ao aceitar emergência")
+                                    errorMessage = friendlyError
                                 }
                             }
                         }
@@ -70,18 +84,49 @@ struct EmergencyResponseView: View {
             }
 
             if let error = errorMessage {
-                Section { Text(error).foregroundColor(.red).font(.caption) }
+                Section {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                }
             }
         }
         .navigationTitle("Emergência Próxima")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "appeared emergencyId=\(emergencyId)")
+            startAvailabilityObserver()
         }
         .onDisappear {
             statusListener?.remove()
             statusListener = nil
+            availabilityListener?.remove()
+            availabilityListener = nil
         }
+    }
+
+    /// Observa o documento da emergência. Se ficar inativa (cancelada, expirada ou já aceita
+    /// por outro helper), marca como indisponível e dispensa a view automaticamente.
+    private func startAvailabilityObserver() {
+        availabilityListener = Firestore.firestore()
+            .collection("emergency_requests")
+            .document(emergencyId)
+            .addSnapshotListener { snapshot, _ in
+                guard let data = snapshot?.data() else { return }
+                let active = data["active"] as? Bool ?? true
+                let status = data["status"] as? String ?? "waiting"
+                let alreadyMatched = (data["helperId"] as? String) != nil && !accepted
+                let unavailable = !active || status == "cancelled" || (alreadyMatched && !accepted)
+                DispatchQueue.main.async {
+                    if unavailable && !chatNavigated {
+                        isUnavailable = true
+                        errorMessage = nil
+                        // Remove da lista pendente e dispensa após breve delay
+                        container.dismissIncomingEmergency(id: emergencyId)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { dismiss() }
+                    }
+                }
+            }
     }
 
     private func startStatusObserver() {

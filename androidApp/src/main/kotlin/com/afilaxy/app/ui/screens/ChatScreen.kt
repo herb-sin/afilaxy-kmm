@@ -59,20 +59,34 @@ fun ChatScreen(
     LaunchedEffect(emergencyVmState?.currentEmergency) {
         if (emergencyVmState?.currentEmergency?.id == emergencyId) wasEmergencyActive = true
     }
-    val isResolved = wasEmergencyActive
-        && emergencyVmState != null
-        && emergencyVmState?.currentEmergency == null
+    // Detecta quando A OUTRA PARTE encerra a emergência via emergencyStatus do ViewModel.
+    // O ViewModel já observa observeEmergencyStatus(emergencyId) e atualiza o state.
+    // Não usa Firebase Android SDK diretamente (indisponível no androidApp como dep direta).
+    var resolvedByOther by remember { mutableStateOf(false) }
+    LaunchedEffect(emergencyVmState?.emergencyStatus) {
+        val s = emergencyVmState?.emergencyStatus
+        if ((s == "resolved" || s == "finished") && wasEmergencyActive) {
+            resolvedByOther = true
+        }
+    }
 
-    // ADJUST_PAN: o Android sobe o window inteiro para manter o campo focado
-    // visível acima do teclado. É a abordagem mais compatível com Samsung e
-    // outros OEMs que não propagam corretamente os IME insets do Compose.
-    // Trade-off: o TopAppBar pode subir parcialmente, mas o input fica sempre
-    // acessível sem depender da API de WindowInsets.
+    // isResolved: local (ViewModel sem currentEmergency) OU remoto (Firestore status = resolved)
+    val isResolved = resolvedByOther
+        || (wasEmergencyActive && emergencyVmState?.currentEmergency == null)
+    val resolvedBannerText = when {
+        resolvedByOther -> "✅ Emergência encerrada pela outra parte"
+        else -> "✅ Emergência encerrada — chat bloqueado"
+    }
+
+    // ADJUST_RESIZE + imePadding: quando o teclado abre, o conteúdo encolhe
+    // de baixo para cima — o LazyColumn de mensagens fica visível acima do input,
+    // e o input fica fixo logo acima do teclado. Melhor UX que ADJUST_PAN.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
         val original = window?.attributes?.softInputMode
-        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+        @Suppress("DEPRECATION")
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         onDispose {
             original?.let { window.setSoftInputMode(it) }
         }
@@ -114,7 +128,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                // paddingValues já inclui nav bar + IME do Scaffold quando o teclado abre
+                .imePadding()  // encolhe o conteúdo quando o teclado abre
         ) {
             // Área de mensagens — ocupa todo espaço restante acima do input
             Box(modifier = Modifier.weight(1f)) {
@@ -174,7 +188,7 @@ fun ChatScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "✅ Emergência encerrada — chat bloqueado",
+                            text = resolvedBannerText,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f)
@@ -231,11 +245,13 @@ fun ChatScreen(
         AlertDialog(
             onDismissRequest = { showResolveDialog = false },
             title = { Text("Encerrar Emergência") },
-            text = { Text("Você precisa resolver ou cancelar a emergência antes de sair.") },
+            text = { Text("A outra parte será avisada que a emergência foi encerrada.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showResolveDialog = false
+                        // onResolveEmergency() atualiza status="resolved" no Firestore.
+                        // A outra parte detecta via LaunchedEffect(emergencyVmState?.emergencyStatus).
                         emergencyViewModel?.onResolveEmergency()
                         onNavigateBack()
                     }
@@ -252,13 +268,31 @@ fun ChatScreen(
     }
 }
 
+// Mensagens de sistema são exibidas centralizadas — senderId == "system"
 @Composable
 private fun MessageBubble(
     message: ChatMessage,
     currentUserId: String?
 ) {
+    val isSystem = message.senderId == "system"
+    if (isSystem) {
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = message.message,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+        return
+    }
     val isCurrentUser = message.senderId == currentUserId
-    
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
@@ -287,9 +321,7 @@ private fun MessageBubble(
                     else
                         MaterialTheme.colorScheme.onSecondaryContainer
                 )
-                
                 Spacer(modifier = Modifier.height(4.dp))
-                
                 Text(
                     text = message.message,
                     style = MaterialTheme.typography.bodyMedium,
