@@ -69,15 +69,22 @@ fun HomeScreenNew(
             firstDayOfWeek = Calendar.MONDAY // ISO 8601: semana começa na segunda
         }
         val week = cal.get(Calendar.WEEK_OF_YEAR)
-        val year = cal.weekYear               // getWeekYear() — correto em jan/dez (ex: semana 1 de 2027 pode cair em dez/2026)
+        val year = cal.weekYear               // getWeekYear() — correto em jan/dez
         val weekKey = "%d-W%02d".format(year, week)
+        // Usa getLong() com dot-notation: mais confiável que cast manual de Map.
+        // O Firestore SDK Android retorna o campo aninhado diretamente como Long,
+        // evitando ambiguidade de tipo (Long vs Double) ao iterar sobre Map<String, Any>.
+        val fieldPath = "weeklyCount.$weekKey"
         val listener = FirebaseFirestore.getInstance()
             .collection("user_stats")
             .document(uid)
-            .addSnapshotListener { doc: DocumentSnapshot?, _ ->
-                @Suppress("UNCHECKED_CAST")
-                val weekly = doc?.get("weeklyCount") as? Map<String, Any>
-                weeklyCount = (weekly?.get(weekKey) as? Long)?.toInt() ?: 0
+            .addSnapshotListener { doc, error ->
+                if (error != null) {
+                    android.util.Log.w("HomeScreen", "user_stats listener error: ${error.message}")
+                    weeklyCount = 0
+                    return@addSnapshotListener
+                }
+                weeklyCount = doc?.getLong(fieldPath)?.toInt() ?: 0
             }
         onDispose { listener.remove() }
     }
