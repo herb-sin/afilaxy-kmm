@@ -42,7 +42,12 @@ fun ProfessionalsScreenNew(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var selectedSpecialty by remember { mutableStateOf<Specialty?>(null) }
-    
+
+    // O ViewModel.init() dispara loadProfessionals() durante o warmup do Koin,
+    // antes do token Firebase estar pronto — resulta em lista vazia sem erro visível.
+    // Este LaunchedEffect força um reload quando a tela aparece (auth sempre pronta aqui).
+    LaunchedEffect(Unit) { viewModel.loadProfessionals() }
+
     Scaffold(
         topBar = {
             TopAppBar(

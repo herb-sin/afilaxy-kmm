@@ -27,6 +27,11 @@ struct EmergencyView: View {
         // Limpa emergências pendentes de outros — usuário está criando a própria emergência
         container.pendingIncomingEmergencies.removeAll()
 
+        // Para o observador Firestore ANTES de criar a emergência.
+        // Sem isso, uma race condition permite que o observador (iniciado ao ativar o helper mode)
+        // capture a própria emergência antes de o ViewModel atualizar o estado.
+        container.stopObservingNearbyEmergencies()
+
         // CRÍTICO: cancela qualquer ativação de helper mode em andamento.
         LocationManagerBridge.shared.cancelPendingHelperActivation()
 

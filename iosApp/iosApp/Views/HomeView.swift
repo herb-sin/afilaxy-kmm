@@ -117,8 +117,11 @@ struct HomeView: View {
         statsListener?.remove()
         weeklyCount = -1  // mostra skeleton enquanto carrega
 
-        // Semana ISO atual (ex: "2026-W14")
-        let cal = Calendar(identifier: .iso8601)
+        // Semana ISO 8601 em UTC — mesma referência usada pela Cloud Function.
+        // Sem UTC, um dispositivo em UTC-3 pode estar na semana N enquanto a Cloud
+        // Function já escreveu em semana N+1 após as 21h (meia-noite UTC).
+        var cal = Calendar(identifier: .iso8601)
+        cal.timeZone = TimeZone(identifier: "UTC")!
         let week = cal.component(.weekOfYear, from: Date())
         let year = cal.component(.yearForWeekOfYear, from: Date())
         let weekKey = String(format: "%d-W%02d", year, week)

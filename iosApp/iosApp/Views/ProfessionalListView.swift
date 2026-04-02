@@ -11,10 +11,17 @@ struct ProfessionalListView: View {
     @State private var showOnlyAvailable = false
 
     var body: some View {
-        guard let state = container.professionals.state else {
-            return AnyView(LoadingCard().padding())
+        // O ViewModel.init() dispara loadProfessionals() durante o warmup do Koin,
+        // antes do token Firebase estar pronto — resulta em lista vazia sem erro visível.
+        // .onAppear força um reload quando a tela aparece (auth sempre pronta aqui).
+        Group {
+            if let state = container.professionals.state {
+                listBody(state: state)
+            } else {
+                LoadingCard().padding()
+            }
         }
-        return AnyView(listBody(state: state))
+        .onAppear { container.professionals.loadProfessionals() }
     }
 
     @ViewBuilder
