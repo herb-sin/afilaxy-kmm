@@ -150,6 +150,10 @@ class EmergencyViewModel(
                 emergencyExpiresAt = null  // CRÍTICO: evita stale expiresAt de emergência anterior
             )
         }
+        // Para o observer explicitamente — onCancelEmergency também faz isso,
+        // mas onClearEmergencyState é chamado independentemente (ex: logout, iOS freezeSwift).
+        statusObserverJob?.cancel()
+        statusObserverJob = null
         statusObservedId = null
     }
 
@@ -186,6 +190,10 @@ class EmergencyViewModel(
                 emergencyExpiresAt = null  // CRÍTICO: evita stale expiresAt de emergência anterior
             )
         }
+        // Para o observer ANTES de limpar o guard — evita que o job antigo emita
+        // status=cancelled e sobrescreva o estado de uma emergência futura.
+        statusObserverJob?.cancel()
+        statusObserverJob = null
         statusObservedId = null
         viewModelScope.coroutineScope.launch {
             emergencyRepository.cancelEmergency(emergencyId)

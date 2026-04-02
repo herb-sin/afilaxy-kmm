@@ -747,9 +747,14 @@ export const weeklyRiskAlert = functions.pubsub
         const now = new Date();
         const prevMonday = new Date(now);
         prevMonday.setDate(now.getDate() - 7);
-        const startOfYear = new Date(prevMonday.getFullYear(), 0, 1);
-        const week = Math.ceil(((prevMonday.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
-        const weekKey = `${prevMonday.getFullYear()}-W${String(week).padStart(2, '0')}`;
+        // Semana anterior em ISO 8601 UTC — mesma referência usada por onEmergencyFinalized.
+        // Move prevMonday para a quinta-feira da sua semana e depois calcula o número da semana.
+        const isoDate = new Date(prevMonday.getTime());
+        const dayOfWeek = isoDate.getUTCDay() || 7; // Dom(0)→7, Mon=1..Sun=7
+        isoDate.setUTCDate(isoDate.getUTCDate() + 4 - dayOfWeek); // quinta-feira da semana
+        const yearStart = new Date(Date.UTC(isoDate.getUTCFullYear(), 0, 1));
+        const week = Math.ceil(((isoDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+        const weekKey = `${isoDate.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
         const fieldPath = `weeklyCount.${weekKey}`;
 
         console.log(`weeklyRiskAlert: verificando semana ${weekKey}`);
