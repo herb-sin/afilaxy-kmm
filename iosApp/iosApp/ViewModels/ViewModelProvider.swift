@@ -162,6 +162,14 @@ class ProfessionalListViewModelWrapper: ObservableObject {
     private init() { self.viewModel = nil }
 
     var vm: ProfessionalListViewModel? { viewModel }
+
+    /// Força um recarregamento da lista — chamado pelo .onAppear da ProfessionalListView
+    /// para garantir que o Firebase Auth já está pronto (o init() do ViewModel dispara
+    /// antes do auth restaurar a sessão, resultando em lista vazia).
+    func loadProfessionals() {
+        viewModel?.loadProfessionals(specialty: nil)
+    }
+
     func freeze() {
         cancellable?.cancel()
         cancellable = nil
