@@ -665,11 +665,15 @@ export const onEmergencyFinalized = functions.firestore
         // Geohash de precisão 4 (~40km) — granularidade adequada para BI regional
         const regionHash = geofireCommon.geohashForLocation([lat, lon]).substring(0, 4);
 
-        // Semana ISO (ex: "2026-W12")
-        const d = new Date(timestamp);
-        const startOfYear = new Date(d.getFullYear(), 0, 1);
-        const week = Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
-        const weekKey = `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+        // Semana ISO 8601 (ex: "2026-W14")
+        // Regra: semana 1 = semana que contém a primeira quinta-feira do ano (Mon–Sun).
+        // Usamos UTC para evitar divergência de fuso horário entre a Cloud Function e os clientes.
+        const isoDate = new Date(timestamp);
+        const dayOfWeek = isoDate.getUTCDay() || 7; // converte Dom(0)→7 para Mon=1..Sun=7
+        isoDate.setUTCDate(isoDate.getUTCDate() + 4 - dayOfWeek); // move para a quinta-feira da mesma semana
+        const yearStart = new Date(Date.UTC(isoDate.getUTCFullYear(), 0, 1));
+        const week = Math.ceil(((isoDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+        const weekKey = `${isoDate.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 
         const db = admin.firestore();
         const inc = admin.firestore.FieldValue.increment;

@@ -285,6 +285,7 @@ class AppContainer: ObservableObject {
                         guard let requesterId = data["requesterId"] as? String,
                               requesterId != uid,       // não é emergência criada pelo próprio usuário
                               docId != ownEmergencyId, // camada extra: ID não confere com ViewModel
+                              self.emergency.state?.isRequester != true, // defesa extra: ViewModel já marcou como requester
                               !self.notifiedEmergencyIds.contains(docId),
                               (data["status"] as? String) == "waiting" else { return }
                         let docDate: Date

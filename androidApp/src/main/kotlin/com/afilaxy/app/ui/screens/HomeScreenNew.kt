@@ -64,9 +64,12 @@ fun HomeScreenNew(
     DisposableEffect(Unit) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) { weeklyCount = 0; return@DisposableEffect onDispose {} }
-        val cal = Calendar.getInstance()
+        val cal = Calendar.getInstance().apply {
+            minimalDaysInFirstWeek = 4      // ISO 8601: semana 1 contém a primeira quinta-feira
+            firstDayOfWeek = Calendar.MONDAY // ISO 8601: semana começa na segunda
+        }
         val week = cal.get(Calendar.WEEK_OF_YEAR)
-        val year = cal.get(Calendar.YEAR)
+        val year = cal.weekYear               // getWeekYear() — correto em jan/dez (ex: semana 1 de 2027 pode cair em dez/2026)
         val weekKey = "%d-W%02d".format(year, week)
         val listener = FirebaseFirestore.getInstance()
             .collection("user_stats")
@@ -418,7 +421,10 @@ private fun HomeEmergencyButton(
             .fillMaxWidth()
             .height(72.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.error
+            // Vermelho quando sem emergência ativa (chama atenção para solicitar ajuda)
+            // Azul primary quando emergência ativa (indica estado, não urgência para clicar)
+            containerColor = if (isActive) MaterialTheme.colorScheme.primary
+                             else MaterialTheme.colorScheme.error
         ),
         shape = RoundedCornerShape(16.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
