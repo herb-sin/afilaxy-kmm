@@ -26,8 +26,9 @@ import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.util.FileLogger
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
@@ -63,6 +64,7 @@ fun HomeScreenNew(
     // onEmergencyFinalized escrever em user_stats após a emergência ser resolvida.
     DisposableEffect(Unit) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
+        FileLogger.log("DEBUG", "HomeScreenNew", "weeklyCount listener uid=$uid")
         if (uid == null) { weeklyCount = 0; return@DisposableEffect onDispose {} }
         val cal = Calendar.getInstance().apply {
             minimalDaysInFirstWeek = 4      // ISO 8601: semana 1 contém a primeira quinta-feira
@@ -71,20 +73,33 @@ fun HomeScreenNew(
         val week = cal.get(Calendar.WEEK_OF_YEAR)
         val year = cal.weekYear               // getWeekYear() — correto em jan/dez
         val weekKey = "%d-W%02d".format(year, week)
-        // Usa getLong() com dot-notation: mais confiável que cast manual de Map.
-        // O Firestore SDK Android retorna o campo aninhado diretamente como Long,
-        // evitando ambiguidade de tipo (Long vs Double) ao iterar sobre Map<String, Any>.
-        val fieldPath = "weeklyCount.$weekKey"
+        FileLogger.log("DEBUG", "HomeScreenNew", "weeklyCount weekKey=$weekKey uid=$uid")
+        // FieldPath.of() é explícito e inequívoco — evita ambiguidade do parse de dot-notation
+        // em getLong(String) que pode falhar dependendo da versão do SDK.
+        val fp = FieldPath.of("weeklyCount", weekKey)
         val listener = FirebaseFirestore.getInstance()
             .collection("user_stats")
             .document(uid)
             .addSnapshotListener { doc, error ->
                 if (error != null) {
-                    android.util.Log.w("HomeScreen", "user_stats listener error: ${error.message}")
+                    FileLogger.log("WARN", "HomeScreenNew", "weeklyCount error: ${error.message}")
                     weeklyCount = 0
                     return@addSnapshotListener
                 }
-                weeklyCount = doc?.getLong(fieldPath)?.toInt() ?: 0
+                val exists = doc?.exists() ?: false
+                @Suppress("UNCHECKED_CAST")
+                val map = doc?.get("weeklyCount") as? Map<String, Any>
+                val raw = map?.get(weekKey)
+                FileLogger.log("DEBUG", "HomeScreenNew",
+                    "weeklyCount snapshot exists=$exists map=$map raw=$raw rawType=${raw?.javaClass?.simpleName}")
+                weeklyCount = when (raw) {
+                    is Long   -> raw.toInt()
+                    is Double -> raw.toInt()
+                    is Int    -> raw
+                    is Number -> raw.toInt()
+                    else      -> 0
+                }
+                FileLogger.log("DEBUG", "HomeScreenNew", "weeklyCount resolved=$weeklyCount")
             }
         onDispose { listener.remove() }
     }

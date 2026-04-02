@@ -111,39 +111,48 @@ struct HomeView: View {
 
     // MARK: - Fetch weekly stats (listener em tempo real)
     private func fetchWeeklyStatus() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard let uid = Auth.auth().currentUser?.uid else {
+            FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "fetchWeeklyStatus: uid nil, não iniciando listener")
+            return
+        }
 
         // Cancela listener anterior se existir (evita duplicatas em reappear)
         statsListener?.remove()
         weeklyCount = -1  // mostra skeleton enquanto carrega
 
         // Semana ISO 8601 em UTC — mesma referência usada pela Cloud Function.
-        // Sem UTC, um dispositivo em UTC-3 pode estar na semana N enquanto a Cloud
-        // Function já escreveu em semana N+1 após as 21h (meia-noite UTC).
         var cal = Calendar(identifier: .iso8601)
         cal.timeZone = TimeZone(identifier: "UTC")!
         let week = cal.component(.weekOfYear, from: Date())
         let year = cal.component(.yearForWeekOfYear, from: Date())
         let weekKey = String(format: "%d-W%02d", year, week)
+        FileLogger.shared.write(level: "DEBUG", tag: "HomeView", message: "fetchWeeklyStatus uid=\(uid) weekKey=\(weekKey)")
 
-        // addSnapshotListener: atualiza automaticamente quando a Cloud Function
-        // onEmergencyFinalized escrever em user_stats após a emergência ser resolvida.
         statsListener = Firestore.firestore()
             .collection("user_stats")
             .document(uid)
-            .addSnapshotListener { snapshot, _ in
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "weeklyCount error: \(error.localizedDescription)")
+                    weeklyCount = 0
+                    return
+                }
                 guard let data = snapshot?.data() else {
+                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "weeklyCount: snapshot sem dados (uid=\(uid) weekKey=\(weekKey) exists=\(snapshot?.exists ?? false))")
                     weeklyCount = 0
                     return
                 }
                 let weekly = data["weeklyCount"] as? [String: Any]
-                // O Firestore iOS SDK retorna Int64 para campos numéricos, não Int.
-                // O cast 'as? Int' falha silenciosamente em dispositivos 64-bit e sempre 
-                // resulta em 0. NSNumber aceita Int, Int32, Int64 e Double corretamente.
-                if let raw = weekly?[weekKey] {
-                    weeklyCount = (raw as? NSNumber)?.intValue ?? 0
+                let raw = weekly?[weekKey]
+                FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
+                    message: "weeklyCount weekKey=\(weekKey) weekly=\(String(describing: weekly)) raw=\(String(describing: raw)) rawType=\(type(of: raw))")
+                if let r = raw {
+                    let resolved = (r as? NSNumber)?.intValue ?? 0
+                    weeklyCount = resolved
+                    FileLogger.shared.write(level: "DEBUG", tag: "HomeView", message: "weeklyCount resolved=\(resolved)")
                 } else {
                     weeklyCount = 0
+                    FileLogger.shared.write(level: "DEBUG", tag: "HomeView", message: "weeklyCount: chave \(weekKey) não encontrada no mapa. Keys disponíveis: \(weekly?.keys.joined(separator: ",") ?? "mapa nil")")
                 }
             }
     }
