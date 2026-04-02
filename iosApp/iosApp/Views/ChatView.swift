@@ -122,8 +122,11 @@ struct ChatView: View {
     }
 
     private func resolveEmergency() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let displayName = Auth.auth().currentUser?.displayName ?? "Usuário"
         let db = Firestore.firestore()
         // 1. Escreve mensagem de sistema visível para os dois lados
+        // senderId deve ser o uid real (regra do Firestore exige auth.uid == senderId)
         let msgId = UUID().uuidString
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         db.collection("emergency_chats")
@@ -133,16 +136,33 @@ struct ChatView: View {
             .setData([
                 "id": msgId,
                 "emergencyId": emergencyId,
-                "senderId": "system",
+                "senderId": "system",   // mantido para renderização especial na UI
                 "senderName": "Sistema",
                 "message": "✅ Emergência encerrada. O chat foi bloqueado.",
                 "timestamp": nowMs,
                 "isFromHelper": false
-            ])
+            ]) { [self] error in
+                // Se a regra bloquear (senderId=system), envia com uid real para garantir entrega
+                if error != nil {
+                    db.collection("emergency_chats")
+                        .document(emergencyId)
+                        .collection("messages")
+                        .document(msgId)
+                        .setData([
+                            "id": msgId,
+                            "emergencyId": emergencyId,
+                            "senderId": uid,
+                            "senderName": displayName,
+                            "message": "✅ \(displayName) encerrou a emergência.",
+                            "timestamp": nowMs,
+                            "isFromHelper": false
+                        ])
+                }
+            }
         // 2. Atualiza status da emergência
         db.collection("emergency_requests")
             .document(emergencyId)
-            .updateData(["status": "resolved", "active": false])
+            .updateData(["status": "resolved", "active": false, "resolvedAt": nowMs])
         container.resolvedEmergencyId = emergencyId
         container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
         NotificationCenter.default.post(

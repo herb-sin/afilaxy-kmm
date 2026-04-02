@@ -137,7 +137,14 @@ struct HomeView: View {
                     return
                 }
                 let weekly = data["weeklyCount"] as? [String: Any]
-                weeklyCount = weekly?[weekKey] as? Int ?? 0
+                // O Firestore iOS SDK retorna Int64 para campos numéricos, não Int.
+                // O cast 'as? Int' falha silenciosamente em dispositivos 64-bit e sempre 
+                // resulta em 0. NSNumber aceita Int, Int32, Int64 e Double corretamente.
+                if let raw = weekly?[weekKey] {
+                    weeklyCount = (raw as? NSNumber)?.intValue ?? 0
+                } else {
+                    weeklyCount = 0
+                }
             }
     }
     

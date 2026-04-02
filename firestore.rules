@@ -107,7 +107,12 @@ service cloud.firestore {
     match /emergency_chats/{emergencyId}/messages/{messageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
-        && request.resource.data.senderId == request.auth.uid
+        && (
+          // Mensagem normal: senderId = uid do usuário autenticado
+          request.resource.data.senderId == request.auth.uid
+          // Mensagem de sistema (encerramento): gerada pelo app, identificada por senderId="system"
+          || request.resource.data.senderId == "system"
+        )
         && isValidString(request.resource.data.message, 1, 1000);
       allow update, delete: if false;
     }
