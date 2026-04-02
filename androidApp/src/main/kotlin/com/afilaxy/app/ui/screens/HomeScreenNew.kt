@@ -141,7 +141,7 @@ fun HomeScreenNew(
         item {
             HomeEmergencyButton(
                 onClick = onNavigateToEmergency,
-                isActive = emergencyState.currentEmergency != null
+                isActive = emergencyState.hasActiveEmergency
             )
         }
 
