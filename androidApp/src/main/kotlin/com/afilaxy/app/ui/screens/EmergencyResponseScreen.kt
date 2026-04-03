@@ -181,7 +181,10 @@ fun EmergencyResponseScreen(
                             FileLogger.log("INFO", "EmergencyResponseScreen", "acceptEmergency tapped emergencyId=$emergencyId")
                             viewModel.onAcceptEmergency(emergencyId)
                         },
-                        enabled = !state.isLoading,
+                        // Dupla guarda: `state.isLoading` (ViewModel) e `acceptInProgress` (local).
+                        // Necessário porque duas instâncias do back stack geram ViewModels distintos
+                        // com estados independentes — só o flag local é imune a essa duplicação.
+                        enabled = !state.isLoading && !acceptInProgress,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary

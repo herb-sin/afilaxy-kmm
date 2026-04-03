@@ -683,21 +683,29 @@ export const onEmergencyFinalized = functions.firestore
 
         // ── user_stats/{requesterId} ──────────────────────────────────────────
         const statsRef = db.collection('user_stats').doc(requesterId);
-        const statsUpdate: Record<string, any> = {
-            totalEmergencies:          inc(1),
-            [`weeklyCount.${weekKey}`]: inc(1),
-            lastEmergencyAt:           timestamp,
-            updatedAt:                 now(),
+        // ⚠️  batch.set() com { merge: true } NÃO expande dot-notation nas chaves.
+        //     A chave `weeklyCount.${weekKey}` seria gravada como campo literal
+        //     "weeklyCount.2026-W14" na raiz — o cliente lê `weeklyCount` como mapa
+        //     e sempre obtinha null. Fix: mergeFields com FieldPath explícito +
+        //     objeto nested real `{ weeklyCount: { [weekKey]: inc(1) } }`.
+        const statsFlat: Record<string, any> = {
+            totalEmergencies: inc(1),
+            lastEmergencyAt:  timestamp,
+            updatedAt:        now(),
         };
-        if (status === 'resolved') statsUpdate.totalResolved = inc(1);
-        if (status === 'cancelled') statsUpdate.totalCancelled = inc(1);
-        if (status === 'expired')   statsUpdate.totalExpired   = inc(1);
+        if (status === 'resolved') statsFlat.totalResolved = inc(1);
+        if (status === 'cancelled') statsFlat.totalCancelled = inc(1);
+        if (status === 'expired')   statsFlat.totalExpired   = inc(1);
         if (resolvedAt && matchedAt) {
-            // Tempo de atendimento em segundos
-            statsUpdate.totalResponseTimeSec = inc(Math.round((resolvedAt - matchedAt) / 1000));
-            statsUpdate.totalResponseCount   = inc(1);
+            statsFlat.totalResponseTimeSec = inc(Math.round((resolvedAt - matchedAt) / 1000));
+            statsFlat.totalResponseCount   = inc(1);
         }
-        batch.set(statsRef, statsUpdate, { merge: true });
+        const weeklyPath = new admin.firestore.FieldPath('weeklyCount', weekKey);
+        batch.set(
+            statsRef,
+            { ...statsFlat, weeklyCount: { [weekKey]: inc(1) } },
+            { mergeFields: [...Object.keys(statsFlat), weeklyPath] }
+        );
 
         // ── emergency_analytics/{region}_{weekKey} ────────────────────────────
         const analyticsRef = db.collection('emergency_analytics').doc(`${regionHash}_${weekKey}`);
