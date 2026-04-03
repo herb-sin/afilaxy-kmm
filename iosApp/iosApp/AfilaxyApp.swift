@@ -213,6 +213,8 @@ class AppContainer: ObservableObject {
     @Published var pendingIncomingEmergencies: [(id: String, name: String)] = []
     private var emergencyListener: ListenerRegistration?
     private var notifiedEmergencyIds = Set<String>()
+    /// IDs já entregues via APNs remote push — bloqueia notificação local duplicada
+    private var fcmDeliveredIds = Set<String>()
 
     func freezeAll() {
         // 1. Cancela todos os sinks Combine do AppContainer (objectWillChange e notificações).
@@ -224,6 +226,7 @@ class AppContainer: ObservableObject {
         emergencyListener?.remove()
         emergencyListener = nil
         notifiedEmergencyIds = []
+        fcmDeliveredIds = []
         pendingIncomingEmergencies = []
         // 3. Agora é seguro encerrar cada ViewModel (seus Combine cancellables já foram
         //    cancelados em passo 1; os freezes abaixo também têm seus próprios cancels)
@@ -257,7 +260,10 @@ class AppContainer: ObservableObject {
                 let name = notification.userInfo?["requesterName"] as? String ?? "Alguém"
                 FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency via FCM from \(name)")
                 self.pendingIncomingEmergencies.append((id: emergencyId, name: name))
-                self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: emergencyId)
+                // Marca como entregue via FCM — o banner remoto já foi exibido pelo sistema;
+                // não dispara notificação local para evitar o card duplicado.
+                self.fcmDeliveredIds.insert(emergencyId)
+                FileLogger.shared.write(level: "DEBUG", tag: "AppContainer", message: "FCM: banner remoto já entregue, local suprimido emergencyId=\(emergencyId)")
             }
             .store(in: &cancellables)
     }
@@ -302,7 +308,12 @@ class AppContainer: ObservableObject {
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
                         self.pendingIncomingEmergencies.append((id: docId, name: name))
-                        self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: docId)
+                        // Só dispara notificação local se o FCM remoto ainda não entregou o banner
+                        if !self.fcmDeliveredIds.contains(docId) {
+                            self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: docId)
+                        } else {
+                            FileLogger.shared.write(level: "DEBUG", tag: "AppContainer", message: "Firestore: notificação local suprimida (FCM já entregou) emergencyId=\(docId)")
+                        }
                     }
             }
     }

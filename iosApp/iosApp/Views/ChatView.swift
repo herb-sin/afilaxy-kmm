@@ -13,6 +13,9 @@ struct ChatView: View {
     @State private var showResolveDialog = false
     @State private var isResolved = false
     @State private var resolvedByOther = false
+    /// true quando o próprio dispositivo disparou o resolve — impede que o statusListener
+    /// re-acione resolvedByOther ao receber o echo do Firestore.
+    @State private var didResolveLocally = false
     @Environment(\.dismiss) private var dismiss
 
     private var currentUserId: String? { Auth.auth().currentUser?.uid }
@@ -125,6 +128,12 @@ struct ChatView: View {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let displayName = Auth.auth().currentUser?.displayName ?? "Usuário"
         let db = Firestore.firestore()
+        // Marca como resolvido localmente ANTES de escrever no Firestore —
+        // impede que o statusListener reaja ao próprio echo de status=resolved.
+        didResolveLocally = true
+        // Para o statusListener imediatamente para evitar race-condition durante a animação de pop.
+        statusListener?.remove()
+        statusListener = nil
         // 1. Escreve mensagem de sistema visível para os dois lados
         // senderId deve ser o uid real (regra do Firestore exige auth.uid == senderId)
         let msgId = UUID().uuidString
@@ -215,6 +224,9 @@ struct ChatView: View {
                       let status = data["status"] as? String else { return }
                 let wasResolvedByOther = status == "resolved" || status == "finished"
                 DispatchQueue.main.async {
+                    // Ignora o evento se foi este dispositivo que resolveu —
+                    // evita o banner "encerrado pela outra parte" aparecer como ghost.
+                    guard !didResolveLocally else { return }
                     if wasResolvedByOther && !isResolved {
                         resolvedByOther = true
                         isResolved = true
