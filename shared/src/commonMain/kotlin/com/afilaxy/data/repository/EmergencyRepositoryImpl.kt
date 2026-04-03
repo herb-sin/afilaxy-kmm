@@ -142,36 +142,43 @@ class EmergencyRepositoryImpl(
         return try {
             val userId = auth.currentUser?.uid 
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
+            // Busca o nome do helper com timeout — evita que um get pausado trave toda a operação
             val helperName = try {
-                val userDoc = firestore.collection("users").document(userId).get()
-                userDoc.get<String?>("name") 
-                    ?: auth.currentUser?.displayName 
-                    ?: "Helper"
+                kotlinx.coroutines.withTimeout(5_000) {
+                    val userDoc = firestore.collection("users").document(userId).get()
+                    userDoc.get<String?>("name")
+                        ?: auth.currentUser?.displayName
+                        ?: "Helper"
+                }
             } catch (e: Exception) {
                 auth.currentUser?.displayName ?: "Helper"
             }
             
-            firestore.runTransaction {
-                val emergencyRef = firestore.collection("emergency_requests").document(emergencyId)
-                val emergencyDoc = get(emergencyRef)
-                
-                if (!emergencyDoc.exists) throw Exception("Emergência não encontrada")
-                
-                val isActive = emergencyDoc.get<Boolean>("active") ?: false
-                val currentHelperId = emergencyDoc.get<String?>("helperId")
-                val currentStatus = emergencyDoc.get<String>("status") ?: ""
-                
-                if (!isActive) throw Exception("Emergência não está ativa")
-                if (currentHelperId != null || currentStatus != "waiting") throw Exception("Emergência já foi aceita")
-                
-                update(
-                    emergencyRef,
-                    "status" to "matched",
-                    "helperId" to userId,
-                    "helperName" to helperName,
-                    "matchedAt" to getCurrentTimeMillis(),
-                    "expiresAt" to (getCurrentTimeMillis() + 180000)
-                )
+            // Timeout de 10s na transação — sem ele, um runTransaction com regra rejeitada
+            // ou problema de rede pode travara indefinidamente sem retornar sucesso nem falha.
+            kotlinx.coroutines.withTimeout(10_000) {
+                firestore.runTransaction {
+                    val emergencyRef = firestore.collection("emergency_requests").document(emergencyId)
+                    val emergencyDoc = get(emergencyRef)
+
+                    if (!emergencyDoc.exists) throw Exception("Emergência não encontrada")
+
+                    val isActive = emergencyDoc.get<Boolean>("active") ?: false
+                    val currentHelperId = emergencyDoc.get<String?>("helperId")
+                    val currentStatus = emergencyDoc.get<String>("status") ?: ""
+
+                    if (!isActive) throw Exception("Emergência não está ativa")
+                    if (currentHelperId != null || currentStatus != "waiting") throw Exception("Emergência já foi aceita")
+
+                    update(
+                        emergencyRef,
+                        "status" to "matched",
+                        "helperId" to userId,
+                        "helperName" to helperName,
+                        "matchedAt" to getCurrentTimeMillis(),
+                        "expiresAt" to (getCurrentTimeMillis() + 180000)
+                    )
+                }
             }
             
             Result.success(true)
