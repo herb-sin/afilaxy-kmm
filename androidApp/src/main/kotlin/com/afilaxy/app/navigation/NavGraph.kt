@@ -1,10 +1,14 @@
 package com.afilaxy.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import com.afilaxy.util.FileLogger
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -46,11 +50,46 @@ fun NavGraph(
         }
     }
 
+    // IDs de emergencias cujo chat já foi aberto nesta sessão.
+    // Impede que FCMs type=chat tardios (chegam durante ou após a transição
+    // EmergencyResponseScreen → ChatScreen) empurrem uma segunda instância
+    // do ChatScreen sobre a primeira, gerando ChatScreen opened 2-3x por emergência.
+    // Análogo ao resolvedEmergencyIds do iOS ContentView.
+    val chatNavigatedIds = remember { mutableStateOf(setOf<String>()) }
+
+    // Registra automaticamente qualquer entidade em chat/{id},
+    // qualquer que seja o caminho (FCM intent OU navegação direta pelo accept).
+    DisposableEffect(navController) {
+        val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, arguments ->
+            val route = destination.route ?: return@OnDestinationChangedListener
+            if (route.startsWith("chat/")) {
+                val chatId = arguments?.getString("emergencyId") ?: return@OnDestinationChangedListener
+                chatNavigatedIds.value = chatNavigatedIds.value + chatId
+                FileLogger.log("DEBUG", "NavGraph", "chatNavigatedIds registrado emergencyId=$chatId")
+            }
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+
     // Navega quando onNewIntent entrega destino com app já aberto (notificação push).
     LaunchedEffect(pendingDestination?.value) {
         val dest = pendingDestination?.value ?: return@LaunchedEffect
         if (navController.currentDestination == null) return@LaunchedEffect
         val currentRoute = navController.currentDestination?.route
+
+        // Extrai emergencyId do destino chat/
+        val destChatId = if (dest.startsWith("chat/")) dest.removePrefix("chat/") else null
+
+        // Bloqueia se já navegamos ao chat para este emergencyId — independente
+        // da rota atual (pode ainda estar em emergency_response durante a transição).
+        if (destChatId != null && destChatId in chatNavigatedIds.value) {
+            FileLogger.log("DEBUG", "NavGraph",
+                "pendingDestination ignorado — chat já aberto emergencyId=$destChatId")
+            pendingDestination.value = null
+            return@LaunchedEffect
+        }
+
         val alreadyThere = when {
             dest.startsWith("chat/") && currentRoute?.startsWith("chat/") == true ->
                 currentRoute == dest
