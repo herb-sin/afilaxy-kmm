@@ -263,6 +263,7 @@ class EmergencyViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
             emergencyRepository.acceptEmergency(emergencyId)
                 .onSuccess {
+                    com.afilaxy.util.Logger.d("EmergencyViewModel", "onAcceptEmergency success emergencyId=$emergencyId")
                     _state.update {
                         it.copy(
                             emergencyId = emergencyId,
@@ -273,6 +274,7 @@ class EmergencyViewModel(
                     }
                 }
                 .onFailure { exception ->
+                    com.afilaxy.util.Logger.e("EmergencyViewModel", "onAcceptEmergency failed emergencyId=$emergencyId: ${exception.message}")
                     _state.update {
                         it.copy(
                             isLoading = false,

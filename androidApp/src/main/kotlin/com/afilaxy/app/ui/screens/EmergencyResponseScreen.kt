@@ -28,6 +28,9 @@ fun EmergencyResponseScreen(
     val state by viewModel.state.collectAsState()
     var secondsLeft by remember { mutableStateOf(180) }
     val context = LocalContext.current
+    // Guard local: evita que uma segunda abertura da tela (via 2ª notificação FCM)
+    // chame preloadEmergencyId e resete hasActiveEmergency enquanto o accept está em curso.
+    var acceptInProgress by remember { mutableStateOf(false) }
 
     // Cancela a notificação do sistema usando o mesmo ID derivado do emergencyId
     fun cancelEmergencyNotification() {
@@ -41,8 +44,13 @@ fun EmergencyResponseScreen(
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyResponseScreen", "opened emergencyId=$emergencyId")
         viewModel.fetchEmergencyExpiresAt(emergencyId)
-        // Garante que o ViewModel conhece o emergencyId mesmo em cold start via notificação
-        viewModel.preloadEmergencyId(emergencyId)
+        // Garante que o ViewModel conhece o emergencyId mesmo em cold start via notificação,
+        // mas NÃO reseta o estado se um accept já estava em curso (guard local).
+        if (!acceptInProgress) {
+            viewModel.preloadEmergencyId(emergencyId)
+        } else {
+            FileLogger.log("DEBUG", "EmergencyResponseScreen", "preloadEmergencyId ignorado — acceptInProgress=true emergencyId=$emergencyId")
+        }
         // Fallback: se após 1,5s o expiresAt ainda for null (tipo Firestore incompatível ou
         // campo ausente), injeta um valor estimado de 3 minutos a partir de agora.
         // Garante que o countdown inicie e não fique travado em 3:00 estático.
@@ -84,8 +92,10 @@ fun EmergencyResponseScreen(
     }
 
     // Navegar para chat após aceitar
-    LaunchedEffect(state.hasActiveEmergency, state.emergencyId) {
-        FileLogger.log("DEBUG", "EmergencyResponseScreen", "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId}")
+    // Observa também isLoading para pegar o caso onde a recomposição substituiu a tela
+    // antes do LaunchedEffect disparar com hasActiveEmergency=true.
+    LaunchedEffect(state.hasActiveEmergency, state.emergencyId, state.isLoading) {
+        FileLogger.log("DEBUG", "EmergencyResponseScreen", "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId} isLoading=${state.isLoading}")
         if (state.hasActiveEmergency && state.emergencyId == emergencyId && !state.isRequester) {
             FileLogger.log("INFO", "EmergencyResponseScreen", "navigating to chat emergencyId=$emergencyId")
             navController.navigate("chat/$emergencyId") {
@@ -167,6 +177,8 @@ fun EmergencyResponseScreen(
                     
                     Button(
                         onClick = {
+                            acceptInProgress = true
+                            FileLogger.log("INFO", "EmergencyResponseScreen", "acceptEmergency tapped emergencyId=$emergencyId")
                             viewModel.onAcceptEmergency(emergencyId)
                         },
                         enabled = !state.isLoading,
