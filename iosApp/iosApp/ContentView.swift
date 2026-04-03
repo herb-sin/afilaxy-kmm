@@ -53,6 +53,9 @@ struct ContentView: View {
     @State private var chatNavigatedId: String? = nil
     @State private var wasActiveEmergency = false
     @State private var resolvedChatId: String? = nil
+    /// IDs de emergências já encerradas nesta sessão — bloqueia FCM tardio
+    /// de reabrir o chat após o usuário ter resolvido e voltado à home.
+    @State private var resolvedEmergencyIds = Set<String>()
     
     // MARK: - Adaptive Tab View Style
     private var adaptiveTabViewStyle: DefaultTabViewStyle {
@@ -152,11 +155,20 @@ struct ContentView: View {
                 // Detecta logout — performLogout() sinaliza via Firebase → Kotlin → StateFlow → polling
                 if authState?.isAuthenticated == false {
                     isLoggedIn = false
+                    resolvedEmergencyIds = []  // limpa na saída de sessão
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyEmergencyResolved"))) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyEmergencyResolved"))) { notification in
                 // ChatView disparou 'Resolver' — limpa toda a pilha de navegação de volta à home
                 homeNavigationPath.removeLast(homeNavigationPath.count)
+                // Guarda o ID resolvido ANTES de zerar chatNavigatedId, para que FCM tardios
+                // de type=chat não reabram o chat encerrado.
+                if let resolvedId = notification.userInfo?["emergencyId"] as? String {
+                    resolvedEmergencyIds.insert(resolvedId)
+                } else if let id = chatNavigatedId {
+                    // Fallback: usa chatNavigatedId se o userInfo não trouxer o ID
+                    resolvedEmergencyIds.insert(id)
+                }
                 chatNavigatedId = nil
                 emergencyRouteActive = false
             }
@@ -261,6 +273,13 @@ struct ContentView: View {
     }
     
     private func handlePendingChat(_ emergencyId: String) {
+        // Bloqueia FCM tardio de reabrir um chat cujo emergency já foi encerrado nesta sessão.
+        guard !resolvedEmergencyIds.contains(emergencyId) else {
+            FileLogger.shared.write(level: "DEBUG", tag: "ContentView",
+                message: "handlePendingChat ignorado — emergência já encerrada emergencyId=\(emergencyId)")
+            container.pendingChatId = nil
+            return
+        }
         guard chatNavigatedId != emergencyId else { return }
         
         chatNavigatedId = emergencyId
