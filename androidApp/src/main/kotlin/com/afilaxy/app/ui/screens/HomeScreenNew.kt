@@ -51,6 +51,7 @@ fun HomeScreenNew(
     onNavigateToProfessionals: () -> Unit,
     onNavigateToEducation: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
+    onNavigateToPharmacyMap: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
@@ -186,7 +187,7 @@ fun HomeScreenNew(
         item { HomeCommunityFeedPreview(onNavigateToCommunity = onNavigateToCommunity) }
 
         // Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
-        item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp) }
+        item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap) }
     }
 
     // Dialog de consentimento LGPD — exibido apenas na primeira ativação.
@@ -697,7 +698,7 @@ private fun HomeCommunityPostItem(author: String, content: String, timeAgo: Stri
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit) {
+private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPharmacyMap: () -> Unit) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -717,8 +718,7 @@ private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit) {
                 icon = Icons.Default.Add,
                 color = Color(0xFF2E7D32)
             ) {
-                val uri = Uri.parse("geo:0,0?q=farm%C3%A1cia+24h")
-                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                onNavigateToPharmacyMap()
             }
             Spacer(modifier = Modifier.height(8.dp))
             HomeSupportLinkRow(

@@ -27,6 +27,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun MapScreen(
     navController: NavController,
+    pharmacyMode: Boolean = false,
     emergencyViewModel: EmergencyViewModel = koinViewModel()
 ) {
     val locationRepository: LocationRepository = koinInject()
@@ -42,6 +43,8 @@ fun MapScreen(
     var userLocation by remember { mutableStateOf<LatLng?>(null) }
     var mapLoadError by remember { mutableStateOf(false) }
     var mapLoaded by remember { mutableStateOf(false) }
+    var pharmacies by remember { mutableStateOf<List<PharmacyPlace>>(emptyList()) }
+    var isLoadingPharmacies by remember { mutableStateOf(false) }
 
     // Busca a localização real e inicia observer de helpers próximos ao abrir
     LaunchedEffect(Unit) {
@@ -52,34 +55,74 @@ fun MapScreen(
             cameraPositionState.animate(
                 CameraUpdateFactory.newLatLngZoom(realLatLng, 15f)
             )
-            // Inicia o observer de helpers próximos com as coordenadas reais
-            emergencyViewModel.startObservingNearbyHelpers(loc.latitude, loc.longitude)
+            if (pharmacyMode) {
+                isLoadingPharmacies = true
+                try {
+                    val query = "[out:json];node[\"amenity\"=\"pharmacy\"](around:5000,${loc.latitude},${loc.longitude});out 20;"
+                    val encoded = android.net.Uri.encode(query)
+                    val url = "https://overpass-api.de/api/interpreter?data=$encoded"
+                    val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        java.net.URL(url).readText()
+                    }
+                    val elements = org.json.JSONObject(response).getJSONArray("elements")
+                    val result = mutableListOf<PharmacyPlace>()
+                    for (i in 0 until elements.length()) {
+                        val el = elements.getJSONObject(i)
+                        val tags = el.optJSONObject("tags")
+                        result.add(PharmacyPlace(
+                            name = tags?.optString("name") ?: "Farmácia",
+                            lat = el.getDouble("lat"),
+                            lon = el.getDouble("lon"),
+                            phone = tags?.optString("phone") ?: ""
+                        ))
+                    }
+                    pharmacies = result
+                } catch (_: Exception) {
+                } finally {
+                    isLoadingPharmacies = false
+                }
+            } else {
+                emergencyViewModel.startObservingNearbyHelpers(loc.latitude, loc.longitude)
+            }
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mapa") },
+                title = {
+                    if (pharmacyMode) {
+                        Column {
+                            Text("Farmácias 24h")
+                            if (isLoadingPharmacies) {
+                                Text("Buscando...", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else if (pharmacies.isNotEmpty()) {
+                                Text("${pharmacies.size} encontradas no raio de 5 km",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else { Text("Mapa") }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
                     }
                 },
                 actions = {
-                    // Legenda: quantidade de helpers próximos visíveis
-                    val count = emergencyState.nearbyHelpers.size
-                    if (count > 0) {
-                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
-                            Text("$count")
+                    if (!pharmacyMode) {
+                        val count = emergencyState.nearbyHelpers.size
+                        if (count > 0) {
+                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                Text("$count")
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Default.LocationOn,
+                                contentDescription = "$count ajudantes próximos",
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = "$count ajudantes próximos",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(8.dp))
                     }
                 }
             )
@@ -115,21 +158,32 @@ fun MapScreen(
                             "São Paulo, SP"
                     )
 
-                    // Markers de helpers próximos em modo ajudante ativo
-                    // Cada marker mostra nome + distância aproximada no balloon
-                    emergencyState.nearbyHelpers.forEach { helper ->
-                        Marker(
-                            state = MarkerState(
-                                position = LatLng(helper.latitude, helper.longitude)
-                            ),
-                            title = if (helper.name.isNotBlank()) helper.name else "Ajudante próximo",
-                            snippet = if (helper.distance > 0)
-                                "${"%.1f".format(helper.distance)} km de distância"
-                            else "Localização aproximada",
-                            icon = BitmapDescriptorFactory.defaultMarker(
-                                BitmapDescriptorFactory.HUE_AZURE
+                    if (pharmacyMode) {
+                        // Markers de farmácias
+                        pharmacies.forEach { p ->
+                            Marker(
+                                state = MarkerState(position = LatLng(p.lat, p.lon)),
+                                title = p.name,
+                                snippet = p.phone.ifBlank { null },
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
                             )
-                        )
+                        }
+                    } else {
+                        // Markers de helpers próximos
+                        emergencyState.nearbyHelpers.forEach { helper ->
+                            Marker(
+                                state = MarkerState(
+                                    position = LatLng(helper.latitude, helper.longitude)
+                                ),
+                                title = if (helper.name.isNotBlank()) helper.name else "Ajudante próximo",
+                                snippet = if (helper.distance > 0)
+                                    "${"%.1f".format(helper.distance)} km de distância"
+                                else "Localização aproximada",
+                                icon = BitmapDescriptorFactory.defaultMarker(
+                                    BitmapDescriptorFactory.HUE_AZURE
+                                )
+                            )
+                        }
                     }
                 }
 
@@ -261,3 +315,10 @@ fun MapErrorFallback(
         }
     }
 }
+
+data class PharmacyPlace(
+    val name: String,
+    val lat: Double,
+    val lon: Double,
+    val phone: String
+)

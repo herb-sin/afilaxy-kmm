@@ -21,6 +21,7 @@ object AppRoutes {
     const val PORTAL = "portal"  // NOVO - Tab role-based
     const val CRM_LOOKUP = "crm_lookup"
     const val MAP = "map"
+    const val MAP_PHARMACY = "map_pharmacy"
     const val NOTIFICATIONS = "notifications"
     const val HELP = "help"
     const val EVENTO_DETAIL = "evento_detail/{eventoId}"
