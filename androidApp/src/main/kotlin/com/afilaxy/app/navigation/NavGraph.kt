@@ -26,7 +26,7 @@ import org.koin.androidx.compose.koinViewModel
 private val protectedRoutes = setOf(
     AppRoutes.HOME, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
     AppRoutes.SETTINGS, AppRoutes.COMMUNITY, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
-    AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
+    AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.MAP_PHARMACY, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
     AppRoutes.TERMS, AppRoutes.PRIVACY, AppRoutes.PORTAL, "emergency_request", "emergency_response", AppRoutes.CHAT
 )
 
@@ -191,6 +191,7 @@ fun NavGraph(
                     onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
                     onNavigateToEducation = { navController.navigate("education") },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
+                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
                     onLogout = {
                         navController.navigate(AppRoutes.LOGIN) {
                             popUpTo(0) { inclusive = true }
@@ -205,7 +206,11 @@ fun NavGraph(
                 MapScreen(navController = navController)
             }
         }
-        
+
+        composable(AppRoutes.MAP_PHARMACY) {
+            MapScreen(navController = navController, pharmacyMode = true)
+        }
+
         composable(AppRoutes.PROFILE) {
             AfilaxyAppScaffoldSimple(navController = navController) {
                 ProfileScreenNew(

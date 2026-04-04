@@ -182,6 +182,11 @@ class EmergencyRepositoryImpl(
             }
             
             Result.success(true)
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            // Converte para Exception regular — evita que seja tratada como cancelamento
+            // do coroutine e deixe isLoading=true indefinidamente sem tocar o onFailure.
+            com.afilaxy.util.Logger.e("EmergencyRepo", "acceptEmergency timeout emergencyId=$emergencyId")
+            Result.failure(Exception("Tempo esgotado ao aceitar emergência. Tente novamente."))
         } catch (e: Exception) {
             com.afilaxy.util.Logger.e("EmergencyRepo", "acceptEmergency failed emergencyId=$emergencyId: ${e.message}")
             Result.failure(e)

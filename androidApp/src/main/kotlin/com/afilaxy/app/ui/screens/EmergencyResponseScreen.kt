@@ -92,8 +92,6 @@ fun EmergencyResponseScreen(
     }
 
     // Navegar para chat após aceitar
-    // Observa também isLoading para pegar o caso onde a recomposição substituiu a tela
-    // antes do LaunchedEffect disparar com hasActiveEmergency=true.
     LaunchedEffect(state.hasActiveEmergency, state.emergencyId, state.isLoading) {
         FileLogger.log("DEBUG", "EmergencyResponseScreen", "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId} isLoading=${state.isLoading}")
         if (state.hasActiveEmergency && state.emergencyId == emergencyId && !state.isRequester) {
@@ -101,6 +99,12 @@ fun EmergencyResponseScreen(
             navController.navigate("chat/$emergencyId") {
                 popUpTo("emergency_response/$emergencyId") { inclusive = true }
             }
+        } else if (acceptInProgress && !state.isLoading && !state.hasActiveEmergency) {
+            // Operação concluída sem sucesso — desbloqueia o botão para retry
+            acceptInProgress = false
+            state.error?.let { err ->
+                FileLogger.log("ERROR", "EmergencyResponseScreen", "acceptEmergency failed: $err emergencyId=$emergencyId")
+            } ?: FileLogger.log("WARN", "EmergencyResponseScreen", "acceptEmergency finished with no success and no error emergencyId=$emergencyId")
         }
     }
     
