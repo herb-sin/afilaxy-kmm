@@ -106,7 +106,7 @@ class HistoryViewModelWrapper: ObservableObject {
         // restaurar currentUser → "Usuário não autenticado". Listener faz retry
         // no momento correto, sem depender do timing do TabBar ou onAppear.
         authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            guard user != nil, self?.state?.history?.isEmpty != false else { return }
+            guard user != nil, self?.state?.history.isEmpty == true else { return }
             FileLogger.shared.write(level: "INFO", tag: "HistoryViewModelWrapper",
                 message: "authStateDidChange: user disponível, recarregando histórico")
             self?.viewModel?.loadHistory()
@@ -207,7 +207,7 @@ class ProfessionalListViewModelWrapper: ObservableObject {
         // dispara loadProfessionals() antes do Firebase Auth restaurar currentUser
         // → "Missing or insufficient permissions". Listener garante retry no momento certo.
         authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            guard user != nil, self?.state?.professionals?.isEmpty != false else { return }
+            guard user != nil, self?.state?.professionals.isEmpty == true else { return }
             FileLogger.shared.write(level: "INFO", tag: "ProfessionalListViewModelWrapper",
                 message: "authStateDidChange: user disponível, recarregando profissionais")
             self?.viewModel?.loadProfessionals(specialty: nil)
