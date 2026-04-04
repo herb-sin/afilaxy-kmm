@@ -308,12 +308,11 @@ class AppContainer: ObservableObject {
                         let name = data["requesterName"] as? String ?? "Alguém"
                         FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
                         self.pendingIncomingEmergencies.append((id: docId, name: name))
-                        // Só dispara notificação local se o FCM remoto ainda não entregou o banner
-                        if !self.fcmDeliveredIds.contains(docId) {
-                            self.sendLocalNotification(title: "🆘 Nova Emergência", body: "\(name) precisa de ajuda!", emergencyId: docId)
-                        } else {
-                            FileLogger.shared.write(level: "DEBUG", tag: "AppContainer", message: "Firestore: notificação local suprimida (FCM já entregou) emergencyId=\(docId)")
-                        }
+                        // Não dispara notificação local — o FCM remoto (Cloud Function
+                        // onEmergencyCreated) é o canal de notificação autorizado e já
+                        // exibiu o banner. Disparar aqui gerava dois banners independentes
+                        // porque o gRPC do Firestore fica ativo em background e dispara
+                        // ~20s antes do FCM chegar, com títulos diferentes.
                     }
             }
     }

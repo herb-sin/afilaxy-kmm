@@ -48,11 +48,22 @@ fun EmergencyRequestScreen(
     }
 
     // Navegar para chat quando helper aceitar — apenas se for o requester e emergencyId correto
-    var navigatedToChat by remember { mutableStateOf(false) }
+    // rememberSaveable: sobrevive à recomposição causada por uma segunda notificação FCM
+    // empurrando uma nova instância da tela com navigatedToChat=false (mesmo emergencyId).
+    var navigatedToChat by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.emergencyStatus, state.emergencyId) {
         FileLogger.log("DEBUG", "EmergencyRequestScreen", "emergencyStatus=${state.emergencyStatus}")
         if (state.emergencyStatus == "matched" && !navigatedToChat && state.isRequester
             && (state.emergencyId == null || state.emergencyId == emergencyId)) {
+            // Guard de rota: não navega se já estiver no chat para este emergencyId
+            // (pode acontecer se esta é uma segunda instância criada por FCM tardio).
+            val currentRoute = navController.currentDestination?.route ?: ""
+            if (currentRoute.startsWith("chat/")) {
+                FileLogger.log("DEBUG", "EmergencyRequestScreen",
+                    "chat já aberto (currentRoute=$currentRoute) — ignorando navegação duplicada emergencyId=$emergencyId")
+                navigatedToChat = true   // sinaliza para não tentar novamente
+                return@LaunchedEffect
+            }
             navigatedToChat = true
             val chatId = state.emergencyId ?: emergencyId
             navController.navigate("chat/$chatId") {
