@@ -35,6 +35,19 @@ class EmergencyViewModel(
         }
     }
 
+    /**
+     * Reseta isLoading caso esteja travado sem nenhuma operação ativa.
+     * Chamado ao abrir EmergencyScreen para desbloquear botões após um timeout
+     * silencioso de AcceptEmergency (TimeoutCancellationException escapou do launch).
+     */
+    fun resetStuckLoading() {
+        val s = _state.value
+        if (s.isLoading && !s.hasActiveEmergency && !s.isCreatingEmergency) {
+            com.afilaxy.util.Logger.w("EmergencyViewModel", "resetStuckLoading: isLoading estava true sem emergência ativa — corrigido")
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+
     fun fetchEmergencyExpiresAt(emergencyId: String) {
         viewModelScope.coroutineScope.launch {
             try {
