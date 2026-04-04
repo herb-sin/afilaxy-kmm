@@ -179,14 +179,11 @@ struct HomeView: View {
             isActive: isActive
         ) {
             if isActive {
-                // Navega para a emergência ativa
-                if let emergencyId = state?.emergencyId as? String {
-                    NotificationCenter.default.post(
-                        name: .init("AfilaxyOpenEmergency"),
-                        object: nil,
-                        userInfo: ["emergencyId": emergencyId]
-                    )
-                }
+                // Requester clicou em "Emergência Ativa" — abre EmergencyView com countdown.
+                // NÃO usa AfilaxyOpenEmergency pois esse canal sempre abre EmergencyResponseView
+                // (tela do helper), o que causava o loop de self-match dismiss quando o próprio
+                // usuário era o requester.
+                navigationPath.append(AppRoute.emergency)
             } else {
                 // Abre a tela de criação de emergência
                 navigationPath.append(AppRoute.emergency)
