@@ -115,9 +115,10 @@ class EmergencyViewModel(
             createEmergencyUseCase.execute(emergency)
                 .onSuccess { emergencyId ->
                     com.afilaxy.util.Logger.d("EmergencyViewModel", "onCreateEmergency success emergencyId=$emergencyId")
-                    if (_state.value.isHelperMode) {
-                        emergencyRepository.deactivateHelper()
-                    }
+                    // Sempre desativa o helper antes de assumir o papel de requester —
+                    // mesmo que isHelperMode=false no estado, o device pode estar registrado
+                    // na coleção 'helpers' de uma sessão anterior (auto-match prevention).
+                    try { emergencyRepository.deactivateHelper() } catch (_: Exception) {}
                     val expiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + 180000L
                     _state.update {
                         it.copy(
