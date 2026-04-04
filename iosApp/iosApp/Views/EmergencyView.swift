@@ -243,9 +243,8 @@ struct EmergencyView: View {
             countdownTimer?.invalidate()
             countdownTimer = nil
         }
-        .onReceive(container.emergency.objectWillChange) { _ in
-            guard let newState = container.emergency.state else { return }
-            let s = newState
+        .onReceive(container.emergency.$state) { newState in
+            guard let s = newState else { return }
             if !s.hasActiveEmergency {
                 chatNavigated = false
                 return

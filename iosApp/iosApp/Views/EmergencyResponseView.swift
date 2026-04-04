@@ -95,6 +95,15 @@ struct EmergencyResponseView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyResponseView", message: "appeared emergencyId=\(emergencyId)")
+            // Guarda contra auto-match: o device pode receber notificação da própria
+            // emergência se ainda estava registrado na coleção 'helpers'.
+            let ownId = container.emergency.state?.emergencyId
+            if ownId == emergencyId {
+                FileLogger.shared.write(level: "WARN", tag: "EmergencyResponseView", message: "self-match detected — dismissing emergencyId=\(emergencyId)")
+                container.dismissIncomingEmergency(id: emergencyId)
+                dismiss()
+                return
+            }
             startAvailabilityObserver()
         }
         .onDisappear {
