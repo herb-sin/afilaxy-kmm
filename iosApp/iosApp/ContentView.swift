@@ -137,6 +137,20 @@ struct ContentView: View {
             }
             .onReceive(container.$pendingIncomingEmergencies) { emergencies in
                 guard let first = emergencies.first else { return }
+
+                // Guard de self-match: descarta se o ID é da própria emergência do usuário.
+                // Isso pode chegar aqui por timing — o FCM da Cloud Function chega antes
+                // de emergency.state?.emergencyId ser atualizado pelo KMM StateFlow,
+                // pelo que o guard no AppContainer.observeChildren não bloqueou a tempo.
+                let ownEmergencyId = container.emergency.state?.emergencyId as? String
+                let isRequester = container.emergency.state?.isRequester == true
+                if first.id == ownEmergencyId || isRequester {
+                    FileLogger.shared.write(level: "WARN", tag: "ContentView",
+                        message: "pendingIncomingEmergencies: self-match descartado emergencyId=\(first.id)")
+                    container.dismissIncomingEmergency(id: first.id)
+                    return
+                }
+
                 if emergencyRouteActive {
                     // Já navegamos para EmergencyResponseView (via notificação ou Firestore listener).
                     // Descarta o pending sem navegar novamente — evita que pendingEmergencies
