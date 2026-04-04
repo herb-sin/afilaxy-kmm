@@ -91,6 +91,7 @@ class HistoryViewModelWrapper: ObservableObject {
     @Published var state: HistoryState?
     private var observer: StateFlowObserver<HistoryState>?
     private var cancellable: AnyCancellable?
+    private var authHandle: AuthStateDidChangeListenerHandle?
 
     init(_ viewModel: HistoryViewModel) {
         self.viewModel = viewModel
@@ -100,16 +101,37 @@ class HistoryViewModelWrapper: ObservableObject {
         self.cancellable = obs.$value
             .receive(on: DispatchQueue.main)
             .sink { [weak self] newState in self?.state = newState }
+
+        // HistoryViewModel.init { loadHistory() } executa antes do Firebase Auth
+        // restaurar currentUser → "Usuário não autenticado". Listener faz retry
+        // no momento correto, sem depender do timing do TabBar ou onAppear.
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            guard user != nil, self?.state?.history?.isEmpty != false else { return }
+            FileLogger.shared.write(level: "INFO", tag: "HistoryViewModelWrapper",
+                message: "authStateDidChange: user disponível, recarregando histórico")
+            self?.viewModel?.loadHistory()
+        }
+    }
+
+    deinit {
+        if let handle = authHandle {
+            Auth.auth().removeStateDidChangeListener(handle)
+        }
     }
 
     static func empty() -> HistoryViewModelWrapper { HistoryViewModelWrapper() }
     private init() { self.viewModel = nil }
 
     var vm: HistoryViewModel? { viewModel }
+
     func freeze() {
         cancellable?.cancel()
         cancellable = nil
         observer = nil
+        if let handle = authHandle {
+            Auth.auth().removeStateDidChangeListener(handle)
+            authHandle = nil
+        }
     }
 }
 
@@ -170,6 +192,7 @@ class ProfessionalListViewModelWrapper: ObservableObject {
     @Published var state: ProfessionalListState?
     private var observer: StateFlowObserver<ProfessionalListState>?
     private var cancellable: AnyCancellable?
+    private var authHandle: AuthStateDidChangeListenerHandle?
 
     init(_ viewModel: ProfessionalListViewModel) {
         self.viewModel = viewModel
@@ -179,6 +202,22 @@ class ProfessionalListViewModelWrapper: ObservableObject {
         self.cancellable = obs.$value
             .receive(on: DispatchQueue.main)
             .sink { [weak self] newState in self?.state = newState }
+
+        // Mesmo padrão do ProfileViewModelWrapper: ProfessionalListViewModel.init
+        // dispara loadProfessionals() antes do Firebase Auth restaurar currentUser
+        // → "Missing or insufficient permissions". Listener garante retry no momento certo.
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            guard user != nil, self?.state?.professionals?.isEmpty != false else { return }
+            FileLogger.shared.write(level: "INFO", tag: "ProfessionalListViewModelWrapper",
+                message: "authStateDidChange: user disponível, recarregando profissionais")
+            self?.viewModel?.loadProfessionals(specialty: nil)
+        }
+    }
+
+    deinit {
+        if let handle = authHandle {
+            Auth.auth().removeStateDidChangeListener(handle)
+        }
     }
 
     static func empty() -> ProfessionalListViewModelWrapper { ProfessionalListViewModelWrapper() }
@@ -197,6 +236,10 @@ class ProfessionalListViewModelWrapper: ObservableObject {
         cancellable?.cancel()
         cancellable = nil
         observer = nil
+        if let handle = authHandle {
+            Auth.auth().removeStateDidChangeListener(handle)
+            authHandle = nil
+        }
     }
 }
 
