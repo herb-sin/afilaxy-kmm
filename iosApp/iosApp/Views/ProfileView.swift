@@ -169,12 +169,11 @@ struct ProfileView: View {
         .navigationTitle("Meu Perfil")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            // Firebase Auth no iOS pode ainda não ter restaurado o currentUser
-            // quando o AppContainer.warmUp() executa o init do ProfileViewModel.
-            // Se o estado carregou com erro de auth ou sem perfil, recarrega agora
-            // que a view aparece (Auth já está estável neste ponto).
-            let s = container.profile.state
-            if s?.profile == nil && (s?.error != nil || s?.isLoading == false) {
+            // ProfileViewModel.init { loadProfile() } executa no boot, antes do
+            // Firebase Auth iOS restaurar o currentUser → currentUser null → erro.
+            // Recarrega sempre que não há perfil; Auth está estável quando o
+            // usuário chega até esta tela.
+            if container.profile.state?.profile == nil {
                 container.profile.vm?.loadProfile()
             }
         }
