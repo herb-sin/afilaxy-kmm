@@ -119,6 +119,8 @@ class ProfileViewModelWrapper: ObservableObject {
     @Published var state: ProfileState?
     private var observer: StateFlowObserver<ProfileState>?
     private var cancellable: AnyCancellable?
+    // Handle do listener de Auth — removido em deinit para evitar leak
+    private var authHandle: AuthStateDidChangeListenerHandle?
 
     init(_ viewModel: ProfileViewModel) {
         self.viewModel = viewModel
@@ -128,6 +130,23 @@ class ProfileViewModelWrapper: ObservableObject {
         self.cancellable = obs.$value
             .receive(on: DispatchQueue.main)
             .sink { [weak self] newState in self?.state = newState }
+
+        // Fix: ProfileViewModel.init { loadProfile() } executa no boot, antes do
+        // Firebase Auth iOS restaurar o currentUser persistido em disco (~15s de gap).
+        // O ProfileView é uma tab do TabBar → onAppear também dispara antes do Auth.
+        // Solução: listener de Auth que recarrega o perfil quando o user fica disponível.
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            guard user != nil, self?.state?.profile == nil else { return }
+            FileLogger.shared.write(level: "INFO", tag: "ProfileViewModelWrapper",
+                message: "authStateDidChange: user disponível, recarregando perfil")
+            self?.viewModel?.loadProfile()
+        }
+    }
+
+    deinit {
+        if let handle = authHandle {
+            Auth.auth().removeStateDidChangeListener(handle)
+        }
     }
 
     static func empty() -> ProfileViewModelWrapper { ProfileViewModelWrapper() }
@@ -138,6 +157,10 @@ class ProfileViewModelWrapper: ObservableObject {
         cancellable?.cancel()
         cancellable = nil
         observer = nil
+        if let handle = authHandle {
+            Auth.auth().removeStateDidChangeListener(handle)
+            authHandle = nil
+        }
     }
 }
 

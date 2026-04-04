@@ -168,15 +168,6 @@ struct ProfileView: View {
         }
         .navigationTitle("Meu Perfil")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            // ProfileViewModel.init { loadProfile() } executa no boot, antes do
-            // Firebase Auth iOS restaurar o currentUser → currentUser null → erro.
-            // Recarrega sempre que não há perfil; Auth está estável quando o
-            // usuário chega até esta tela.
-            if container.profile.state?.profile == nil {
-                container.profile.vm?.loadProfile()
-            }
-        }
         .sheet(isPresented: $showEditSheet) {
             EditProfileSheet(
                 name: $name, phone: $phone, bloodType: $bloodType,
