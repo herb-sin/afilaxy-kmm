@@ -128,7 +128,7 @@ private struct StatusConfig {
                 icon: "checkmark.seal.fill",
                 gradientColors: [Color(hex: "#1976D2"), Color(hex: "#1565C0")],
                 headline: "Essa semana você não fez nenhum pedido de socorro.",
-                body: "Sua asma parece controlada! Continue assim. 💙",
+                body: "Lembre-se: Duas crises ou mais por semana indicam Asma não controlada!",
                 pillText: "0 pedidos esta semana",
                 shadowColor: Color(hex: "#1976D2").opacity(0.35)
             )
@@ -136,19 +136,37 @@ private struct StatusConfig {
             return StatusConfig(
                 icon: "exclamationmark.triangle.fill",
                 gradientColors: [Color(hex: "#F4A825"), Color(hex: "#E65100")],
-                headline: "Você já fez 1 pedido de emergência esta semana.",
-                body: "Se precisar da bombinha novamente, considere marcar uma consulta com seu médico. 🩺",
+                headline: "Você fez 1 pedido de socorro esta semana.",
+                body: "Alguém parou o que estava fazendo para te ajudar, de graça. Agendar uma consulta é o passo mais responsável, com a sua Saúde e com a pessoa que te ajudou. Ela pode precisar de você, assim como você precisou dela!",
                 pillText: "1 pedido esta semana",
                 shadowColor: Color(hex: "#F4A825").opacity(0.35)
+            )
+        case 2:
+            return StatusConfig(
+                icon: "cross.circle.fill",
+                gradientColors: [Color(hex: "#C62828"), Color(hex: "#7B1A1A")],
+                headline: "2º pedido de socorro esta semana.",
+                body: "ALERTA CLÍNICO: Duas crises ou mais por semana indicam Asma não controlada! É URGENTE agendar uma consulta!",
+                pillText: "2 pedidos esta semana",
+                shadowColor: Color(hex: "#C62828").opacity(0.4)
+            )
+        case 3:
+            return StatusConfig(
+                icon: "cross.circle.fill",
+                gradientColors: [Color(hex: "#4A0000"), Color(hex: "#1A0000")],
+                headline: "Você já pediu socorro \(count) vezes esta semana.",
+                body: "Você acumula \(count) pedidos de ajuda. Esse quadro vai além da urgência. Por favor, busque assistência médica.",
+                pillText: "\(count) pedidos esta semana",
+                shadowColor: Color(hex: "#4A0000").opacity(0.5)
             )
         default:
             return StatusConfig(
                 icon: "cross.circle.fill",
-                gradientColors: [Color(hex: "#C62828"), Color(hex: "#7B1A1A")],
-                headline: "Você já fez \(count) pedidos de emergência esta semana.",
-                body: "Sua asma pode estar fora de controle. Agendar uma consulta com urgência é extremamente importante. ❗",
+                gradientColors: [Color(hex: "#6A0DAD"), Color(hex: "#3D0066")],
+                headline: "Você já pediu socorro \(count) vezes esta semana.",
+                body: "Você acumula \(count) pedidos de ajuda. Esse quadro vai além da urgência. Por favor, busque assistência médica.",
                 pillText: "\(count) pedidos esta semana",
-                shadowColor: Color(hex: "#C62828").opacity(0.4)
+                shadowColor: Color(hex: "#6A0DAD").opacity(0.5)
             )
         }
     }

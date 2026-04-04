@@ -1,12 +1,16 @@
 package com.afilaxy.app.ui.screens
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -45,6 +49,7 @@ fun HomeScreenNew(
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToProfessionals: () -> Unit,
     onNavigateToEducation: () -> Unit = {},
+    onNavigateToHelp: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
@@ -131,31 +136,11 @@ fun HomeScreenNew(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Hero Header com saudação + Helper Mode
+        // Hero Header — card semanal (helper toggle movido para card próprio abaixo)
         item {
             HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
-                weeklyCount = weeklyCount,
-                // Enquanto pendente, mostra o valor pretendido pelo usuário.
-                // Após o ViewModel confirmar, LaunchedEffect zera isHelperPending.
-                isHelperMode = if (isHelperPending) helperIntended else emergencyState.isHelperMode,
-                onHelperModeToggle = { enable ->
-                    if (isHelperPending) return@HomeWelcomeCard  // ignora tap duplo
-                    if (enable) {
-                        val consentGiven = prefsRepo.getBoolean("helper_map_consent_v1", false)
-                        if (consentGiven) {
-                            // Consentimento já dado anteriormente — vai direto para permissão
-                            showHelperPermission = true
-                        } else {
-                            // Primeira vez — exibe dialog LGPD antes de qualquer outra ação
-                            showHelperConsentDialog = true
-                        }
-                    } else {
-                        isHelperPending = true
-                        helperIntended = false
-                        viewModel.deactivateHelper()
-                    }
-                }
+                weeklyCount = weeklyCount
             )
         }
 
@@ -167,7 +152,26 @@ fun HomeScreenNew(
             )
         }
 
-        // Atalhos rápidos — Row + Row em vez de LazyVerticalGrid aninhado
+        // Modo Ajudante — card separado (espelha iOS ToggleCard)
+        item {
+            HomeHelperModeCard(
+                isHelperMode = if (isHelperPending) helperIntended else emergencyState.isHelperMode,
+                onHelperModeToggle = { enable ->
+                    if (isHelperPending) return@HomeHelperModeCard
+                    if (enable) {
+                        val consentGiven = prefsRepo.getBoolean("helper_map_consent_v1", false)
+                        if (consentGiven) showHelperPermission = true
+                        else showHelperConsentDialog = true
+                    } else {
+                        isHelperPending = true
+                        helperIntended = false
+                        viewModel.deactivateHelper()
+                    }
+                }
+            )
+        }
+
+        // Atalhos rápidos — grid 2×2 com subtítulo (espelha iOS)
         item {
             HomeQuickActions(
                 onNavigateToProfessionals = onNavigateToProfessionals,
@@ -177,10 +181,11 @@ fun HomeScreenNew(
             )
         }
 
-        // Estatísticas da comunidade
-        item {
-            HomeStatsCard()
-        }
+        // Feed da comunidade — placeholder (espelha iOS communityFeedPreview)
+        item { HomeCommunityFeedPreview(onNavigateToCommunity = onNavigateToCommunity) }
+
+        // Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
+        item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp) }
     }
 
     // Dialog de consentimento LGPD — exibido apenas na primeira ativação.
@@ -303,9 +308,7 @@ fun HomeScreenNew(
 @Composable
 private fun HomeWelcomeCard(
     userName: String,
-    weeklyCount: Int,
-    isHelperMode: Boolean,
-    onHelperModeToggle: (Boolean) -> Unit
+    weeklyCount: Int
 ) {
     // Cor do gradiente e mensagens dependem da contagem semanal
     val (gradientColors, headline, body) = when (weeklyCount) {
@@ -316,18 +319,28 @@ private fun HomeWelcomeCard(
         )
         0 -> Triple(
             listOf(Color(0xFF1976D2), Color(0xFF1565C0)),
-            "Essa semana nenhum pedido de socorro.",
-            "Sua asma parece controlada! Continue assim. 💙"
+            "Essa semana você não fez nenhum pedido de socorro.",
+            "Lembre-se: Duas crises ou mais por semana indicam Asma não controlada!"
         )
         1 -> Triple(
             listOf(Color(0xFFF4A825), Color(0xFFE65100)),
-            "Você já fez 1 pedido de emergência essa semana.",
-            "Se precisar da bombinha novamente, considere marcar uma consulta. 🩺"
+            "Você fez 1 pedido de socorro esta semana.",
+            "Alguém parou o que estava fazendo para te ajudar, de graça. Agendar uma consulta é o passo mais responsável, com a sua Saúde e com a pessoa que te ajudou. Ela pode precisar de você, assim como você precisou dela!"
+        )
+        2 -> Triple(
+            listOf(Color(0xFFC62828), Color(0xFF7B1A1A)),
+            "2º pedido de socorro esta semana.",
+            "ALERTA CLÍNICO: Duas crises ou mais por semana indicam Asma não controlada! É URGENTE agendar uma consulta!"
+        )
+        3 -> Triple(
+            listOf(Color(0xFF4A0000), Color(0xFF1A0000)),
+            "Você já pediu socorro $weeklyCount vezes esta semana.",
+            "Você acumula $weeklyCount pedidos de ajuda. Esse quadro vai além da urgência. Por favor, busque assistência médica."
         )
         else -> Triple(
-            listOf(Color(0xFFC62828), Color(0xFF7B1A1A)),
-            "Você já fez $weeklyCount pedidos de emergência essa semana.",
-            "Sua asma pode estar fora de controle. Agende uma consulta com urgência! ❗"
+            listOf(Color(0xFF6A0DAD), Color(0xFF3D0066)),
+            "Você já pediu socorro $weeklyCount vezes esta semana.",
+            "Você acumula $weeklyCount pedidos de ajuda. Esse quadro vai além da urgência. Por favor, busque assistência médica."
         )
     }
 
@@ -396,38 +409,6 @@ private fun HomeWelcomeCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Helper toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Modo Ajudante",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = if (isHelperMode) "Ativo — você pode receber pedidos" else "Desativado",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.75f)
-                    )
-                }
-                Switch(
-                    checked = isHelperMode,
-                    onCheckedChange = onHelperModeToggle,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = Color.White,
-                        uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
-                        uncheckedTrackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                )
-            }
         }
     }
 }
@@ -491,12 +472,14 @@ private fun HomeQuickActions(
         ) {
             HomeActionCard(
                 title = "Profissionais",
+                subtitle = "Encontre especialistas",
                 icon = Icons.Default.MedicalServices,
                 onClick = onNavigateToProfessionals,
                 modifier = Modifier.weight(1f)
             )
             HomeActionCard(
                 title = "Educação",
+                subtitle = "Aprenda sobre asma",
                 icon = Icons.Default.School,
                 onClick = onNavigateToEducation,
                 modifier = Modifier.weight(1f)
@@ -508,12 +491,14 @@ private fun HomeQuickActions(
         ) {
             HomeActionCard(
                 title = "Histórico",
+                subtitle = "Suas emergências anteriores",
                 icon = Icons.Default.History,
                 onClick = onNavigateToHistory,
                 modifier = Modifier.weight(1f)
             )
             HomeActionCard(
                 title = "Perfil",
+                subtitle = "Seu cadastro",
                 icon = Icons.Default.Person,
                 onClick = onNavigateToProfile,
                 modifier = Modifier.weight(1f)
@@ -525,13 +510,14 @@ private fun HomeQuickActions(
 @Composable
 private fun HomeActionCard(
     title: String,
+    subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(80.dp),
+        modifier = modifier.height(90.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -539,66 +525,247 @@ private fun HomeActionCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(26.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Modo Ajudante — card separado
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun HomeHelperModeCard(
+    isHelperMode: Boolean,
+    onHelperModeToggle: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = if (isHelperMode) MaterialTheme.colorScheme.error
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column {
+                    Text(
+                        text = "Modo Ajudante",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = if (isHelperMode) "Você está disponível para ajudar"
+                               else "Ative para receber pedidos de ajuda",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Switch(
+                checked = isHelperMode,
+                onCheckedChange = onHelperModeToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Comunidade — preview placeholder (espelha iOS communityFeedPreview)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun HomeCommunityFeedPreview(onNavigateToCommunity: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Comunidade",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = onNavigateToCommunity) {
+                    Text("Ver Mais", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeCommunityPostItem(
+                author = "Maria S.",
+                content = "Consegui controlar melhor minha asma seguindo as dicas do app! 💪",
+                timeAgo = "2h"
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeCommunityPostItem(
+                author = "João P.",
+                content = "Alguém sabe onde encontrar bombinha mais barata na região?",
+                timeAgo = "4h"
             )
         }
     }
 }
 
 @Composable
-private fun HomeStatsCard() {
+private fun HomeCommunityPostItem(author: String, content: String, timeAgo: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = author.take(1),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Column {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = author,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = timeAgo,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = content,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Comunidade Afilaxy",
+                text = "Suporte Rápido",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+            HomeSupportLinkRow(
+                title = "Farmácias 24h",
+                subtitle = "Encontre medicamentos",
+                icon = Icons.Default.Add,
+                color = Color(0xFF2E7D32)
             ) {
-                HomeStatItem("0", "Emergências")
-                HomeStatItem("0", "Ajudas")
-                HomeStatItem("0", "Membros")
+                val uri = Uri.parse("geo:0,0?q=farm%C3%A1cia+24h")
+                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeSupportLinkRow(
+                title = "Protocolo de Crise",
+                subtitle = "Passos para emergência",
+                icon = Icons.Default.List,
+                color = Color(0xFFF4A825),
+                onClick = onNavigateToHelp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeSupportLinkRow(
+                title = "SAMU 192",
+                subtitle = "Emergência médica",
+                icon = Icons.Default.Phone,
+                color = Color(0xFFC62828)
+            ) {
+                val uri = Uri.parse("tel:192")
+                context.startActivity(Intent(Intent.ACTION_DIAL, uri))
             }
         }
     }
 }
 
 @Composable
-private fun HomeStatItem(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun HomeSupportLinkRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = color,
+            modifier = Modifier.size(22.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium)
+            Text(text = subtitle, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
     }
 }
