@@ -190,6 +190,7 @@ fun NavGraph(
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
                     onNavigateToEducation = { navController.navigate("education") },
+                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onLogout = {
                         navController.navigate(AppRoutes.LOGIN) {
                             popUpTo(0) { inclusive = true }
