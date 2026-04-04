@@ -136,7 +136,7 @@ fun LoginScreen(
             if (state.error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = state.error ?: "",
+                    text = friendlyLoginError(state.error ?: ""),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -181,5 +181,47 @@ fun LoginScreen(
                 Text("Não tem uma conta? Criar conta")
             }
         }
+    }
+}
+
+private fun friendlyLoginError(raw: String): String {
+    val msg = raw.lowercase()
+    return when {
+        msg.contains("password is invalid") ||
+        msg.contains("wrong password") ||
+        msg.contains("invalid credential") ||
+        msg.contains("auth credential is incorrect") ->
+            "Senha incorreta. Verifique e tente novamente."
+
+        msg.contains("no user record") ||
+        msg.contains("user not found") ||
+        msg.contains("there is no user") ->
+            "Nenhuma conta encontrada com esse e-mail."
+
+        msg.contains("badly formatted") ||
+        msg.contains("invalid email") ||
+        msg.contains("email address is badly") ->
+            "Endereço de e-mail inválido."
+
+        msg.contains("network error") ||
+        msg.contains("network request failed") ||
+        msg.contains("unable to resolve host") ->
+            "Sem conexão com a internet. Verifique sua rede."
+
+        msg.contains("too many requests") ||
+        msg.contains("too many attempts") ||
+        msg.contains("temporarily disabled") ->
+            "Muitas tentativas. Aguarde alguns minutos e tente novamente."
+
+        msg.contains("weak password") ->
+            "Senha muito fraca. Use ao menos 6 caracteres."
+
+        msg.contains("email already in use") ->
+            "Este e-mail já está cadastrado. Faça login ou recupere sua senha."
+
+        msg.contains("user disabled") ->
+            "Esta conta foi desativada. Entre em contato com o suporte."
+
+        else -> "Erro ao entrar. Verifique suas credenciais e tente novamente."
     }
 }

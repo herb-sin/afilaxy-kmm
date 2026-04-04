@@ -16,6 +16,7 @@ struct HomeView: View {
     @AppStorage("helperMapConsentGiven") private var helperMapConsentGiven = false
     @State private var showHelperConsentAlert = false
     @State private var weeklyCount: Int = -1     // -1 = ainda carregando
+    @State private var showPharmacyMap = false
     @State private var statsListener: ListenerRegistration? = nil
 
     var body: some View {
@@ -101,6 +102,17 @@ struct HomeView: View {
         }
         .onAppear { fetchWeeklyStatus() }
         .onDisappear { statsListener?.remove() }
+        .sheet(isPresented: $showPharmacyMap) {
+            NavigationStack {
+                MapView(pharmacyMode: true)
+                    .environmentObject(container)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Fechar") { showPharmacyMap = false }
+                        }
+                    }
+            }
+        }
     }
     
     // MARK: - Hero Section
@@ -334,10 +346,7 @@ struct HomeView: View {
                         icon: "cross.fill",
                         color: .afiSuccess
                     ) {
-                        // Open Maps app to search for pharmacies
-                        if let url = URL(string: "maps://?q=farmácia") {
-                            UIApplication.shared.open(url)
-                        }
+                        showPharmacyMap = true
                     }
                     
                     SupportLinkRow(
