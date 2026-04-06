@@ -61,7 +61,7 @@ fun sharedModule(): Module = module {
     factory { CrmLookupViewModel() }
     
     // New ViewModels for expanded features
-    factory { HomeViewModel(get(), get(), get()) }
+    factory { HomeViewModel(get(), get()) }
     factory { MedicalProfileViewModel(get(), "default_user") }
 }
 
