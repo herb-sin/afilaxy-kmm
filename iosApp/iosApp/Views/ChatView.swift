@@ -13,9 +13,10 @@ struct ChatView: View {
     @State private var showResolveDialog = false
     @State private var isResolved = false
     @State private var resolvedByOther = false
-    /// true quando o próprio dispositivo disparou o resolve — impede que o statusListener
-    /// re-acione resolvedByOther ao receber o echo do Firestore.
     @State private var didResolveLocally = false
+    @State private var samuCalled = false
+    @State private var showRatingSheet = false
+    @State private var reviewedId: String? = nil
     @Environment(\.dismiss) private var dismiss
 
     private var currentUserId: String? { Auth.auth().currentUser?.uid }
@@ -97,12 +98,24 @@ struct ChatView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                // Se a outra parte já encerrou: dismiss direto, sem alert
                 Button {
                     if resolvedByOther { dismissAndClearState() }
                     else { showResolveDialog = true }
                 } label: {
                     Image(systemName: "chevron.left")
+                }
+            }
+            // Botão SAMU — visível enquanto emergência ativa
+            if !isResolved {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        markSamuCalled()
+                    } label: {
+                        Text(samuCalled ? "🚑 acionado" : "🚑 SAMU")
+                            .font(.subheadline)
+                            .foregroundColor(samuCalled ? .secondary : .red)
+                    }
+                    .disabled(samuCalled)
                 }
             }
             if !resolvedByOther {
@@ -115,12 +128,23 @@ struct ChatView: View {
             Button("Resolver", role: .destructive) { resolveEmergency() }
             Button("Continuar no Chat", role: .cancel) {}
         } message: { Text("A outra parte será avisada que a emergência foi encerrada.") }
-        .onAppear { startListening() }
-        .onDisappear {
+        .onAppear {
+            startListening()
+            fetchParticipants()
+        }        .onDisappear {
             listener?.remove()
             listener = nil
             statusListener?.remove()
             statusListener = nil
+        }
+        .sheet(isPresented: $showRatingSheet) {
+            RatingSheetView(
+                onSubmit: { rating, comment in
+                    submitReview(reviewedId: reviewedId, rating: rating, comment: comment)
+                    showRatingSheet = false
+                },
+                onSkip: { showRatingSheet = false }
+            )
         }
     }
 
@@ -179,6 +203,8 @@ struct ChatView: View {
             object: nil,
             userInfo: ["emergencyId": emergencyId]
         )
+        // Mostra avaliação se soubermos quem avaliar
+        if reviewedId != nil { showRatingSheet = true }
     }
 
     /// Limpa estado e navega de volta à home quando foi a outra parte que encerrou.
@@ -258,6 +284,99 @@ struct ChatView: View {
             ])
     }
 }
+
+// MARK: - Helper functions (Analytics)
+
+extension ChatView {
+
+    private func fetchParticipants() {
+        guard let currentUid = Auth.auth().currentUser?.uid else { return }
+        Firestore.firestore().collection("emergency_requests").document(emergencyId).getDocument { snap, _ in
+            guard let d = snap?.data() else { return }
+            let requesterId = d["requesterId"] as? String
+            let helperId = d["helperId"] as? String
+            DispatchQueue.main.async {
+                reviewedId = (currentUid == requesterId) ? helperId : requesterId
+            }
+        }
+    }
+
+    private func markSamuCalled() {
+        guard !samuCalled else { return }
+        samuCalled = true
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        Firestore.firestore().collection("emergency_requests").document(emergencyId)
+            .updateData(["samuCalled": true, "samuCalledAt": nowMs])
+    }
+
+    private func submitReview(reviewedId: String?, rating: Int, comment: String?) {
+        guard let reviewedId = reviewedId,
+              let reviewerId = Auth.auth().currentUser?.uid else { return }
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        var data: [String: Any] = [
+            "emergencyId": emergencyId,
+            "reviewerId": reviewerId,
+            "reviewedId": reviewedId,
+            "rating": rating,
+            "timestamp": nowMs
+        ]
+        if let comment = comment { data["comment"] = comment }
+        Firestore.firestore().collection("reviews").addDocument(data: data)
+    }
+}
+
+// MARK: - RatingSheetView
+
+struct RatingSheetView: View {
+    var onSubmit: (Int, String?) -> Void
+    var onSkip: () -> Void
+    @State private var selectedRating = 0
+    @State private var comment = ""
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Text("Como foi o atendimento?")
+                    .font(.title3).bold()
+
+                Text("Avalie a pessoa que te ajudou nesta emergência.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+
+                // Estrelas
+                HStack(spacing: 8) {
+                    ForEach(1...5, id: \.self) { i in
+                        Text(i <= selectedRating ? "⭐" : "☆")
+                            .font(.largeTitle)
+                            .onTapGesture { selectedRating = i }
+                    }
+                }
+
+                TextField("Comentário opcional", text: $comment, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(3)
+                    .padding(.horizontal)
+
+                Spacer()
+
+                HStack(spacing: 16) {
+                    Button("Pular") { onSkip() }
+                        .foregroundColor(.secondary)
+
+                    Button("Enviar e Encerrar") {
+                        onSubmit(max(1, selectedRating), comment.trimmingCharacters(in: .whitespaces).isEmpty ? nil : comment)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+            }
+            .padding(.top, 24)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
 
 private struct MessageBubble: View {
     let text: String

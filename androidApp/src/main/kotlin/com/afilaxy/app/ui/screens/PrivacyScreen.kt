@@ -41,7 +41,7 @@ fun PrivacyScreen(navController: NavController) {
             
             item {
                 Text(
-                    "Última atualização: Janeiro de 2024",
+                    "Última atualização: Abril de 2025",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -57,7 +57,7 @@ fun PrivacyScreen(navController: NavController) {
             item {
                 PrivacySection(
                     title = "2. Uso das Informações",
-                    content = "Usamos seus dados para:\n• Conectar você com helpers próximos\n• Enviar notificações de emergências\n• Melhorar o serviço\n• Garantir segurança da plataforma"
+                    content = "Usamos seus dados para:\n• Conectar você com helpers próximos\n• Enviar notificações de emergências\n• Melhorar o serviço e a experiência\n• Garantir segurança da plataforma\n• Pesquisas de saúde pública e modelos preditivos (apenas com consentimento analítico)"
                 )
             }
             
@@ -117,6 +117,13 @@ fun PrivacyScreen(navController: NavController) {
                 )
             }
             
+            item {
+                PrivacySection(
+                    title = "11. Analytics & Machine Learning",
+                    content = "Com seu consentimento opcional, utilizamos dados de:\n• Gravidade de crises (leve / moderada / grave)\n• Avaliações pós-atendimento (1–5 ⭐)\n• NPS (Net Promoter Score)\n• Acionamento do SAMU durante chats\n\nEsses dados são usados exclusivamente para:\n• Melhoria contínua do serviço\n• Pesquisas de saúde pública\n• Modelos preditivos de risco (dados anonimizados)\n\nVocê pode revogar esse consentimento a qualquer momento em Configurações > Privacidade."
+                )
+            }
+
             item {
                 HorizontalDivider()
             }

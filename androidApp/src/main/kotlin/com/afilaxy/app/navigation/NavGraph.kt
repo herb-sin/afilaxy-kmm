@@ -17,13 +17,15 @@ import androidx.navigation.navArgument
 import com.afilaxy.app.ui.screens.*
 import com.afilaxy.app.ui.scaffold.AfilaxyAppScaffoldSimple
 
+import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 private val protectedRoutes = setOf(
-    AppRoutes.HOME, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
+    AppRoutes.HOME, AppRoutes.CONSENT, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
     AppRoutes.SETTINGS, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
     AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.MAP_PHARMACY, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
     AppRoutes.TERMS, AppRoutes.PRIVACY, AppRoutes.PORTAL, "emergency_request", "emergency_response", AppRoutes.CHAT
@@ -41,6 +43,18 @@ fun NavGraph(
     pendingDestination: MutableState<String?>? = null
 ) {
     val navController = rememberNavController()
+    val prefs: PreferencesRepository = koinInject()
+
+    // Destino pós-autenticação: consentimento se ainda não apresentado, home caso contrário
+    fun postAuthDestination() =
+        if (prefs.getBoolean("consent_shown", false)) AppRoutes.HOME else AppRoutes.CONSENT
+
+    // Se o app abre com usuário já logado mas sem consentimento gravado, redireciona
+    val effectiveStart = remember(startDestination) {
+        if (startDestination == AppRoutes.HOME && !prefs.getBoolean("consent_shown", false))
+            AppRoutes.CONSENT
+        else startDestination
+    }
 
     // Redirect unauthenticated deep-links to login
     LaunchedEffect(startDestination) {
@@ -130,40 +144,53 @@ fun NavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = startDestination ?: AppRoutes.LOGIN
+        startDestination = effectiveStart ?: AppRoutes.LOGIN
     ) {
         composable(AppRoutes.LOGIN) {
             LoginScreen(
-                onLoginSuccess = { 
-                    navController.navigate(AppRoutes.HOME) { 
-                        popUpTo(AppRoutes.LOGIN) { inclusive = true } 
-                    } 
+                onLoginSuccess = {
+                    val dest = postAuthDestination()
+                    navController.navigate(dest) {
+                        popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                    }
                 },
                 onRegisterClick = { navController.navigate(AppRoutes.REGISTER) }
             )
         }
-        
+
         composable(AppRoutes.REGISTER) {
             RegisterScreen(
-                onRegisterSuccess = { 
-                    navController.navigate("email_verification") { 
-                        popUpTo(AppRoutes.REGISTER) { inclusive = true } 
-                    } 
+                onRegisterSuccess = {
+                    navController.navigate("email_verification") {
+                        popUpTo(AppRoutes.REGISTER) { inclusive = true }
+                    }
                 },
                 onBackClick = { navController.popBackStack() }
             )
         }
-        
+
         composable("email_verification") {
             EmailVerificationScreen(
-                onVerified = { 
-                    navController.navigate(AppRoutes.HOME) { 
-                        popUpTo("email_verification") { inclusive = true } 
-                    } 
+                onVerified = {
+                    val dest = postAuthDestination()
+                    navController.navigate(dest) {
+                        popUpTo("email_verification") { inclusive = true }
+                    }
                 },
                 onLogout = {
                     navController.navigate(AppRoutes.LOGIN) {
                         popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ── Consentimento: exibido uma única vez ──────────────────────────────
+        composable(AppRoutes.CONSENT) {
+            ConsentScreen(
+                onConsentGiven = {
+                    navController.navigate(AppRoutes.HOME) {
+                        popUpTo(AppRoutes.CONSENT) { inclusive = true }
                     }
                 }
             )

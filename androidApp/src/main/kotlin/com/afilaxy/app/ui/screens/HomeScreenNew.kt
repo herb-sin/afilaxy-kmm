@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import com.afilaxy.app.ui.components.RequestLocationPermission
+import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
@@ -35,6 +36,7 @@ import com.afilaxy.util.FileLogger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 import java.util.Calendar
@@ -59,12 +61,26 @@ fun HomeScreenNew(
     val emergencyState by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
     val prefsRepo: PreferencesRepository = koinInject()
+    val emergencyRepo: EmergencyRepository = koinInject()
+    val scope = rememberCoroutineScope()
     var isHelperPending by remember { mutableStateOf(false) }
     var helperIntended by remember { mutableStateOf(false) }
     var showHelperPermission by remember { mutableStateOf(false) }
     var showHelperConsentDialog by remember { mutableStateOf(false) }
+    var showNps by remember { mutableStateOf(false) }
     // -1 = carregando, 0 = nenhum pedido, 1+ = atenção/urgente
     var weeklyCount by remember { mutableStateOf(-1) }
+
+    // NPS: exibe uma vez, 7 dias após a primeira emergência
+    LaunchedEffect(Unit) {
+        val firstAtStr = prefsRepo.getString("first_emergency_at", null) ?: return@LaunchedEffect
+        val firstAt = firstAtStr.toLongOrNull() ?: return@LaunchedEffect
+        val npsShown = prefsRepo.getBoolean("nps_shown", false)
+        val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
+        if (!npsShown && System.currentTimeMillis() - firstAt >= sevenDaysMs) {
+            showNps = true
+        }
+    }
 
     // Listener em tempo real: atualiza automaticamente quando a Cloud Function
     // onEmergencyFinalized escrever em user_stats após a emergência ser resolvida.
@@ -221,6 +237,21 @@ fun HomeScreenNew(
                 }) {
                     Text("Cancelar")
                 }
+            }
+        )
+    }
+
+    // NPS: exibido uma única vez, 7 dias após a primeira emergência
+    if (showNps) {
+        NpsDialog(
+            onSubmit = { score ->
+                showNps = false
+                prefsRepo.putBoolean("nps_shown", true)
+                scope.launch { emergencyRepo.submitNps(score) }
+            },
+            onDismiss = {
+                showNps = false
+                prefsRepo.putBoolean("nps_shown", true)
             }
         )
     }
@@ -694,5 +725,72 @@ private fun HomeSupportLinkRow(
         }
         Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+    }
+}
+
+// ── NPS Dialog ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun NpsDialog(
+    onSubmit: (score: Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selected by remember { mutableStateOf(-1) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Você recomendaria o Afilaxy?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "De 0 (pouco provável) a 10 (com certeza).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (i in 0..5) NpsScoreButton(i, selected) { selected = i }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (i in 6..10) NpsScoreButton(i, selected) { selected = i }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (selected >= 0) onSubmit(selected) else onDismiss() },
+                enabled = selected >= 0
+            ) { Text("Enviar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Pular") }
+        }
+    )
+}
+
+@Composable
+private fun NpsScoreButton(score: Int, selected: Int, onSelect: () -> Unit) {
+    val isSelected = score == selected
+    Surface(
+        onClick = onSelect,
+        shape = RoundedCornerShape(8.dp),
+        color = when {
+            isSelected -> MaterialTheme.colorScheme.primary
+            score <= 6 -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+            score <= 8 -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+            else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        },
+        modifier = Modifier.size(40.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = score.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            )
+        }
     }
 }
