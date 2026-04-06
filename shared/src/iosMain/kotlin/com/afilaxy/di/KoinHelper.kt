@@ -9,7 +9,7 @@ import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.presentation.medical.MedicalProfileViewModel
-import com.afilaxy.presentation.professional.ProfessionalDashboardViewModel
+
 import com.afilaxy.util.Logger
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
@@ -92,8 +92,3 @@ fun safeGetMedicalProfileViewModel(): MedicalProfileViewModel {
     return getKoin().get<MedicalProfileViewModel>().also { Logger.d(TAG, "MedicalProfileViewModel OK") }
 }
 
-@Throws(Exception::class)
-fun safeGetProfessionalDashboardViewModel(): ProfessionalDashboardViewModel {
-    Logger.d(TAG, "safeGetProfessionalDashboardViewModel")
-    return getKoin().get<ProfessionalDashboardViewModel>().also { Logger.d(TAG, "ProfessionalDashboardViewModel OK") }
-}
