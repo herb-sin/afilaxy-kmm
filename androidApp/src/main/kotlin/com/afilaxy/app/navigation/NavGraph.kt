@@ -361,35 +361,8 @@ fun NavGraph(
             HelpScreen(navController = navController)
         }
 
-        // Detalhe de Evento
-        composable(
-            route = AppRoutes.EVENTO_DETAIL,
-            arguments = listOf(navArgument("eventoId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val eventoId = backStackEntry.arguments?.getString("eventoId") ?: ""
-            val evento = eventos.find { it.id == eventoId }
-            if (evento != null) {
-                EventoDetailScreen(
-                    evento = evento,
-                    onBackClick = { navController.popBackStack() }
-                )
-            }
-        }
 
-        // Detalhe de Produto
-        composable(
-            route = AppRoutes.PRODUTO_DETAIL,
-            arguments = listOf(navArgument("produtoId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val produtoId = backStackEntry.arguments?.getString("produtoId") ?: ""
-            val produto = produtos.find { it.id == produtoId }
-            if (produto != null) {
-                ProdutoDetailScreen(
-                    produto = produto,
-                    onBackClick = { navController.popBackStack() }
-                )
-            }
-        }
+
 
         // Tela de Navegação (Google Maps)
         composable(
