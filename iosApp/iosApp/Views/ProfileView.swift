@@ -123,13 +123,16 @@ struct ProfileView: View {
                             accentColor: .afiError
                         )
                         
-                        // Protocolo Card
-                        InfoGridItem(
-                            title: "Protocolo de Crise",
-                            value: "3 passos definidos",
-                            icon: "list.clipboard.fill",
-                            accentColor: .afiWarning
-                        )
+                        // Protocolo Card — navega para HelpView
+                        NavigationLink(destination: HelpView()) {
+                            InfoGridItem(
+                                title: "Protocolo de Crise",
+                                value: "Ver passos de emergência",
+                                icon: "list.clipboard.fill",
+                                accentColor: .afiWarning
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     
                     // Quick Actions

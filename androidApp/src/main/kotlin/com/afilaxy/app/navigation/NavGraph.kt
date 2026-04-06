@@ -232,7 +232,9 @@ fun NavGraph(
             AfilaxyAppScaffoldSimple(navController = navController) {
                 ProfileScreenNew(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) }
+                    onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
+                    onNavigateToPrivacy = { navController.navigate(AppRoutes.PRIVACY) },
+                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) }
                 )
             }
         }
