@@ -43,10 +43,9 @@ import java.util.Calendar
 @Composable
 fun HomeScreenNew(
     onNavigateToEmergency: () -> Unit,
-    onNavigateToProfile: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToCommunity: () -> Unit = {},
+
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToProfessionals: () -> Unit,
     onNavigateToEducation: () -> Unit = {},
@@ -178,13 +177,10 @@ fun HomeScreenNew(
             HomeQuickActions(
                 onNavigateToProfessionals = onNavigateToProfessionals,
                 onNavigateToEducation = onNavigateToEducation,
-                onNavigateToHistory = onNavigateToHistory,
-                onNavigateToProfile = onNavigateToProfile
+                onNavigateToHistory = onNavigateToHistory
             )
         }
 
-        // Feed da comunidade — placeholder (espelha iOS communityFeedPreview)
-        item { HomeCommunityFeedPreview(onNavigateToCommunity = onNavigateToCommunity) }
 
         // Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
         item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap) }
@@ -459,9 +455,9 @@ private fun HomeEmergencyButton(
 private fun HomeQuickActions(
     onNavigateToProfessionals: () -> Unit,
     onNavigateToEducation: () -> Unit,
-    onNavigateToHistory: () -> Unit,
-    onNavigateToProfile: () -> Unit
+    onNavigateToHistory: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Acesso Rápido",
@@ -499,10 +495,10 @@ private fun HomeQuickActions(
                 modifier = Modifier.weight(1f)
             )
             HomeActionCard(
-                title = "Perfil",
-                subtitle = "Seu cadastro",
-                icon = Icons.Default.Person,
-                onClick = onNavigateToProfile,
+                title = "Comunidade",
+                subtitle = "Grupo no WhatsApp",
+                icon = Icons.Default.Group,
+                onClick = { openWhatsAppGroup(context) },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -609,8 +605,10 @@ private fun HomeHelperModeCard(
     }
 }
 
+
+
 // ---------------------------------------------------------------------------
-// Comunidade — preview placeholder (espelha iOS communityFeedPreview)
+// WhatsApp — grupo da comunidade
 // ---------------------------------------------------------------------------
 
 private const val WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/BmSp54ER4hHBeow0KYCedL"
@@ -619,87 +617,6 @@ private fun openWhatsAppGroup(context: android.content.Context) {
     val uri = Uri.parse(WHATSAPP_GROUP_URL)
     val intent = Intent(Intent.ACTION_VIEW, uri)
     context.startActivity(intent)
-}
-
-@Composable
-private fun HomeCommunityFeedPreview(onNavigateToCommunity: () -> Unit) {
-    val context = LocalContext.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Comunidade",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                TextButton(onClick = { openWhatsAppGroup(context) }) {
-                    Text("Ver Mais", style = MaterialTheme.typography.labelMedium)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            HomeCommunityPostItem(
-                author = "Maria S.",
-                content = "Consegui controlar melhor minha asma seguindo as dicas do app! 💪",
-                timeAgo = "2h"
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            HomeCommunityPostItem(
-                author = "João P.",
-                content = "Alguém sabe onde encontrar bombinha mais barata na região?",
-                timeAgo = "4h"
-            )
-        }
-    }
-}
-
-@Composable
-private fun HomeCommunityPostItem(author: String, content: String, timeAgo: String) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = author.take(1),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-        Column {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = author,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = timeAgo,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2
-            )
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

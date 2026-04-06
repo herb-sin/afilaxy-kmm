@@ -42,17 +42,13 @@ struct HomeView: View {
                 // Quick Actions Grid
                 quickActionsGrid
 
-                // Community Feed Preview
-                communityFeedPreview
-
                 // Support Links
                 supportLinksSection
             }
             .padding()
         }
         .background(Color.afiBackground)
-        .navigationTitle("Afilaxy")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
@@ -293,44 +289,7 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Community Feed Preview
-    private var communityFeedPreview: some View {
-        AfilaxyCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Comunidade")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.afiTextPrimary)
-                    
-                    Spacer()
-                    
-                    Button("Ver Mais") {
-                        if let url = URL(string: "https://chat.whatsapp.com/BmSp54ER4hHBeow0KYCedL") {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.afiPrimary)
-                }
-                
-                VStack(spacing: 8) {
-                    CommunityPostPreview(
-                        author: "Maria S.",
-                        content: "Consegui controlar melhor minha asma seguindo as dicas do app! 💪",
-                        timeAgo: "2h"
-                    )
-                    
-                    CommunityPostPreview(
-                        author: "João P.",
-                        content: "Alguém sabe onde encontrar bombinha mais barata na região?",
-                        timeAgo: "4h"
-                    )
-                }
-            }
-        }
-    }
-    
+
     // MARK: - Support Links
     private var supportLinksSection: some View {
         AfilaxyCard {
@@ -477,8 +436,6 @@ struct HomeView: View {
             ProfessionalListView()
         case .education:
             EducationView()
-        case .community:
-            CommunityView()
         case .help:
             HelpView()
         case .professionalDetail(let id):
@@ -533,45 +490,6 @@ struct PendingEmergencyRow: View {
     }
 }
 
-struct CommunityPostPreview: View {
-    let author: String
-    let content: String
-    let timeAgo: String
-    
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Circle()
-                .fill(Color.afiPrimary.opacity(0.2))
-                .frame(width: 32, height: 32)
-                .overlay(
-                    Text(String(author.prefix(1)))
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.afiPrimary)
-                )
-            
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text(author)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.afiTextPrimary)
-                    
-                    Text(timeAgo)
-                        .font(.caption2)
-                        .foregroundColor(.afiTextSecondary)
-                }
-                
-                Text(content)
-                    .font(.caption)
-                    .foregroundColor(.afiTextSecondary)
-                    .lineLimit(2)
-            }
-            
-            Spacer()
-        }
-    }
-}
 
 struct SupportLinkRow: View {
     let title: String

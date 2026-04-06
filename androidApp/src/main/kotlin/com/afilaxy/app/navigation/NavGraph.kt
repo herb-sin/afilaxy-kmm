@@ -16,8 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.afilaxy.app.ui.screens.*
 import com.afilaxy.app.ui.scaffold.AfilaxyAppScaffoldSimple
-import com.afilaxy.domain.model.Evento
-import com.afilaxy.domain.model.Produto
+
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -25,7 +24,7 @@ import org.koin.androidx.compose.koinViewModel
 
 private val protectedRoutes = setOf(
     AppRoutes.HOME, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
-    AppRoutes.SETTINGS, AppRoutes.COMMUNITY, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
+    AppRoutes.SETTINGS, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
     AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.MAP_PHARMACY, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
     AppRoutes.TERMS, AppRoutes.PRIVACY, AppRoutes.PORTAL, "emergency_request", "emergency_response", AppRoutes.CHAT
 )
@@ -129,20 +128,6 @@ fun NavGraph(
     }
 
 
-    // Dados da comunidade — centralizados aqui para reuso nas rotas de detalhe
-    val produtos = listOf(
-        Produto("1", "Bombinha de Asma", "Bombinha para crises de asma. Disponível sem receita em algumas farmácias.", 45.0, "Medicamentos",
-            precoOriginal = "59.90", cupom = "AFILAXY10", desconto = "R$ 14,90", validadeCupom = "31/12/2025", farmacia = "Farmácias Nissei"),
-        Produto("2", "Espaçador", "Espaçador para bombinha — melhora absorção do medicamento.", 25.0, "Acessórios",
-            precoOriginal = "35.00", cupom = "ESPA20", desconto = "R$ 10,00", validadeCupom = "30/06/2025", farmacia = "Ultrafarma")
-    )
-    val eventos = listOf(
-        Evento("1", "Palestra sobre Asma", "Aprenda a controlar a asma com especialistas.", "15/12/2024", "Centro Comunitário",
-            organizador = "ABRA", horario = "14h"),
-        Evento("2", "Grupo de Apoio", "Encontro mensal de apoio para pacientes.", "20/12/2024", "Online",
-            organizador = "Crônicos do Dia-a-Dia", horario = "19h")
-    )
-    
     NavHost(
         navController = navController,
         startDestination = startDestination ?: AppRoutes.LOGIN
@@ -189,10 +174,9 @@ fun NavGraph(
             AfilaxyAppScaffoldSimple(navController = navController) {
                 HomeScreenNew(
                     onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
-                    onNavigateToProfile = { navController.navigate(AppRoutes.PROFILE) },
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
                     onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
-                    onNavigateToCommunity = { navController.navigate(AppRoutes.COMMUNITY) },
+
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
                     onNavigateToEducation = { navController.navigate("education") },
@@ -335,13 +319,6 @@ fun NavGraph(
             AboutScreen(navController = navController)
         }
         
-        composable(AppRoutes.COMMUNITY) {
-            CommunityScreen(
-                navController = navController,
-                produtos = produtos,
-                eventos = eventos
-            )
-        }
 
         composable(AppRoutes.AUTOCUIDADO) {
             AutocuidadoScreen(navController = navController)
