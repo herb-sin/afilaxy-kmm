@@ -8,7 +8,9 @@ import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
-import com.afilaxy.presentation.professional.*
+import com.afilaxy.presentation.professional.CrmLookupViewModel
+import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
+import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.presentation.medical.MedicalProfileViewModel
@@ -39,8 +41,6 @@ fun sharedModule(): Module = module {
     
     // New repositories for expanded features
     single<MedicalRepository> { MedicalRepositoryImpl(get()) }
-    single<SocialRepository> { SocialRepositoryImpl(get()) }
-    single<ProfessionalRepository> { ProfessionalRepositoryImpl(get()) }
     
     // LocationRepository é injetado no platformModule()
     
@@ -63,7 +63,6 @@ fun sharedModule(): Module = module {
     // New ViewModels for expanded features
     factory { HomeViewModel(get(), get(), get()) }
     factory { MedicalProfileViewModel(get(), "default_user") }
-    factory { ProfessionalDashboardViewModel(get(), "default_professional") }
 }
 
 /**

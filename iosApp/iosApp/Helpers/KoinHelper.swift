@@ -58,7 +58,3 @@ func safeGetHomeViewModel() -> HomeViewModel? {
 func safeGetMedicalProfileViewModel() -> MedicalProfileViewModel? {
     koinGet({ try KoinHelperKt.safeGetMedicalProfileViewModel() }, tag: "MedicalProfileViewModel")
 }
-
-func safeGetProfessionalDashboardViewModel() -> ProfessionalDashboardViewModel? {
-    koinGet({ try KoinHelperKt.safeGetProfessionalDashboardViewModel() }, tag: "ProfessionalDashboardViewModel")
-}
