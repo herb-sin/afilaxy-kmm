@@ -3,6 +3,7 @@ package com.afilaxy.app.navigation
 object AppRoutes {
     const val LOGIN = "login"
     const val REGISTER = "register"
+    const val CONSENT = "consent"
     const val HOME = "home"
     const val EMERGENCY = "emergency"
     const val EMERGENCY_REQUEST = "emergency_request"

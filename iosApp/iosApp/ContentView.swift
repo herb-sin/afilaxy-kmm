@@ -41,6 +41,7 @@ struct ContentView: View {
     @EnvironmentObject var container: AppContainer
     @State private var isLoggedIn = false
     @State private var selectedTab: Tab = .home
+    @AppStorage("consent_shown") private var consentShown = false
     
     // Navigation paths for each tab
     @State private var homeNavigationPath = NavigationPath()
@@ -64,6 +65,9 @@ struct ContentView: View {
 
     var body: some View {
         if isLoggedIn {
+            if !consentShown {
+                ConsentView(onConsentGiven: { consentShown = true })
+            } else {
             TabView(selection: $selectedTab) {
                 // MARK: - Home Tab
                 NavigationStack(path: $homeNavigationPath) {
@@ -186,7 +190,9 @@ struct ContentView: View {
                 chatNavigatedId = nil
                 emergencyRouteActive = false
             }
+            } // end else (consentShown)
         } else {
+            // ── Login ─────────────────────────────────────────────────────
             LoginView(onLoginSuccess: {
                 isLoggedIn = true
             })

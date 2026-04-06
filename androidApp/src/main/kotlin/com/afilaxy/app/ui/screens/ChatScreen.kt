@@ -1,10 +1,12 @@
 package com.afilaxy.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -13,8 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
@@ -26,6 +30,7 @@ import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -48,12 +53,25 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var messageText by remember { mutableStateOf("") }
     var showResolveDialog by remember { mutableStateOf(false) }
+    var showRatingDialog by remember { mutableStateOf(false) }
+    var samuCalled by remember { mutableStateOf(false) }
+
+    val emergencyRepo: EmergencyRepository = koinInject()
+    val scope = rememberCoroutineScope()
+
+    // Participantes da emergência (para saber quem avaliar)
+    var reviewedId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(emergencyId) {
+        emergencyRepo.getEmergencyParticipants(emergencyId).onSuccess { (requesterId, helperId) ->
+            val currentUserId = state.currentUserId
+            reviewedId = if (currentUserId == requesterId) helperId else requesterId
+        }
+    }
 
     // Observa o status da emergência DIRETAMENTE via EmergencyRepository (Firestore snapshot).
     // Mesmo padrão do statusListener do iOS ChatView — funciona para os dois lados
     // (requester e helper) sem depender do ViewModel, evitando a race condition que
     // existia antes entre emergencyStatus e currentEmergency chegando juntos.
-    val emergencyRepo: EmergencyRepository = koinInject()
     var resolvedByOther by remember { mutableStateOf(false) }
     LaunchedEffect(emergencyId) {
         emergencyRepo.observeEmergencyStatus(emergencyId).collect { status ->
@@ -112,6 +130,24 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    // Botão SAMU — visível enquanto emergência ativa e ainda não acionado
+                    if (!isResolved && !samuCalled) {
+                        TextButton(onClick = {
+                            scope.launch {
+                                emergencyRepo.updateSamuCalled(emergencyId)
+                                samuCalled = true
+                            }
+                        }) {
+                            Text("🚑 SAMU", color = MaterialTheme.colorScheme.error)
+                        }
+                    } else if (samuCalled) {
+                        Text(
+                            text = "🚑 SAMU acionado",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
                     if (!resolvedByOther) {
                         TextButton(onClick = { showResolveDialog = true }) {
                             Text("Resolver", color = MaterialTheme.colorScheme.primary)
@@ -253,10 +289,10 @@ fun ChatScreen(
                 TextButton(
                     onClick = {
                         showResolveDialog = false
-                        // onResolveEmergency() atualiza status="resolved" no Firestore.
-                        // A outra parte detecta via LaunchedEffect(emergencyVmState?.emergencyStatus).
                         emergencyViewModel?.onResolveEmergency()
-                        onNavigateBack()
+                        // Mostra avaliação se soubermos quem avaliar
+                        if (reviewedId != null) showRatingDialog = true
+                        else onNavigateBack()
                     }
                 ) {
                     Text("Resolver")
@@ -266,6 +302,25 @@ fun ChatScreen(
                 TextButton(onClick = { showResolveDialog = false }) {
                     Text("Continuar no Chat")
                 }
+            }
+        )
+    }
+
+    if (showRatingDialog) {
+        val rid = reviewedId
+        RatingDialog(
+            onSubmit = { rating, comment ->
+                showRatingDialog = false
+                if (rid != null) {
+                    scope.launch {
+                        emergencyRepo.submitReview(emergencyId, rid, rating, comment)
+                    }
+                }
+                onNavigateBack()
+            },
+            onSkip = {
+                showRatingDialog = false
+                onNavigateBack()
             }
         )
     }
@@ -336,4 +391,59 @@ private fun MessageBubble(
             }
         }
     }
+}
+
+// ── RatingDialog ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun RatingDialog(
+    onSubmit: (rating: Int, comment: String?) -> Unit,
+    onSkip: () -> Unit
+) {
+    var selectedRating by remember { mutableStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onSkip,
+        title = { Text("Como foi o atendimento?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Avalie a pessoa que te ajudou nesta emergência.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                // Estrelas
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (i in 1..5) {
+                        Text(
+                            text = if (i <= selectedRating) "⭐" else "☆",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.clickable { selectedRating = i }
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    placeholder = { Text("Comentário opcional") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSubmit(
+                        selectedRating.coerceAtLeast(1),
+                        comment.trim().ifEmpty { null }
+                    )
+                }
+            ) { Text("Enviar e Encerrar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onSkip) { Text("Pular") }
+        }
+    )
 }

@@ -13,6 +13,7 @@ struct EmergencyView: View {
 
     @State private var isCancelling = false
     @State private var lastEmergencyId: String? = nil
+    @State private var selectedSeverity: String? = nil
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -43,6 +44,11 @@ struct EmergencyView: View {
         if locationManager.hasPermission {
             LocationManagerBridge.shared.start()
             if locationManager.currentLocation != nil {
+                // Grava timestamp da primeira emergência para NPS timing
+                if UserDefaults.standard.string(forKey: "first_emergency_at") == nil {
+                    let nowMs = String(Int64(Date().timeIntervalSince1970 * 1000))
+                    UserDefaults.standard.set(nowMs, forKey: "first_emergency_at")
+                }
                 FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "using cached location — calling onCreateEmergency")
                 container.emergency.vm?.onCreateEmergency()
             } else {
@@ -155,7 +161,31 @@ struct EmergencyView: View {
                             .foregroundColor(secondsLeft <= 30 ? .red : .orange)
                             .monospacedDigit()
                     }
-                    // Botão de fallback: visível quando o match ocorreu mas a navegação falhou
+
+                    // Seletor de gravidade (pós-criação, enquanto aguarda)
+                    if state.currentEmergency?.assignedHelperId == nil && !chatNavigated {
+                        if let eid = container.emergency.state?.emergencyId as? String, !eid.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Como você está se sentindo?")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                HStack(spacing: 8) {
+                                    SeverityChipView("🟡", "Leve", "leve", selectedSeverity) {
+                                        selectedSeverity = "leve"
+                                        updateSeverity(emergencyId: eid, severity: "leve")
+                                    }
+                                    SeverityChipView("🟠", "Moderada", "moderada", selectedSeverity) {
+                                        selectedSeverity = "moderada"
+                                        updateSeverity(emergencyId: eid, severity: "moderada")
+                                    }
+                                    SeverityChipView("🔴", "Grave", "grave", selectedSeverity) {
+                                        selectedSeverity = "grave"
+                                        updateSeverity(emergencyId: eid, severity: "grave")
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if chatNavigated {
                         Button {
                             if let eid = container.emergency.state?.emergencyId as? String {
@@ -274,5 +304,53 @@ struct EmergencyView: View {
                 startCountdown(expiresAt: nil)
             }
         }
+    }
+}
+
+// MARK: - Analytics Helpers
+
+extension EmergencyView {
+    private func updateSeverity(emergencyId: String, severity: String) {
+        Firestore.firestore().collection("emergency_requests").document(emergencyId)
+            .updateData(["severity": severity])
+    }
+}
+
+// MARK: - SeverityChipView
+
+private struct SeverityChipView: View {
+    let emoji: String
+    let label: String
+    let value: String
+    let selected: String?
+    let onSelect: () -> Void
+
+    init(_ emoji: String, _ label: String, _ value: String, _ selected: String?, _ onSelect: @escaping () -> Void) {
+        self.emoji = emoji; self.label = label; self.value = value
+        self.selected = selected; self.onSelect = onSelect
+    }
+
+    var isSelected: Bool { selected == value }
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 4) {
+                Text(emoji).font(.caption)
+                Text(label).font(.caption).fontWeight(isSelected ? .bold : .regular)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? Color.red.opacity(0.18) : Color(.systemGray6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isSelected ? Color.red : Color.secondary.opacity(0.4),
+                                    lineWidth: isSelected ? 1.5 : 0.5)
+                    )
+            )
+            .foregroundColor(.primary)
+        }
+        .buttonStyle(.plain)
     }
 }

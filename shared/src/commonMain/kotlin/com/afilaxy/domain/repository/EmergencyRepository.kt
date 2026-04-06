@@ -24,4 +24,25 @@ interface EmergencyRepository {
     fun observeNearbyHelpers(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Helper>>
     fun observeEmergencyStatus(emergencyId: String): Flow<String?>
     suspend fun getEmergencyExpiresAt(emergencyId: String): Long?
+
+    // ── Analytics & Data Enrichment ──────────────────────────────────────────
+    /** Grava a gravidade da emergência (leve / moderada / grave). */
+    suspend fun updateSeverity(emergencyId: String, severity: String): Result<Unit>
+
+    /** Registra que o usuário acionou o SAMU durante o chat. */
+    suspend fun updateSamuCalled(emergencyId: String): Result<Unit>
+
+    /** Salva avaliação (1–5 ⭐) + comentário opcional em `reviews`. */
+    suspend fun submitReview(
+        emergencyId: String,
+        reviewedId: String,
+        rating: Int,
+        comment: String?
+    ): Result<Unit>
+
+    /** Grava resposta NPS (0–10) em `nps_responses`. */
+    suspend fun submitNps(score: Int): Result<Unit>
+
+    /** Retorna (requesterId, helperId) para montar a avaliação correta. */
+    suspend fun getEmergencyParticipants(emergencyId: String): Result<Pair<String?, String?>>
 }
