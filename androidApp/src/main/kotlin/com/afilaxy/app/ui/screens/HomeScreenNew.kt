@@ -613,8 +613,17 @@ private fun HomeHelperModeCard(
 // Comunidade — preview placeholder (espelha iOS communityFeedPreview)
 // ---------------------------------------------------------------------------
 
+private const val WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/BmSp54ER4hHBeow0KYCedL"
+
+private fun openWhatsAppGroup(context: android.content.Context) {
+    val uri = Uri.parse(WHATSAPP_GROUP_URL)
+    val intent = Intent(Intent.ACTION_VIEW, uri)
+    context.startActivity(intent)
+}
+
 @Composable
 private fun HomeCommunityFeedPreview(onNavigateToCommunity: () -> Unit) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -631,7 +640,7 @@ private fun HomeCommunityFeedPreview(onNavigateToCommunity: () -> Unit) {
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                TextButton(onClick = onNavigateToCommunity) {
+                TextButton(onClick = { openWhatsAppGroup(context) }) {
                     Text("Ver Mais", style = MaterialTheme.typography.labelMedium)
                 }
             }

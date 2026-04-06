@@ -286,7 +286,9 @@ struct HomeView: View {
                 subtitle: "Conecte-se com outros",
                 icon: "person.3.fill"
             ) {
-                navigationPath.append(AppRoute.community)
+                if let url = URL(string: "https://chat.whatsapp.com/BmSp54ER4hHBeow0KYCedL") {
+                    UIApplication.shared.open(url)
+                }
             }
         }
     }
@@ -304,7 +306,9 @@ struct HomeView: View {
                     Spacer()
                     
                     Button("Ver Mais") {
-                        navigationPath.append(AppRoute.community)
+                        if let url = URL(string: "https://chat.whatsapp.com/BmSp54ER4hHBeow0KYCedL") {
+                            UIApplication.shared.open(url)
+                        }
                     }
                     .font(.subheadline)
                     .foregroundColor(.afiPrimary)
