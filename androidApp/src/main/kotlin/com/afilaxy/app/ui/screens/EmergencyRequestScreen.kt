@@ -56,17 +56,19 @@ fun EmergencyRequestScreen(
         FileLogger.log("DEBUG", "EmergencyRequestScreen", "emergencyStatus=${state.emergencyStatus}")
         if (state.emergencyStatus == "matched" && !navigatedToChat && state.isRequester
             && (state.emergencyId == null || state.emergencyId == emergencyId)) {
-            // Guard de rota: não navega se já estiver no chat para este emergencyId
-            // (pode acontecer se esta é uma segunda instância criada por FCM tardio).
+            // Guard de rota: não navega se já estiver no chat ou se a instância anterior
+            // já abriu o chat para este emergencyId (segunda instância criada por FCM tardio).
             val currentRoute = navController.currentDestination?.route ?: ""
             if (currentRoute.startsWith("chat/")) {
                 FileLogger.log("DEBUG", "EmergencyRequestScreen",
-                    "chat já aberto (currentRoute=$currentRoute) — ignorando navegação duplicada emergencyId=$emergencyId")
-                navigatedToChat = true   // sinaliza para não tentar novamente
+                    "chat já aberto (currentRoute=$currentRoute) — ignorando emergencyId=$emergencyId")
+                navigatedToChat = true
                 return@LaunchedEffect
             }
             navigatedToChat = true
             val chatId = state.emergencyId ?: emergencyId
+            FileLogger.log("INFO", "EmergencyRequestScreen",
+                "navigating to chat emergencyId=$chatId (from request screen)")
             navController.navigate("chat/$chatId") {
                 popUpTo("emergency_request/$emergencyId") { inclusive = true }
             }
