@@ -266,15 +266,18 @@ fun NavGraph(
                             "onNavigateToRequest ignorado — chat já aberto emergencyId=$emergencyId")
                         return@EmergencyScreen
                     }
-                    // Guard 2: rota atual já é chat ou emergency_request para este mesmo ID.
-                    // Impede que updateSamuCalled (write no Firestore) cause re-emissão do
-                    // EmergencyViewModel, re-disparando o LaunchedEffect do EmergencyScreen que
-                    // ainda está na back stack, empurrando EmergencyRequestScreen em cima do chat.
-                    val currentRoute = navController.currentDestination?.route ?: ""
-                    if (currentRoute.startsWith("chat/") ||
-                        currentRoute == "emergency_request/$emergencyId") {
+                    // Guard 2: pilha de navegação já contém chat/ ou emergency_request/.
+                    // Usa currentBackStack.value (lista completa) em vez de currentDestination
+                    // para evitar leituras stale de snapshot Compose em contexto de coroutine.
+                    val backStack = navController.currentBackStack.value
+                    val alreadyInChatOrRequest = backStack.any { entry ->
+                        val route = entry.destination.route ?: ""
+                        route.startsWith("chat/") || route.startsWith("emergency_request/")
+                    }
+                    if (alreadyInChatOrRequest) {
+                        val routes = backStack.mapNotNull { it.destination.route }.joinToString()
                         FileLogger.log("DEBUG", "NavGraph",
-                            "onNavigateToRequest ignorado — rota atual=$currentRoute")
+                            "onNavigateToRequest ignorado — back stack=$routes")
                         return@EmergencyScreen
                     }
                     navController.navigate("emergency_request/$emergencyId") {

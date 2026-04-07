@@ -85,18 +85,23 @@ fun EmergencyRequestScreen(
 
             // Guard 1 (externo): NavGraph já registrou que o chat foi aberto nesta sessão
             if (alreadyInChat(emergencyId)) {
-                FileLogger.log("DEBUG", "EmergencyRequestScreen",
-                    "chat já aberto (chatNavigatedIds) — ignorando emergencyId=$emergencyId")
+                FileLogger.log("INFO", "EmergencyRequestScreen",
+                    "chat já aberto — auto-retornando ao chat emergencyId=$emergencyId")
                 navigatedToChat = true
+                // Esta tela foi empurrada incorretamente enquanto o chat estava ativo.
+                // popBackStack() retira emergency_request da pilha e devolve o usuário ao chat.
+                navController.popBackStack()
                 return@LaunchedEffect
             }
 
-            // Guard 2 (local): rota atual já é chat/
-            val currentRoute = navController.currentDestination?.route ?: ""
-            if (currentRoute.startsWith("chat/")) {
-                FileLogger.log("DEBUG", "EmergencyRequestScreen",
-                    "chat já aberto (currentRoute=$currentRoute) — ignorando emergencyId=$emergencyId")
+            // Guard 2 (local): pilha contém chat/ → ignorar e auto-pop
+            val backStack = navController.currentBackStack.value
+            val inChat = backStack.any { (it.destination.route ?: "").startsWith("chat/") }
+            if (inChat) {
+                FileLogger.log("INFO", "EmergencyRequestScreen",
+                    "chat já na pilha (Guard 2) — auto-retornando emergencyId=$emergencyId")
                 navigatedToChat = true
+                navController.popBackStack()
                 return@LaunchedEffect
             }
             navigatedToChat = true
