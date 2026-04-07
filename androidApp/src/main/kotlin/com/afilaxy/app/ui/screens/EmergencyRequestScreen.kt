@@ -30,7 +30,11 @@ import org.koin.compose.koinInject
 fun EmergencyRequestScreen(
     navController: NavController,
     emergencyId: String,
-    viewModel: EmergencyViewModel = koinViewModel()
+    viewModel: EmergencyViewModel = koinViewModel(),
+    // Guard externo: injeta o set de chatNavigatedIds do NavGraph para bloquear
+    // uma segunda instância da tela (criada por FCM tardio ou recomposição do
+    // EmergencyScreen) que tente navegar para um chat já aberto.
+    alreadyInChat: (String) -> Boolean = { false }
 ) {
     val state by viewModel.state.collectAsState()
     val emergencyRepo: EmergencyRepository = koinInject()
@@ -73,15 +77,21 @@ fun EmergencyRequestScreen(
     }
 
     // Navegar para chat quando helper aceitar — apenas se for o requester e emergencyId correto
-    // rememberSaveable: sobrevive à recomposição causada por uma segunda notificação FCM
-    // empurrando uma nova instância da tela com navigatedToChat=false (mesmo emergencyId).
     var navigatedToChat by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.emergencyStatus, state.emergencyId) {
         FileLogger.log("DEBUG", "EmergencyRequestScreen", "emergencyStatus=${state.emergencyStatus}")
         if (state.emergencyStatus == "matched" && !navigatedToChat && state.isRequester
             && (state.emergencyId == null || state.emergencyId == emergencyId)) {
-            // Guard de rota: não navega se já estiver no chat ou se a instância anterior
-            // já abriu o chat para este emergencyId (segunda instância criada por FCM tardio).
+
+            // Guard 1 (externo): NavGraph já registrou que o chat foi aberto nesta sessão
+            if (alreadyInChat(emergencyId)) {
+                FileLogger.log("DEBUG", "EmergencyRequestScreen",
+                    "chat já aberto (chatNavigatedIds) — ignorando emergencyId=$emergencyId")
+                navigatedToChat = true
+                return@LaunchedEffect
+            }
+
+            // Guard 2 (local): rota atual já é chat/
             val currentRoute = navController.currentDestination?.route ?: ""
             if (currentRoute.startsWith("chat/")) {
                 FileLogger.log("DEBUG", "EmergencyRequestScreen",

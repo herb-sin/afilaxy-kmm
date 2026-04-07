@@ -288,7 +288,8 @@ fun NavGraph(
             EmergencyRequestScreen(
                 emergencyId = emergencyId,
                 navController = navController,
-                viewModel = emergencyViewModel ?: koinViewModel()
+                viewModel = emergencyViewModel ?: koinViewModel(),
+                alreadyInChat = { id -> id in chatNavigatedIds.value }
             )
         }
         
