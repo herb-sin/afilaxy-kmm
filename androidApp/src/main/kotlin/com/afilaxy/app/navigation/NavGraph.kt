@@ -112,6 +112,31 @@ fun NavGraph(
             pendingDestination.value = null
             return@LaunchedEffect
         }
+
+        // Guard: notificação FCM de emergency_request quando o chat já está ativo.
+        // Sem este guard, popUpTo(HOME) eliminaria o CHAT da pilha, e o popBackStack()
+        // do EmergencyRequestScreen enviaria o usuário à HOME em vez de voltar ao chat.
+        val destRequestId = if (dest.startsWith("emergency_request/"))
+            dest.removePrefix("emergency_request/") else null
+        if (destRequestId != null && destRequestId in chatNavigatedIds.value) {
+            FileLogger.log("DEBUG", "NavGraph",
+                "pendingDestination: chat já aberto — redirecionando ao chat emergencyId=$destRequestId")
+            // Navega para o chat existente sem popUpTo para preservar a pilha
+            navController.navigate("chat/$destRequestId") { launchSingleTop = true }
+            pendingDestination.value = null
+            return@LaunchedEffect
+        }
+
+        // Também protege se a pilha já contém chat/ para este ID (backStack check)
+        val backStack = navController.currentBackStack.value
+        if (destRequestId != null && backStack.any { (it.destination.route ?: "").startsWith("chat/") }) {
+            FileLogger.log("DEBUG", "NavGraph",
+                "pendingDestination: backStack contém chat — redirecionando emergencyId=$destRequestId")
+            navController.navigate("chat/$destRequestId") { launchSingleTop = true }
+            pendingDestination.value = null
+            return@LaunchedEffect
+        }
+
         navController.navigate(dest) {
             launchSingleTop = true
             popUpTo(AppRoutes.HOME) { saveState = false }

@@ -265,6 +265,17 @@ class AppContainer: ObservableObject {
                 self.fcmDeliveredIds.insert(emergencyId)
                 FileLogger.shared.write(level: "DEBUG", tag: "AppContainer", message: "FCM: banner remoto já entregue, local suprimido emergencyId=\(emergencyId)")
             }
+        NotificationCenter.default.publisher(for: .init("AfilaxyEmergencyResolved"))
+            .sink { [weak self] notification in
+                guard let self = self,
+                      let emergencyId = notification.userInfo?["emergencyId"] as? String else { return }
+                // Remove emergencyId da lista de pendentes quando resolvida —
+                // evita o card 'Emergências Pendentes' aparecer na home após encerramento.
+                self.pendingIncomingEmergencies.removeAll { $0.id == emergencyId }
+                self.notifiedEmergencyIds.remove(emergencyId)
+                FileLogger.shared.write(level: "DEBUG", tag: "AppContainer",
+                    message: "AfilaxyEmergencyResolved: pendingIncoming limpo emergencyId=\(emergencyId)")
+            }
             .store(in: &cancellables)
     }
 
@@ -283,37 +294,46 @@ class AppContainer: ObservableObject {
                 // não processa eventos — evita auto-match onde requesterId!=nil≡true passaria.
                 guard let uid = Auth.auth().currentUser?.uid else { return }
                 let ownEmergencyId = self.emergency.state?.emergencyId as? String
-                snapshot.documentChanges
-                    .filter { $0.type == .added }
-                    .forEach { change in
-                        let data = change.document.data()
-                        let docId = change.document.documentID
-                        guard let requesterId = data["requesterId"] as? String,
-                              requesterId != uid,       // não é emergência criada pelo próprio usuário
-                              docId != ownEmergencyId, // camada extra: ID não confere com ViewModel
-                              self.emergency.state?.isRequester != true, // defesa extra: ViewModel já marcou como requester
-                              !self.notifiedEmergencyIds.contains(docId),
-                              (data["status"] as? String) == "waiting" else { return }
-                        let docDate: Date
-                        if let ts = data["timestamp"] as? Timestamp {
-                            docDate = ts.dateValue()
-                        } else if let ms = (data["timestamp"] as? Int64)
-                                    ?? (data["timestamp"] as? Int).map(Int64.init)
-                                    ?? (data["timestamp"] as? Double).map(Int64.init) {
-                            guard ms > 0 else { return }
-                            docDate = Date(timeIntervalSince1970: Double(ms) / 1000)
-                        } else { return }
-                        if docDate < startTime { return }
-                        self.notifiedEmergencyIds.insert(docId)
-                        let name = data["requesterName"] as? String ?? "Alguém"
-                        FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
-                        self.pendingIncomingEmergencies.append((id: docId, name: name))
-                        // Não dispara notificação local — o FCM remoto (Cloud Function
-                        // onEmergencyCreated) é o canal de notificação autorizado e já
-                        // exibiu o banner. Disparar aqui gerava dois banners independentes
-                        // porque o gRPC do Firestore fica ativo em background e dispara
-                        // ~20s antes do FCM chegar, com títulos diferentes.
+                snapshot.documentChanges.forEach { change in
+                    let data = change.document.data()
+                    let docId = change.document.documentID
+
+                    // Quando documento sai da query (active→false ou status→resolved),
+                    // remove da lista de pendentes mesmo se o card já estiver visível.
+                    if change.type == .removed || change.type == .modified {
+                        let isStillActive = (data["active"] as? Bool) == true
+                            && (data["status"] as? String) == "waiting"
+                        if !isStillActive {
+                            DispatchQueue.main.async {
+                                self.pendingIncomingEmergencies.removeAll { $0.id == docId }
+                            }
+                        }
+                        return
                     }
+
+                    // .added — mesmo guard original
+                    guard change.type == .added,
+                          let requesterId = data["requesterId"] as? String,
+                          requesterId != uid,
+                          docId != ownEmergencyId,
+                          self.emergency.state?.isRequester != true,
+                          !self.notifiedEmergencyIds.contains(docId),
+                          (data["status"] as? String) == "waiting" else { return }
+                    let docDate: Date
+                    if let ts = data["timestamp"] as? Timestamp {
+                        docDate = ts.dateValue()
+                    } else if let ms = (data["timestamp"] as? Int64)
+                                ?? (data["timestamp"] as? Int).map(Int64.init)
+                                ?? (data["timestamp"] as? Double).map(Int64.init) {
+                        guard ms > 0 else { return }
+                        docDate = Date(timeIntervalSince1970: Double(ms) / 1000)
+                    } else { return }
+                    if docDate < startTime { return }
+                    self.notifiedEmergencyIds.insert(docId)
+                    let name = data["requesterName"] as? String ?? "Alguém"
+                    FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
+                    self.pendingIncomingEmergencies.append((id: docId, name: name))
+                }
             }
     }
 
