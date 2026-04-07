@@ -29,16 +29,16 @@ extension Color {
     static let afiOnErrorContainer = Color(hex: "#410002")
     
     // MARK: - Surface Colors
-    static let afiSurface = Color(hex: "#f8f9ff")
-    static let afiSurfaceContainer = Color(hex: "#e5efff")
-    static let afiSurfaceContainerHigh = Color(hex: "#dfe8f9")
-    static let afiSurfaceContainerHighest = Color(hex: "#d9e2f3")
-    static let afiOnSurface = Color(hex: "#0d1c2d")
-    static let afiOnSurfaceVariant = Color(hex: "#42474e")
+    static let afiSurface = Color(.systemBackground)
+    static let afiSurfaceContainer = Color(.secondarySystemBackground)
+    static let afiSurfaceContainerHigh = Color(.tertiarySystemBackground)
+    static let afiSurfaceContainerHighest = Color(.tertiarySystemBackground)
+    static let afiOnSurface = Color(.label)
+    static let afiOnSurfaceVariant = Color(.secondaryLabel)
     
     // MARK: - Background Colors
-    static let afiBackground = Color(hex: "#f8f9ff")
-    static let afiOnBackground = Color(hex: "#0d1c2d")
+    static let afiBackground = Color(.systemBackground)
+    static let afiOnBackground = Color(.label)
     
     // MARK: - Outline Colors
     static let afiOutline = Color(hex: "#72777f")
