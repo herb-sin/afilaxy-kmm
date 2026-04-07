@@ -207,8 +207,8 @@ struct ProfessionalCTACard: View {
                     Spacer()
                 }
                 .padding(.vertical, 8)
-                .background(AfilaxyColors.primary.opacity(0.15))
-                .foregroundColor(AfilaxyColors.primary)
+                .background(AfilaxyColors.primary)
+                .foregroundColor(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
