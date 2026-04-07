@@ -260,18 +260,26 @@ fun NavGraph(
         composable(AppRoutes.EMERGENCY) {
             EmergencyScreen(
                 onNavigateToRequest = { emergencyId ->
-                    // Guard duplo: não abre emergency_request se o chat já foi aberto para este ID.
-                    // O LaunchedEffect do EmergencyScreen pode re-disparar quando o KMM emite um
-                    // state update ao receber dados do helper (currentEmergency actualizado com
-                    // helperId), mudando isRequester ou emergencyId e re-executando o effect.
-                    // wasNavigatedToRequest() deveria bloquear, mas pode falhar se o ViewModel
-                    // foi re-criado pelo Koin após o EmergencyScreen voltar ao topo da backstack.
+                    // Guard 1: chat já foi aberto para este emergencyId nesta sessão
                     if (emergencyId in chatNavigatedIds.value) {
                         FileLogger.log("DEBUG", "NavGraph",
                             "onNavigateToRequest ignorado — chat já aberto emergencyId=$emergencyId")
                         return@EmergencyScreen
                     }
-                    navController.navigate("emergency_request/$emergencyId")
+                    // Guard 2: rota atual já é chat ou emergency_request para este mesmo ID.
+                    // Impede que updateSamuCalled (write no Firestore) cause re-emissão do
+                    // EmergencyViewModel, re-disparando o LaunchedEffect do EmergencyScreen que
+                    // ainda está na back stack, empurrando EmergencyRequestScreen em cima do chat.
+                    val currentRoute = navController.currentDestination?.route ?: ""
+                    if (currentRoute.startsWith("chat/") ||
+                        currentRoute == "emergency_request/$emergencyId") {
+                        FileLogger.log("DEBUG", "NavGraph",
+                            "onNavigateToRequest ignorado — rota atual=$currentRoute")
+                        return@EmergencyScreen
+                    }
+                    navController.navigate("emergency_request/$emergencyId") {
+                        launchSingleTop = true  // evita duplicata se já estiver no topo
+                    }
                 },
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToChat = {},

@@ -5,6 +5,9 @@ import SwiftUI
 /// o valor já resolvido via `weeklyCount`.
 struct WeeklyStatusCard: View {
     let weeklyCount: Int  // -1 = carregando, 0 = nenhum, 1+
+    // Total acumulado de todas as semanas — nunca zera na virada ISO.
+    // -1 enquanto carrega (exibe skeleton junto com weeklyCount=-1).
+    var totalEmergencies: Int = -1
 
     private var config: StatusConfig { StatusConfig.from(count: weeklyCount) }
 
@@ -82,10 +85,18 @@ struct WeeklyStatusCard: View {
 
                 // Count pill (só se carregou)
                 if weeklyCount >= 0 {
+                    let total = totalEmergencies >= 0 ? totalEmergencies : weeklyCount
+                    let pillText: String = {
+                        if total == 0 { return "nenhum pedido ainda" }
+                        if total == 1 && weeklyCount == 1 { return "1 pedido \u00b7 1 esta semana" }
+                        if total == 1 { return "1 pedido no total" }
+                        if weeklyCount > 0 { return "\(total) no total \u00b7 \(weeklyCount) esta semana" }
+                        return "\(total) no total"
+                    }()
                     HStack(spacing: 6) {
                         Image(systemName: "waveform.path.ecg")
                             .font(.caption2)
-                        Text(config.pillText)
+                        Text(pillText)
                             .font(.caption.bold())
                     }
                     .foregroundColor(.white.opacity(0.9))

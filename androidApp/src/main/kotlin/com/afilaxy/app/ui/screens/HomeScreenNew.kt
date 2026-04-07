@@ -68,8 +68,11 @@ fun HomeScreenNew(
     var showHelperPermission by remember { mutableStateOf(false) }
     var showHelperConsentDialog by remember { mutableStateOf(false) }
     var showNps by remember { mutableStateOf(false) }
-    // -1 = carregando, 0 = nenhum pedido, 1+ = atenção/urgente
+    // -1 = carregando, 0 = nenhum pedido nesta semana, 1+ = atenção/urgente
     var weeklyCount by remember { mutableStateOf(-1) }
+    // Total acumulado de todas as semanas — nunca zera. Exibido no pill
+    // para que o usuário veja seu histórico real mesmo após virada de semana.
+    var totalEmergencies by remember { mutableStateOf(-1) }
 
     // NPS: exibe uma vez, 7 dias após a primeira emergência
     LaunchedEffect(Unit) {
@@ -121,7 +124,17 @@ fun HomeScreenNew(
                     is Number -> raw.toInt()
                     else      -> 0
                 }
-                FileLogger.log("DEBUG", "HomeScreenNew", "weeklyCount resolved=$weeklyCount")
+                // Lê o total acumulado (escrito pela Cloud Function em onEmergencyFinalized)
+                val rawTotal = doc?.get("totalEmergencies")
+                totalEmergencies = when (rawTotal) {
+                    is Long   -> rawTotal.toInt()
+                    is Double -> rawTotal.toInt()
+                    is Int    -> rawTotal
+                    is Number -> rawTotal.toInt()
+                    else      -> 0
+                }
+                FileLogger.log("DEBUG", "HomeScreenNew",
+                    "weeklyCount resolved=$weeklyCount totalEmergencies=$totalEmergencies")
             }
         onDispose { listener.remove() }
     }
@@ -157,7 +170,8 @@ fun HomeScreenNew(
         item {
             HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
-                weeklyCount = weeklyCount
+                weeklyCount = weeklyCount,
+                totalEmergencies = totalEmergencies
             )
         }
 
@@ -337,7 +351,9 @@ fun HomeScreenNew(
 @Composable
 private fun HomeWelcomeCard(
     userName: String,
-    weeklyCount: Int
+    weeklyCount: Int,
+    // Total acumulado de todas as semanas — nunca zera na virada de semana.
+    totalEmergencies: Int = -1
 ) {
     // Cor do gradiente e mensagens dependem da contagem semanal
     val (gradientColors, headline, body) = when (weeklyCount) {
@@ -416,12 +432,15 @@ private fun HomeWelcomeCard(
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
-                // Pill de contagem
+                // Pill de contagem — mostra total acumulado + contexto semanal
                 if (weeklyCount >= 0) {
-                    val pillText = when (weeklyCount) {
-                        0    -> "0 pedidos esta semana"
-                        1    -> "1 pedido esta semana"
-                        else -> "$weeklyCount pedidos esta semana"
+                    val total = if (totalEmergencies >= 0) totalEmergencies else weeklyCount
+                    val pillText = when {
+                        total == 0 -> "nenhum pedido ainda"
+                        total == 1 && weeklyCount == 1 -> "1 pedido · 1 esta semana"
+                        total == 1 -> "1 pedido no total"
+                        weeklyCount > 0 -> "$total no total · $weeklyCount esta semana"
+                        else -> "$total no total"
                     }
                     Surface(
                         color = Color.White.copy(alpha = 0.18f),
