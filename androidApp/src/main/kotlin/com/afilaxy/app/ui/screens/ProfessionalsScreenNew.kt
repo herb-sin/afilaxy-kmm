@@ -109,6 +109,10 @@ fun ProfessionalsScreenNew(
                         item {
                             StatsHeader(professionals = state.professionals)
                         }
+
+                        item {
+                            ProfessionalCTABanner(context = context)
+                        }
                         
                         items(state.professionals) { professional ->
                             ProfessionalCardNew(
@@ -128,6 +132,61 @@ fun ProfessionalsScreenNew(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfessionalCTABanner(context: android.content.Context) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Badge,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(36.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "É profissional de saúde?",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    "Cadastre-se na plataforma Afilaxy e conecte-se com pacientes.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
+                )
+            }
+            OutlinedButton(
+                onClick = {
+                    val uri = Uri.parse("https://afilaxy.com/profissionais")
+                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                },
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text(
+                    "Saiba mais",
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
     }
