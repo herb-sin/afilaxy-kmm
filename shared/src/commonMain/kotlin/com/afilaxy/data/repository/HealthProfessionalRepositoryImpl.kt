@@ -20,6 +20,13 @@ class HealthProfessionalRepositoryImpl(
     private val collection = firestore.collection("health_professionals")
     
     override suspend fun getAll(): List<HealthProfessional> {
+        // Guard: Firebase auth token ainda não está disponível (warmup do Koin antes do
+        // authStateDidChange). Retorna lista vazia sem query — o caller (ViewModel) vai
+        // recarregar após authStateDidChange confirmar o usuário.
+        if (auth.currentUser == null) {
+            Logger.w("HealthProfessionalRepo", "getAll: currentUser == null — aguardando auth")
+            return emptyList()
+        }
         return try {
             collection
                 .get()
