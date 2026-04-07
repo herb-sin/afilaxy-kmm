@@ -150,28 +150,22 @@ struct ProfessionalListView: View {
 struct ProfessionalsHeroCard: View {
     var body: some View {
         HeroGradientCard {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "stethoscope")
                         .font(.title2)
                         .foregroundColor(.white)
-                    
+
                     Text("Profissionais de Saúde")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                 }
-                
-                Text("Conecte-se com pneumologistas, alergistas e fisioterapeutas especializados em asma. Todos os profissionais são verificados e qualificados.")
+
+                Text("Conecte-se com profissionais de Saúde que apóiam o Afilaxy.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.9))
                     .lineSpacing(2)
-                
-                HStack(spacing: 16) {
-                    StatBadge(value: "50+", label: "Profissionais")
-                    StatBadge(value: "4.8", label: "Avaliação Média")
-                    StatBadge(value: "24h", label: "Resposta")
-                }
             }
         }
     }
@@ -183,44 +177,49 @@ struct ProfessionalCTACard: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 34))
-                .foregroundColor(AfilaxyColors.primary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "person.badge.plus")
+                    .font(.title3)
+                    .foregroundColor(AfilaxyColors.primary)
 
-            VStack(alignment: .leading, spacing: 4) {
                 Text("Sou Profissional de Saúde")
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                Text("Cadastre-se e apareça como referência no Afilaxy.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
+                Spacer()
             }
 
-            Spacer()
+            Text("Cadastre-se e apareça como referência no Afilaxy.")
+                .font(.caption)
+                .foregroundColor(.secondary)
 
             Button {
                 if let url = URL(string: "https://afilaxy.com/profissionais") {
                     openURL(url)
                 }
             } label: {
-                Text("Quero me cadastrar")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AfilaxyColors.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(AfilaxyColors.primary.opacity(0.12))
-                    .clipShape(Capsule())
+                HStack {
+                    Spacer()
+                    Text("Quero me cadastrar")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+                .background(AfilaxyColors.primary.opacity(0.15))
+                .foregroundColor(AfilaxyColors.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(AfilaxyColors.primary.opacity(0.25), lineWidth: 1)
+        )
     }
 }
 
