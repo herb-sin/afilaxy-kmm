@@ -145,8 +145,14 @@ struct ChatView: View {
                 onSubmit: { rating, comment in
                     submitReview(reviewedId: reviewedId, rating: rating, comment: comment)
                     showRatingSheet = false
+                    // Só navega de volta após o rating ser enviado
+                    dismissAndClearState()
                 },
-                onSkip: { showRatingSheet = false }
+                onSkip: {
+                    showRatingSheet = false
+                    // Só navega de volta quando o usuário escolhe pular
+                    dismissAndClearState()
+                }
             )
         }
         // Cartão SOS — tela cheia de alto contraste para ser mostrada a um bystander
@@ -208,13 +214,15 @@ struct ChatView: View {
             .updateData(["status": "resolved", "active": false, "resolvedAt": nowMs])
         container.resolvedEmergencyId = emergencyId
         container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
-        NotificationCenter.default.post(
-            name: .init("AfilaxyEmergencyResolved"),
-            object: nil,
-            userInfo: ["emergencyId": emergencyId]
-        )
-        // Mostra avaliação se soubermos quem avaliar
-        if reviewedId != nil { showRatingSheet = true }
+        // Mostra avaliação se soubermos quem avaliar.
+        // IMPORTANTE: não postamos AfilaxyEmergencyResolved aqui — o dismiss
+        // só ocorre DEPOIS que o usuário submete ou pula a avaliação (via dismissAndClearState).
+        if reviewedId != nil {
+            showRatingSheet = true
+        } else {
+            // Sem parceiro conhecido para avaliar: navega de volta imediatamente.
+            dismissAndClearState()
+        }
     }
 
     /// Limpa estado e navega de volta à home quando foi a outra parte que encerrou.
