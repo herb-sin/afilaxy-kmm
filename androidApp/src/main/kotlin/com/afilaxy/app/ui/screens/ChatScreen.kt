@@ -558,9 +558,9 @@ private fun SamuCardDialog(onDismiss: () -> Unit) {
                         Text("Quando atender, diga:", fontSize = 14.sp,
                             fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.9f))
                         listOf(
-                            "\"Uma pessoa está com crise grave de asma\"",
-                            "\"Ela usa o app Afilaxy e precisa de socorro\"",
-                            "Informe o endereço ou local onde estão"
+                            "Endereço completo, com ponto de referência, Cidade;",
+                            "Nome, idade aproximada e sexo da vítima;",
+                            "Crise de Asma e perigos adicionais;"
                         ).forEach { line ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("•", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)

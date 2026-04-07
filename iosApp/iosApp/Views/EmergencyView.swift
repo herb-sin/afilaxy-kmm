@@ -14,6 +14,7 @@ struct EmergencyView: View {
     @State private var isCancelling = false
     @State private var lastEmergencyId: String? = nil
     @State private var selectedSeverity: String? = nil
+    @State private var showCancelAlert = false
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -213,7 +214,7 @@ struct EmergencyView: View {
                     Button {
                         requestLocationAndCreateEmergency()
                     } label: {
-                        Label("🆘 Solicitar Ajuda", systemImage: "exclamationmark.triangle.fill")
+                        Label("Criar Emergência", systemImage: "exclamationmark.triangle.fill")
                             .frame(maxWidth: .infinity).foregroundColor(.white).padding(.vertical, 8)
                     }
                     .disabled(state.isCreatingEmergency || state.isLoading)
@@ -244,6 +245,38 @@ struct EmergencyView: View {
         }
         .navigationTitle("Emergência")
         .navigationBarTitleDisplayMode(.inline)
+        // Bloqueia o swipe-back e o botão Voltar enquanto a emergência estiver ativa.
+        // Sem isso, o usuário pode voltar à home acidentalmente e perder o countdown.
+        .navigationBarBackButtonHidden(state.hasActiveEmergency)
+        .toolbar {
+            if state.hasActiveEmergency {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        // O único jeito de sair é cancelar a emergência (botão na lista)
+                        // ou aguardar o match/expiração. Exibe alerta explicativo.
+                        showCancelAlert = true
+                    } label: {
+                        Image(systemName: "chevron.left")
+                    }
+                }
+            }
+        }
+        .alert("Voltar cancela a emergência?", isPresented: $showCancelAlert) {
+            Button("Ficar no countdown", role: .cancel) {}
+            Button("Cancelar Emergência", role: .destructive) {
+                guard !isCancelling else { return }
+                isCancelling = true
+                countdownTimer?.invalidate()
+                countdownTimer = nil
+                statusListener?.remove()
+                statusListener = nil
+                if let eid = container.emergency.state?.emergencyId as? String {
+                    cancelEmergencyNative(emergencyId: eid)
+                }
+            }
+        } message: {
+            Text("Se voltar agora, sua solicitação de ajuda será cancelada.")
+        }
         .onAppear {
             FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "appeared hasActiveEmergency=\(state.hasActiveEmergency) isHelperMode=\(state.isHelperMode)")
             guard state.hasActiveEmergency, !chatNavigated else { return }

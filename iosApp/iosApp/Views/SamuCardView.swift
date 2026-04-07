@@ -103,9 +103,9 @@ struct SamuCardView: View {
                         .foregroundColor(.white.opacity(0.9))
 
                     ForEach([
-                        "\"Uma pessoa está com crise grave de asma\"",
-                        "\"Ela usa o app Afilaxy e precisa de socorro\"",
-                        "Informe o endereço ou local onde estão"
+                        "Endereço completo, com ponto de referência, Cidade;",
+                        "Nome, idade aproximada e sexo da vítima;",
+                        "Crise de Asma e perigos adicionais;"
                     ], id: \.self) { line in
                         HStack(alignment: .top, spacing: 10) {
                             Text("•")
