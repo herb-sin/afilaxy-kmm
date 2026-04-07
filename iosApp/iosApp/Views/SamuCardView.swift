@@ -23,32 +23,31 @@ struct SamuCardView: View {
                 .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
                 .offset(y: -120)
 
-            VStack(spacing: 0) {
-                Spacer()
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 20) {
 
                 // Ícone de alerta
                 Text("🆘")
-                    .font(.system(size: 80))
+                    .font(.system(size: 72))
                     .scaleEffect(pulse ? 1.06 : 1.0)
                     .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulse)
+                    .padding(.top, 40)
 
-                Spacer().frame(height: 24)
-
-                // Mensagem principal — máximo contraste, letra grande
+                // Mensagem principal
                 Text("PRECISO DE AJUDA\nIMEDIATA")
-                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Spacer().frame(height: 20)
-
-                // Contexto
-                Text("Estou com uma crise de asma.\nNão consigo respirar direito\ne preciso de socorro.")
-                    .font(.system(size: 20, weight: .semibold))
+                // Contexto — texto unificado conforme sugestão
+                Text("Estou com uma crise de Asma. Não consigo respirar direito e preciso de socorro. Por favor, ligue 192!")
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white.opacity(0.92))
                     .multilineTextAlignment(.center)
-                    .lineSpacing(5)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 24)
 
                 Spacer().frame(height: 32)
@@ -137,10 +136,11 @@ struct SamuCardView: View {
                         .foregroundColor(.white.opacity(0.5))
                         .padding(.vertical, 12)
                 }
+                .padding(.bottom, 32)
 
-                Spacer().frame(height: 20)
-            }
-        }
+                } // VStack
+            } // ScrollView
+        } // ZStack
         .onAppear { pulse = true }
     }
 }

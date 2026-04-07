@@ -20,6 +20,7 @@ struct ChatView: View {
     @State private var showSamuCard = false
     @State private var showRatingSheet = false
     @State private var reviewedId: String? = nil
+    @State private var isRequester = false
     @Environment(\.dismiss) private var dismiss
 
     private var currentUserId: String? { Auth.auth().currentUser?.uid }
@@ -108,8 +109,8 @@ struct ChatView: View {
                     Image(systemName: "chevron.left")
                 }
             }
-            // Botão SAMU — abre Cartão SOS para ser mostrado a alguém próximo
-            if !isResolved {
+            // Botão SAMU — só visível para o requester (quem está em crise)
+            if !isResolved && isRequester {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         markSamuCalled()    // grava samuCalled no Firestore
@@ -315,6 +316,7 @@ extension ChatView {
             let helperId = d["helperId"] as? String
             DispatchQueue.main.async {
                 reviewedId = (currentUid == requesterId) ? helperId : requesterId
+                isRequester = currentUid == requesterId
             }
         }
     }
