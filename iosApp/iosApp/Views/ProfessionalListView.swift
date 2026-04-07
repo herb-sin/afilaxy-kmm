@@ -9,6 +9,7 @@ struct ProfessionalListView: View {
     @State private var showFilters = false
     @State private var sortBy: SortOption = .relevance
     @State private var showOnlyAvailable = false
+    @State private var showCrmLookup = false
 
     var body: some View {
         // O ViewModel.init() dispara loadProfessionals() durante o warmup do Koin,
@@ -37,6 +38,9 @@ struct ProfessionalListView: View {
                 } else {
                     // Hero Welcome Card
                     ProfessionalsHeroCard()
+
+                    // CTA para profissionais de saúde
+                    ProfessionalCTACard()
                     
                     // Filter Controls
                     FilterControlsCard(
@@ -66,6 +70,19 @@ struct ProfessionalListView: View {
         .navigationTitle("Profissionais")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Buscar por nome ou especialidade")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showCrmLookup = true
+                } label: {
+                    Image(systemName: "person.text.rectangle.fill")
+                        .accessibilityLabel("Consultar CRM")
+                }
+            }
+        }
+        .sheet(isPresented: $showCrmLookup) {
+            CrmLookupView()
+        }
     }
     
     private func filteredProfessionals(_ professionals: [HealthProfessional]) -> [HealthProfessional] {
@@ -157,6 +174,53 @@ struct ProfessionalsHeroCard: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Professional CTA Card
+
+struct ProfessionalCTACard: View {
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "stethoscope.circle.fill")
+                .font(.system(size: 36))
+                .foregroundColor(AfilaxyColors.primary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("É profissional de saúde?")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text("Cadastre-se e conecte-se com pacientes Afilaxy.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Button {
+                if let url = URL(string: "https://afilaxy.com/profissionais") {
+                    openURL(url)
+                }
+            } label: {
+                Text("Saiba mais")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AfilaxyColors.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(AfilaxyColors.primary.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
 }
 
