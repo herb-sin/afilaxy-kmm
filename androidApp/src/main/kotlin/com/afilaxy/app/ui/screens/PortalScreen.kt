@@ -1,5 +1,7 @@
 package com.afilaxy.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +29,7 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortalScreen() {
+    val context = LocalContext.current
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -36,6 +40,11 @@ fun PortalScreen() {
         // Hero Header
         item {
             HeroHeader()
+        }
+
+        // CTA para afilaxy.com/profissionais
+        item {
+            PortalCTABanner(context = context)
         }
         
         // Métricas em Row
@@ -421,3 +430,58 @@ private data class PatientData(
     val status: String,
     val adherence: Float
 )
+
+@Composable
+private fun PortalCTABanner(context: android.content.Context) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.OpenInBrowser,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(32.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Afilaxy para Profissionais",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    "Conheça todos os recursos da plataforma para profissionais de saúde.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
+                )
+            }
+            OutlinedButton(
+                onClick = {
+                    val uri = Uri.parse("https://afilaxy.com/profissionais")
+                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                },
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text(
+                    "Acessar",
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+    }
+}
