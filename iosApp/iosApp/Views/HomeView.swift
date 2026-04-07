@@ -18,6 +18,9 @@ struct HomeView: View {
     @State private var showHelperConsentAlert = false
     @State private var showNps = false
     @State private var weeklyCount: Int = -1     // -1 = ainda carregando
+    // Total acumulado de todas as semanas — nunca zera na virada de semana ISO.
+    // Exibido no pill do WeeklyStatusCard para que o usuário veja seu histórico real.
+    @State private var totalEmergencies: Int = -1
     @State private var showPharmacyMap = false
     @State private var statsListener: ListenerRegistration? = nil
 
@@ -132,7 +135,7 @@ struct HomeView: View {
     // MARK: - Hero Section
 
     private var heroSection: some View {
-        WeeklyStatusCard(weeklyCount: weeklyCount)
+        WeeklyStatusCard(weeklyCount: weeklyCount, totalEmergencies: totalEmergencies)
     }
 
     // MARK: - Fetch weekly stats (listener em tempo real)
@@ -175,11 +178,15 @@ struct HomeView: View {
                 if let r = raw {
                     let resolved = (r as? NSNumber)?.intValue ?? 0
                     weeklyCount = resolved
-                    FileLogger.shared.write(level: "DEBUG", tag: "HomeView", message: "weeklyCount resolved=\(resolved)")
                 } else {
                     weeklyCount = 0
                     FileLogger.shared.write(level: "DEBUG", tag: "HomeView", message: "weeklyCount: chave \(weekKey) não encontrada no mapa. Keys disponíveis: \(weekly?.keys.joined(separator: ",") ?? "mapa nil")")
                 }
+                // Lê o total acumulado de emergências (campo escrito pela Cloud Function)
+                let rawTotal = data["totalEmergencies"] as? NSNumber
+                totalEmergencies = rawTotal?.intValue ?? 0
+                FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
+                    message: "weeklyCount resolved=\(weeklyCount) totalEmergencies=\(totalEmergencies)")
             }
     }
     

@@ -15,6 +15,9 @@ struct ChatView: View {
     @State private var resolvedByOther = false
     @State private var didResolveLocally = false
     @State private var samuCalled = false
+    // Cartão SOS: tela cheia para ser mostrada a alguém próximo
+    // que possa ligar ao SAMU 192 em nome do usuário em crise.
+    @State private var showSamuCard = false
     @State private var showRatingSheet = false
     @State private var reviewedId: String? = nil
     @Environment(\.dismiss) private var dismiss
@@ -105,17 +108,17 @@ struct ChatView: View {
                     Image(systemName: "chevron.left")
                 }
             }
-            // Botão SAMU — visível enquanto emergência ativa
+            // Botão SAMU — abre Cartão SOS para ser mostrado a alguém próximo
             if !isResolved {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        markSamuCalled()
+                        markSamuCalled()    // grava samuCalled no Firestore
+                        showSamuCard = true // abre cartão tela cheia
                     } label: {
                         Text(samuCalled ? "🚑 acionado" : "🚑 SAMU")
                             .font(.subheadline)
                             .foregroundColor(samuCalled ? .secondary : .red)
                     }
-                    .disabled(samuCalled)
                 }
             }
             if !resolvedByOther {
@@ -144,6 +147,13 @@ struct ChatView: View {
                     showRatingSheet = false
                 },
                 onSkip: { showRatingSheet = false }
+            )
+        }
+        // Cartão SOS — tela cheia de alto contraste para ser mostrada a um bystander
+        .fullScreenCover(isPresented: $showSamuCard) {
+            SamuCardView(
+                userName: Auth.auth().currentUser?.displayName ?? "Usuário",
+                onDismiss: { showSamuCard = false }
             )
         }
     }

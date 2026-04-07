@@ -1,5 +1,13 @@
 package com.afilaxy.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,16 +19,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import android.view.WindowManager
@@ -55,6 +69,9 @@ fun ChatScreen(
     var showResolveDialog by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var samuCalled by remember { mutableStateOf(false) }
+    // Cartão SOS: tela cheia para ser mostrado a alguém próximo que
+    // possa ligar ao SAMU 192 em nome do usuário em crise.
+    var showSamuCard by remember { mutableStateOf(false) }
 
     val emergencyRepo: EmergencyRepository = koinInject()
     val scope = rememberCoroutineScope()
@@ -130,23 +147,21 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    // Botão SAMU — visível enquanto emergência ativa e ainda não acionado
+                    // Botão SAMU — abre Cartão SOS para ser mostrado a alguém próximo
                     if (!isResolved && !samuCalled) {
                         TextButton(onClick = {
                             scope.launch {
                                 emergencyRepo.updateSamuCalled(emergencyId)
                                 samuCalled = true
+                                showSamuCard = true  // abre cartão tela cheia
                             }
                         }) {
                             Text("🚑 SAMU", color = MaterialTheme.colorScheme.error)
                         }
                     } else if (samuCalled) {
-                        Text(
-                            text = "🚑 SAMU acionado",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
+                        TextButton(onClick = { showSamuCard = true }) {
+                            Text("🚑 SAMU", color = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                        }
                     }
                     if (!resolvedByOther) {
                         TextButton(onClick = { showResolveDialog = true }) {
@@ -324,6 +339,11 @@ fun ChatScreen(
             }
         )
     }
+
+    // Cartão SOS — Dialog tela cheia de alto contraste para ser mostrado a um bystander
+    if (showSamuCard) {
+        SamuCardDialog(onDismiss = { showSamuCard = false })
+    }
 }
 
 // Mensagens de sistema são exibidas centralizadas — senderId == "system"
@@ -446,4 +466,116 @@ private fun RatingDialog(
             TextButton(onClick = onSkip) { Text("Pular") }
         }
     )
+}
+
+/**
+ * Cartão SOS — Dialog tela cheia de alto contraste.
+ * Projetado para ser MOSTRADO A ALGUÉM PRÓXIMO que possa ligar ao SAMU 192
+ * em nome do usuário em crise de asma, que pode não conseguir falar.
+ */
+@Composable
+private fun SamuCardDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ), label = "scale"
+    )
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFFB71C1C), Color(0xFF7B0000))
+                    )
+                )
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(320.dp)
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-60).dp)
+                    .graphicsLayer(scaleX = scale, scaleY = scale)
+                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 48.dp, bottom = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = "🆘", fontSize = 72.sp,
+                    modifier = Modifier.graphicsLayer(scaleX = scale, scaleY = scale))
+                Spacer(Modifier.height(20.dp))
+                Text("PRECISO DE\nAJUDA IMEDIATA",
+                    fontSize = 32.sp, fontWeight = FontWeight.Black,
+                    color = Color.White, textAlign = TextAlign.Center, lineHeight = 38.sp)
+                Spacer(Modifier.height(16.dp))
+                Text("Estou com uma crise de asma.\nNão consigo respirar direito\ne preciso de socorro.",
+                    fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.92f),
+                    textAlign = TextAlign.Center, lineHeight = 26.sp)
+                Spacer(Modifier.height(28.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.3f),
+                    modifier = Modifier.padding(horizontal = 16.dp))
+                Spacer(Modifier.height(24.dp))
+                Text("Por favor:", fontSize = 17.sp,
+                    color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
+                Spacer(Modifier.height(8.dp))
+                Text("192", fontSize = 80.sp, fontWeight = FontWeight.Black,
+                    color = Color.White, textAlign = TextAlign.Center)
+                Text("SAMU — ligue do SEU celular",
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
+                Spacer(Modifier.height(6.dp))
+                Surface(
+                    color = Color.White.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "⚠️ Deixe este celular com a vítima — ela está trocando mensagens com quem vem ajudá-la.",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.88f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                    )
+                }
+                Spacer(Modifier.height(24.dp))
+                Surface(color = Color.White.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Quando atender, diga:", fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.9f))
+                        listOf(
+                            "\"Uma pessoa está com crise grave de asma\"",
+                            "\"Ela usa o app Afilaxy e precisa de socorro\"",
+                            "Informe o endereço ou local onde estão"
+                        ).forEach { line ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("•", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+                                Text(line, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+                // Botão de discagem removido: o bystander deve ligar do SEU CELULAR,
+                // mantendo o celular da vítima livre para continuar no chat com o helper.
+                TextButton(onClick = onDismiss) {
+                    Text("Fechar cartão", fontSize = 13.sp, color = Color.White.copy(alpha = 0.45f))
+                }
+            }
+        }
+    }
 }
