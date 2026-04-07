@@ -143,7 +143,7 @@ private fun ProfessionalCTABanner(context: android.content.Context) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -155,22 +155,22 @@ private fun ProfessionalCTABanner(context: android.content.Context) {
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Badge,
+                imageVector = Icons.Default.PersonAdd,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(36.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "É profissional de saúde?",
+                    "Sou Profissional de Saúde",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
                 Text(
-                    "Cadastre-se na plataforma Afilaxy e conecte-se com pacientes.",
+                    "Cadastre-se e apareça como referência no Afilaxy.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                 )
             }
             OutlinedButton(
@@ -179,12 +179,12 @@ private fun ProfessionalCTABanner(context: android.content.Context) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                 },
                 border = androidx.compose.foundation.BorderStroke(
-                    1.dp, MaterialTheme.colorScheme.secondary
+                    1.dp, MaterialTheme.colorScheme.tertiary
                 )
             ) {
                 Text(
-                    "Saiba mais",
-                    color = MaterialTheme.colorScheme.secondary,
+                    "Quero me cadastrar",
+                    color = MaterialTheme.colorScheme.tertiary,
                     style = MaterialTheme.typography.labelMedium
                 )
             }

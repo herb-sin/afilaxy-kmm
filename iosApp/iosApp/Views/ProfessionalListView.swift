@@ -184,16 +184,16 @@ struct ProfessionalCTACard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: "stethoscope.circle.fill")
-                .font(.system(size: 36))
+            Image(systemName: "person.badge.plus")
+                .font(.system(size: 34))
                 .foregroundColor(AfilaxyColors.primary)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("É profissional de saúde?")
+                Text("Sou Profissional de Saúde")
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                Text("Cadastre-se e conecte-se com pacientes Afilaxy.")
+                Text("Cadastre-se e apareça como referência no Afilaxy.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -206,7 +206,7 @@ struct ProfessionalCTACard: View {
                     openURL(url)
                 }
             } label: {
-                Text("Saiba mais")
+                Text("Quero me cadastrar")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(AfilaxyColors.primary)
