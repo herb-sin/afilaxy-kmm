@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -78,10 +80,12 @@ fun ChatScreen(
 
     // Participantes da emergência (para saber quem avaliar)
     var reviewedId by remember { mutableStateOf<String?>(null) }
+    var isRequester by remember { mutableStateOf(false) }
     LaunchedEffect(emergencyId) {
         emergencyRepo.getEmergencyParticipants(emergencyId).onSuccess { (requesterId, helperId) ->
             val currentUserId = state.currentUserId
             reviewedId = if (currentUserId == requesterId) helperId else requesterId
+            isRequester = currentUserId == requesterId
         }
     }
 
@@ -147,8 +151,8 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    // Botão SAMU — abre Cartão SOS para ser mostrado a alguém próximo
-                    if (!isResolved && !samuCalled) {
+                    // Botão SAMU — só visível para o requester (quem está em crise)
+                    if (!isResolved && isRequester && !samuCalled) {
                         TextButton(onClick = {
                             scope.launch {
                                 emergencyRepo.updateSamuCalled(emergencyId)
@@ -158,7 +162,7 @@ fun ChatScreen(
                         }) {
                             Text("🚑 SAMU", color = MaterialTheme.colorScheme.error)
                         }
-                    } else if (samuCalled) {
+                    } else if (isRequester && samuCalled) {
                         TextButton(onClick = { showSamuCard = true }) {
                             Text("🚑 SAMU", color = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
                         }
@@ -510,6 +514,7 @@ private fun SamuCardDialog(onDismiss: () -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp)
                     .padding(top = 48.dp, bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -521,10 +526,10 @@ private fun SamuCardDialog(onDismiss: () -> Unit) {
                     fontSize = 32.sp, fontWeight = FontWeight.Black,
                     color = Color.White, textAlign = TextAlign.Center, lineHeight = 38.sp)
                 Spacer(Modifier.height(16.dp))
-                Text("Estou com uma crise de asma.\nNão consigo respirar direito\ne preciso de socorro.",
-                    fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                Text("Estou com uma crise de Asma. Não consigo respirar direito e preciso de socorro. Por favor, ligue 192!",
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
                     color = Color.White.copy(alpha = 0.92f),
-                    textAlign = TextAlign.Center, lineHeight = 26.sp)
+                    textAlign = TextAlign.Center, lineHeight = 25.sp)
                 Spacer(Modifier.height(28.dp))
                 HorizontalDivider(color = Color.White.copy(alpha = 0.3f),
                     modifier = Modifier.padding(horizontal = 16.dp))
