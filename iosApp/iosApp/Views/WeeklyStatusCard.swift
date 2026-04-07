@@ -88,9 +88,9 @@ struct WeeklyStatusCard: View {
                     let total = totalEmergencies >= 0 ? totalEmergencies : weeklyCount
                     let pillText: String = {
                         if total == 0 { return "nenhum pedido ainda" }
-                        if total == 1 && weeklyCount == 1 { return "1 pedido \u00b7 1 esta semana" }
+                        if total == 1 && weeklyCount == 1 { return "1 pedido · 1 esta semana" }
                         if total == 1 { return "1 pedido no total" }
-                        if weeklyCount > 0 { return "\(total) no total \u00b7 \(weeklyCount) esta semana" }
+                        if weeklyCount > 0 { return "\(total) no total · \(weeklyCount) esta semana" }
                         return "\(total) no total"
                     }()
                     HStack(spacing: 6) {
