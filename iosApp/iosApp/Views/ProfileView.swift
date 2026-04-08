@@ -54,22 +54,9 @@ struct ProfileView: View {
                                     .font(.subheadline)
                                     .foregroundColor(.white.opacity(0.8))
                             }
-                            
-                            Button(action: { showEditSheet = true }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "pencil")
-                                    Text("Editar Perfil")
-                                }
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.afiPrimary)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.white)
-                                .clipShape(Capsule())
-                            }
                         }
                     }
+
                     
                     agendaDeSaudeSection(profile: profile)
                 }
@@ -134,10 +121,9 @@ struct ProfileView: View {
                 }
                 Divider()
                 // Dados clínicos
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                VStack(spacing: 12) {
                     InfoGridItem(title: "Tipo de Asma", value: profile.healthData?.conditions.first ?? "Não informado", icon: "lungs.fill", accentColor: .afiPrimary)
-                    InfoGridItem(title: "Tipo Sanguíneo", value: (profile.healthData?.bloodType.isEmpty == false ? profile.healthData!.bloodType : "Não informado"), icon: "drop.fill", accentColor: .afiTertiary)
-                    // Medicação (span 2)
+                    // Medicação
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Medicação Atual").font(.subheadline).fontWeight(.semibold).foregroundColor(.afiPrimary)
@@ -150,12 +136,16 @@ struct ProfileView: View {
                             MedicationTypeCard(type: "Outros",   count: max(0, (profile.healthData?.medications.count ?? 0) - 2))
                         }
                     }
-                    .padding(8).background(Color(UIColor.secondarySystemBackground)).cornerRadius(10).gridCellColumns(2)
-                    InfoGridItem(title: "Contato de Emergência", value: profile.emergencyContact?.name ?? "Não informado", icon: "phone.fill", accentColor: .afiError)
-                    NavigationLink(destination: HelpView()) {
-                        InfoGridItem(title: "Protocolo de Crise", value: "Ver passos", icon: "list.clipboard.fill", accentColor: .afiWarning)
-                    }.buttonStyle(.plain)
+                    .padding(8).background(Color(UIColor.secondarySystemBackground)).cornerRadius(10)
+                    // Contato + Protocolo lado a lado
+                    HStack(spacing: 12) {
+                        InfoGridItem(title: "Contato de Emergência", value: profile.emergencyContact?.name ?? "Não informado", icon: "phone.fill", accentColor: .afiError)
+                        NavigationLink(destination: HelpView()) {
+                            InfoGridItem(title: "Protocolo de Crise", value: "Ver passos", icon: "list.clipboard.fill", accentColor: .afiWarning)
+                        }.buttonStyle(.plain)
+                    }
                 }
+
                 Divider()
                 // Ocorrências recentes
                 Text("Ocorrências Recentes").font(.subheadline).fontWeight(.semibold).foregroundColor(.secondary)
@@ -313,12 +303,16 @@ struct EditProfileSheet: View {
                     TextField("Telefone", text: $phone).keyboardType(.phonePad)
                 }
                 Section("Dados de Saúde") {
-                    TextField("Tipo Sanguíneo (ex: O+)", text: $bloodType)
                     TextField("Alergias (separadas por vírgula)", text: $allergies)
-                    TextField("Medicamentos em uso", text: $medications)
-                    TextField("Condições médicas", text: $conditions)
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField("Medicação Atual", text: $medications)
+                        Text("Separe por vírgula. Ex: fluticasona controle, salbutamol resgate")
+                            .font(.caption2).foregroundColor(.secondary)
+                    }
+                    TextField("Tipo de Asma / Condições médicas", text: $conditions)
                     TextField("Observações adicionais", text: $healthNotes)
                 }
+
                 Section("Contato de Emergência") {
                     TextField("Nome", text: $emergencyName)
                     TextField("Telefone", text: $emergencyPhone).keyboardType(.phonePad)
