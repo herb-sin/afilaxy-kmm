@@ -257,7 +257,7 @@ fun NavGraph(
             AfilaxyAppScaffoldSimple(navController = navController) {
                 ProfileScreenNew(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
+                    onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
                     onNavigateToPrivacy = { navController.navigate(AppRoutes.PRIVACY) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) }
                 )
@@ -369,10 +369,7 @@ fun NavGraph(
             )
         }
         
-        composable(AppRoutes.SETTINGS) {
-            SettingsScreenNew(navController = navController)
-        }
-        
+        // Rota de Configurações removida — log export movido para toolbar da Home
         composable(AppRoutes.TERMS) {
             TermsScreen(navController = navController)
         }

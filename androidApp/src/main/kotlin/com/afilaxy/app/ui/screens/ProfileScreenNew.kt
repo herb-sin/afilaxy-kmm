@@ -19,16 +19,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.afilaxy.domain.model.EmergencyContact
+import com.afilaxy.domain.model.EmergencyHistory
 import com.afilaxy.domain.model.UserHealthData
 import com.afilaxy.domain.model.UserProfile
+import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import org.koin.androidx.compose.koinViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreenNew(
     onNavigateBack: () -> Unit,
-    onNavigateToSettings: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel()
@@ -36,6 +41,9 @@ fun ProfileScreenNew(
     val state by viewModel.state.collectAsState()
     val profile = state.profile
     var showEditSheet by remember { mutableStateOf(false) }
+    val historyViewModel: HistoryViewModel = koinViewModel()
+    val historyState by historyViewModel.state.collectAsState()
+    val recentHistory = historyState.filteredHistory.take(3)
 
     // Campos de edição — inicializados com os dados do perfil
     var editName        by remember { mutableStateOf("") }
@@ -201,107 +209,15 @@ fun ProfileScreenNew(
             }
         }
 
-        // ── Bento Grid de Saúde ──────────────────────────────────────────────────
+        // ── Agenda de Saúde ───────────────────────────────────────────────────────
         item {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ProfileInfoCard(
-                        title = "Tipo de Asma",
-                        value = profile?.healthData?.conditions?.firstOrNull() ?: "Não informado",
-                        icon = Icons.Default.Favorite,
-                        modifier = Modifier.weight(1f)
-                    )
-                    ProfileInfoCard(
-                        title = "Tipo Sanguíneo",
-                        value = profile?.healthData?.bloodType?.takeIf { it.isNotBlank() } ?: "Não informado",
-                        icon = Icons.Default.Bloodtype,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ProfileInfoCard(
-                        title = "Contato Emergência",
-                        value = profile?.emergencyContact?.name?.takeIf { it.isNotBlank() } ?: "Não informado",
-                        icon = Icons.Default.ContactPhone,
-                        modifier = Modifier.weight(1f)
-                    )
-                    ProfileInfoCard(
-                        title = "Protocolo de Crise",
-                        value = "Ver passos de emergência",
-                        icon = Icons.AutoMirrored.Filled.List,
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToHelp
-                    )
-                }
-            }
-        }
-
-        // ── Seção Medicação ──────────────────────────────────────────────────────
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Medicação Atual", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Icon(Icons.Default.MedicalServices, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary)
-                    }
-
-                    val meds = profile?.healthData?.medications ?: emptyList()
-                    val controle = meds.count { it.contains("controle", ignoreCase = true) || it.contains("manutenc", ignoreCase = true) }
-                    val resgate  = meds.count { it.contains("resgate", ignoreCase = true) || it.contains("bronco", ignoreCase = true) }
-                    val outros   = maxOf(0, meds.size - controle - resgate)
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MedCountChip("Controle", controle, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-                        MedCountChip("Resgate",  resgate,  MaterialTheme.colorScheme.error,   Modifier.weight(1f))
-                        MedCountChip("Outros",   outros,   MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-
-        // ── Ações Rápidas ────────────────────────────────────────────────────────
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Ações Rápidas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 8.dp))
-                    QuickActionItem(Icons.Default.Favorite,     "Histórico Médico",  "Ver registros de saúde")
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    QuickActionItem(Icons.Default.Notifications, "Notificações",      "Gerenciar alertas")
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    QuickActionItem(Icons.Default.Shield,        "Privacidade",       "Configurações de dados",
-                        onClick = onNavigateToPrivacy)
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    QuickActionItem(Icons.Default.Settings,      "Configurações",     "Preferências do app",
-                        onClick = onNavigateToSettings)
-                }
-            }
+            AgendaDeSaudeCard(
+                profile = profile,
+                recentHistory = recentHistory,
+                onNavigateToHistory = onNavigateToHistory,
+                onNavigateToHelp = onNavigateToHelp,
+                onEditProfile = { showEditSheet = true }
+            )
         }
     }
 
@@ -412,33 +328,94 @@ private fun MedCountChip(label: String, count: Int, color: Color, modifier: Modi
     }
 }
 
-// ── QuickActionItem ───────────────────────────────────────────────────────────────
+// ── AgendaDeSaudeCard ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun QuickActionItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit = {}
+private fun AgendaDeSaudeCard(
+    profile: UserProfile?,
+    recentHistory: List<EmergencyHistory>,
+    onNavigateToHistory: () -> Unit,
+    onNavigateToHelp: () -> Unit,
+    onEditProfile: () -> Unit
 ) {
-    Surface(
-        onClick = onClick,
-        color = Color.Transparent
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Cabeçalho
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DateRange, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Text("Agenda de Saúde", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+                IconButton(onClick = onEditProfile, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                }
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+            HorizontalDivider()
+            // Dados clínicos
+            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
+                ProfileInfoCard("Tipo de Asma", profile?.healthData?.conditions?.firstOrNull() ?: "Não informado", Icons.Default.Favorite, Modifier.weight(1f))
+                ProfileInfoCard("Tipo Sanguíneo", profile?.healthData?.bloodType?.takeIf { it.isNotBlank() } ?: "Não informado", Icons.Default.Bloodtype, Modifier.weight(1f))
+            }
+            // Medicação
+            val meds = profile?.healthData?.medications ?: emptyList()
+            val controle = meds.count { it.contains("controle", ignoreCase = true) || it.contains("manutenc", ignoreCase = true) }
+            val resgate  = meds.count { it.contains("resgate",  ignoreCase = true) || it.contains("bronco",   ignoreCase = true) }
+            val outros   = maxOf(0, meds.size - controle - resgate)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Medicação Atual", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
+                    MedCountChip("Controle", controle, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                    MedCountChip("Resgate",  resgate,  MaterialTheme.colorScheme.error,   Modifier.weight(1f))
+                    MedCountChip("Outros",   outros,   MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                }
+            }
+            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
+                ProfileInfoCard("Contato Emergência", profile?.emergencyContact?.name?.takeIf { it.isNotBlank() } ?: "Não informado", Icons.Default.ContactPhone, Modifier.weight(1f))
+                ProfileInfoCard("Protocolo de Crise", "Ver passos de emergência", Icons.AutoMirrored.Filled.List, Modifier.weight(1f), onClick = onNavigateToHelp)
+            }
+            HorizontalDivider()
+            // Ocorrências Recentes
+            Text("Ocorrências Recentes", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (recentHistory.isEmpty()) {
+                Text("Nenhuma ocorrência registrada", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 4.dp))
+            } else {
+                recentHistory.forEach { event -> AgendaHistoryItem(event) }
+            }
+            TextButton(onClick = onNavigateToHistory, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.AutoMirrored.Filled.List, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Ver histórico completo", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgendaHistoryItem(event: EmergencyHistory) {
+    val statusColor = when (event.status) {
+        "resolved"  -> MaterialTheme.colorScheme.secondary
+        "cancelled" -> MaterialTheme.colorScheme.error
+        "matched"   -> MaterialTheme.colorScheme.tertiary
+        else        -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val statusLabel = when (event.status) {
+        "resolved"  -> "Resolvida"
+        "cancelled" -> "Cancelada"
+        "matched"   -> "Em Atendimento"
+        else        -> event.status
+    }
+    val dateStr = remember(event.timestamp) {
+        SimpleDateFormat("dd/MM HH:mm", Locale("pt", "BR")).format(Date(event.timestamp))
+    }
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), Arrangement.spacedBy(10.dp), Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).background(statusColor, CircleShape))
+        Column(Modifier.weight(1f)) {
+            Text(statusLabel, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = statusColor)
+            Text(dateStr, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

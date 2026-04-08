@@ -71,84 +71,7 @@ struct ProfileView: View {
                         }
                     }
                     
-                    // Bento Grid Layout
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        // Tipo de Asma Card
-                        InfoGridItem(
-                            title: "Tipo de Asma",
-                            value: profile.healthData?.conditions.first ?? "Não informado",
-                            icon: "lungs.fill",
-                            accentColor: .afiPrimary
-                        )
-                        
-                        // Último Exame Card
-                        InfoGridItem(
-                            title: "Último Exame",
-                            value: profile.healthData?.notes ?? "Nenhum registro",
-                            icon: "stethoscope",
-                            accentColor: .afiTertiary
-                        )
-                        
-                        // Medicamentos Card (span 2 columns)
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Medicação Atual")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.afiPrimary)
-                                
-                                Spacer()
-                                
-                                Image(systemName: "pills.fill")
-                                    .foregroundColor(.afiPrimary)
-                            }
-                            
-                            HStack(spacing: 8) {
-                                MedicationTypeCard(type: "Controle", count: profile.healthData?.medications.filter { $0.contains("controle") || $0.contains("manutencao") }.count ?? 0)
-                                MedicationTypeCard(type: "Resgate", count: profile.healthData?.medications.filter { $0.contains("resgate") || $0.contains("bronco") }.count ?? 0)
-                                MedicationTypeCard(type: "Outros", count: max(0, (profile.healthData?.medications.count ?? 0) - 2))
-                            }
-                        }
-                        .padding()
-                        .background(Color.afiSurface)
-                        .cornerRadius(12)
-                        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-                        .gridCellColumns(2)
-                        
-                        // Contato de Emergência Card
-                        InfoGridItem(
-                            title: "Contato de Emergência",
-                            value: profile.emergencyContact?.name ?? "Não informado",
-                            icon: "phone.fill",
-                            accentColor: .afiError
-                        )
-                        
-                        // Protocolo Card — navega para HelpView
-                        NavigationLink(destination: HelpView()) {
-                            InfoGridItem(
-                                title: "Protocolo de Crise",
-                                value: "Ver passos de emergência",
-                                icon: "list.clipboard.fill",
-                                accentColor: .afiWarning
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    
-                    // Quick Actions
-                    AfilaxyCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Ações Rápidas")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            
-                            VStack(spacing: 12) {
-                                QuickActionRow(icon: "heart.text.square", title: "Histórico Médico", subtitle: "Ver registros de saúde")
-                                QuickActionRow(icon: "bell", title: "Notificações", subtitle: "Gerenciar alertas")
-                                QuickActionRow(icon: "shield", title: "Privacidade", subtitle: "Configurações de dados")
-                            }
-                        }
-                    }
+                    agendaDeSaudeSection(profile: profile)
                 }
                 
                 if let error = state?.error {
@@ -193,6 +116,64 @@ struct ProfileView: View {
             emergencyName = profile.emergencyContact?.name ?? ""
             emergencyPhone = profile.emergencyContact?.phone ?? ""
             emergencyRelationship = profile.emergencyContact?.relationship ?? ""
+        }
+    }
+
+    @ViewBuilder
+    private func agendaDeSaudeSection(profile: UserProfile) -> some View {
+        AfilaxyCard {
+            VStack(alignment: .leading, spacing: 14) {
+                // Cabeçalho
+                HStack {
+                    Image(systemName: "calendar.badge.clock").foregroundColor(.afiPrimary)
+                    Text("Agenda de Saúde").font(.headline).fontWeight(.semibold)
+                    Spacer()
+                    Button { showEditSheet = true } label: {
+                        Image(systemName: "pencil.circle").font(.title3).foregroundColor(.afiPrimary)
+                    }
+                }
+                Divider()
+                // Dados clínicos
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    InfoGridItem(title: "Tipo de Asma", value: profile.healthData?.conditions.first ?? "Não informado", icon: "lungs.fill", accentColor: .afiPrimary)
+                    InfoGridItem(title: "Tipo Sanguíneo", value: (profile.healthData?.bloodType.isEmpty == false ? profile.healthData!.bloodType : "Não informado"), icon: "drop.fill", accentColor: .afiTertiary)
+                    // Medicação (span 2)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Medicação Atual").font(.subheadline).fontWeight(.semibold).foregroundColor(.afiPrimary)
+                            Spacer()
+                            Image(systemName: "pills.fill").foregroundColor(.afiPrimary)
+                        }
+                        HStack(spacing: 8) {
+                            MedicationTypeCard(type: "Controle", count: profile.healthData?.medications.filter { $0.contains("controle") || $0.contains("manutencao") }.count ?? 0)
+                            MedicationTypeCard(type: "Resgate",  count: profile.healthData?.medications.filter { $0.contains("resgate")  || $0.contains("bronco")     }.count ?? 0)
+                            MedicationTypeCard(type: "Outros",   count: max(0, (profile.healthData?.medications.count ?? 0) - 2))
+                        }
+                    }
+                    .padding(8).background(Color(UIColor.secondarySystemBackground)).cornerRadius(10).gridCellColumns(2)
+                    InfoGridItem(title: "Contato de Emergência", value: profile.emergencyContact?.name ?? "Não informado", icon: "phone.fill", accentColor: .afiError)
+                    NavigationLink(destination: HelpView()) {
+                        InfoGridItem(title: "Protocolo de Crise", value: "Ver passos", icon: "list.clipboard.fill", accentColor: .afiWarning)
+                    }.buttonStyle(.plain)
+                }
+                Divider()
+                // Ocorrências recentes
+                Text("Ocorrências Recentes").font(.subheadline).fontWeight(.semibold).foregroundColor(.secondary)
+                let recent = Array((container.history.state?.filteredHistory ?? []).prefix(3))
+                if recent.isEmpty {
+                    Text("Nenhuma ocorrência registrada").font(.caption).foregroundColor(.secondary).padding(.vertical, 4)
+                } else {
+                    ForEach(recent, id: \.id) { item in AgendaHistoryRow(item: item) }
+                }
+                NavigationLink(value: AppRoute.history) {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath").font(.caption)
+                        Text("Ver histórico completo").font(.subheadline)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption)
+                    }.foregroundColor(.afiPrimary).padding(.vertical, 2)
+                }
+            }
         }
     }
 
@@ -355,6 +336,38 @@ struct EditProfileSheet: View {
                         .fontWeight(.semibold)
                 }
             }
+        }
+    }
+}
+
+struct AgendaHistoryRow: View {
+
+    let item: EmergencyHistory
+
+    private var statusInfo: (String, Color) {
+        switch item.status {
+        case "resolved":  return ("Resolvida", .green)
+        case "cancelled": return ("Cancelada", .red)
+        case "matched":   return ("Em Atendimento", .orange)
+        default:          return (item.status, .secondary)
+        }
+    }
+
+    private var timeString: String {
+        let date = Date(timeIntervalSince1970: TimeInterval(item.timestamp / 1000))
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM HH:mm"
+        return f.string(from: date)
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle().fill(statusInfo.1).frame(width: 8, height: 8)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(statusInfo.0).font(.caption).fontWeight(.medium).foregroundColor(statusInfo.1)
+                Text(timeString).font(.caption2).foregroundColor(.secondary)
+            }
+            Spacer()
         }
     }
 }
