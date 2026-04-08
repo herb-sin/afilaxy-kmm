@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import com.afilaxy.util.FileLogger
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,17 +18,19 @@ import androidx.navigation.navArgument
 import com.afilaxy.app.ui.screens.*
 import com.afilaxy.app.ui.scaffold.AfilaxyAppScaffoldSimple
 
+import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import kotlinx.coroutines.launch
 
 private val protectedRoutes = setOf(
     AppRoutes.HOME, AppRoutes.CONSENT, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
-    AppRoutes.SETTINGS, AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
-    AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.MAP_PHARMACY, AppRoutes.NOTIFICATIONS, AppRoutes.HELP, AppRoutes.ABOUT,
+    AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
+    AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.MAP_PHARMACY, AppRoutes.HELP, AppRoutes.ABOUT,
     AppRoutes.TERMS, AppRoutes.PRIVACY, AppRoutes.PORTAL, "emergency_request", "emergency_response", AppRoutes.CHAT
 )
 
@@ -44,6 +47,8 @@ fun NavGraph(
 ) {
     val navController = rememberNavController()
     val prefs: PreferencesRepository = koinInject()
+    val authRepository: AuthRepository = koinInject()
+    val scope = rememberCoroutineScope()
 
     // Destino pós-autenticação: consentimento se ainda não apresentado, home caso contrário
     fun postAuthDestination() =
@@ -186,7 +191,7 @@ fun NavGraph(
         composable(AppRoutes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = {
-                    navController.navigate("email_verification") {
+                    navController.navigate(AppRoutes.EMAIL_VERIFICATION) {
                         popUpTo(AppRoutes.REGISTER) { inclusive = true }
                     }
                 },
@@ -194,12 +199,12 @@ fun NavGraph(
             )
         }
 
-        composable("email_verification") {
+        composable(AppRoutes.EMAIL_VERIFICATION) {
             EmailVerificationScreen(
                 onVerified = {
                     val dest = postAuthDestination()
                     navController.navigate(dest) {
-                        popUpTo("email_verification") { inclusive = true }
+                        popUpTo(AppRoutes.EMAIL_VERIFICATION) { inclusive = true }
                     }
                 },
                 onLogout = {
@@ -227,11 +232,11 @@ fun NavGraph(
                 HomeScreenNew(
                     onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
-                    onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
+                    onNavigateToSettings = {}, // Settings removida — sem rota registrada
 
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
-                    onNavigateToEducation = { navController.navigate("education") },
+                    onNavigateToEducation = { navController.navigate(AppRoutes.EDUCATION) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
                     onLogout = {
@@ -259,7 +264,15 @@ fun NavGraph(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
                     onNavigateToPrivacy = { navController.navigate(AppRoutes.PRIVACY) },
-                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) }
+                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
+                    onLogout = {
+                        scope.launch {
+                            authRepository.logout()
+                            navController.navigate(AppRoutes.LOGIN) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -395,7 +408,7 @@ fun NavGraph(
             )
         }
         
-        composable("education") {
+        composable(AppRoutes.EDUCATION) {
             EducationScreenNew(
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -416,9 +429,6 @@ fun NavGraph(
             )
         }
 
-        composable(AppRoutes.NOTIFICATIONS) {
-            NotificationsScreen(navController = navController)
-        }
 
         composable(AppRoutes.HELP) {
             HelpScreen(navController = navController)

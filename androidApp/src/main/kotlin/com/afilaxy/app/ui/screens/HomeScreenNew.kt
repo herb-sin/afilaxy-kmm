@@ -232,7 +232,8 @@ fun HomeScreenNew(
             HomeQuickActions(
                 onNavigateToProfessionals = onNavigateToProfessionals,
                 onNavigateToEducation = onNavigateToEducation,
-                onNavigateToHistory = onNavigateToHistory
+                onNavigateToHistory = onNavigateToHistory,
+                onNavigateToAutocuidado = onNavigateToAutocuidado
             )
         }
 
@@ -547,9 +548,9 @@ private fun HomeEmergencyButton(
 private fun HomeQuickActions(
     onNavigateToProfessionals: () -> Unit,
     onNavigateToEducation: () -> Unit,
-    onNavigateToHistory: () -> Unit
+    onNavigateToHistory: () -> Unit,
+    onNavigateToAutocuidado: () -> Unit
 ) {
-    val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Acesso Rápido",
@@ -587,10 +588,10 @@ private fun HomeQuickActions(
                 modifier = Modifier.weight(1f)
             )
             HomeActionCard(
-                title = "Comunidade",
-                subtitle = "Grupo no WhatsApp",
-                icon = Icons.Default.Group,
-                onClick = { openWhatsAppGroup(context) },
+                title = "Autocuidado",
+                subtitle = "Perguntas frequentes",
+                icon = Icons.Default.Healing,
+                onClick = onNavigateToAutocuidado,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -755,6 +756,15 @@ private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPh
             ) {
                 val uri = Uri.parse("tel:192")
                 context.startActivity(Intent(Intent.ACTION_DIAL, uri))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeSupportLinkRow(
+                title = "Comunidade",
+                subtitle = "Grupo no WhatsApp",
+                icon = Icons.Default.Group,
+                color = Color(0xFF25D366)
+            ) {
+                openWhatsAppGroup(context)
             }
         }
     }

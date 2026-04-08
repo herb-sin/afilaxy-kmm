@@ -11,7 +11,6 @@ object AppRoutes {
     const val CHAT = "chat/{emergencyId}"
     const val PROFILE = "profile"
     const val HISTORY = "history"
-    const val SETTINGS = "settings"
     const val TERMS = "terms"
     const val PRIVACY = "privacy"
     const val ABOUT = "about"
@@ -23,10 +22,13 @@ object AppRoutes {
     const val CRM_LOOKUP = "crm_lookup"
     const val MAP = "map"
     const val MAP_PHARMACY = "map_pharmacy"
-    const val NOTIFICATIONS = "notifications"
     const val HELP = "help"
 
     const val NAVIGATION = "navigation/{lat}/{lng}/{name}"
+
+    // Rotas sem tela de configurações dedicada — usadas como strings no NavGraph
+    const val EMAIL_VERIFICATION = "email_verification"
+    const val EDUCATION = "education"
 
     fun professionalDetail(id: String) = "professional_detail/$id"
     fun emergencyResponse(emergencyId: String) = "emergency_response/$emergencyId"
