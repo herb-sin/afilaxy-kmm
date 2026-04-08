@@ -152,19 +152,6 @@ fun ProfileScreenNew(
                         }
                     }
 
-                    // Editar Perfil
-                    Button(
-                        onClick = { showEditSheet = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(50)
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Editar Perfil", style = MaterialTheme.typography.labelLarge)
-                    }
                 }
             }
         }
@@ -230,7 +217,6 @@ fun ProfileScreenNew(
             EditProfileSheetContent(
                 name = editName,           onNameChange = { editName = it },
                 phone = editPhone,          onPhoneChange = { editPhone = it },
-                bloodType = editBloodType,  onBloodTypeChange = { editBloodType = it },
                 allergies = editAllergies,  onAllergiesChange = { editAllergies = it },
                 medications = editMedications, onMedicationsChange = { editMedications = it },
                 conditions = editConditions,  onConditionsChange = { editConditions = it },
@@ -249,7 +235,7 @@ fun ProfileScreenNew(
                             name = editName,
                             phone = editPhone,
                             healthData = UserHealthData(
-                                bloodType  = editBloodType,
+                                bloodType  = profile?.healthData?.bloodType ?: "",
                                 allergies  = split(editAllergies),
                                 medications = split(editMedications),
                                 conditions  = split(editConditions),
@@ -356,11 +342,9 @@ private fun AgendaDeSaudeCard(
             }
             HorizontalDivider()
             // Dados clínicos
-            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-                ProfileInfoCard("Tipo de Asma", profile?.healthData?.conditions?.firstOrNull() ?: "Não informado", Icons.Default.Favorite, Modifier.weight(1f))
-                ProfileInfoCard("Tipo Sanguíneo", profile?.healthData?.bloodType?.takeIf { it.isNotBlank() } ?: "Não informado", Icons.Default.Bloodtype, Modifier.weight(1f))
-            }
+            ProfileInfoCard("Tipo de Asma", profile?.healthData?.conditions?.firstOrNull() ?: "Não informado", Icons.Default.Favorite, Modifier.fillMaxWidth())
             // Medicação
+
             val meds = profile?.healthData?.medications ?: emptyList()
             val controle = meds.count { it.contains("controle", ignoreCase = true) || it.contains("manutenc", ignoreCase = true) }
             val resgate  = meds.count { it.contains("resgate",  ignoreCase = true) || it.contains("bronco",   ignoreCase = true) }
@@ -422,12 +406,13 @@ private fun AgendaHistoryItem(event: EmergencyHistory) {
 
 // ── Edit Bottom Sheet Content ─────────────────────────────────────────────────────
 
+// ── EditProfileSheetContent ───────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditProfileSheetContent(
     name: String,        onNameChange: (String) -> Unit,
     phone: String,       onPhoneChange: (String) -> Unit,
-    bloodType: String,   onBloodTypeChange: (String) -> Unit,
     allergies: String,   onAllergiesChange: (String) -> Unit,
     medications: String, onMedicationsChange: (String) -> Unit,
     conditions: String,  onConditionsChange: (String) -> Unit,
@@ -439,63 +424,93 @@ private fun EditProfileSheetContent(
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = 32.dp),
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Título + ações
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = onCancel) { Text("Cancelar") }
-            Text("Editar Perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            if (isSaving) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            } else {
-                TextButton(onClick = onSave) {
-                    Text("Salvar", fontWeight = FontWeight.Bold)
+        // Cabeçalho
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onCancel) { Text("Cancelar") }
+                Text("Editar Perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    TextButton(onClick = onSave) {
+                        Text("Salvar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
+            HorizontalDivider()
         }
-
-        HorizontalDivider()
-
-        // Informações Pessoais
-        SectionLabel("Informações Pessoais")
-        ProfileTextField("Nome completo", name, onNameChange)
-        ProfileTextField("Telefone", phone, onPhoneChange)
-
-        // Dados de Saúde
-        SectionLabel("Dados de Saúde")
-        ProfileTextField("Tipo sanguíneo (ex: O+)", bloodType, onBloodTypeChange)
-        ProfileTextField("Alergias (separadas por vírgula)", allergies, onAllergiesChange)
-        ProfileTextField("Medicamentos em uso", medications, onMedicationsChange)
-        ProfileTextField("Condições médicas", conditions, onConditionsChange)
-        ProfileTextField("Observações adicionais", notes, onNotesChange, singleLine = false)
-
-        // Contato de Emergência
-        SectionLabel("Contato de Emergência")
-        ProfileTextField("Nome", emergName, onEmergNameChange)
-        ProfileTextField("Telefone", emergPhone, onEmergPhoneChange)
-        ProfileTextField("Parentesco (ex: Mãe)", emergRel, onEmergRelChange)
+        // Seção 1: Informações Pessoais
+        item {
+            EditSection(icon = Icons.Default.Person, title = "Informações Pessoais") {
+                ProfileTextField("Nome completo", name, onNameChange)
+                ProfileTextField("Telefone", phone, onPhoneChange)
+            }
+        }
+        // Seção 2: Dados de Saúde
+        item {
+            EditSection(icon = Icons.Default.Favorite, title = "Dados de Saúde") {
+                ProfileTextField("Tipo de Asma / Condições médicas", conditions, onConditionsChange)
+                ProfileTextField("Alergias (separadas por vírgula)", allergies, onAllergiesChange)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    ProfileTextField("Medicação Atual (separada por vírgula)", medications, onMedicationsChange)
+                    Text(
+                        "Ex: fluticasona controle, salbutamol resgate",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+                ProfileTextField("Observações adicionais", notes, onNotesChange, singleLine = false)
+            }
+        }
+        // Seção 3: Contato de Emergência
+        item {
+            EditSection(icon = Icons.Default.ContactPhone, title = "Contato de Emergência") {
+                ProfileTextField("Nome", emergName, onEmergNameChange)
+                ProfileTextField("Telefone", emergPhone, onEmergPhoneChange)
+                ProfileTextField("Parentesco (ex: Mãe)", emergRel, onEmergRelChange)
+            }
+        }
     }
 }
 
+// ── EditSection ─────────────────────────────────────────────────────────────────
+
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 4.dp)
-    )
+private fun EditSection(
+    icon: ImageVector,
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            }
+            HorizontalDivider()
+            content()
+        }
+    }
 }
+
+// ── ProfileTextField ─────────────────────────────────────────────────────────────
 
 @Composable
 private fun ProfileTextField(
