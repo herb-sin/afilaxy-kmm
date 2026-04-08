@@ -153,8 +153,8 @@ private fun ProfessionalCTABanner(context: android.content.Context) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -164,19 +164,19 @@ private fun ProfessionalCTABanner(context: android.content.Context) {
                     imageVector = Icons.Default.PersonAdd,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
                 Text(
-                    "Sou Profissional de Saúde",
-                    style = MaterialTheme.typography.titleSmall,
+                    "Sou Profissional da Saúde",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
-                "Cadastre-se e apareça como referência no Afilaxy.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                "Apóie o Afilaxy e ganhe visibilidade fora do ambiente clínico.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
             )
             Button(
                 onClick = {
@@ -189,8 +189,8 @@ private fun ProfessionalCTABanner(context: android.content.Context) {
                 )
             ) {
                 Text(
-                    "Quero me cadastrar",
-                    style = MaterialTheme.typography.labelMedium
+                    "Quero Apoiar!",
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         }
