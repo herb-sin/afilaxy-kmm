@@ -26,7 +26,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.PermissionChecker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
@@ -171,7 +174,29 @@ fun HomeScreenNew(
             HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
                 weeklyCount = weeklyCount,
-                totalEmergencies = totalEmergencies
+                totalEmergencies = totalEmergencies,
+                onExportLogs = {
+                    scope.launch(Dispatchers.IO) {
+                        val logs = FileLogger.getAllLogs()
+                        if (logs.isNotEmpty()) {
+                            val uris = logs.map { file ->
+                                FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    file
+                                )
+                            }
+                            withContext(Dispatchers.Main) {
+                                val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                    type = "text/plain"
+                                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Exportar Logs"))
+                            }
+                        }
+                    }
+                }
             )
         }
 
@@ -353,7 +378,8 @@ private fun HomeWelcomeCard(
     userName: String,
     weeklyCount: Int,
     // Total acumulado de todas as semanas — nunca zera na virada de semana.
-    totalEmergencies: Int = -1
+    totalEmergencies: Int = -1,
+    onExportLogs: (() -> Unit)? = null
 ) {
     // Cor do gradiente e mensagens dependem da contagem semanal
     val (gradientColors, headline, body) = when (weeklyCount) {
@@ -457,6 +483,22 @@ private fun HomeWelcomeCard(
                 }
             }
 
+        }
+        // Botão de exportação de logs (dev) — discreto no canto superior direito
+        if (onExportLogs != null) {
+            IconButton(
+                onClick = onExportLogs,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = "Exportar Logs",
+                    tint = Color.White.copy(alpha = 0.55f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }
