@@ -42,9 +42,11 @@ class EmergencyViewModel(
      */
     fun resetStuckLoading() {
         val s = _state.value
-        if (s.isLoading && !s.hasActiveEmergency && !s.isCreatingEmergency) {
-            com.afilaxy.util.Logger.w("EmergencyViewModel", "resetStuckLoading: isLoading estava true sem emergência ativa — corrigido")
-            _state.update { it.copy(isLoading = false) }
+        val stuck = (s.isLoading || s.isCreatingEmergency) && !s.hasActiveEmergency
+        if (stuck) {
+            com.afilaxy.util.Logger.w("EmergencyViewModel",
+                "resetStuckLoading: isLoading=${s.isLoading} isCreatingEmergency=${s.isCreatingEmergency} sem emergência ativa — corrigido")
+            _state.update { it.copy(isLoading = false, isCreatingEmergency = false) }
         }
     }
 
@@ -85,64 +87,60 @@ class EmergencyViewModel(
     fun onCreateEmergency() {
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isCreatingEmergency = true, error = null) }
-            
-            // Obter localização
-            val location = locationRepository.getCurrentLocation()
-            if (location == null) {
-                _state.update { 
-                    it.copy(
-                        isCreatingEmergency = false,
-                        error = "Erro ao obter localização"
-                    )
+            try {
+                // Obter localização
+                val location = locationRepository.getCurrentLocation()
+                if (location == null) {
+                    _state.update {
+                        it.copy(isCreatingEmergency = false, error = "Erro ao obter localização")
+                    }
+                    return@launch
                 }
-                return@launch
-            }
-            
-            _state.update { 
-                it.copy(
-                    userLatitude = location.latitude,
-                    userLongitude = location.longitude
+
+                _state.update {
+                    it.copy(userLatitude = location.latitude, userLongitude = location.longitude)
+                }
+
+                // Criar emergência via use case (inclui validação de coordenadas)
+                val emergency = com.afilaxy.domain.model.Emergency.create(
+                    id = "",
+                    userId = "",
+                    userName = "",
+                    location = location
                 )
+                createEmergencyUseCase.execute(emergency)
+                    .onSuccess { emergencyId ->
+                        com.afilaxy.util.Logger.d("EmergencyViewModel", "onCreateEmergency success emergencyId=$emergencyId")
+                        // Sempre desativa o helper antes de assumir o papel de requester —
+                        // mesmo que isHelperMode=false no estado, o device pode estar registrado
+                        // na coleção 'helpers' de uma sessão anterior (auto-match prevention).
+                        try { emergencyRepository.deactivateHelper() } catch (_: Exception) {}
+                        val expiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + 180000L
+                        _state.update {
+                            it.copy(
+                                emergencyId = emergencyId,
+                                hasActiveEmergency = true,
+                                isCreatingEmergency = false,
+                                isHelperMode = false,
+                                isRequester = true,
+                                emergencyExpiresAt = expiresAt,
+                                error = null
+                            )
+                        }
+                        observeEmergencyStatus(emergencyId)
+                        findNearbyHelpers()
+                    }
+                    .onFailure { exception ->
+                        com.afilaxy.util.Logger.e("EmergencyViewModel", "onCreateEmergency failed: ${exception.message}", exception)
+                        _state.update {
+                            it.copy(isCreatingEmergency = false, error = exception.message ?: "Erro ao criar emergência")
+                        }
+                    }
+            } catch (e: Exception) {
+                // Garante que isCreatingEmergency não trava em true após qualquer exceção inesperada
+                com.afilaxy.util.Logger.e("EmergencyViewModel", "onCreateEmergency unexpected: ${e.message}", e)
+                _state.update { it.copy(isCreatingEmergency = false, error = "Erro inesperado. Tente novamente.") }
             }
-            
-            // Criar emergência via use case (inclui validação de coordenadas)
-            val emergency = com.afilaxy.domain.model.Emergency.create(
-                id = "",
-                userId = "",
-                userName = "",
-                location = location
-            )
-            createEmergencyUseCase.execute(emergency)
-                .onSuccess { emergencyId ->
-                    com.afilaxy.util.Logger.d("EmergencyViewModel", "onCreateEmergency success emergencyId=$emergencyId")
-                    // Sempre desativa o helper antes de assumir o papel de requester —
-                    // mesmo que isHelperMode=false no estado, o device pode estar registrado
-                    // na coleção 'helpers' de uma sessão anterior (auto-match prevention).
-                    try { emergencyRepository.deactivateHelper() } catch (_: Exception) {}
-                    val expiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + 180000L
-                    _state.update {
-                        it.copy(
-                            emergencyId = emergencyId,
-                            hasActiveEmergency = true,
-                            isCreatingEmergency = false,
-                            isHelperMode = false,
-                            isRequester = true,
-                            emergencyExpiresAt = expiresAt,
-                            error = null
-                        )
-                    }
-                    observeEmergencyStatus(emergencyId)
-                    findNearbyHelpers()
-                }
-                .onFailure { exception ->
-                    com.afilaxy.util.Logger.e("EmergencyViewModel", "onCreateEmergency failed: ${exception.message}", exception)
-                    _state.update {
-                        it.copy(
-                            isCreatingEmergency = false,
-                            error = exception.message ?: "Erro ao criar emergência"
-                        )
-                    }
-                }
         }
     }
     

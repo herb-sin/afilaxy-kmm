@@ -119,6 +119,7 @@ fun EmergencyScreen(
             
             if (showLocationPermission) {
                 RequestLocationPermission(
+                    requiresBackground = false,
                     onPermissionGranted = {
                         showLocationPermission = false
                         viewModel.onCreateEmergency()
