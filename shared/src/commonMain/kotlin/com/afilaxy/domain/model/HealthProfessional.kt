@@ -23,9 +23,16 @@ data class HealthProfessional(
 
 @Serializable
 enum class Specialty {
-    PNEUMOLOGIST,
-    ALLERGIST,
-    PHYSIOTHERAPIST
+    PNEUMOLOGIST,       // Pneumologista
+    ALLERGIST,          // Alergologista
+    PHYSIOTHERAPIST,    // Fisioterapeuta
+    PSYCHOLOGIST,       // Psicologia
+    PSYCHIATRIST,       // Psiquiatria
+    OTOLARYNGOLOGIST,   // Otorrino
+    ENDOCRINOLOGIST,    // Endocrino
+    GASTROENTEROLOGIST, // Gastro
+    CARDIOLOGIST,       // Cardio
+    CLINIC              // Clínicas
 }
 
 @Serializable

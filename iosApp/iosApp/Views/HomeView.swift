@@ -277,31 +277,15 @@ struct HomeView: View {
     
     // MARK: - Quick Actions Grid
     private var quickActionsGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+        HStack(spacing: 16) {
             ActionCard(
-                title: "Histórico",
-                subtitle: "Suas emergências anteriores",
-                icon: "clock.fill"
-            ) {
-                navigationPath.append(AppRoute.history)
-            }
-            
-            ActionCard(
-                title: "Profissionais",
-                subtitle: "Encontre especialistas",
-                icon: "stethoscope"
-            ) {
-                navigationPath.append(AppRoute.professionals)
-            }
-            
-            ActionCard(
-                title: "Educação",
-                subtitle: "Aprenda sobre asma",
-                icon: "graduationcap.fill"
+                title: "Autocuidado",
+                subtitle: "Saúde e bem-estar",
+                icon: "heart.text.square.fill"
             ) {
                 navigationPath.append(AppRoute.education)
             }
-            
+
             ActionCard(
                 title: "Comunidade",
                 subtitle: "Grupo no WhatsApp",
@@ -441,12 +425,18 @@ struct HomeView: View {
         let urls = FileLogger.shared.getAllLogFileURLs()
         let content = urls.compactMap { try? String(contentsOf: $0, encoding: .utf8) }
                           .joined(separator: "\n\n--- next file ---\n\n")
-        guard !content.isEmpty else { return }
-        let av = UIActivityViewController(activityItems: [content], applicationActivities: nil)
-        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let root = scene.windows.first?.rootViewController {
-            root.present(av, animated: true)
-        }
+
+        let text = content.isEmpty
+            ? "[Nenhum log disponível nesta sessão — reinicie o app e reproduza o problema]"
+            : content
+
+        let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+
+        // Traversal correto: garante que chegamos ao topmost VC mesmo dentro de NavigationStack
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              var topVC = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
+        while let presented = topVC.presentedViewController { topVC = presented }
+        topVC.present(av, animated: true)
     }
     
     // MARK: - Navigation Destination Builder
