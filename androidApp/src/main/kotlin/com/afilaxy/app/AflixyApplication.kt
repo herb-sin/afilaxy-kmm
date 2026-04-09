@@ -17,14 +17,18 @@ import org.koin.core.logger.Level
 import org.koin.dsl.module
 
 class AflixyApplication : Application() {
-    
+
     override fun onCreate() {
         super.onCreate()
-        
+
         FileLogger.initialize(this)
-        
+
         startKoin {
-            androidLogger(Level.DEBUG)
+            // DEBUG em builds de desenvolvimento, ERROR em produção
+            val koinLogLevel = if ((applicationInfo.flags and
+                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0)
+                Level.DEBUG else Level.ERROR
+            androidLogger(koinLogLevel)
             androidContext(this@AflixyApplication)
             modules(
                 sharedModule(),
