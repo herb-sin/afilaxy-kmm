@@ -36,11 +36,11 @@ struct ProfessionalListView: View {
                 } else if state.professionals.isEmpty {
                     EmptyProfessionalsCard()
                 } else {
-                    // Hero Welcome Card
-                    ProfessionalsHeroCard()
-
                     // CTA para profissionais de saúde
                     ProfessionalCTACard()
+
+                    // Hero Welcome Card
+                    ProfessionalsHeroCard()
                     
                     // Filter Controls
                     FilterControlsCard(
