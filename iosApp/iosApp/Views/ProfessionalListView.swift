@@ -183,15 +183,15 @@ struct ProfessionalCTACard: View {
                     .font(.title3)
                     .foregroundColor(AfilaxyColors.primary)
 
-                Text("Sou Profissional de Saúde")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                Text("Sou Profissional da Saúde")
+                    .font(.headline)
+                    .fontWeight(.bold)
 
                 Spacer()
             }
 
-            Text("Cadastre-se e apareça como referência no Afilaxy.")
-                .font(.caption)
+            Text("Apóie o Afilaxy e ganhe visibilidade fora do ambiente clínico.")
+                .font(.subheadline)
                 .foregroundColor(.secondary)
 
             Button {
@@ -201,8 +201,8 @@ struct ProfessionalCTACard: View {
             } label: {
                 HStack {
                     Spacer()
-                    Text("Quero me cadastrar")
-                        .font(.caption)
+                    Text("Quero Apoiar!")
+                        .font(.subheadline)
                         .fontWeight(.semibold)
                     Spacer()
                 }
@@ -213,7 +213,7 @@ struct ProfessionalCTACard: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(16)
+        .padding(20)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
