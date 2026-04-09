@@ -33,7 +33,8 @@ import com.google.accompanist.permissions.shouldShowRationale
 @Composable
 fun RequestLocationPermission(
     onPermissionGranted: () -> Unit,
-    onPermissionDenied: () -> Unit = {}
+    onPermissionDenied: () -> Unit = {},
+    requiresBackground: Boolean = true
 ) {
     val context = LocalContext.current
 
@@ -69,20 +70,21 @@ fun RequestLocationPermission(
     LaunchedEffect(Unit) {
         when {
             foregroundState.allPermissionsGranted -> {
-                handleBackgroundStep(backgroundState?.status?.isGranted, ::grantOnce) {
-                    showBackgroundRationale = true
+                if (requiresBackground) {
+                    handleBackgroundStep(backgroundState?.status?.isGranted, ::grantOnce) {
+                        showBackgroundRationale = true
+                    }
+                } else {
+                    grantOnce() // Emergência: foreground basta, sem diálogo de segundo plano
                 }
             }
             foregroundState.permissions.any { it.status.shouldShowRationale } -> {
-                // Usuário negou antes — exibir rationale de foreground
                 showForegroundRationale = true
             }
             isPermanentlyDenied -> {
-                // Negado permanentemente — mostrar rationale com opção de configurações
                 showForegroundRationale = true
             }
             else -> {
-                // Primeira solicitação — pedir diretamente
                 hasLaunchedRequest = true
                 foregroundState.launchMultiplePermissionRequest()
             }
@@ -92,11 +94,14 @@ fun RequestLocationPermission(
     // --- Após o request inicial, verificar resultado ---
     LaunchedEffect(foregroundState.allPermissionsGranted) {
         if (foregroundState.allPermissionsGranted) {
-            handleBackgroundStep(backgroundState?.status?.isGranted, ::grantOnce) {
-                showBackgroundRationale = true
+            if (requiresBackground) {
+                handleBackgroundStep(backgroundState?.status?.isGranted, ::grantOnce) {
+                    showBackgroundRationale = true
+                }
+            } else {
+                grantOnce()
             }
         } else if (hasLaunchedRequest && !foregroundState.allPermissionsGranted) {
-            // Request foi feito mas negado — mostrar rationale
             showForegroundRationale = true
         }
     }
