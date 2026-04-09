@@ -23,6 +23,8 @@ import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Calendar
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
@@ -74,6 +76,54 @@ fun NavGraph(
     // do ChatScreen sobre a primeira, gerando ChatScreen opened 2-3x por emergência.
     // Análogo ao resolvedEmergencyIds do iOS ContentView.
     val chatNavigatedIds = remember { mutableStateOf(setOf<String>()) }
+
+    // ── Stats do usuário ────────────────────────────────────────────────────────
+    // Listener no nível do NavGraph: executado UMA vez por sessão, nunca
+    // recriado ao navegar entre rotas. Eleva responsabilidade que antes vivia
+    // no HomeScreenNew (onde o DisposableEffect era destruido/recriado a cada
+    // navegação ida/volta, gerando snapshot duplo e log de listener recriado).
+    val weeklyCountState    = remember { mutableStateOf(-1) }
+    val totalEmergenciesState = remember { mutableStateOf(-1) }
+
+    DisposableEffect(Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid == null) {
+            weeklyCountState.value = 0
+            return@DisposableEffect onDispose {}
+        }
+        val cal = Calendar.getInstance().apply {
+            minimalDaysInFirstWeek = 4
+            firstDayOfWeek = Calendar.MONDAY
+        }
+        val week = cal.get(Calendar.WEEK_OF_YEAR)
+        val year = cal.weekYear
+        val weekKey = "%d-W%02d".format(year, week)
+        val listener = FirebaseFirestore.getInstance()
+            .collection("user_stats")
+            .document(uid)
+            .addSnapshotListener { doc, error ->
+                if (error != null) { weeklyCountState.value = 0; return@addSnapshotListener }
+                @Suppress("UNCHECKED_CAST")
+                val map = doc?.get("weeklyCount") as? Map<String, Any>
+                val raw = map?.get(weekKey)
+                weeklyCountState.value = when (raw) {
+                    is Long   -> raw.toInt()
+                    is Double -> raw.toInt()
+                    is Int    -> raw
+                    is Number -> raw.toInt()
+                    else      -> 0
+                }
+                val rawTotal = doc?.get("totalEmergencies")
+                totalEmergenciesState.value = when (rawTotal) {
+                    is Long   -> rawTotal.toInt()
+                    is Double -> rawTotal.toInt()
+                    is Int    -> rawTotal
+                    is Number -> rawTotal.toInt()
+                    else      -> 0
+                }
+            }
+        onDispose { listener.remove() }
+    }
 
     // Registra automaticamente qualquer entidade em chat/{id},
     // qualquer que seja o caminho (FCM intent OU navegação direta pelo accept).
@@ -230,9 +280,11 @@ fun NavGraph(
         composable(AppRoutes.HOME) {
             AfilaxyAppScaffoldSimple(navController = navController) {
                 HomeScreenNew(
+                    weeklyCount = weeklyCountState.value,
+                    totalEmergencies = totalEmergenciesState.value,
                     onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
-                    onNavigateToSettings = {}, // Settings removida — sem rota registrada
+                    onNavigateToSettings = {},
 
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },

@@ -7,7 +7,7 @@ struct ProfessionalListView: View {
     @State private var selectedPlan: SubscriptionPlan? = nil
     @State private var searchText = ""
     @State private var showFilters = false
-    @State private var sortBy: SortOption = .relevance
+    @State private var sortBy: SortOption = .name
     @State private var showOnlyAvailable = false
     @State private var showCrmLookup = false
 
@@ -118,16 +118,9 @@ struct ProfessionalListView: View {
         
         // Sort results - using mock sorting since some properties don't exist
         switch sortBy {
-        case .relevance:
-            // Mock relevance sorting
-            filtered = filtered.sorted { $0.name < $1.name }
         case .name:
             filtered = filtered.sorted { $0.name < $1.name }
-        case .rating:
-            // Mock rating sorting
-            filtered = filtered.sorted { $0.name < $1.name }
         case .distance:
-            // Mock distance sorting
             filtered = filtered.shuffled()
         }
         
@@ -135,11 +128,17 @@ struct ProfessionalListView: View {
     }
     
     private func specialtyLabel(_ specialty: ProfessionalSpecialty) -> String {
-        // Convert specialty string to readable label
         switch specialty.uppercased() {
-        case "PNEUMOLOGIST": return "Pneumologista"
-        case "ALLERGIST": return "Alergista"
-        case "PHYSIOTHERAPIST": return "Fisioterapeuta"
+        case "PNEUMOLOGIST":       return "Pneumologista"
+        case "ALLERGIST":          return "Alergologista"
+        case "PHYSIOTHERAPIST":    return "Fisioterapeuta"
+        case "PSYCHOLOGIST":       return "Psicologia"
+        case "PSYCHIATRIST":       return "Psiquiatria"
+        case "OTOLARYNGOLOGIST":   return "Otorrino"
+        case "ENDOCRINOLOGIST":    return "Endocrino"
+        case "GASTROENTEROLOGIST": return "Gastro"
+        case "CARDIOLOGIST":       return "Cardio"
+        case "CLINIC":             return "Clínica"
         default: return specialty.capitalized
         }
     }
@@ -248,10 +247,17 @@ struct FilterControlsCard: View {
     let onSpecialtyChange: (ProfessionalSpecialty?) -> Void
     
     private let specialties: [(ProfessionalSpecialty?, String, String)] = [
-        (nil, "Todos", "person.3.fill"),
-        ("PNEUMOLOGIST", "Pneumo", "lungs.fill"),
-        ("ALLERGIST", "Alergia", "allergens"),
-        ("PHYSIOTHERAPIST", "Fisio", "figure.walk")
+        (nil,                "Todos",          "person.3.fill"),
+        ("PNEUMOLOGIST",     "Pneumo",         "lungs.fill"),
+        ("ALLERGIST",        "Alergo",         "allergens"),
+        ("PHYSIOTHERAPIST",  "Fisio",          "figure.walk"),
+        ("PSYCHOLOGIST",     "Psicologia",     "brain.head.profile"),
+        ("PSYCHIATRIST",     "Psiquiatria",    "brain.filled.head.profile"),
+        ("OTOLARYNGOLOGIST", "Otorrino",       "ear"),
+        ("ENDOCRINOLOGIST",  "Endocrino",      "chart.line.uptrend.xyaxis"),
+        ("GASTROENTEROLOGIST", "Gastro",       "fork.knife"),
+        ("CARDIOLOGIST",     "Cardio",         "heart.fill"),
+        ("CLINIC",           "Clínicas",       "cross.fill")
     ]
     
     var body: some View {
@@ -302,9 +308,7 @@ struct FilterControlsCard: View {
                             .fontWeight(.semibold)
                         
                         Menu {
-                            Button("Relevância") { sortBy = .relevance }
                             Button("Nome") { sortBy = .name }
-                            Button("Avaliação") { sortBy = .rating }
                             Button("Distância") { sortBy = .distance }
                         } label: {
                             HStack(spacing: 4) {
@@ -509,30 +513,40 @@ struct EmptyProfessionalsCard: View {
 // MARK: - Enums and Extensions
 
 enum Specialty: String, CaseIterable {
-    case pneumologist = "pneumologist"
-    case allergist = "allergist"
-    case physiotherapist = "physiotherapist"
-    
+    case pneumologist       = "pneumologist"
+    case allergist          = "allergist"
+    case physiotherapist    = "physiotherapist"
+    case psychologist       = "psychologist"
+    case psychiatrist       = "psychiatrist"
+    case otolaryngologist   = "otolaryngologist"
+    case endocrinologist    = "endocrinologist"
+    case gastroenterologist = "gastroenterologist"
+    case cardiologist       = "cardiologist"
+    case clinic             = "clinic"
+
     var label: String {
         switch self {
-        case .pneumologist: return "Pneumologista"
-        case .allergist: return "Alergista"
-        case .physiotherapist: return "Fisioterapeuta"
+        case .pneumologist:       return "Pneumologista"
+        case .allergist:          return "Alergologista"
+        case .physiotherapist:    return "Fisioterapeuta"
+        case .psychologist:       return "Psicologia"
+        case .psychiatrist:       return "Psiquiatria"
+        case .otolaryngologist:   return "Otorrino"
+        case .endocrinologist:    return "Endocrino"
+        case .gastroenterologist: return "Gastro"
+        case .cardiologist:       return "Cardio"
+        case .clinic:             return "Clínica"
         }
     }
 }
 
 enum SortOption: String, CaseIterable {
-    case relevance = "relevance"
-    case name = "name"
-    case rating = "rating"
+    case name     = "name"
     case distance = "distance"
-    
+
     var label: String {
         switch self {
-        case .relevance: return "Relevância"
-        case .name: return "Nome"
-        case .rating: return "Avaliação"
+        case .name:     return "Nome"
         case .distance: return "Distância"
         }
     }

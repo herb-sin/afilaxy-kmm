@@ -202,6 +202,20 @@ private fun SpecialtyFilters(
     selectedSpecialty: Specialty?,
     onSpecialtySelected: (Specialty?) -> Unit
 ) {
+    val specialties = listOf(
+        null              to ("Todos"             to Icons.Default.Person),
+        Specialty.PNEUMOLOGIST       to ("Pneumo"          to Icons.Default.Air),
+        Specialty.ALLERGIST          to ("Alergo"          to Icons.Default.Healing),
+        Specialty.PHYSIOTHERAPIST    to ("Fisio"           to Icons.Default.FitnessCenter),
+        Specialty.PSYCHOLOGIST       to ("Psicologia"      to Icons.Default.Face),
+        Specialty.PSYCHIATRIST       to ("Psiquiatria"     to Icons.Default.Person),
+        Specialty.OTOLARYNGOLOGIST   to ("Otorrino"        to Icons.Default.VolumeUp),
+        Specialty.ENDOCRINOLOGIST    to ("Endocrino"       to Icons.Default.MonitorHeart),
+        Specialty.GASTROENTEROLOGIST to ("Gastro"          to Icons.Default.Restaurant),
+        Specialty.CARDIOLOGIST       to ("Cardio"          to Icons.Default.Favorite),
+        Specialty.CLINIC             to ("Clínicas"        to Icons.Default.MedicalServices)
+    )
+
     Column {
         Text(
             "Especialidades",
@@ -209,56 +223,16 @@ private fun SpecialtyFilters(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 12.dp)
         )
-        
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(specialties) { (specialty, labelIcon) ->
+                val (label, icon) = labelIcon
                 FilterChip(
-                    onClick = { onSpecialtySelected(null) },
-                    label = { Text("Todos") },
-                    selected = selectedSpecialty == null
-                )
-            }
-            
-            item {
-                FilterChip(
-                    onClick = { onSpecialtySelected(Specialty.PNEUMOLOGIST) },
-                    label = { Text("Pneumologistas") },
-                    selected = selectedSpecialty == Specialty.PNEUMOLOGIST,
+                    onClick = { onSpecialtySelected(specialty) },
+                    label = { Text(label) },
+                    selected = selectedSpecialty == specialty,
                     leadingIcon = {
                         Icon(
-                            Icons.Default.Air,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                )
-            }
-            
-            item {
-                FilterChip(
-                    onClick = { onSpecialtySelected(Specialty.ALLERGIST) },
-                    label = { Text("Alergistas") },
-                    selected = selectedSpecialty == Specialty.ALLERGIST,
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Healing,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                )
-            }
-            
-            item {
-                FilterChip(
-                    onClick = { onSpecialtySelected(Specialty.PHYSIOTHERAPIST) },
-                    label = { Text("Fisioterapeutas") },
-                    selected = selectedSpecialty == Specialty.PHYSIOTHERAPIST,
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.FitnessCenter,
+                            icon,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
