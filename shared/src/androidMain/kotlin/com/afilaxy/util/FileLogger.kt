@@ -12,12 +12,18 @@ object FileLogger {
     private const val MAX_FILE_SIZE = 5 * 1024 * 1024L // 5MB
     private const val MAX_AGE_DAYS = 7L
     private const val LOG_DIR = "logs"
-    
+
+    /** false em release builds — elimina todo IO de disco em produção */
+    private var isEnabled: Boolean = false
+
     private lateinit var logDir: File
     private val lock = ReentrantReadWriteLock()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
-    
+
     fun initialize(context: Context) {
+        isEnabled = (context.applicationInfo.flags and
+            android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!isEnabled) return  // Release: não cria diretório de logs em disco
         logDir = File(context.cacheDir, LOG_DIR)
         if (!logDir.exists()) {
             logDir.mkdirs()
@@ -26,14 +32,15 @@ object FileLogger {
     }
     
     fun log(level: String, tag: String, message: String) {
+        if (!isEnabled) return  // no-op em release
         lock.write {
             try {
                 val logFile = getCurrentLogFile()
                 val timestamp = dateFormat.format(Date())
                 val logEntry = "$timestamp [$level] $tag: $message\n"
-                
+
                 logFile.appendText(logEntry)
-                
+
                 if (logFile.length() > MAX_FILE_SIZE) {
                     rotateLogFile()
                 }
@@ -44,6 +51,7 @@ object FileLogger {
     }
     
     fun getAllLogs(): List<File> {
+        if (!isEnabled) return emptyList()
         return lock.read {
             if (!::logDir.isInitialized || !logDir.exists()) {
                 emptyList()
@@ -52,14 +60,16 @@ object FileLogger {
             }
         }
     }
-    
+
     fun getTotalSize(): Long {
+        if (!isEnabled) return 0L
         return lock.read {
             getAllLogs().sumOf { it.length() }
         }
     }
-    
+
     fun clearLogs() {
+        if (!isEnabled) return
         lock.write {
             getAllLogs().forEach { it.delete() }
         }

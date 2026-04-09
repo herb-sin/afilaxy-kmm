@@ -45,29 +45,37 @@
     @kotlinx.serialization.SerialName <fields>;
 }
 
-# Remove logging in release
+# Remove logging in release (android.util.Log)
 -assumenosideeffects class android.util.Log {
     public static *** v(...);
     public static *** d(...);
     public static *** i(...);
+    public static *** w(...);
+    public static *** wtf(...);
 }
 
-# Logger KMM compartilhado — remove chamadas de debug/info no release (auditoria 2026-03)
+# Logger KMM compartilhado — strip completo no release (auditoria 2026-04)
 -assumenosideeffects class com.afilaxy.util.Logger {
     public static *** d(...);
     public static *** i(...);
     public static *** v(...);
+    public static *** w(...);
+    public static *** e(...);
 }
 
 -assumenosideeffects class com.afilaxy.app.performance.LogOptimizer {
     public static *** d(...);
     public static *** i(...);
+    public static *** e(...);
 }
 
-# FileLogger — remove gravação em disco no release (auditoria pré-produção 2026-04)
+# FileLogger — strip completo no release: isEnabled garante no-op, ProGuard remove chamadas
+# (auditoria pré-produção 2026-04)
 -assumenosideeffects class com.afilaxy.util.FileLogger {
     public static *** log(...);
 }
+# Preservar initialize() e getAllLogs() que podem ser invocados indiretamente
+-keep class com.afilaxy.util.FileLogger { void initialize(android.content.Context); }
 
 # Google Maps
 -keep class com.google.android.gms.maps.** { *; }
