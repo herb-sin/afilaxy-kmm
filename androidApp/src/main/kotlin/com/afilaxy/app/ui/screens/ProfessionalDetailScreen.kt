@@ -142,9 +142,16 @@ private fun ProfessionalDetailContent(
                 )
                 Text(
                     text = when (professional.specialty) {
-                        Specialty.PNEUMOLOGIST -> "Pneumologista"
-                        Specialty.ALLERGIST -> "Alergista"
-                        Specialty.PHYSIOTHERAPIST -> "Fisioterapeuta"
+                        Specialty.PNEUMOLOGIST       -> "Pneumologista"
+                        Specialty.ALLERGIST          -> "Alergologista"
+                        Specialty.PHYSIOTHERAPIST    -> "Fisioterapeuta"
+                        Specialty.PSYCHOLOGIST       -> "Psicólogo(a)"
+                        Specialty.PSYCHIATRIST       -> "Psiquiatra"
+                        Specialty.OTOLARYNGOLOGIST   -> "Otorrinolaringologista"
+                        Specialty.ENDOCRINOLOGIST    -> "Endocrinologista"
+                        Specialty.GASTROENTEROLOGIST -> "Gastroenterologista"
+                        Specialty.CARDIOLOGIST       -> "Cardiologista"
+                        Specialty.CLINIC             -> "Clínico(a) Geral"
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
