@@ -94,14 +94,14 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: build-files
-        path: web-professional/dist/
+        path: public/professional/
         retention-days: 30
 
   deploy:
     name: 🚀 Deploy to Production
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && success()
     
     steps:
     - name: Download build artifacts
