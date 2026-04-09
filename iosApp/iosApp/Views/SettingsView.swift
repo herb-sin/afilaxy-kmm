@@ -6,10 +6,6 @@ import shared
 struct SettingsView: View {
     @EnvironmentObject var container: AppContainer
     @State private var showLogoutAlert = false
-    @State private var showShareSheet = false
-    @State private var logFileURLs: [URL] = []
-    @State private var showClearLogsAlert = false
-    @State private var showNoLogsAlert = false
     @State private var notificationsEnabled = true
     @State private var helperModeAutoActivate = false
     @State private var emergencyRadius = 5.0
@@ -126,27 +122,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Developer Section (sempre visível — útil para diagnóstico em campo)
-                SettingsSectionCard(title: "Desenvolvedor", icon: "hammer.fill") {
-                    VStack(spacing: 8) {
-                        SettingsActionRow(
-                            title: "Exportar Logs",
-                            subtitle: "\(formatBytes(FileLogger.shared.getTotalLogSize()))",
-                            icon: "square.and.arrow.up.fill",
-                            action: exportLogs
-                        )
-                        
-                        SettingsActionRow(
-                            title: "Limpar Logs",
-                            subtitle: "Remover todos os arquivos de log",
-                            icon: "trash.fill",
-                            isDestructive: true,
-                            action: { showClearLogsAlert = true }
-                        )
-                    }
-                }
-                
-                // Logout Section
                 AfilaxyCard {
                     Button(action: { showLogoutAlert = true }) {
                         HStack {
@@ -184,24 +159,6 @@ struct SettingsView: View {
         } message: {
             Text("Deseja realmente sair da sua conta?")
         }
-        .alert("Limpar Logs", isPresented: $showClearLogsAlert) {
-            Button("Cancelar", role: .cancel) {}
-            Button("Limpar", role: .destructive) {
-                FileLogger.shared.clearAllLogs()
-            }
-        } message: {
-            Text("Todos os logs serão removidos permanentemente.")
-        }
-        .alert("Sem Logs", isPresented: $showNoLogsAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Nenhum arquivo de log encontrado. Use o app para gerar logs.")
-        }
-        .sheet(isPresented: $showShareSheet) {
-            if !logFileURLs.isEmpty {
-                ShareSheet(items: logFileURLs)
-            }
-        }
     }
     
     private func performLogout() {
@@ -227,31 +184,6 @@ struct SettingsView: View {
         }
     }
     
-    private func exportLogs() {
-        let urls = FileLogger.shared.getAllLogFileURLs()
-        FileLogger.shared.write(level: "DEBUG", tag: "SettingsView", message: "Found \(urls.count) log files")
-
-        let content = urls.compactMap { url in
-            try? String(contentsOf: url, encoding: .utf8)
-        }.joined(separator: "\n\n--- next file ---\n\n")
-
-        if content.isEmpty {
-            showNoLogsAlert = true
-        } else {
-            logFileURLs = urls
-            let av = UIActivityViewController(activityItems: [content], applicationActivities: nil)
-            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let root = scene.windows.first?.rootViewController {
-                root.present(av, animated: true)
-            }
-        }
-    }
-    
-    private func formatBytes(_ bytes: Int64) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: bytes)
-    }
 }
 
 // MARK: - Supporting Views
@@ -472,14 +404,3 @@ struct SettingsActionRow: View {
     }
 }
 
-// MARK: - Share Sheet
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        return controller
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}

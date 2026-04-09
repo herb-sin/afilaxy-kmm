@@ -64,6 +64,11 @@
     public static *** i(...);
 }
 
+# FileLogger — remove gravação em disco no release (auditoria pré-produção 2026-04)
+-assumenosideeffects class com.afilaxy.util.FileLogger {
+    public static *** log(...);
+}
+
 # Google Maps
 -keep class com.google.android.gms.maps.** { *; }
 -keep class com.google.maps.** { *; }
