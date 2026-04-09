@@ -56,23 +56,11 @@ struct HomeView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button {
-                        exportLogs()
-                    } label: {
-                        Label("Exportar Logs", systemImage: "doc.text.fill")
-                    }
-
-                    Divider()
-
-                    Button(role: .destructive) {
-                        showLogoutAlert = true
-                    } label: {
-                        Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
+                Button(role: .destructive) {
+                    showLogoutAlert = true
                 } label: {
-                    Image(systemName: "ellipsis.circle.fill")
-                        .foregroundColor(.afiPrimary)
+                    Label("Sair", systemImage: "rectangle.portrait.and.arrow.right")
+                        .foregroundColor(.afiError)
                 }
             }
         }
@@ -419,24 +407,6 @@ struct HomeView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak container] in
             container?.freezeAll()
         }
-    }
-    
-    private func exportLogs() {
-        let urls = FileLogger.shared.getAllLogFileURLs()
-        let content = urls.compactMap { try? String(contentsOf: $0, encoding: .utf8) }
-                          .joined(separator: "\n\n--- next file ---\n\n")
-
-        let text = content.isEmpty
-            ? "[Nenhum log disponível nesta sessão — reinicie o app e reproduza o problema]"
-            : content
-
-        let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
-
-        // Traversal correto: garante que chegamos ao topmost VC mesmo dentro de NavigationStack
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              var topVC = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
-        while let presented = topVC.presentedViewController { topVC = presented }
-        topVC.present(av, animated: true)
     }
     
     // MARK: - Navigation Destination Builder

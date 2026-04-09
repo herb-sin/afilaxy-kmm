@@ -26,17 +26,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.content.PermissionChecker
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
-import com.afilaxy.util.FileLogger
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 
@@ -114,29 +110,7 @@ fun HomeScreenNew(
             HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
                 weeklyCount = weeklyCount,
-                totalEmergencies = totalEmergencies,
-                onExportLogs = {
-                    scope.launch(Dispatchers.IO) {
-                        val logs = FileLogger.getAllLogs()
-                        if (logs.isNotEmpty()) {
-                            val uris = logs.map { file ->
-                                FileProvider.getUriForFile(
-                                    context,
-                                    "${context.packageName}.fileprovider",
-                                    file
-                                )
-                            }
-                            withContext(Dispatchers.Main) {
-                                val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                                    type = "text/plain"
-                                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Exportar Logs"))
-                            }
-                        }
-                    }
-                }
+                totalEmergencies = totalEmergencies
             )
         }
 
