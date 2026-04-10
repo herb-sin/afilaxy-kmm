@@ -27,6 +27,7 @@ import com.afilaxy.app.security.InputSanitizer
 import com.afilaxy.app.util.FcmHelper
 import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.presentation.login.LoginViewModel
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -43,8 +44,11 @@ fun LoginScreen(
     val state by viewModel.state.collectAsState()
     val focusManager = LocalFocusManager.current
     val authRepository: AuthRepository = koinInject()
-    
+    val coroutineScope = rememberCoroutineScope()
+
     var passwordVisible by remember { mutableStateOf(false) }
+    var resetEmailSent by remember { mutableStateOf(false) }
+    var resetError by remember { mutableStateOf<String?>(null) }
     
     LaunchedEffect(state.isLoggedIn) {
         if (state.isLoggedIn) {
@@ -172,13 +176,63 @@ fun LoginScreen(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Botão de Registro
             TextButton(
                 onClick = onRegisterClick,
                 enabled = !state.isLoading
             ) {
                 Text("Não tem uma conta? Criar conta")
+            }
+
+            // Esqueci minha senha
+            TextButton(
+                onClick = {
+                    val email = state.email.trim()
+                    if (email.isBlank()) {
+                        resetError = "Digite seu e-mail acima para recuperar a senha."
+                        return@TextButton
+                    }
+                    coroutineScope.launch {
+                        authRepository.sendPasswordResetEmail(email)
+                            .onSuccess { resetEmailSent = true; resetError = null }
+                            .onFailure { resetError = "Não foi possível enviar o email. Verifique o endereço."; resetEmailSent = false }
+                    }
+                },
+                enabled = !state.isLoading
+            ) {
+                Text(
+                    text = "Esqueci minha senha",
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            // Feedback de redefinição de senha
+            if (resetEmailSent) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Text(
+                        text = "✅ Email de redefinição enviado! Verifique sua caixa de entrada.",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            if (resetError != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = resetError ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

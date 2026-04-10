@@ -53,13 +53,13 @@ fun RegisterScreen(
                       password.length >= 6 && 
                       passwordsMatch
     
-    // Navegar quando registro for bem-sucedido
+    // Navega para tela de verificação de email quando registro for bem-sucedido
     LaunchedEffect(state.isAuthenticated) {
         if (state.isAuthenticated) {
             onRegisterSuccess()
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(

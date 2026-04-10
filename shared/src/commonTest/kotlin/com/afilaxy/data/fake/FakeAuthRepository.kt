@@ -68,7 +68,21 @@ class FakeAuthRepository(
     override fun observeAuthState(): Flow<User?> {
         return flowOf(currentUser)
     }
-    
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Password reset failed"))
+    }
+
+    override suspend fun sendEmailVerification(): Result<Unit> {
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Email verification failed"))
+    }
+
+    override suspend fun isEmailVerified(): Boolean = shouldSucceed
+
+    override suspend fun reloadUser() { /* no-op */ }
+
     // Test helpers
     fun setCurrentUser(user: User?) {
         currentUser = user
