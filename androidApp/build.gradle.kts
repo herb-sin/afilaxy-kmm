@@ -165,6 +165,10 @@ dependencies {
     
     // Biometric
     implementation("androidx.biometric:biometric:1.1.0")
+
+    // WorkManager — agendamento de check-ins matinal e noturno
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
     
     // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics-ktx")

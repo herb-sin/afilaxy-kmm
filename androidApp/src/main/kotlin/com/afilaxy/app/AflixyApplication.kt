@@ -4,6 +4,9 @@ import android.app.Application
 import com.afilaxy.app.analytics.AnalyticsManager
 import com.afilaxy.app.performance.AnrOptimizer
 import com.afilaxy.app.performance.LogOptimizer
+import com.afilaxy.app.workers.EveningCheckInWorker
+import com.afilaxy.app.workers.MorningCheckInWorker
+import com.afilaxy.app.workers.createCheckInNotificationChannel
 import com.afilaxy.di.platformModule
 import com.afilaxy.di.sharedModule
 import com.afilaxy.util.FileLogger
@@ -56,6 +59,14 @@ class AflixyApplication : Application() {
             } catch (e: Exception) {
                 LogOptimizer.e("AflixyApp", "Error initializing services", e)
             }
+        }
+        withContext(Dispatchers.Main) {
+            // Cria canais de notificação (necessário Android 8+)
+            createCheckInNotificationChannel(this@AflixyApplication)
+            // Agenda workers de check-in (idempotente — ExistingWorkPolicy.REPLACE)
+            MorningCheckInWorker.scheduleNext(this@AflixyApplication)
+            EveningCheckInWorker.scheduleNext(this@AflixyApplication)
+            LogOptimizer.d("AflixyApp", "Check-in workers agendados")
         }
     }
 }
