@@ -10,6 +10,9 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showRegister = false
+    @State private var resetSent = false
+    @State private var resetError: String? = nil
+    @State private var isSendingReset = false
 
     var body: some View {
         let state = container.auth.state
@@ -54,6 +57,28 @@ struct LoginView: View {
                     Button { showRegister = true } label: {
                         Text("Criar Conta").foregroundColor(.red)
                     }
+
+                    // Esqueci minha senha
+                    Button(action: sendPasswordReset) {
+                        if isSendingReset {
+                            ProgressView()
+                        } else {
+                            Text("Esqueci minha senha")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .disabled(isSendingReset)
+
+                    if resetSent {
+                        Text("✅ Email de redefinição enviado! Verifique sua caixa de entrada.")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                            .multilineTextAlignment(.center)
+                    }
+                    if let err = resetError {
+                        Text(err).font(.caption).foregroundColor(.red).multilineTextAlignment(.center)
+                    }
                 }
                 .padding(.horizontal, 32)
                 Spacer()
@@ -79,6 +104,26 @@ struct LoginView: View {
 
     private func login() {
         container.auth.vm?.onLogin(email: email, password: password)
+    }
+
+    private func sendPasswordReset() {
+        let trimmed = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            resetError = "Digite seu e-mail acima para recuperar a senha."
+            return
+        }
+        isSendingReset = true
+        resetError = nil
+        resetSent = false
+        Auth.auth().sendPasswordReset(withEmail: trimmed) { error in
+            isSendingReset = false
+            if let error = error {
+                resetError = "Não foi possível enviar o email. Verifique o endereço."
+                _ = error
+            } else {
+                resetSent = true
+            }
+        }
     }
 
     private func friendlyError(_ raw: String) -> String {
