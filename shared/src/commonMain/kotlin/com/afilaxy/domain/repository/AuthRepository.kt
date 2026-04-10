@@ -12,5 +12,9 @@ interface AuthRepository {
     suspend fun updateFcmToken(token: String)
     suspend fun updateUserLocation(latitude: Double, longitude: Double)
     fun observeAuthState(): Flow<User?>
+    suspend fun sendPasswordResetEmail(email: String): Result<Unit>
+    suspend fun sendEmailVerification(): Result<Unit>
+    suspend fun isEmailVerified(): Boolean
+    suspend fun reloadUser()
 }
 

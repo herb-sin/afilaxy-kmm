@@ -229,6 +229,10 @@ fun NavGraph(
         composable(AppRoutes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
+                    // Email verification is enforced at registration time (EmailVerificationScreen).
+                    // Existing users (registered before this feature) are NOT blocked here
+                    // to avoid locking out the current user base.
+                    // Future: add account-age check to enforce for new users only.
                     val dest = postAuthDestination()
                     navController.navigate(dest) {
                         popUpTo(AppRoutes.LOGIN) { inclusive = true }

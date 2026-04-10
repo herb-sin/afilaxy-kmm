@@ -50,11 +50,18 @@ class AuthRepositoryImpl(
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password)
             val firebaseUser = result.user
-            
+
             if (firebaseUser == null) {
                 return Result.failure(Exception("Erro ao criar usuário"))
             }
-            
+
+            // Enviar email de verificação (não bloqueia o registro se falhar)
+            try {
+                firebaseUser.sendEmailVerification()
+            } catch (e: Exception) {
+                // Falha silenciosa — conta criada, mas email não enviado
+            }
+
             // Criar perfil no Firestore
             val userData = mapOf(
                 "uid" to firebaseUser.uid,
@@ -63,12 +70,12 @@ class AuthRepositoryImpl(
                 "isHelper" to false,
                 "createdAt" to getCurrentTimeMillis()
             )
-            
+
             firestore
                 .collection("users")
                 .document(firebaseUser.uid)
                 .set(userData)
-            
+
             val user = User(
                 uid = firebaseUser.uid,
                 email = email,
@@ -76,7 +83,7 @@ class AuthRepositoryImpl(
                 fcmToken = null,
                 isHelper = false
             )
-            
+
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)
@@ -147,6 +154,42 @@ class AuthRepositoryImpl(
         }
     }
     
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+        return try {
+            auth.sendPasswordResetEmail(email)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun sendEmailVerification(): Result<Unit> {
+        return try {
+            val firebaseUser = auth.currentUser
+                ?: return Result.failure(Exception("Usuário não autenticado"))
+            firebaseUser.sendEmailVerification()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun isEmailVerified(): Boolean {
+        return try {
+            auth.currentUser?.isEmailVerified ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    override suspend fun reloadUser() {
+        try {
+            auth.currentUser?.reload()
+        } catch (e: Exception) {
+            // Falha silenciosa
+        }
+    }
+
     /**
      * Mapeia FirebaseUser + documento Firestore para o modelo User do domínio.
      * Método centralizado para evitar duplicação em login, getCurrentUser e observeAuthState.
@@ -164,5 +207,5 @@ class AuthRepositoryImpl(
             isHelper = userDoc.get<Boolean?>("isHelper") ?: false
         )
     }
-    
+
 }
