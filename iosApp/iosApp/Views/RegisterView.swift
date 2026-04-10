@@ -8,6 +8,7 @@ struct RegisterView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var showEmailVerification = false
 
     private var passwordsMatch: Bool { password == confirmPassword }
     private var isFormValid: Bool {
@@ -49,7 +50,23 @@ struct RegisterView: View {
             container.auth.vm?.clearError()
         }
         .onReceive(container.auth.$state) { s in
-            if s?.isAuthenticated == true { dismiss() }
+            if s?.isAuthenticated == true {
+                showEmailVerification = true
+            }
+        }
+        .fullScreenCover(isPresented: $showEmailVerification) {
+            EmailVerificationView(
+                userEmail: email,
+                onVerified: {
+                    showEmailVerification = false
+                    dismiss()
+                },
+                onLogout: {
+                    container.auth.vm?.clearError()
+                    showEmailVerification = false
+                    dismiss()
+                }
+            )
         }
     }
 
