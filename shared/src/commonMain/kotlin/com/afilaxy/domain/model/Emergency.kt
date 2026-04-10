@@ -12,7 +12,9 @@ data class Emergency(
     val timestamp: Long,
     val status: EmergencyStatus = EmergencyStatus.ACTIVE,
     val assignedHelperId: String? = null,
-    val resolvedAt: Long? = null
+    val resolvedAt: Long? = null,
+    /** Gravidade auto-reportada pelo paciente: "leve", "moderada", "grave" ou null (não informada). */
+    val severity: String? = null
 ) {
     companion object {
         fun create(

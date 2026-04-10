@@ -14,6 +14,7 @@ import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.presentation.medical.MedicalProfileViewModel
+import com.afilaxy.presentation.risk.RiskViewModel
 import com.russhwolf.settings.Settings
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
@@ -41,7 +42,8 @@ fun sharedModule(): Module = module {
     
     // New repositories for expanded features
     single<MedicalRepository> { MedicalRepositoryImpl(get()) }
-    
+    single<EnvironmentalRepository> { EnvironmentalRepositoryImpl(get()) }
+
     // LocationRepository é injetado no platformModule()
     
     // Use Cases
@@ -63,6 +65,7 @@ fun sharedModule(): Module = module {
     // New ViewModels for expanded features
     factory { HomeViewModel(get(), get()) }
     factory { MedicalProfileViewModel(get(), "default_user") }
+    factory { RiskViewModel(get(), get()) }
 }
 
 /**
