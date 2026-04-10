@@ -29,7 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
+import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.app.ui.components.RiskWidget
 import com.afilaxy.domain.repository.EmergencyRepository
@@ -101,20 +103,30 @@ fun HomeScreenNew(
         helperIntended = emergencyState.isHelperMode
     }
 
-    // Localização silenciosa para o RiskWidget (usa última posição conhecida)
+    // Localização para o RiskWidget via FusedLocationProviderClient (mais confiável)
     var riskLat by remember { mutableStateOf(0.0) }
     var riskLng by remember { mutableStateOf(0.0) }
     LaunchedEffect(Unit) {
         try {
-            val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
             @Suppress("MissingPermission")
-            val loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            val loc = fusedClient.lastLocation.await()
             if (loc != null) {
                 riskLat = loc.latitude
                 riskLng = loc.longitude
+            } else {
+                // Fallback: LocationManager caso Fused não tenha cache
+                val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                @Suppress("MissingPermission")
+                val fallback = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                    ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+                if (fallback != null) {
+                    riskLat = fallback.latitude
+                    riskLng = fallback.longitude
+                }
             }
-        } catch (_: Exception) { /* Sem permissão — RiskWidget não é exibido */ }
+        } catch (_: Exception) { /* Sem permissão — RiskWidget não exibido */ }
     }
 
     LazyColumn(
