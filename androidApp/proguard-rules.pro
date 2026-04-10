@@ -102,3 +102,11 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# Ktor + OkHttp: SLF4J não existe no Android (logging interno do OkHttp)
+-dontwarn org.slf4j.**
+
+# Ktor: classes opcionais não presentes no runtime Android
+-dontwarn io.ktor.**
+-keep class io.ktor.** { *; }
+-keepclassmembers class io.ktor.** { *; }

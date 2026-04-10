@@ -98,6 +98,7 @@ android {
     
     lint {
         disable.add("MissingTranslation")
+        disable.add("ExtraTranslation")
         abortOnError = false
     }
     
