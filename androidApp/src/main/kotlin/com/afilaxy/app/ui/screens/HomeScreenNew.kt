@@ -1,7 +1,9 @@
 package com.afilaxy.app.ui.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,6 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import kotlinx.coroutines.launch
 import com.afilaxy.app.ui.components.RequestLocationPermission
+import com.afilaxy.app.ui.components.RiskWidget
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
@@ -98,6 +101,22 @@ fun HomeScreenNew(
         helperIntended = emergencyState.isHelperMode
     }
 
+    // Localização silenciosa para o RiskWidget (usa última posição conhecida)
+    var riskLat by remember { mutableStateOf(0.0) }
+    var riskLng by remember { mutableStateOf(0.0) }
+    LaunchedEffect(Unit) {
+        try {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            @Suppress("MissingPermission")
+            val loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            if (loc != null) {
+                riskLat = loc.latitude
+                riskLng = loc.longitude
+            }
+        } catch (_: Exception) { /* Sem permissão — RiskWidget não é exibido */ }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -112,6 +131,13 @@ fun HomeScreenNew(
                 weeklyCount = weeklyCount,
                 totalEmergencies = totalEmergencies
             )
+        }
+
+        // Widget de risco de crise — visível apenas se localização disponível
+        if (riskLat != 0.0 && riskLng != 0.0) {
+            item {
+                RiskWidget(latitude = riskLat, longitude = riskLng)
+            }
         }
 
         // Botão de Emergência Principal

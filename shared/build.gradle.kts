@@ -56,6 +56,11 @@ kotlin {
 
             // KMM-ViewModel
             implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16")
+
+            // Ktor HTTP client (OpenMeteo + WAQI)
+            implementation("io.ktor:ktor-client-core:2.3.7")
+            implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
         }
 
         commonTest.dependencies {
@@ -67,12 +72,17 @@ kotlin {
         androidMain.dependencies {
             implementation("io.insert-koin:koin-android:3.5.0")
             implementation("com.google.android.gms:play-services-location:21.3.0")
+            // Ktor engine Android
+            implementation("io.ktor:ktor-client-okhttp:2.3.7")
         }
 
-        // iosMain é criado automaticamente pelo Kotlin 2.x Default Hierarchy Template.
-        // Não é necessário declarar dependsOn() manualmente.
-    }
-}
+        iosMain.dependencies {
+            // Ktor engine iOS
+            implementation("io.ktor:ktor-client-darwin:2.3.7")
+        }
+
+    } // sourceSets
+} // kotlin
 
 android {
     namespace = "com.afilaxy.shared"

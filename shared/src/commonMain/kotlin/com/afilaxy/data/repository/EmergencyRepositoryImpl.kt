@@ -379,7 +379,8 @@ class EmergencyRepositoryImpl(
                     status = status,
                     timestamp = doc.get("timestamp") ?: 0L,
                     resolvedAt = doc.get("resolvedAt"),
-                    cancelledAt = if (status == "cancelled") doc.get("timestamp") else null
+                    cancelledAt = if (status == "cancelled") doc.get("timestamp") else null,
+                    severity = doc.get("severity") // null se o paciente não selecionou
                 )
             }.sortedByDescending { it.timestamp }
 
@@ -416,7 +417,8 @@ class EmergencyRepositoryImpl(
                         location = Location(lat, lon, "", doc.get("timestamp") ?: 0L),
                         status = EmergencyStatus.fromDb(doc.get("status") ?: "waiting"),
                         assignedHelperId = doc.get("helperId"),
-                        timestamp = doc.get("timestamp") ?: 0L
+                        timestamp = doc.get("timestamp") ?: 0L,
+                        severity = doc.get("severity") // null se o paciente não selecionou
                     )
                 }
             }

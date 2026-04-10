@@ -14,5 +14,7 @@ data class EmergencyHistory(
     val status: String,
     val timestamp: Long,
     val resolvedAt: Long? = null,
-    val cancelledAt: Long? = null
+    val cancelledAt: Long? = null,
+    /** Gravidade auto-reportada pelo paciente: "leve", "moderada", "grave" ou null (não informada). */
+    val severity: String? = null
 )
