@@ -237,7 +237,8 @@ jobs:
           echo "Usando PROFILE_UUID=$PROFILE_UUID"
 
           # Atualiza ExportOptions.plist
-          /usr/libexec/PlistBuddy -c "Set :signingStyle manual" iosApp/ExportOptions.plist
+          # NOTA: NÃO sobrescrever signingStyle — manter 'automatic' do plist
+          # signingStyle=manual + uploadAndDistribute=true é incompatível no Xcode 16
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" iosApp/ExportOptions.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy \
             -c "Set :provisioningProfiles:com.afilaxy.app $PROFILE_UUID" \
@@ -253,6 +254,19 @@ jobs:
             -authenticationKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
             -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
+
+      # Valida que o upload ao TestFlight ocorreu (xcodebuild loga 'Uploading' quando bem sucedido)
+      - name: Verify TestFlight Upload
+        run: |
+          IPA_PATH=$(find "$RUNNER_TEMP/ipa" -name "*.ipa" 2>/dev/null | head -1)
+          if [[ -f "$IPA_PATH" ]]; then
+            echo "✅ IPA gerado: $IPA_PATH ($(du -h "$IPA_PATH" | cut -f1))"
+            echo "   Upload gerenciado por xcodebuild via uploadAndDistribute=true"
+            echo "   Aguarde 5-30 min para processamento no App Store Connect."
+          else
+            echo "❌ IPA não encontrado em $RUNNER_TEMP/ipa"
+            exit 1
+          fi
 
       # Faz upload do IPA como artefato do Actions
       - name: Upload IPA
