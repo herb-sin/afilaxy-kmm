@@ -236,9 +236,8 @@ jobs:
           fi
           echo "Usando PROFILE_UUID=$PROFILE_UUID"
 
-          # Atualiza ExportOptions.plist
-          # NOTA: NÃO sobrescrever signingStyle — manter 'automatic' do plist
-          # signingStyle=manual + uploadAndDistribute=true é incompatível no Xcode 16
+          # Atualiza ExportOptions.plist com signing manual + provisioning profile
+          /usr/libexec/PlistBuddy -c "Set :signingStyle manual" iosApp/ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" iosApp/ExportOptions.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy \
             -c "Set :provisioningProfiles:com.afilaxy.app $PROFILE_UUID" \
@@ -255,17 +254,22 @@ jobs:
             -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
 
-      # Valida que o upload ao TestFlight ocorreu (xcodebuild loga 'Uploading' quando bem sucedido)
-      - name: Verify TestFlight Upload
+      # Valida que o IPA foi gerado e captura os logs de distribuição para diagnóstico
+      - name: Verify Export and Capture Distribution Logs
+        if: always()
         run: |
           IPA_PATH=$(find "$RUNNER_TEMP/ipa" -name "*.ipa" 2>/dev/null | head -1)
           if [[ -f "$IPA_PATH" ]]; then
             echo "✅ IPA gerado: $IPA_PATH ($(du -h "$IPA_PATH" | cut -f1))"
-            echo "   Upload gerenciado por xcodebuild via uploadAndDistribute=true"
-            echo "   Aguarde 5-30 min para processamento no App Store Connect."
           else
-            echo "❌ IPA não encontrado em $RUNNER_TEMP/ipa"
-            exit 1
+            echo "❌ IPA não encontrado"
+          fi
+          # Captura xdistributionlogs para diagnóstico de upload
+          DIST_LOGS=$(ls /var/folders/*/*/*xcdistributionlogs 2>/dev/null | tail -1)
+          if [[ -n "$DIST_LOGS" ]]; then
+            echo "=== Distribution Logs ==="
+            cat "$DIST_LOGS"/IDEDistribution.standard.log 2>/dev/null | tail -50 || true
+            cp -r "$DIST_LOGS" "$RUNNER_TEMP/xcdistributionlogs" 2>/dev/null || true
           fi
 
       # Faz upload do IPA como artefato do Actions
@@ -276,15 +280,12 @@ jobs:
           path: ${{ runner.temp }}/ipa/*.ipa
           retention-days: 30
 
-      # Upload ao TestFlight: gerenciado pelo xcodebuild -exportArchive via
-      # uploadAndDistribute=true no ExportOptions.plist (Xcode 16+).
-      # xcrun altool foi removido no Xcode 15.4 / Xcode 16 — não usar.
-      - name: Confirm TestFlight Upload
-        run: |
-          EXPORT_METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" iosApp/ExportOptions.plist)
-          if [[ "$EXPORT_METHOD" == "app-store-connect" ]]; then
-            echo "✅ Upload ao TestFlight realizado pelo xcodebuild via uploadAndDistribute=true"
-            echo "   Aguarde alguns minutos para o build aparecer no App Store Connect."
-          else
-            echo "ℹ️  Método '$EXPORT_METHOD' — sem upload ao TestFlight."
-          fi
+      # Upload dos logs de distribuição para diagnóstico de upload ao TestFlight
+      - name: Upload Distribution Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcdistributionlogs-${{ github.sha }}
+          path: ${{ runner.temp }}/xcdistributionlogs/
+          retention-days: 7
+          if-no-files-found: ignore
