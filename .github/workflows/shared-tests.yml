@@ -23,6 +23,9 @@ jobs:
     
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+
+    - name: Inject WAQI API token
+      run: echo "WAQI_API_TOKEN=${{ secrets.WAQI_API_TOKEN }}" >> local.properties
     
     - name: Run all shared tests
       run: ./gradlew shared:allTests --stacktrace

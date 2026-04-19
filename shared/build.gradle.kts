@@ -1,9 +1,36 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinCocoapods)
     alias(libs.plugins.androidLibrary)
     kotlin("plugin.serialization") version libs.versions.kotlin.get()
 }
+
+// ── WAQI API Token (lido de local.properties ou env var) ─────────────────────
+val waqiToken: String = run {
+    System.getenv("WAQI_API_TOKEN")?.takeIf { it.isNotBlank() }
+        ?: rootProject.file("local.properties").let { file ->
+            if (file.exists()) {
+                val props = Properties().apply { file.inputStream().use { load(it) } }
+                props.getProperty("WAQI_API_TOKEN", "")
+            } else ""
+        }
+}
+
+// Gera WaqiConfig.kt na fase de configuração (antes de qualquer compilação)
+val waqiDir = layout.buildDirectory.dir("generated/waqi/com/afilaxy/config").get().asFile
+waqiDir.mkdirs()
+waqiDir.resolve("WaqiConfig.kt").writeText(
+    """
+    |package com.afilaxy.config
+    |
+    |/** Auto-generated — NÃO editar manualmente. Veja shared/build.gradle.kts */
+    |object WaqiConfig {
+    |    const val API_TOKEN = "$waqiToken"
+    |}
+    """.trimMargin()
+)
 
 kotlin {
     androidTarget {
@@ -34,33 +61,36 @@ kotlin {
     }
 
     sourceSets {
-        commonMain.dependencies {
-            // Coroutines
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+        commonMain {
+            kotlin.srcDir(layout.buildDirectory.dir("generated/waqi"))
+            dependencies {
+                // Coroutines
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
-            // Serialization
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+                // Serialization
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
-            // DateTime
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                // DateTime
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
 
-            // Firebase KMM
-            implementation("dev.gitlive:firebase-auth:2.1.0")
-            implementation("dev.gitlive:firebase-firestore:2.1.0")
+                // Firebase KMM
+                implementation("dev.gitlive:firebase-auth:2.1.0")
+                implementation("dev.gitlive:firebase-firestore:2.1.0")
 
-            // Settings
-            implementation("com.russhwolf:multiplatform-settings:1.1.1")
+                // Settings
+                implementation("com.russhwolf:multiplatform-settings:1.1.1")
 
-            // Koin DI
-            implementation("io.insert-koin:koin-core:3.5.0")
+                // Koin DI
+                implementation("io.insert-koin:koin-core:3.5.0")
 
-            // KMM-ViewModel
-            implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16")
+                // KMM-ViewModel
+                implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16")
 
-            // Ktor HTTP client (OpenMeteo + WAQI)
-            implementation("io.ktor:ktor-client-core:2.3.7")
-            implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+                // Ktor HTTP client (OpenMeteo + WAQI)
+                implementation("io.ktor:ktor-client-core:2.3.7")
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+            }
         }
 
         commonTest.dependencies {

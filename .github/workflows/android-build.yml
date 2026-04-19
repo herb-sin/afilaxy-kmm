@@ -36,6 +36,7 @@ jobs:
       run: |
         echo "MAPS_API_KEY_ANDROID=${{ secrets.MAPS_API_KEY_ANDROID }}" >> local.properties
         echo "VERSION_CODE=${{ github.run_number }}" >> local.properties
+        echo "WAQI_API_TOKEN=${{ secrets.WAQI_API_TOKEN }}" >> local.properties
     
     - name: Run shared module tests
       run: ./gradlew shared:testDebugUnitTest --stacktrace
