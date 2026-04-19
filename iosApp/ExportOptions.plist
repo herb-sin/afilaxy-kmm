@@ -30,5 +30,11 @@
     <!-- Inclui símbolos para crash reporting -->
     <key>uploadSymbols</key>
     <true/>
+
+    <!-- Xcode 16+: faz upload ao App Store Connect / TestFlight durante o export.
+         Substitui xcrun altool --upload-app (removido no Xcode 16).
+         Só tem efeito quando method=app-store-connect. -->
+    <key>uploadAndDistribute</key>
+    <true/>
 </dict>
 </plist>
