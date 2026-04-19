@@ -34,7 +34,7 @@ class EnvironmentalRepositoryImpl(
          * Para produção, registre em https://aqicn.org/data-platform/token/
          * e injete via Koin: single<EnvironmentalRepository> { EnvironmentalRepositoryImpl(get(), "SEU_TOKEN") }
          */
-        const val WAQI_DEFAULT_TOKEN = "demo"
+        const val WAQI_DEFAULT_TOKEN = "9867cbadcb85de211606897e23957d61907586a7"
     }
 
     private val httpClient = HttpClient {
