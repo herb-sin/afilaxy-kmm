@@ -149,6 +149,7 @@ class AppContainer: ObservableObject {
     private(set) var _professionals: ProfessionalListViewModelWrapper?
     private(set) var _professionalDetail: ProfessionalDetailViewModelWrapper?
     private(set) var _loginViewModel: LoginViewModel?
+    private(set) var _risk: RiskViewModelWrapper?
 
     // Estado de erro publicado — substituiu fatalError()
     @Published var initError: String? = nil
@@ -161,6 +162,7 @@ class AppContainer: ObservableObject {
     var professionals: ProfessionalListViewModelWrapper { _professionals ?? ProfessionalListViewModelWrapper.empty() }
     var professionalDetail: ProfessionalDetailViewModelWrapper { _professionalDetail ?? ProfessionalDetailViewModelWrapper.empty() }
     var loginViewModel: LoginViewModel? { _loginViewModel }
+    var risk: RiskViewModelWrapper { _risk ?? RiskViewModelWrapper.empty() }
 
     /// Pré-aquece todos os ViewModels logo após o Koin inicializar.
     /// Chamado no background thread — falhas são capturadas sem crash.
@@ -194,6 +196,13 @@ class AppContainer: ObservableObject {
         } else { failed.append("ProfessionalDetailViewModel") }
 
         _loginViewModel = ViewModelProvider.shared.getLoginViewModel()
+
+        // RiskViewModel: falha não é crítica — widget simplesmente não aparece
+        if let vm = ViewModelProvider.shared.getRiskViewModel() {
+            _risk = RiskViewModelWrapper(vm)
+        } else {
+            FileLogger.shared.write(level: "WARN", tag: "AppContainer", message: "RiskViewModel não inicializado — widget de risco desativado")
+        }
 
         if !failed.isEmpty {
             let msg = "Falha ao inicializar: \(failed.joined(separator: ", "))"
@@ -236,6 +245,7 @@ class AppContainer: ObservableObject {
         _profile?.freeze()
         _professionals?.freeze()
         _professionalDetail?.freeze()
+        _risk?.freeze()
     }
 
     func observeChildren() {

@@ -271,10 +271,42 @@ class ProfessionalDetailViewModelWrapper: ObservableObject {
     }
 }
 
+// MARK: - RiskViewModelWrapper
+class RiskViewModelWrapper: ObservableObject {
+    let viewModel: RiskViewModel?
+    @Published var state: RiskState?
+    private var observer: StateFlowObserver<RiskState>?
+    private var cancellable: AnyCancellable?
+
+    init(_ viewModel: RiskViewModel) {
+        self.viewModel = viewModel
+        let obs = StateFlowObserver<RiskState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
+    }
+
+    static func empty() -> RiskViewModelWrapper { RiskViewModelWrapper() }
+    private init() { self.viewModel = nil }
+
+    func loadRiskScore(latitude: Double, longitude: Double) {
+        viewModel?.loadRiskScore(latitude: latitude, longitude: longitude)
+    }
+
+    func freeze() {
+        cancellable?.cancel()
+        cancellable = nil
+        observer = nil
+    }
+}
+
 // MARK: - ViewModelProvider
 class ViewModelProvider {
     static let shared = ViewModelProvider()
 
+    func getRiskViewModel() -> RiskViewModel? { safeGetRiskViewModel() }
     func getLoginViewModel() -> LoginViewModel? { safeGetLoginViewModel() }
     func getAuthViewModel() -> AuthViewModel? { safeGetAuthViewModel() }
     func getEmergencyViewModel() -> EmergencyViewModel? { safeGetEmergencyViewModel() }
