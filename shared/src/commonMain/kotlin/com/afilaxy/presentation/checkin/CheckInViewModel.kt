@@ -90,7 +90,12 @@ class CheckInViewModel(
             )
 
             checkInRepository.saveCheckIn(response)
-            _state.update { it.copy(isLoading = false, isSubmitted = true) }
+                .onSuccess {
+                    _state.update { it.copy(isLoading = false, isSubmitted = true) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message ?: "Erro ao salvar check-in") }
+                }
         }
     }
 
@@ -123,7 +128,12 @@ class CheckInViewModel(
             )
 
             checkInRepository.saveCheckIn(response)
-            _state.update { it.copy(isLoading = false, isSubmitted = true) }
+                .onSuccess {
+                    _state.update { it.copy(isLoading = false, isSubmitted = true) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message ?: "Erro ao salvar check-in") }
+                }
         }
     }
 }

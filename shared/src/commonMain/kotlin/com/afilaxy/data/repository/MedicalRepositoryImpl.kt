@@ -91,30 +91,7 @@ class MedicalRepositoryImpl(
                 emit(medications)
             }
         } catch (e: Exception) {
-            emit(listOf(
-                Medication(
-                    id = "1",
-                    name = "Montelucaste",
-                    dosage = "10mg",
-                    frequency = "1x ao dia",
-                    timing = "Noite",
-                    type = MedicationType.CONTROLE
-                ),
-                Medication(
-                    id = "2",
-                    name = "Budecort",
-                    dosage = "200mcg",
-                    frequency = "2x ao dia",
-                    type = MedicationType.MANUTENCAO
-                ),
-                Medication(
-                    id = "3",
-                    name = "Salbutamol",
-                    dosage = "100mcg",
-                    frequency = "Se necessário",
-                    type = MedicationType.RESGATE
-                )
-            ))
+            emit(emptyList())
         }
     }
 
@@ -158,23 +135,7 @@ class MedicalRepositoryImpl(
                 emit(contacts)
             }
         } catch (e: Exception) {
-            emit(listOf(
-                MedicalEmergencyContact(
-                    id = "1",
-                    name = "Dra. Helena Souza",
-                    relationship = "Pneumologista",
-                    phone = "(11) 95823-1221",
-                    isProfessional = true,
-                    specialty = "Pneumologia"
-                ),
-                MedicalEmergencyContact(
-                    id = "2",
-                    name = "Carlos Johnson",
-                    relationship = "Esposo (Emergência)",
-                    phone = "(11) 98762-2432",
-                    isProfessional = false
-                )
-            ))
+            emit(emptyList())
         }
     }
 

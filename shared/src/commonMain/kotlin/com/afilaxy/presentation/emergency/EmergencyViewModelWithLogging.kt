@@ -155,7 +155,7 @@ class EmergencyViewModelWithLogging(
                     longitude = longitude,
                     timestamp = com.afilaxy.domain.model.getCurrentTimeMillis()
                 ),
-                radiusKm = 5.0
+                radiusKm = 0.25 // ~250m — resposta a pé em ~3 min
             )
                 .onSuccess { helpers ->
                     logInfo("Found ${helpers.size} nearby helpers")

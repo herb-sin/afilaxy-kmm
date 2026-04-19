@@ -99,7 +99,7 @@ class EmergencyRepositoryImpl(
             
             try {
                 firestore.collection("users").document(userId)
-                    .update(mapOf("latitude" to latitude, "longitude" to longitude))
+                    .update(mapOf("latitude" to obfuscatedLat, "longitude" to obfuscatedLon))
             } catch (e: Exception) {
                 com.afilaxy.util.Logger.w("EmergencyRepo", "Falha ao atualizar localização em users/${userId}: ${e.message}")
             }

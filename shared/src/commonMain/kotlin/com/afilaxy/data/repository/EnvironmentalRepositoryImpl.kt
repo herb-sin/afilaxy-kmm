@@ -1,8 +1,10 @@
 package com.afilaxy.data.repository
 
+import com.afilaxy.domain.model.CheckInResponse
 import com.afilaxy.domain.model.EnvironmentalData
 import com.afilaxy.domain.model.AsthmaRiskLevel
 import com.afilaxy.domain.model.RiskScore
+import com.afilaxy.domain.repository.CheckInRepository
 import com.afilaxy.domain.repository.EnvironmentalRepository
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import dev.gitlive.firebase.firestore.FirebaseFirestore
@@ -25,7 +27,8 @@ import kotlinx.serialization.json.Json
  */
 class EnvironmentalRepositoryImpl(
     private val firestore: FirebaseFirestore,
-    private val waqiToken: String = WAQI_DEFAULT_TOKEN
+    private val waqiToken: String = WAQI_DEFAULT_TOKEN,
+    private val checkInRepository: CheckInRepository? = null
 ) : EnvironmentalRepository {
 
     internal companion object {
@@ -142,7 +145,7 @@ class EnvironmentalRepositoryImpl(
         return try {
             val env = getEnvironmentalData(latitude, longitude).getOrNull()
 
-            // Histórico de crises dos últimos 30 dias
+            // Histórico de crises dos últimos 30 dias (emergências registradas)
             val thirtyDaysAgo = getCurrentTimeMillis() - 30L * 24 * 3600 * 1000
             val sevenDaysAgo = getCurrentTimeMillis() - 7L * 24 * 3600 * 1000
 
@@ -160,6 +163,11 @@ class EnvironmentalRepositoryImpl(
                 doc.get<Boolean?>("samuCalled") == true
             }
 
+            // Check-ins da Agenda de Saúde (últimos 7 dias)
+            val recentCheckIns = try {
+                checkInRepository?.getRecentCheckIns(userId, days = 7)?.getOrNull() ?: emptyList()
+            } catch (e: Exception) { emptyList() }
+
             // Mês atual → sazonalidade
             val month = Clock.System.now()
                 .toLocalDateTime(TimeZone.currentSystemDefault()).monthNumber
@@ -170,7 +178,8 @@ class EnvironmentalRepositoryImpl(
                     crises30d = crises30d,
                     crises7d = crises7d,
                     samuCalledCount = samuCalledCount,
-                    monthOfYear = month
+                    monthOfYear = month,
+                    recentCheckIns = recentCheckIns
                 )
             )
         } catch (e: Exception) {
@@ -188,13 +197,14 @@ internal object RiskScoreEngine {
         crises30d: Int,
         crises7d: Int,
         samuCalledCount: Int,
-        monthOfYear: Int
+        monthOfYear: Int,
+        recentCheckIns: List<CheckInResponse> = emptyList()
     ): RiskScore {
         var score = 0
         val factors = mutableListOf<String>()
         val recommendations = mutableListOf<String>()
 
-        // ── Histórico de crises ────────────────────────────────────────────────
+        // ── Histórico de crises (emergências registradas) ─────────────────────
         score += (crises7d * 15).coerceAtMost(30)
         if (crises7d > 0) factors.add("${crises7d} crise(s) nos últimos 7 dias")
 
@@ -205,6 +215,42 @@ internal object RiskScoreEngine {
             score += 15
             factors.add("SAMU acionado em crises anteriores")
             recommendations.add("Tenha o número do SAMU (192) salvo no celular")
+        }
+
+        // ── Agenda de Saúde (check-ins dos últimos 7 dias) ────────────────────
+        if (recentCheckIns.isNotEmpty()) {
+            // Crises reportadas nos check-ins noturnos
+            val reportedCrises = recentCheckIns.count { it.hadCrisisToday == true }
+            if (reportedCrises > 0) {
+                score += (reportedCrises * 12).coerceAtMost(25)
+                factors.add("$reportedCrises crise(s) reportada(s) na Agenda de Saúde")
+            }
+
+            // Uso de bombinha de resgate (indica sintomas ativos)
+            val rescueUsageCount = recentCheckIns.count { it.usedRescueInhaler == true }
+            if (rescueUsageCount >= 2) {
+                score += 10
+                factors.add("Bombinha de resgate usada $rescueUsageCount vezes esta semana")
+                recommendations.add("Converse com seu médico sobre seu tratamento de manutenção")
+            }
+
+            // Crise grave reportada
+            val severeCrises = recentCheckIns.count { it.crisisSeverity == "grave" }
+            if (severeCrises > 0) {
+                score += 15
+                factors.add("Crise grave reportada recentemente")
+                recommendations.add("Procure atendimento médico para reavaliar seu tratamento")
+            }
+
+            // Sem bombinha de resgate disponível
+            val withoutInhaler = recentCheckIns.any {
+                it.hasRescueInhaler == false
+            }
+            if (withoutInhaler) {
+                score += 8
+                factors.add("Sem bombinha de resgate disponível")
+                recommendations.add("Providencie uma bombinha de resgate com seu médico")
+            }
         }
 
         // ── Qualidade do ar ────────────────────────────────────────────────────
