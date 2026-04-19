@@ -23,6 +23,8 @@ struct HomeView: View {
     @State private var totalEmergencies: Int = -1
     @State private var showPharmacyMap = false
     @State private var statsListener: ListenerRegistration? = nil
+    // Localização para o RiskWidget — nil enquanto não obtida ou sem permissão
+    @State private var riskLocation: CLLocationCoordinate2D? = nil
 
     var body: some View {
         // NOTA: ContentView já envolve HomeView em NavigationStack(path: $homeNavigationPath).
@@ -32,6 +34,11 @@ struct HomeView: View {
             LazyVStack(spacing: 20) {
                 // Hero Section
                 heroSection
+
+                // Risk Widget — visível apenas se localização disponível
+                if riskLocation != nil || container.risk.state?.isLoading == true {
+                    RiskWidgetView(riskState: container.risk.state)
+                }
 
                 // Emergency Button
                 emergencyButton
@@ -92,6 +99,7 @@ struct HomeView: View {
         .onAppear {
             fetchWeeklyStatus()
             checkNps()
+            fetchLocationForRisk()
         }
         .onDisappear { statsListener?.remove() }
         .sheet(isPresented: $showNps) {
@@ -331,6 +339,37 @@ struct HomeView: View {
     }
     
     // MARK: - Helper Methods
+
+    /// Obtém localização para alimentar o RiskWidget.
+    /// Reutiliza o LocationManager já presente — não solicita nova permissão.
+    /// Se a permissão não foi concedida, simplesmente não exibe o widget.
+    private func fetchLocationForRisk() {
+        // Usa localização cacheada se já disponível (evita delay perceptível)
+        if let cached = LocationManager.shared.currentLocation {
+            let coord = cached.coordinate
+            riskLocation = coord
+            container.risk.loadRiskScore(latitude: coord.latitude, longitude: coord.longitude)
+            FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
+                message: "fetchLocationForRisk: usando cache lat=\(coord.latitude) lon=\(coord.longitude)")
+            return
+        }
+        // Caso contrário, busca assíncrono
+        Task {
+            let location = await LocationManager.shared.fetchCurrentLocation()
+            guard let coord = location?.coordinate, coord.latitude != 0 else {
+                FileLogger.shared.write(level: "WARN", tag: "HomeView",
+                    message: "fetchLocationForRisk: sem localização disponível — RiskWidget oculto")
+                return
+            }
+            await MainActor.run {
+                riskLocation = coord
+                container.risk.loadRiskScore(latitude: coord.latitude, longitude: coord.longitude)
+                FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
+                    message: "fetchLocationForRisk: OK lat=\(coord.latitude) lon=\(coord.longitude)")
+            }
+        }
+    }
+
     private func activateHelperMode() {
         guard !isTogglingHelper else { return }
         isTogglingHelper = true
