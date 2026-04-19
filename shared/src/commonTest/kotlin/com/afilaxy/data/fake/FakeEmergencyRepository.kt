@@ -112,6 +112,40 @@ class FakeEmergencyRepository(
 
     override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? = null
 
+    override fun observeNearbyHelpers(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Helper>> {
+        return MutableStateFlow(emptyList())
+    }
+
+    override suspend fun updateSeverity(emergencyId: String, severity: String): Result<Unit> {
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Erro ao atualizar severidade"))
+    }
+
+    override suspend fun updateSamuCalled(emergencyId: String): Result<Unit> {
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Erro ao registrar SAMU"))
+    }
+
+    override suspend fun submitReview(
+        emergencyId: String,
+        reviewedId: String,
+        rating: Int,
+        comment: String?
+    ): Result<Unit> {
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Erro ao enviar avaliação"))
+    }
+
+    override suspend fun submitNps(score: Int): Result<Unit> {
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Erro ao registrar NPS"))
+    }
+
+    override suspend fun getEmergencyParticipants(emergencyId: String): Result<Pair<String?, String?>> {
+        return if (shouldSucceed) Result.success(Pair("requester-id", "helper-id"))
+        else Result.failure(Exception("Erro ao buscar participantes"))
+    }
+
     // Test helpers
     fun setShouldSucceed(value: Boolean) { shouldSucceed = value }
     fun setActiveEmergencyId(id: String?) { activeEmergencyId = id }

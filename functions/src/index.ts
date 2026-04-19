@@ -815,9 +815,15 @@ export const weeklyRiskAlert = functions.pubsub
 
 /**
  * Consulta dados de um médico pelo CRM + UF na API pública do CFM.
- * Não requer autenticação — feature pública para pacientes verificarem profissionais.
+ * Requer autenticação — previne scraping anônimo.
  */
-export const validateCrm = functions.https.onCall(async (data) => {
+export const validateCrm = functions.https.onCall(async (data, context) => {
+    // Requer autenticação — previne scraping anônimo da API do CFM.
+    // Qualquer usuário logado pode consultar (pacientes verificam profissionais).
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Autenticação necessária');
+    }
+
     const crm: string = (data.crm ?? '').toString().replace(/\D/g, '').slice(0, 10);
     const uf: string = (data.uf ?? '').toString().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
 

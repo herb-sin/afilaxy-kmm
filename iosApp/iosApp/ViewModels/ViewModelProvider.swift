@@ -273,7 +273,7 @@ class ProfessionalDetailViewModelWrapper: ObservableObject {
 
 // MARK: - RiskViewModelWrapper
 class RiskViewModelWrapper: ObservableObject {
-    let viewModel: RiskViewModel?
+    private let viewModel: RiskViewModel?
     @Published var state: RiskState?
     private var observer: StateFlowObserver<RiskState>?
     private var cancellable: AnyCancellable?

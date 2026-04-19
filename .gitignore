@@ -78,6 +78,7 @@ keystore.properties
 *.csr
 *.p12
 *.cer
+*.pem
 *.mobileprovision
 
 # macOS
@@ -86,9 +87,11 @@ keystore.properties
 # Kotlin
 *.kotlin_module
 .kotlin/
-*.key
-*.p12
-*.pem
+
+# Node.js — NUNCA commitar dependências
+node_modules/
+scripts/node_modules/
 
 # Web hosting build output
 web-dist/
+web-dist-secure/

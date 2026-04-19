@@ -165,7 +165,7 @@ class EmergencyViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.state.value
-        assertTrue(state.hasActiveEmergency)
+        assertTrue(state.hasActiveEmergency, "Expected hasActiveEmergency=true, got=${state.hasActiveEmergency}")
         assertEquals("emergency-123", state.emergencyId)
         assertFalse(state.isLoading)
     }

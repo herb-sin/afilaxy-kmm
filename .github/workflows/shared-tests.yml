@@ -25,4 +25,4 @@ jobs:
       run: chmod +x gradlew
     
     - name: Run all shared tests
-      run: ./gradlew shared:allTests --stacktrace || true
+      run: ./gradlew shared:allTests --stacktrace
