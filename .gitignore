@@ -3,6 +3,16 @@
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
+# Kotlin metadata cache (interop klibs, error logs)
+.kotlin/
+
+# IDE
+.vscode/
+
+# Root package files (não usado pelo KMM — functions/ tem seu próprio)
+/package.json
+/package-lock.json
+
 # Android
 *.apk
 *.ap_

@@ -76,7 +76,8 @@ class HealthProfessionalRepositoryImpl(
     }
     
     override suspend fun findNearby(location: Location, radiusKm: Double): List<HealthProfessional> {
-        // TODO: Implementar query geoespacial com GeoHash
+        // Backlog: substituir por query geoespacial com GeoHash (como onHelperWrite faz para helpers).
+        // A implementação atual (getAll + filtro Haversine client-side) funciona para <100 profissionais.
         return getAll().filter { professional ->
             professional.location?.let { profLocation ->
                 calculateDistance(location, profLocation) <= radiusKm
