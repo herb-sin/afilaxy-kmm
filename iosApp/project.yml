@@ -35,6 +35,9 @@ targets:
         CURRENT_PROJECT_VERSION: "6"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_ENTITLEMENTS: iosApp/iosApp.entitlements
+    info:
+      properties:
+        ITSAppUsesNonExemptEncryption: false
 schemes:
   iosApp:
     build:

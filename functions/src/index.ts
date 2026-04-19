@@ -1,5 +1,9 @@
-import * as functions from 'firebase-functions/v1';
+import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onTaskDispatched } from 'firebase-functions/v2/tasks';
 import * as admin from 'firebase-admin';
+import { getFunctions } from 'firebase-admin/functions';
 import * as geofireCommon from 'geofire-common';
 
 // Inicializar Firebase Admin
@@ -9,7 +13,7 @@ admin.initializeApp();
 let _stripe: any = null;
 function getStripe() {
     if (!_stripe) {
-        const key = process.env.STRIPE_SECRET_KEY || (functions as any).config?.()?.stripe?.secret_key;
+        const key = process.env.STRIPE_SECRET_KEY;
         _stripe = require('stripe')(key);
     }
     return _stripe;
@@ -19,21 +23,21 @@ function getStripe() {
 // STRIPE WEBHOOK - MVP PROFISSIONAIS
 // ============================================
 
-export const createCheckoutSession = functions.https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+export const createCheckoutSession = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Authentication required');
     }
-    
-    const { priceId, email, metadata } = data;
+
+    const { priceId, email, metadata } = request.data;
 
     if (!priceId || !email || !metadata) {
-        throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
+        throw new HttpsError('invalid-argument', 'Missing required fields');
     }
 
     try {
         // Usar uid do Firebase Auth como ID do documento — operação idempotente.
         // set+merge atualiza campos de perfil sem sobrescrever dados de assinatura já existentes.
-        const professionalId = context.auth!.uid;
+        const professionalId = request.auth!.uid;
         const professionalsRef = admin.firestore().collection('health_professionals');
         const profRef = professionalsRef.doc(professionalId);
 
@@ -59,34 +63,29 @@ export const createCheckoutSession = functions.https.onCall(async (data, context
             });
         }
 
+        // 3. Criar sessão do Stripe
         const session = await getStripe().checkout.sessions.create({
             payment_method_types: ['card'],
-            line_items: [{
-                price: priceId,
-                quantity: 1
-            }],
             mode: 'subscription',
-            success_url: `${process.env.APP_URL || 'https://afilaxy.com'}/professional/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.APP_URL || 'https://afilaxy.com'}/professional/cancel`,
             customer_email: email,
+            line_items: [{ price: priceId, quantity: 1 }],
             metadata: {
-                professionalId,
-                planType: metadata.planType,
-                name: metadata.name,
-                crm: metadata.crm
-            }
+                professionalId: professionalId,
+                planType: metadata.planType || 'BASIC',
+            },
+            success_url: `https://afilaxy.com/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `https://afilaxy.com/cancel`,
         });
 
-        console.log(`✅ Checkout session created for ${email}: ${session.id}`);
-        return { sessionId: session.id };
+        return { sessionId: session.id, url: session.url };
     } catch (error: any) {
         console.error('Error creating checkout session:', error);
-        throw new functions.https.HttpsError('internal', error.message);
+        throw new HttpsError('internal', error.message);
     }
 });
 
-export const stripeWebhook = functions.https.onRequest(async (req, res) => {
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || (functions as any).config?.()?.stripe?.webhook_secret;
+export const stripeWebhook = onRequest(async (req, res) => {
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const sig = req.headers['stripe-signature'];
     let event;
     try {
@@ -172,12 +171,11 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
 
 /**
  * Cron job diário para verificar assinaturas expiradas
- * Executa todo dia às 00:00 UTC
+ * Executa todo dia às 00:00 BRT
  */
-export const checkExpiredSubscriptions = functions.pubsub
-    .schedule('0 0 * * *')
-    .timeZone('America/Sao_Paulo')
-    .onRun(async (context) => {
+export const checkExpiredSubscriptions = onSchedule(
+    { schedule: '0 0 * * *', timeZone: 'America/Sao_Paulo' },
+    async () => {
         console.log('Checking expired subscriptions...');
 
         try {
@@ -192,7 +190,7 @@ export const checkExpiredSubscriptions = functions.pubsub
 
             if (snapshot.empty) {
                 console.log('No expired subscriptions found');
-                return null;
+                return;
             }
 
             const batch = admin.firestore().batch();
@@ -209,13 +207,11 @@ export const checkExpiredSubscriptions = functions.pubsub
 
             await batch.commit();
             console.log(`✅ ${count} subscriptions expired`);
-
-            return null;
         } catch (error) {
             console.error('Error checking expired subscriptions:', error);
-            return null;
         }
-    });
+    }
+);
 
 // ============================================
 // FUNÇÕES EXISTENTES (EMERGÊNCIAS)
@@ -223,13 +219,15 @@ export const checkExpiredSubscriptions = functions.pubsub
 
 /**
  * Trigger quando uma emergência é criada
- * Envia notificação apenas para helpers próximos (5km)
+ * Envia notificação apenas para helpers próximos (250m)
  */
-export const onEmergencyCreated = functions.firestore
-    .document('emergency_requests/{emergencyId}')   // ✅ Corrigido: era 'emergencies'
-    .onCreate(async (snap, context) => {
+export const onEmergencyCreated = onDocumentCreated(
+    'emergency_requests/{emergencyId}',
+    async (event) => {
+        const snap = event.data;
+        if (!snap) return;
         const emergency = snap.data();
-        const emergencyId = context.params.emergencyId;
+        const emergencyId = event.params.emergencyId;
 
         console.log(`Nova emergência criada: ${emergencyId}`);
 
@@ -237,7 +235,7 @@ export const onEmergencyCreated = functions.firestore
             // Validar coordenadas da emergência
             if (!emergency.latitude || !emergency.longitude) {
                 console.error('Emergência sem coordenadas válidas');
-                return null;
+                return;
             }
 
             const center: [number, number] = [emergency.latitude, emergency.longitude];
@@ -294,7 +292,7 @@ export const onEmergencyCreated = functions.firestore
 
             if (nearbyHelpers.length === 0) {
                 console.log('Nenhum helper próximo encontrado');
-                return null;
+                return;
             }
 
             // Buscar tokens FCM dos helpers próximos na coleção 'users'
@@ -312,7 +310,7 @@ export const onEmergencyCreated = functions.firestore
 
             if (tokens.length === 0) {
                 console.log('Nenhum helper próximo com token FCM');
-                return null;
+                return;
             }
 
             console.log(`✅ Notificando ${tokens.length} helper(s) dentro de ${radiusInKm}km`);
@@ -369,24 +367,24 @@ export const onEmergencyCreated = functions.firestore
                     }
                 });
             }
-
-            return null;
         } catch (error) {
             console.error('Erro ao processar emergência:', error);
-            return null;
         }
-    });
+    }
+);
 
 /**
  * Trigger quando uma emergência é aceita
  * Envia notificação para o requester informando que ajuda está a caminho
  */
-export const onEmergencyAccepted = functions.firestore
-    .document('emergency_requests/{emergencyId}')   // ✅ Corrigido: era 'emergencies'
-    .onUpdate(async (change, context) => {
+export const onEmergencyAccepted = onDocumentUpdated(
+    'emergency_requests/{emergencyId}',
+    async (event) => {
+        const change = event.data;
+        if (!change) return;
         const before = change.before.data();
         const after = change.after.data();
-        const emergencyId = context.params.emergencyId;
+        const emergencyId = event.params.emergencyId;
 
         // Verificar se o status mudou para 'matched' (status do EmergencyRepositoryImpl.acceptEmergency)
         if (before.status !== 'matched' && after.status === 'matched') {
@@ -401,7 +399,7 @@ export const onEmergencyAccepted = functions.firestore
 
                 if (!requesterDoc.exists) {
                     console.log('Requester não encontrado');
-                    return null;
+                    return;
                 }
 
                 const requesterData = requesterDoc.data();
@@ -409,7 +407,7 @@ export const onEmergencyAccepted = functions.firestore
 
                 if (!requesterToken) {
                     console.log('Requester não tem token FCM');
-                    return null;
+                    return;
                 }
 
                 // Buscar dados do helper
@@ -433,7 +431,7 @@ export const onEmergencyAccepted = functions.firestore
                         emergencyId: emergencyId,
                         helperName: helperName,
                         title: 'Ajuda a Caminho!',
-                        body: `${helperName} aceitou sua emerg\u00eancia e est\u00e1 indo te ajudar!`,
+                        body: `${helperName} aceitou sua emergência e está indo te ajudar!`,
                     },
                     android: { priority: 'high' as const },
                     apns: {
@@ -442,7 +440,7 @@ export const onEmergencyAccepted = functions.firestore
                             aps: {
                                 alert: {
                                     title: 'Ajuda a Caminho!',
-                                    body: `${helperName} aceitou sua emerg\u00eancia e est\u00e1 indo te ajudar!`,
+                                    body: `${helperName} aceitou sua emergência e está indo te ajudar!`,
                                 },
                                 sound: 'default',
                                 contentAvailable: true,
@@ -454,26 +452,24 @@ export const onEmergencyAccepted = functions.firestore
 
                 await admin.messaging().send(message);
                 console.log('Notificação de aceitação enviada com sucesso');
-
-                return null;
             } catch (error) {
                 console.error('Erro ao enviar notificação de aceitação:', error);
-                return null;
             }
         }
-
-        return null;
-    });
+    }
+);
 
 /**
  * Trigger quando uma mensagem é enviada no chat
  * Envia notificação para o destinatário
  */
-export const onChatMessage = functions.firestore
-    .document('emergency_chats/{emergencyId}/messages/{messageId}')
-    .onCreate(async (snap, context) => {
+export const onChatMessage = onDocumentCreated(
+    'emergency_chats/{emergencyId}/messages/{messageId}',
+    async (event) => {
+        const snap = event.data;
+        if (!snap) return;
         const message = snap.data();
-        const emergencyId = context.params.emergencyId;
+        const emergencyId = event.params.emergencyId;
 
         try {
             const emergencyDoc = await admin.firestore()
@@ -483,7 +479,7 @@ export const onChatMessage = functions.firestore
 
             if (!emergencyDoc.exists) {
                 console.log('Emergência não encontrada');
-                return null;
+                return;
             }
 
             const emergencyData = emergencyDoc.data();
@@ -497,7 +493,7 @@ export const onChatMessage = functions.firestore
 
             if (!recipientId) {
                 console.log('Destinatário não identificado');
-                return null;
+                return;
             }
 
             // Buscar token FCM do destinatário
@@ -508,7 +504,7 @@ export const onChatMessage = functions.firestore
 
             if (!recipientDoc.exists) {
                 console.log('Destinatário não encontrado');
-                return null;
+                return;
             }
 
             const recipientData = recipientDoc.data();
@@ -516,7 +512,7 @@ export const onChatMessage = functions.firestore
 
             if (!recipientToken) {
                 console.log('Destinatário não tem token FCM');
-                return null;
+                return;
             }
 
             const notificationMessage = {
@@ -548,33 +544,33 @@ export const onChatMessage = functions.firestore
 
             await admin.messaging().send(notificationMessage);
             console.log('Notificação de chat enviada com sucesso');
-
-            return null;
         } catch (error) {
             console.error('Erro ao enviar notificação de chat:', error);
-            return null;
         }
-    });
+    }
+);
 
 /**
  * Trigger quando localização do usuário é atualizada
  * Recalcula e salva o geohash automaticamente
  */
-export const onUserLocationUpdate = functions.firestore
-    .document('users/{userId}')
-    .onUpdate(async (change, context) => {
+export const onUserLocationUpdate = onDocumentUpdated(
+    'users/{userId}',
+    async (event) => {
+        const change = event.data;
+        if (!change) return;
         const after = change.after.data();
         const before = change.before.data();
 
         // Verificar se localização mudou
         if (after.latitude !== before.latitude || after.longitude !== before.longitude) {
-            console.log(`Atualizando geohash para usuário ${context.params.userId}`);
+            console.log(`Atualizando geohash para usuário ${event.params.userId}`);
 
             try {
                 // Validar coordenadas
                 if (!after.latitude || !after.longitude) {
                     console.log('Coordenadas inválidas');
-                    return null;
+                    return;
                 }
 
                 // Calcular geohash
@@ -583,55 +579,84 @@ export const onUserLocationUpdate = functions.firestore
                 // Atualizar documento com novo geohash
                 await change.after.ref.update({ geohash: hash });
                 console.log(`Geohash atualizado: ${hash}`);
-
-                return null;
             } catch (error) {
                 console.error('Erro ao atualizar geohash:', error);
-                return null;
             }
         }
-
-        return null;
-    });
+    }
+);
 
 // migrateHelperLocations removida — migração concluída, função era pública sem autenticação
 // Para re-executar se necessário, usar Admin SDK localmente via script Node.js
 
 /**
- * Trigger onCreate — agenda cancelamento automático em 3 minutos
- * Substitui o cron job expireEmergencies (mais eficiente: roda só quando necessário)
+ * Cloud Task handler — expira uma emergência específica.
+ * Enfileirada por scheduleEmergencyExpiry; a instância que criou a task já morreu.
+ * Substitui o antigo setTimeout(180000) que mantinha a instância viva por 3 minutos.
  */
-export const scheduleEmergencyExpiry = functions.firestore
-    .document('emergency_requests/{emergencyId}')
-    .onCreate(async (snap, context) => {
-        const emergencyId = context.params.emergencyId;
-        const data = snap.data();
-        const expiresAt: number = data.expiresAt || (Date.now() + 180000);
-        const delayMs = Math.max(0, expiresAt - Date.now());
+export const expireEmergencyTask = onTaskDispatched(
+    { retryConfig: { maxAttempts: 3, minBackoffSeconds: 10 } },
+    async (request) => {
+        const { emergencyId } = request.data as { emergencyId: string };
+        if (!emergencyId) {
+            console.error('expireEmergencyTask: emergencyId ausente');
+            return;
+        }
 
-        console.log(`Agendando expiração de ${emergencyId} em ${Math.round(delayMs / 1000)}s`);
+        const docRef = admin.firestore().collection('emergency_requests').doc(emergencyId);
+        const current = await docRef.get();
 
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-
-        // Re-ler documento — pode já ter sido cancelado/aceito pelo cliente
-        const current = await snap.ref.get();
-        if (!current.exists) return null;
+        if (!current.exists) {
+            console.log(`expireEmergencyTask: ${emergencyId} não existe`);
+            return;
+        }
 
         const currentData = current.data()!;
         if (!currentData.active) {
             console.log(`Emergência ${emergencyId} já inativa — nada a fazer`);
-            return null;
+            return;
         }
 
-        await snap.ref.update({
+        await docRef.update({
             active: false,
             status: 'expired',
             expiredAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        console.log(`✅ Emergência ${emergencyId} expirada automaticamente`);
-        return null;
-    });
+        console.log(`✅ Emergência ${emergencyId} expirada automaticamente via Cloud Task`);
+    }
+);
+
+/**
+ * Trigger onCreate — agenda cancelamento automático via Cloud Tasks.
+ * A instância morre imediatamente após enfileirar a task (vs. setTimeout que prendia por 3 min).
+ */
+export const scheduleEmergencyExpiry = onDocumentCreated(
+    'emergency_requests/{emergencyId}',
+    async (event) => {
+        const snap = event.data;
+        if (!snap) return;
+        const emergencyId = event.params.emergencyId;
+        const data = snap.data();
+        const expiresAt: number = data.expiresAt || (Date.now() + 180000);
+        const delaySec = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+
+        console.log(`Agendando expiração de ${emergencyId} em ${delaySec}s via Cloud Task`);
+
+        try {
+            const queue = getFunctions().taskQueue('expireEmergencyTask');
+            await queue.enqueue(
+                { emergencyId },
+                { scheduleDelaySeconds: delaySec }
+            );
+            console.log(`✅ Task enfileirada para ${emergencyId}`);
+        } catch (error) {
+            console.error(`Erro ao enfileirar task para ${emergencyId}:`, error);
+            // Fallback: se Cloud Tasks falhar, garante que a emergência não fique ativa para sempre
+            // A próxima leitura do cliente no app verifica expiresAt e expira localmente.
+        }
+    }
+);
 
 // ============================================
 // AGREGAÇÃO — OPERACIONAL + GOVERNANÇA
@@ -643,16 +668,18 @@ export const scheduleEmergencyExpiry = functions.firestore
  *   user_stats/{userId}          — operacional (app lê para alertas ao paciente)
  *   emergency_analytics/{region} — governança (dashboard de gestores)
  */
-export const onEmergencyFinalized = functions.firestore
-    .document('emergency_requests/{emergencyId}')
-    .onUpdate(async (change, context) => {
+export const onEmergencyFinalized = onDocumentUpdated(
+    'emergency_requests/{emergencyId}',
+    async (event) => {
+        const change = event.data;
+        if (!change) return;
         const before = change.before.data();
         const after  = change.after.data();
 
         // Só processa quando active muda de true para false
-        if (before.active !== true || after.active !== false) return null;
+        if (before.active !== true || after.active !== false) return;
 
-        const emergencyId = context.params.emergencyId;
+        const emergencyId = event.params.emergencyId;
         const requesterId: string = after.requesterId;
         const helperId: string | undefined = after.helperId;
         const status: string = after.status || 'unknown';
@@ -683,11 +710,6 @@ export const onEmergencyFinalized = functions.firestore
 
         // ── user_stats/{requesterId} ──────────────────────────────────────────
         const statsRef = db.collection('user_stats').doc(requesterId);
-        // ⚠️  batch.set() com { merge: true } NÃO expande dot-notation nas chaves.
-        //     A chave `weeklyCount.${weekKey}` seria gravada como campo literal
-        //     "weeklyCount.2026-W14" na raiz — o cliente lê `weeklyCount` como mapa
-        //     e sempre obtinha null. Fix: mergeFields com FieldPath explícito +
-        //     objeto nested real `{ weeklyCount: { [weekKey]: inc(1) } }`.
         const statsFlat: Record<string, any> = {
             totalEmergencies: inc(1),
             lastEmergencyAt:  timestamp,
@@ -737,18 +759,17 @@ export const onEmergencyFinalized = functions.firestore
 
         await batch.commit();
         console.log(`✅ onEmergencyFinalized: ${emergencyId} status=${status} region=${regionHash} week=${weekKey}`);
-        return null;
-    });
+    }
+);
 
 /**
  * Cron semanal — toda segunda-feira às 08:00 BRT.
  * Lê user_stats e envia notificação push para pacientes
  * com ≥2 emergências na semana anterior (risco elevado).
  */
-export const weeklyRiskAlert = functions.pubsub
-    .schedule('0 11 * * 1') // 08:00 BRT = 11:00 UTC
-    .timeZone('UTC')
-    .onRun(async () => {
+export const weeklyRiskAlert = onSchedule(
+    { schedule: '0 11 * * 1', timeZone: 'UTC' },
+    async () => {
         const db = admin.firestore();
 
         // Semana anterior
@@ -756,7 +777,6 @@ export const weeklyRiskAlert = functions.pubsub
         const prevMonday = new Date(now);
         prevMonday.setDate(now.getDate() - 7);
         // Semana anterior em ISO 8601 UTC — mesma referência usada por onEmergencyFinalized.
-        // Move prevMonday para a quinta-feira da sua semana e depois calcula o número da semana.
         const isoDate = new Date(prevMonday.getTime());
         const dayOfWeek = isoDate.getUTCDay() || 7; // Dom(0)→7, Mon=1..Sun=7
         isoDate.setUTCDate(isoDate.getUTCDate() + 4 - dayOfWeek); // quinta-feira da semana
@@ -774,7 +794,7 @@ export const weeklyRiskAlert = functions.pubsub
 
         if (snapshot.empty) {
             console.log('Nenhum paciente em alerta esta semana');
-            return null;
+            return;
         }
 
         let sent = 0;
@@ -806,8 +826,8 @@ export const weeklyRiskAlert = functions.pubsub
         }
 
         console.log(`✅ weeklyRiskAlert: ${sent} pacientes notificados (semana ${weekKey})`);
-        return null;
-    });
+    }
+);
 
 // ============================================
 // CONSULTA CRM
@@ -817,18 +837,18 @@ export const weeklyRiskAlert = functions.pubsub
  * Consulta dados de um médico pelo CRM + UF na API pública do CFM.
  * Requer autenticação — previne scraping anônimo.
  */
-export const validateCrm = functions.https.onCall(async (data, context) => {
+export const validateCrm = onCall(async (request) => {
     // Requer autenticação — previne scraping anônimo da API do CFM.
     // Qualquer usuário logado pode consultar (pacientes verificam profissionais).
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Autenticação necessária');
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Autenticação necessária');
     }
 
-    const crm: string = (data.crm ?? '').toString().replace(/\D/g, '').slice(0, 10);
-    const uf: string = (data.uf ?? '').toString().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+    const crm: string = (request.data.crm ?? '').toString().replace(/\D/g, '').slice(0, 10);
+    const uf: string = (request.data.uf ?? '').toString().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
 
     if (!crm || !uf) {
-        throw new functions.https.HttpsError('invalid-argument', 'crm e uf são obrigatórios');
+        throw new HttpsError('invalid-argument', 'crm e uf são obrigatórios');
     }
 
     try {
@@ -859,7 +879,7 @@ export const validateCrm = functions.https.onCall(async (data, context) => {
         };
     } catch (error: any) {
         console.error('Erro ao consultar CFM:', error.message);
-        throw new functions.https.HttpsError('unavailable', 'Serviço do CFM indisponível no momento');
+        throw new HttpsError('unavailable', 'Serviço do CFM indisponível no momento');
     }
 });
 
@@ -868,11 +888,14 @@ export const validateCrm = functions.https.onCall(async (data, context) => {
  * Calcula e salva o geohash automaticamente na coleção 'helpers'
  * Isso permite queries eficientes por proximidade em onEmergencyCreated
  */
-export const onHelperWrite = functions.firestore
-    .document('helpers/{helperId}')
-    .onWrite(async (change, context) => {
+export const onHelperWrite = onDocumentWritten(
+    'helpers/{helperId}',
+    async (event) => {
+        const change = event.data;
+        if (!change) return;
+
         // Se o documento foi deletado, não fazer nada
-        if (!change.after.exists) return null;
+        if (!change.after.exists) return;
 
         const after = change.after.data()!;
         const before = change.before.exists ? change.before.data()! : {} as any;
@@ -881,21 +904,20 @@ export const onHelperWrite = functions.firestore
         if (after.latitude === before.latitude &&
             after.longitude === before.longitude &&
             after.geohash != null) {
-            return null;
+            return;
         }
 
         if (!after.latitude || !after.longitude) {
-            console.log(`Helper ${context.params.helperId} sem coordenadas válidas`);
-            return null;
+            console.log(`Helper ${event.params.helperId} sem coordenadas válidas`);
+            return;
         }
 
         try {
             const hash = geofireCommon.geohashForLocation([after.latitude, after.longitude]);
             await change.after.ref.update({ geohash: hash });
-            console.log(`✅ Geohash do helper ${context.params.helperId} atualizado: ${hash}`);
-            return null;
+            console.log(`✅ Geohash do helper ${event.params.helperId} atualizado: ${hash}`);
         } catch (error) {
             console.error('Erro ao atualizar geohash do helper:', error);
-            return null;
         }
-    });
+    }
+);
