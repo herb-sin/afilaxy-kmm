@@ -246,7 +246,10 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/iosApp.xcarchive" \
             -exportOptionsPlist iosApp/ExportOptions.plist \
-            -exportPath "$RUNNER_TEMP/ipa"
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -authenticationKeyPath "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
 
       # Faz upload do IPA como artefato do Actions
       - name: Upload IPA
