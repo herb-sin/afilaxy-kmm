@@ -49,6 +49,9 @@ jobs:
 
       # Gera o framework dummy do KMM — necessário para o pod install ler o shared.podspec.
       # O framework real é compilado pelo xcodebuild archive via integração CocoaPods.
+      - name: Inject WAQI API token
+        run: echo "WAQI_API_TOKEN=${{ secrets.WAQI_API_TOKEN }}" >> local.properties
+
       - name: Generate KMM dummy framework
         run: ./gradlew :shared:generateDummyFramework --no-daemon -Pkotlin.native.ignoreDisabledTargets=true
 

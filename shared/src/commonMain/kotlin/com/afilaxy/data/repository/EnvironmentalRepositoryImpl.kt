@@ -30,11 +30,12 @@ class EnvironmentalRepositoryImpl(
 
     internal companion object {
         /**
-         * Token padrão (demo) — rate-limited (~10 req/min).
-         * Para produção, registre em https://aqicn.org/data-platform/token/
-         * e injete via Koin: single<EnvironmentalRepository> { EnvironmentalRepositoryImpl(get(), "SEU_TOKEN") }
+         * Token padrão vazio — a chave real é injetada via Koin no módulo DI.
+         * Para desenvolvimento local: adicione WAQI_API_TOKEN=<sua_chave> em local.properties
+         * Para CI: configure o GitHub Secret WAQI_API_TOKEN
+         * Registre em: https://aqicn.org/data-platform/token/
          */
-        const val WAQI_DEFAULT_TOKEN = "9867cbadcb85de211606897e23957d61907586a7"
+        const val WAQI_DEFAULT_TOKEN = ""
     }
 
     private val httpClient = HttpClient {
