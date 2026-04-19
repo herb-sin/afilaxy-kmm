@@ -22,7 +22,7 @@ class NotificationRepositoryImpl(
                 val helperLng = helper.get<Double?>("longitude") ?: return@forEach
                 val distance = calculateDistance(latitude, longitude, helperLat, helperLng)
                 
-                if (distance <= 5.0) {
+                if (distance <= 0.25) { // ~250m — raio adequado para resposta a pé
                     val notification = mapOf(
                         "to" to helper.get<String>("fcmToken"),
                         "data" to mapOf(

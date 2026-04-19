@@ -110,9 +110,45 @@ class CheckInRepositoryImpl(
         }
     }
 
+    override suspend fun getRecentCheckIns(
+        userId: String,
+        days: Int
+    ): Result<List<CheckInResponse>> {
+        return try {
+            val cutoff = getCurrentTimeMillis() - days.toLong() * 24 * 3600 * 1000
+
+            val docs = firestore.collection("checkins")
+                .document(userId)
+                .collection("responses")
+                .where { "timestamp" greaterThanOrEqualTo cutoff }
+                .get().documents
+
+            val responses = docs.mapNotNull { doc ->
+                try {
+                    CheckInResponse(
+                        id = doc.id,
+                        userId = userId,
+                        type = doc.get("type") ?: "",
+                        timestamp = doc.get<Long>("timestamp") ?: 0L,
+                        hasRescueInhaler = doc.get("hasRescueInhaler"),
+                        rescueInhalerName = doc.get("rescueInhalerName"),
+                        hadCrisisToday = doc.get("hadCrisisToday"),
+                        crisisSeverity = doc.get("crisisSeverity"),
+                        usedRescueInhaler = doc.get("usedRescueInhaler")
+                    )
+                } catch (e: Exception) { null }
+            }
+
+            Result.success(responses)
+        } catch (e: Exception) {
+            Result.success(emptyList()) // fallback silencioso
+        }
+    }
+
     /** Chave de data no formato YYYY-MM-DD para indexar check-ins por dia. */
     private fun todayKey(): String {
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         return "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')}"
     }
 }
+

@@ -45,7 +45,7 @@ fun sharedModule(): Module = module {
     single<MedicalRepository> { MedicalRepositoryImpl(get()) }
     single<EnvironmentalRepository> {
         val token = com.afilaxy.config.WaqiConfig.API_TOKEN.ifBlank { "demo" }
-        EnvironmentalRepositoryImpl(get(), token)
+        EnvironmentalRepositoryImpl(get(), token, get())
     }
     single<CheckInRepository> { CheckInRepositoryImpl(get(), get()) }
 
@@ -69,7 +69,7 @@ fun sharedModule(): Module = module {
     
     // New ViewModels for expanded features
     factory { HomeViewModel(get(), get()) }
-    factory { MedicalProfileViewModel(get(), "default_user") }
+    factory { MedicalProfileViewModel(get(), get<AuthRepository>().getCurrentUserId() ?: "") }
     factory { RiskViewModel(get(), get()) }
     factory { CheckInViewModel(get(), get()) }
 }

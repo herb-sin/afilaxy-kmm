@@ -7,7 +7,7 @@ import com.afilaxy.domain.repository.EmergencyRepository
 class FindHelpersUseCase(
     private val repository: EmergencyRepository
 ) {
-    suspend fun execute(location: Location, radiusKm: Double = 5.0): List<Helper> {
+    suspend fun execute(location: Location, radiusKm: Double = 0.25): List<Helper> {
         // Input validation
         if (location.latitude < -90 || location.latitude > 90) {
             throw IllegalArgumentException("Invalid latitude")

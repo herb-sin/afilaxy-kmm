@@ -130,6 +130,71 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Check-ins da Agenda de Saúde — cada usuário lê/escreve apenas os seus
+    match /checkins/{userId}/responses/{responseId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Perfil médico — dados clínicos sensíveis, apenas o próprio usuário
+    match /medical_profiles/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Medicações — vinculadas ao userId no documento
+    match /medications/{medicationId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // Contatos de emergência médica
+    match /emergency_contacts/{contactId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // Exames médicos
+    match /medical_exams/{examId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // Notificações — escritas pelo app client (idealmente migrar para Cloud Function)
+    match /notifications/{notificationId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if false;
+    }
+
+    // NPS responses
+    match /nps_responses/{responseId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    // Reviews de emergência
+    match /reviews/{reviewId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.reviewerId == request.auth.uid
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow read: if isAuthenticated()
+        && (resource.data.reviewerId == request.auth.uid
+            || resource.data.reviewedId == request.auth.uid);
+      allow update, delete: if false;
+    }
+
     // User statistics — written exclusively by Cloud Functions (Admin SDK).
     // Client only reads its own document to display weekly emergency count.
     match /user_stats/{userId} {
