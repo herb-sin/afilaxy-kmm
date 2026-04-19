@@ -256,31 +256,15 @@ jobs:
           path: ${{ runner.temp }}/ipa/*.ipa
           retention-days: 30
 
-      # Envia para TestFlight quando o método for app-store-connect
-      - name: Upload to TestFlight
+      # Upload ao TestFlight: gerenciado pelo xcodebuild -exportArchive via
+      # uploadAndDistribute=true no ExportOptions.plist (Xcode 16+).
+      # xcrun altool foi removido no Xcode 15.4 / Xcode 16 — não usar.
+      - name: Confirm TestFlight Upload
         run: |
-          # Verifica o método configurado
           EXPORT_METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" iosApp/ExportOptions.plist)
-          
-          if [[ "$EXPORT_METHOD" != "app-store-connect" ]]; then
-            echo "Pulando upload para TestFlight (método: $EXPORT_METHOD)"
-            exit 0
+          if [[ "$EXPORT_METHOD" == "app-store-connect" ]]; then
+            echo "✅ Upload ao TestFlight realizado pelo xcodebuild via uploadAndDistribute=true"
+            echo "   Aguarde alguns minutos para o build aparecer no App Store Connect."
+          else
+            echo "ℹ️  Método '$EXPORT_METHOD' — sem upload ao TestFlight."
           fi
-          
-          IPA_PATH=$(find "$RUNNER_TEMP/ipa" -name "*.ipa" -type f | head -n 1)
-          if [[ -z "$IPA_PATH" ]]; then
-            echo "Erro: IPA não encontrado"
-            exit 1
-          fi
-          echo "Uploading IPA: $IPA_PATH"
-          
-          # Copiar API key para diretório padrão do altool
-          mkdir -p ~/.appstoreconnect/private_keys
-          cp "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
-             ~/.appstoreconnect/private_keys/
-          
-          xcrun altool --upload-app \
-            --type ios \
-            --file "$IPA_PATH" \
-            --apiKey "${{ secrets.APPLE_API_KEY_ID }}" \
-            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}"
