@@ -264,13 +264,21 @@ jobs:
           else
             echo "❌ IPA não encontrado"
           fi
-          # Captura xdistributionlogs para diagnóstico de upload
-          DIST_LOGS=$(ls /var/folders/*/*/*xcdistributionlogs 2>/dev/null | tail -1)
+          # Captura xdistributionlogs (find recursivo — glob anterior tinha nível errado)
+          DIST_LOGS=$(find /var/folders -name "*.xcdistributionlogs" -type d 2>/dev/null | tail -1)
+          echo "DIST_LOGS=$DIST_LOGS"
           if [[ -n "$DIST_LOGS" ]]; then
-            echo "=== Distribution Logs ==="
-            cat "$DIST_LOGS"/IDEDistribution.standard.log 2>/dev/null | tail -50 || true
-            cp -r "$DIST_LOGS" "$RUNNER_TEMP/xcdistributionlogs" 2>/dev/null || true
+            echo "=== IDEDistribution.standard.log (last 80 lines) ==="
+            cat "$DIST_LOGS/IDEDistribution.standard.log" 2>/dev/null | tail -80 || echo "(log não encontrado)"
+            mkdir -p "$RUNNER_TEMP/xcdistributionlogs"
+            cp -r "$DIST_LOGS"/* "$RUNNER_TEMP/xcdistributionlogs/" 2>/dev/null || true
+          else
+            echo "⚠️ Nenhum xcdistributionlogs encontrado — upload pode não ter sido tentado"
           fi
+          # Mostra ExportOptions.plist final usado pelo xcodebuild
+          echo "=== ExportOptions.plist final ==="
+          cat iosApp/ExportOptions.plist
+
 
       # Faz upload do IPA como artefato do Actions
       - name: Upload IPA
