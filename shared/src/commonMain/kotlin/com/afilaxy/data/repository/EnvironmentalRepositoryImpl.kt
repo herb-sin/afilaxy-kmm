@@ -25,8 +25,17 @@ import kotlinx.serialization.json.Json
  */
 class EnvironmentalRepositoryImpl(
     private val firestore: FirebaseFirestore,
-    private val waqiToken: String = "demo" // Substituir por chave real: aqicn.org/api/
+    private val waqiToken: String = WAQI_DEFAULT_TOKEN
 ) : EnvironmentalRepository {
+
+    internal companion object {
+        /**
+         * Token padrão (demo) — rate-limited (~10 req/min).
+         * Para produção, registre em https://aqicn.org/data-platform/token/
+         * e injete via Koin: single<EnvironmentalRepository> { EnvironmentalRepositoryImpl(get(), "SEU_TOKEN") }
+         */
+        const val WAQI_DEFAULT_TOKEN = "demo"
+    }
 
     private val httpClient = HttpClient {
         install(ContentNegotiation) {
