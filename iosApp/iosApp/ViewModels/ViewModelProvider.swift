@@ -302,6 +302,47 @@ class RiskViewModelWrapper: ObservableObject {
     }
 }
 
+// MARK: - CheckInViewModelWrapper
+class CheckInViewModelWrapper: ObservableObject {
+    private let viewModel: CheckInViewModel?
+    @Published var state: CheckInState?
+    private var observer: StateFlowObserver<CheckInState>?
+    private var cancellable: AnyCancellable?
+
+    init(_ viewModel: CheckInViewModel) {
+        self.viewModel = viewModel
+        let obs = StateFlowObserver<CheckInState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
+    }
+
+    static func empty() -> CheckInViewModelWrapper { CheckInViewModelWrapper() }
+    private init() { self.viewModel = nil }
+
+    var vm: CheckInViewModel? { viewModel }
+
+    func initialize(type: CheckInType, riskScore: KotlinInt? = nil, aqi: KotlinInt? = nil) {
+        viewModel?.initialize(type: type, riskScore: riskScore, aqi: aqi, temperature: nil, humidity: nil)
+    }
+
+    func submitMorning(hasInhaler: Bool) {
+        viewModel?.submitMorningCheckIn(hasInhaler: hasInhaler)
+    }
+
+    func submitEvening(hadCrisis: Bool, severity: String? = nil, usedRescueInhaler: KotlinBoolean? = nil) {
+        viewModel?.submitEveningCheckIn(hadCrisis: hadCrisis, severity: severity, usedRescueInhaler: usedRescueInhaler)
+    }
+
+    func freeze() {
+        cancellable?.cancel()
+        cancellable = nil
+        observer = nil
+    }
+}
+
 // MARK: - ViewModelProvider
 class ViewModelProvider {
     static let shared = ViewModelProvider()
@@ -316,6 +357,7 @@ class ViewModelProvider {
     func getProfessionalDetailViewModel() -> ProfessionalDetailViewModel? { safeGetProfessionalDetailViewModel() }
     func getHomeViewModel() -> HomeViewModel? { safeGetHomeViewModel() }
     func getMedicalProfileViewModel() -> MedicalProfileViewModel? { safeGetMedicalProfileViewModel() }
+    func getCheckInViewModel() -> CheckInViewModel? { safeGetCheckInViewModel() }
 
 
     func getChatViewModel(emergencyId: String) -> ChatViewModel? {
@@ -337,3 +379,4 @@ class ViewModelProvider {
         }
     }
 }
+

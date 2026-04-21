@@ -40,6 +40,9 @@ struct HomeView: View {
                     RiskWidgetView(riskState: container.risk.state)
                 }
 
+                // Check-in Card — matinal (até 14h) ou noturno (a partir das 18h)
+                checkInCard
+
                 // Emergency Button
                 emergencyButton
 
@@ -132,6 +135,76 @@ struct HomeView: View {
 
     private var heroSection: some View {
         WeeklyStatusCard(weeklyCount: weeklyCount, totalEmergencies: totalEmergencies)
+    }
+
+
+    // MARK: - Check-in Card
+    @ViewBuilder
+    private var checkInCard: some View {
+        let hour = Calendar.current.component(.hour, from: Date())
+
+        if hour < 14 {
+            // Matinal: pergunta sobre bombinha
+            Button {
+                navigationPath.append(AppRoute.checkIn("MORNING"))
+            } label: {
+                HStack(spacing: 14) {
+                    Text("💊")
+                        .font(.system(size: 36))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Check-in Matinal")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.white)
+                        Text("Você está com sua bombinha hoje?")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(16)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 0.9, green: 0.32, blue: 0), Color(red: 1, green: 0.56, blue: 0)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .buttonStyle(PlainButtonStyle())
+        } else if hour >= 18 {
+            // Noturno: pergunta sobre crise
+            Button {
+                navigationPath.append(AppRoute.checkIn("EVENING"))
+            } label: {
+                HStack(spacing: 14) {
+                    Text("🌙")
+                        .font(.system(size: 36))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Check-in Noturno")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.white)
+                        Text("Teve alguma crise hoje?")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(16)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 0.1, green: 0.14, blue: 0.49), Color(red: 0.16, green: 0.21, blue: 0.58)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        // 14h–18h: não exibe card (fora do horário de check-in)
     }
 
     // MARK: - Fetch weekly stats (listener em tempo real)

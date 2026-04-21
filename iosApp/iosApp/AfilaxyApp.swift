@@ -97,6 +97,35 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let type = userInfo["type"] as? String ?? "unknown"
         let emergencyId = userInfo["emergencyId"] as? String ?? "nil"
         FileLogger.shared.write(level: "INFO", tag: "AppDelegate", message: "didReceive notificationResponse type=\(type) emergencyId=\(emergencyId) action=\(response.actionIdentifier)")
+
+        // ── Check-in notifications ─────────────────────────────────────
+        if type == "checkin" {
+            let checkInType = userInfo["checkInType"] as? String ?? "MORNING"
+            let action = response.actionIdentifier
+
+            // Determine quick answer from notification action buttons
+            var quickAnswer: Bool? = nil
+            switch action {
+            case "CHECKIN_YES":       quickAnswer = true   // morning: has inhaler
+            case "CHECKIN_NO":        quickAnswer = false  // morning: no inhaler
+            case "CHECKIN_NO_CRISIS": quickAnswer = false  // evening: no crisis
+            case "CHECKIN_HAD_CRISIS": quickAnswer = true  // evening: had crisis
+            default: break
+            }
+
+            // Delay to let SwiftUI complete background→foreground transition
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                NotificationCenter.default.post(
+                    name: .init("AfilaxyOpenCheckIn"),
+                    object: nil,
+                    userInfo: ["checkInType": checkInType, "quickAnswer": quickAnswer as Any]
+                )
+            }
+            completionHandler()
+            return
+        }
+
+        // ── Emergency notifications (existing logic) ──────────────────
         guard let eid = userInfo["emergencyId"] as? String else {
             completionHandler()
             return
@@ -499,6 +528,8 @@ struct AfilaxyApp: App {
             if success {
                 self.container.observeChildren()
                 self.isKoinInitialized = true
+                // Agenda notificações diárias de check-in (matinal 07:30 + noturno 21:00)
+                CheckInNotificationScheduler.shared.scheduleDaily()
                 FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App totalmente inicializado")
             } else {
                 FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "warmUp falhou — tela de erro exibida")
