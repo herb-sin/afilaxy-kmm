@@ -1,6 +1,7 @@
 package com.afilaxy.di
 
 import com.afilaxy.presentation.auth.AuthViewModel
+import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
@@ -97,4 +98,10 @@ fun safeGetMedicalProfileViewModel(): MedicalProfileViewModel {
 fun safeGetRiskViewModel(): RiskViewModel {
     Logger.d(TAG, "safeGetRiskViewModel")
     return getKoin().get<RiskViewModel>().also { Logger.d(TAG, "RiskViewModel OK") }
+}
+
+@Throws(Exception::class)
+fun safeGetCheckInViewModel(): CheckInViewModel {
+    Logger.d(TAG, "safeGetCheckInViewModel")
+    return getKoin().get<CheckInViewModel>().also { Logger.d(TAG, "CheckInViewModel OK") }
 }

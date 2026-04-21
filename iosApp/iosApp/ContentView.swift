@@ -6,6 +6,7 @@ enum AppRoute: Hashable {
     case home, emergency, history, profile, professionals, map, portal
     case notifications, settings, about, terms, privacy, help
     case autocuidado, education
+    case checkIn(String)          // "MORNING" ou "EVENING"
     case emergencyResponse(String)
     case chat(String)
     case professionalDetail(String)
@@ -174,7 +175,13 @@ struct ContentView: View {
                 if authState?.isAuthenticated == false {
                     isLoggedIn = false
                     resolvedEmergencyIds = []  // limpa na saída de sessão
+                    CheckInNotificationScheduler.shared.cancelAll()
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenCheckIn"))) { notification in
+                let typeStr = notification.userInfo?["checkInType"] as? String ?? "MORNING"
+                selectedTab = .home
+                homeNavigationPath.append(AppRoute.checkIn(typeStr))
             }
             .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyEmergencyResolved"))) { notification in
                 // ChatView disparou 'Resolver' — limpa toda a pilha de navegação de volta à home
@@ -242,6 +249,14 @@ struct ContentView: View {
             AutocuidadoView()
         case .education:
             EducationView()
+        case .checkIn(let typeStr):
+            let checkInType: CheckInType = typeStr == "MORNING" ? .morning : .evening
+            CheckInView(type: checkInType) {
+                // Pop back to previous screen on done
+                if !homeNavigationPath.isEmpty {
+                    homeNavigationPath.removeLast()
+                }
+            }
         case .map:
             MapView()
         case .portal:
