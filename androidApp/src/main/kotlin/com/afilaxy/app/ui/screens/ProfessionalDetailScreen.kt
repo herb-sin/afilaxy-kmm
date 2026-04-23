@@ -52,7 +52,10 @@ fun ProfessionalDetailScreen(
         }
     ) { padding ->
         when {
-            state.isLoading -> {
+            // Estado de loading explícito OU estado inicial antes do LaunchedEffect disparar
+            // (isLoading=false, professional=null, error=null). Sem este else, haveria
+            // uma tela em branco por um frame na primeira navegação ao detalhe.
+            state.isLoading || (state.professional == null && state.error == null) -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
