@@ -8,7 +8,11 @@ struct ProfessionalDetailView: View {
     var body: some View {
         let wrapper = container.professionalDetail
         Group {
-            if wrapper.state?.isLoading == true {
+            // Enquanto o ID que está sendo carregado não corresponde ao solicitado,
+            // mostra loading para evitar exibir dados do profissional anterior (estado stale).
+            let loadedId = wrapper.state?.professional?.id
+            let isStale = loadedId != nil && loadedId != professionalId
+            if wrapper.state?.isLoading == true || isStale {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = wrapper.state?.error {
                 VStack(spacing: 12) {
@@ -23,7 +27,11 @@ struct ProfessionalDetailView: View {
         }
         .navigationTitle("Profissional")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { wrapper.vm?.loadProfessional(id: professionalId) }
+        .onAppear {
+            // Garante que o load sempre dispara para o ID correto,
+            // mesmo quando o ViewModel ainda tem o estado do profissional anterior.
+            wrapper.vm?.loadProfessional(id: professionalId)
+        }
     }
 
     @ViewBuilder

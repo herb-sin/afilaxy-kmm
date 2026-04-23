@@ -1,5 +1,6 @@
 import SwiftUI
 import shared
+import FirebaseAuth
 
 struct ProfileView: View {
     @EnvironmentObject var container: AppContainer
@@ -81,7 +82,11 @@ struct ProfileView: View {
         }
         .navigationTitle("Meu Perfil")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showEditSheet) {
+        .sheet(isPresented: $showEditSheet, onDismiss: {
+            // Reseta flag ao fechar — garante que re-abrir o sheet
+            // sempre carrega os dados mais recentes do perfil salvo.
+            fieldsLoaded = false
+        }) {
             EditProfileSheet(
                 name: $name, phone: $phone, bloodType: $bloodType,
                 allergies: $allergies, medications: $medications,
@@ -168,20 +173,52 @@ struct ProfileView: View {
     }
 
     private func saveProfile() {
-        guard let profile = container.profile.state?.profile else { return }
-        let updated = profile.doCopy(
-            uid: profile.uid, name: name, email: profile.email, phone: phone,
-            photoUrl: profile.photoUrl,
-            healthData: UserHealthData(
-                bloodType: bloodType,
-                allergies: split(allergies), medications: split(medications),
-                conditions: split(conditions), notes: healthNotes
-            ),
-            emergencyContact: EmergencyContact(
-                name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
-            ),
-            isHealthProfessional: profile.isHealthProfessional
-        )
+        // Obtém o perfil existente OU constrói um mínimo para contas novas
+        // onde o documento Firestore ainda não foi criado (profile == nil).
+        let existingProfile = container.profile.state?.profile
+        let currentUid = existingProfile?.uid ?? Auth.auth().currentUser?.uid ?? ""
+        let currentEmail = existingProfile?.email ?? Auth.auth().currentUser?.email ?? ""
+
+        guard !currentUid.isEmpty else {
+            // Sem UID não há como salvar — não deveria ocorrer se o usuário está autenticado
+            return
+        }
+
+        let updated: UserProfile
+        if let profile = existingProfile {
+            updated = profile.doCopy(
+                uid: profile.uid, name: name, email: profile.email, phone: phone,
+                photoUrl: profile.photoUrl,
+                healthData: UserHealthData(
+                    bloodType: bloodType,
+                    allergies: split(allergies), medications: split(medications),
+                    conditions: split(conditions), notes: healthNotes
+                ),
+                emergencyContact: EmergencyContact(
+                    name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
+                ),
+                isHealthProfessional: profile.isHealthProfessional
+            )
+        } else {
+            // Conta nova: cria perfil com os dados preenchidos agora
+            updated = UserProfile(
+                uid: currentUid,
+                name: name.isEmpty ? (Auth.auth().currentUser?.displayName ?? "") : name,
+                email: currentEmail,
+                phone: phone,
+                photoUrl: nil,
+                healthData: UserHealthData(
+                    bloodType: bloodType,
+                    allergies: split(allergies), medications: split(medications),
+                    conditions: split(conditions), notes: healthNotes
+                ),
+                emergencyContact: EmergencyContact(
+                    name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
+                ),
+                isHealthProfessional: false
+            )
+        }
+
         container.profile.vm?.updateProfile(profile: updated)
         showEditSheet = false
     }
