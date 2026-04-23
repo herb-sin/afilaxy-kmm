@@ -15,6 +15,10 @@ struct HomeView: View {
     // Consentimento LGPD persistido entre sessões (UserDefaults via @AppStorage)
     @AppStorage("helperMapConsentGiven") private var helperMapConsentGiven = false
     @AppStorage("nps_shown") private var npsShown = false
+    // Data em que o check-in matinal/noturno foi concluído (formato "yyyy-MM-dd").
+    // Persiste entre sessões — o banner não reaparece no mesmo dia.
+    @AppStorage("checkin_morning_done_date") private var morningDoneDate = ""
+    @AppStorage("checkin_evening_done_date") private var eveningDoneDate = ""
     @State private var showHelperConsentAlert = false
     @State private var showNps = false
     @State private var weeklyCount: Int = -1     // -1 = ainda carregando
@@ -25,6 +29,13 @@ struct HomeView: View {
     @State private var statsListener: ListenerRegistration? = nil
     // Localização para o RiskWidget — nil enquanto não obtida ou sem permissão
     @State private var riskLocation: CLLocationCoordinate2D? = nil
+
+    /// String "yyyy-MM-dd" para hoje — usada como chave de comparação do check-in.
+    private var todayKey: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
 
     var body: some View {
         // NOTA: ContentView já envolve HomeView em NavigationStack(path: $homeNavigationPath).
@@ -142,9 +153,10 @@ struct HomeView: View {
     @ViewBuilder
     private var checkInCard: some View {
         let hour = Calendar.current.component(.hour, from: Date())
+        let today = todayKey
 
-        if hour < 14 {
-            // Matinal: pergunta sobre bombinha
+        if hour < 14 && morningDoneDate != today {
+            // Matinal: pergunta sobre bombinha (oculta se já respondido hoje)
             Button {
                 navigationPath.append(AppRoute.checkIn("MORNING"))
             } label: {
@@ -173,8 +185,8 @@ struct HomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
             .buttonStyle(PlainButtonStyle())
-        } else if hour >= 18 {
-            // Noturno: pergunta sobre crise
+        } else if hour >= 18 && eveningDoneDate != today {
+            // Noturno: pergunta sobre crise (oculta se já respondido hoje)
             Button {
                 navigationPath.append(AppRoute.checkIn("EVENING"))
             } label: {
@@ -204,7 +216,7 @@ struct HomeView: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
-        // 14h–18h: não exibe card (fora do horário de check-in)
+        // 14h–18h ou check-in já feito hoje: não exibe card
     }
 
     // MARK: - Fetch weekly stats (listener em tempo real)

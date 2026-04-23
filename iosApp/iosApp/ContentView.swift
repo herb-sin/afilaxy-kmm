@@ -49,6 +49,9 @@ struct ContentView: View {
     @State private var mapNavigationPath = NavigationPath()
     @State private var profileNavigationPath = NavigationPath()
     @State private var portalNavigationPath = NavigationPath()
+    // Check-in concluído hoje — compartilhado com HomeView para ocultar o banner
+    @AppStorage("checkin_morning_done_date") private var morningDoneDate = ""
+    @AppStorage("checkin_evening_done_date") private var eveningDoneDate = ""
     
     // Emergency handling
     @State private var emergencyRouteActive = false
@@ -252,6 +255,15 @@ struct ContentView: View {
         case .checkIn(let typeStr):
             let checkInType: CheckInType = typeStr == "MORNING" ? .morning : .evening
             CheckInView(type: checkInType) {
+                // Marca o check-in como concluído para hoje — oculta o banner na Home
+                let f = DateFormatter()
+                f.dateFormat = "yyyy-MM-dd"
+                let today = f.string(from: Date())
+                if checkInType == .morning {
+                    morningDoneDate = today
+                } else {
+                    eveningDoneDate = today
+                }
                 // Pop back to previous screen on done
                 if !homeNavigationPath.isEmpty {
                     homeNavigationPath.removeLast()
