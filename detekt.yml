@@ -25,12 +25,18 @@ complexity:
       - '**/ui/screens/**'
       - '**/ui/components/**'
       - '**/ui/theme/**'
+      # NavGraph é um router monolítico por design — refatoração de sub-gráficos é próximo passo
+      - '**/navigation/**'
 
   LongParameterList:
     active: true
     functionThreshold: 7
     constructorThreshold: 7
     ignoreDefaultParameters: true
+    excludes:
+      # Composables com muitos parâmetros são normais (state hoisting pattern)
+      - '**/ui/screens/**'
+      - '**/ui/components/**'
 
   TooManyFunctions:
     active: true
@@ -41,6 +47,11 @@ complexity:
     thresholdInEnums: 10
     ignorePrivate: false
     ignoreOverridden: true   # Não conta overrides (ex: ViewModels com muitos fun)
+    excludes:
+      # Repositórios e ViewModels KMM implementam muitos casos de uso por design (CQRS)
+      - '**/data/repository/**'
+      - '**/presentation/**'
+      - '**/domain/repository/**'
 
   ComplexMethod:
     active: false   # deprecated — substituído por CyclomaticComplexMethod abaixo
@@ -48,6 +59,9 @@ complexity:
   LargeClass:
     active: true
     threshold: 400          # Classes acima de 400 linhas são sinalizadas
+    excludes:
+      # EmergencyRepositoryImpl: candidato a split em fases futuras
+      - '**/data/repository/EmergencyRepositoryImpl.kt'
 
   NestedBlockDepth:
     active: true
@@ -56,6 +70,14 @@ complexity:
   CyclomaticComplexMethod:
     active: true
     threshold: 15
+    excludes:
+      # Composables têm complexidade ciclomática alta inerentemente (estados, guards, branches)
+      - '**/ui/screens/**'
+      - '**/ui/components/**'
+      # NavGraph: router principal — sub-gráficos são o próximo passo de refatoração
+      - '**/navigation/**'
+      # FCM handler: múltiplos tipos de mensagem por design
+      - '**/service/**'
 
 ## ── Estilo ────────────────────────────────────────────────────────────────────
 

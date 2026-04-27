@@ -36,6 +36,7 @@ object SecureLogger {
                 .filter { it.isLetterOrDigit() || it in "_-. :()[]{}/" }
                 .ifBlank { "SANITIZED" }
         } catch (e: Exception) {
+            Log.w("SecureLogger", "sanitize falhou: ${e::class.simpleName}")
             "SANITIZED"
         }
     }
