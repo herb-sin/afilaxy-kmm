@@ -33,9 +33,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreenNew(
-    onNavigateBack: () -> Unit,
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToPrivacy: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel()
@@ -394,7 +392,12 @@ private fun AgendaDeSaudeCard(
             }
             HorizontalDivider()
             // Dados clínicos
-            ProfileInfoCard("Tipo de Asma", profile?.healthData?.conditions?.firstOrNull() ?: "Não informado", Icons.Default.Favorite, Modifier.fillMaxWidth())
+            ProfileInfoCard(
+                "Tipo de Asma",
+                profile?.healthData?.conditions?.firstOrNull() ?: "Não informado",
+                Icons.Default.Favorite,
+                Modifier.fillMaxWidth()
+            )
             // Medicação
 
             val meds = profile?.healthData?.medications ?: emptyList()
@@ -410,14 +413,35 @@ private fun AgendaDeSaudeCard(
                 }
             }
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-                ProfileInfoCard("Contato Emergência", profile?.emergencyContact?.name?.takeIf { it.isNotBlank() } ?: "Não informado", Icons.Default.ContactPhone, Modifier.weight(1f))
-                ProfileInfoCard("Protocolo de Crise", "Ver passos de emergência", Icons.AutoMirrored.Filled.List, Modifier.weight(1f), onClick = onNavigateToHelp)
+                ProfileInfoCard(
+                    "Contato Emergência",
+                    profile?.emergencyContact?.name?.takeIf { it.isNotBlank() } ?: "Não informado",
+                    Icons.Default.ContactPhone,
+                    Modifier.weight(1f)
+                )
+                ProfileInfoCard(
+                    "Protocolo de Crise",
+                    "Ver passos de emergência",
+                    Icons.AutoMirrored.Filled.List,
+                    Modifier.weight(1f),
+                    onClick = onNavigateToHelp
+                )
             }
             HorizontalDivider()
             // Ocorrências Recentes
-            Text("Ocorrências Recentes", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Ocorrências Recentes",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (recentHistory.isEmpty()) {
-                Text("Nenhuma ocorrência registrada", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 4.dp))
+                Text(
+                    "Nenhuma ocorrência registrada",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
             } else {
                 recentHistory.forEach { event -> AgendaHistoryItem(event) }
             }
@@ -553,8 +577,14 @@ private fun EditSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
             HorizontalDivider()
             content()

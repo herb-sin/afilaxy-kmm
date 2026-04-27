@@ -59,7 +59,10 @@ fun EmergencyResponseScreen(
         // Garante que o countdown inicie e não fique travado em 3:00 estático.
         kotlinx.coroutines.delay(1_500)
         if (viewModel.state.value.emergencyExpiresAt == null) {
-            FileLogger.log("WARN", "EmergencyResponseScreen", "expiresAt still null after fetch — using local fallback emergencyId=$emergencyId")
+            FileLogger.log(
+                "WARN", "EmergencyResponseScreen",
+                "expiresAt still null after fetch — using local fallback emergencyId=$emergencyId"
+            )
             viewModel.applyFallbackExpiresAt()
         }
     }

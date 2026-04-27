@@ -301,7 +301,10 @@ class EmergencyViewModel(
                     }
                 }
                 .onFailure { exception ->
-                    com.afilaxy.util.Logger.e("EmergencyViewModel", "onAcceptEmergency failed emergencyId=$emergencyId: ${exception.message}")
+                    com.afilaxy.util.Logger.e(
+                        "EmergencyViewModel",
+                        "onAcceptEmergency failed emergencyId=$emergencyId: ${exception.message}"
+                    )
                     _state.update {
                         it.copy(
                             isLoading = false,

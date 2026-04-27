@@ -103,6 +103,7 @@ style:
       - '0'
       - '1'
       - '2'
+      - '3'      # Usado em números de passos ordinais (ex: EmergencyStep 1, 2, 3)
       - '5'
       - '10'
       - '100'

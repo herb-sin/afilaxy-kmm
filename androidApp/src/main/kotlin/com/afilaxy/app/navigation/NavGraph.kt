@@ -296,9 +296,7 @@ fun NavGraph(
         composable(AppRoutes.PROFILE) {
             AfilaxyAppScaffoldSimple(navController = navController) {
                 ProfileScreenNew(
-                    onNavigateBack = { navController.popBackStack() },
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
-                    onNavigateToPrivacy = { navController.navigate(AppRoutes.PRIVACY) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onLogout = {
                         scope.launch {
