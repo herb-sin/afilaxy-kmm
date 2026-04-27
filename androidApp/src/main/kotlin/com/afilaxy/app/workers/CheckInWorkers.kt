@@ -48,6 +48,10 @@ class MorningCheckInWorker(
         const val WORK_NAME = "morning_checkin_worker"
         const val KEY_INHALER_NAME = "inhaler_name"
         const val KEY_RISK_SCORE = "risk_score"
+        const val MIN_RISK_SCORE_FOR_NOTIFICATION = 45  // score mínimo para notificar (risco moderado+)
+        private const val PENDING_INTENT_MORNING_MAIN = 1001
+        private const val PENDING_INTENT_MORNING_YES  = 1002
+        private const val PENDING_INTENT_MORNING_NO   = 1003
 
         fun scheduleNext(context: Context, inhalerName: String? = null, riskScore: Int = 0) {
             val delay = minutesUntil(hour = 7, minute = 30)
@@ -74,7 +78,7 @@ class MorningCheckInWorker(
         val inhalerName = inputData.getString(KEY_INHALER_NAME)?.takeIf { it.isNotBlank() }
 
         // Só notifica em risco moderado ou superior (score >= 45)
-        if (riskScore >= 45) {
+        if (riskScore >= MIN_RISK_SCORE_FOR_NOTIFICATION) {
             showMorningNotification(inhalerName)
         }
 
@@ -93,7 +97,7 @@ class MorningCheckInWorker(
             putExtra("open_screen", "morning_checkin")
         }
         val pendingIntent = PendingIntent.getActivity(
-            context, 1001, intent,
+            context, PENDING_INTENT_MORNING_MAIN, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -103,7 +107,7 @@ class MorningCheckInWorker(
             putExtra("open_screen", "morning_checkin_yes")
         }
         val yesPending = PendingIntent.getActivity(
-            context, 1002, yesIntent,
+            context, PENDING_INTENT_MORNING_YES, yesIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -113,7 +117,7 @@ class MorningCheckInWorker(
             putExtra("open_screen", "morning_checkin_no")
         }
         val noPending = PendingIntent.getActivity(
-            context, 1003, noIntent,
+            context, PENDING_INTENT_MORNING_NO, noIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -150,6 +154,9 @@ class EveningCheckInWorker(
 
     companion object {
         const val WORK_NAME = "evening_checkin_worker"
+        private const val PENDING_INTENT_EVENING_MAIN = 2001
+        private const val PENDING_INTENT_EVENING_YES  = 2002
+        private const val PENDING_INTENT_EVENING_NO   = 2003
 
         fun scheduleNext(context: Context) {
             val delay = minutesUntil(hour = 21, minute = 0)
@@ -180,7 +187,7 @@ class EveningCheckInWorker(
             putExtra("open_screen", "evening_checkin")
         }
         val pendingIntent = PendingIntent.getActivity(
-            context, 2001, intent,
+            context, PENDING_INTENT_EVENING_MAIN, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -189,7 +196,7 @@ class EveningCheckInWorker(
             putExtra("open_screen", "evening_checkin_yes")
         }
         val yesPending = PendingIntent.getActivity(
-            context, 2002, yesIntent,
+            context, PENDING_INTENT_EVENING_YES, yesIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -198,7 +205,7 @@ class EveningCheckInWorker(
             putExtra("open_screen", "evening_checkin_no")
         }
         val noPending = PendingIntent.getActivity(
-            context, 2003, noIntent,
+            context, PENDING_INTENT_EVENING_NO, noIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -220,6 +227,8 @@ class EveningCheckInWorker(
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+private const val MILLIS_PER_MINUTE = 60_000L
+
 const val NOTIFICATION_ID_MORNING = 5001
 const val NOTIFICATION_ID_EVENING = 5002
 
@@ -231,7 +240,7 @@ fun minutesUntil(hour: Int, minute: Int): Long {
         set(Calendar.MINUTE, minute)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
-        if (before(now)) add(Calendar.DAY_OF_YEAR, 1) // já passou → próximo dia
+        if (before(now)) add(Calendar.DAY_OF_YEAR, 1)
     }
-    return (target.timeInMillis - now.timeInMillis) / 60_000
+    return (target.timeInMillis - now.timeInMillis) / MILLIS_PER_MINUTE
 }

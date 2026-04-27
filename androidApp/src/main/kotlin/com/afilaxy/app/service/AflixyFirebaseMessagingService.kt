@@ -26,6 +26,10 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
         const val VIBRATION_PAUSE_MS = 0L         // pausa inicial do padrão de vibração
         const val VIBRATION_BUZZ_MS = 1_000L      // duração do buzz de emergência
         const val VIBRATION_GAP_MS = 500L         // gap entre buzzes
+        const val NOTIFICATION_ID_HASH_LENGTH = 8     // chars alfanuméricos para hash estável
+        const val NOTIFICATION_ID_HASH_MULTIPLIER = 31 // multiplicador primo do hash
+        const val NOTIFICATION_TEXT_TITLE_MAX = 64    // máx chars de título de notificação
+        const val NOTIFICATION_TEXT_BODY_MAX = 128    // máx chars de corpo de notificação
     }
 
     // Remove \n, \r e demais caracteres de controle de dados externos antes de logar (CWE-117)
@@ -197,8 +201,9 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
      * Usa apenas os primeiros 8 chars alfanuméricos do ID para gerar um Int determinístico.
      */
     private fun safeNotificationId(externalId: String): Int {
-        val safe = externalId.filter { it.isLetterOrDigit() }.take(8).ifEmpty { "0" }
-        return safe.fold(0) { acc, c -> acc * 31 + c.code }
+        val safe = externalId.filter { it.isLetterOrDigit() }
+            .take(NOTIFICATION_ID_HASH_LENGTH).ifEmpty { "0" }
+        return safe.fold(0) { acc, c -> acc * NOTIFICATION_ID_HASH_MULTIPLIER + c.code }
     }
     
     private fun cancelNotification(emergencyId: String) {
@@ -212,12 +217,12 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
             ?.let { safeNotificationId(it) }
             ?: (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
 
-        val safeTitle = sanitizeNotificationText(title, 64)
-        val safeBody  = sanitizeNotificationText(body, 128)
+        val safeTitle = sanitizeNotificationText(title, NOTIFICATION_TEXT_TITLE_MAX)
+        val safeBody  = sanitizeNotificationText(body, NOTIFICATION_TEXT_BODY_MAX)
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            emergencyId?.let { putExtra("emergencyId", sanitizeNotificationText(it, 64)) }
+            emergencyId?.let { putExtra("emergencyId", sanitizeNotificationText(it, NOTIFICATION_TEXT_TITLE_MAX)) }
         }
 
         val pendingIntent = PendingIntent.getActivity(
