@@ -1,6 +1,5 @@
 package com.afilaxy.domain.model
 
-import dev.gitlive.firebase.firestore.Timestamp
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor

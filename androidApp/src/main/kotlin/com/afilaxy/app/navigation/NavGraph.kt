@@ -29,17 +29,6 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 
-private val protectedRoutes = setOf(
-    AppRoutes.HOME, AppRoutes.CONSENT, AppRoutes.EMERGENCY, AppRoutes.PROFILE, AppRoutes.HISTORY,
-    AppRoutes.AUTOCUIDADO, AppRoutes.PROFESSIONALS,
-    AppRoutes.CRM_LOOKUP, AppRoutes.MAP, AppRoutes.MAP_PHARMACY, AppRoutes.HELP, AppRoutes.ABOUT,
-    AppRoutes.TERMS, AppRoutes.PRIVACY, AppRoutes.PORTAL, "emergency_request", "emergency_response", AppRoutes.CHAT
-)
-
-// Rotas que usam o AfilaxyAppScaffold (tabs principais)
-private val tabRoutes = setOf(
-    AppRoutes.HOME, AppRoutes.MAP, AppRoutes.PROFILE, AppRoutes.PORTAL
-)
 
 @Composable
 fun NavGraph(
@@ -287,19 +276,9 @@ fun NavGraph(
                     weeklyCount = weeklyCountState.value,
                     totalEmergencies = totalEmergenciesState.value,
                     onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
-                    onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
-                    onNavigateToSettings = {},
-
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
-                    onNavigateToProfessionals = { navController.navigate(AppRoutes.PROFESSIONALS) },
-                    onNavigateToEducation = { navController.navigate(AppRoutes.EDUCATION) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
-                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
-                    onLogout = {
-                        navController.navigate(AppRoutes.LOGIN) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
+                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) }
                 )
             }
         }

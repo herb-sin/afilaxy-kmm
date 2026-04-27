@@ -16,7 +16,6 @@ import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.presentation.medical.MedicalProfileViewModel
 import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.risk.RiskViewModel
-import com.russhwolf.settings.Settings
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
