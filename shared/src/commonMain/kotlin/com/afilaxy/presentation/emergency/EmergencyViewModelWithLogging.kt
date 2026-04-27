@@ -1,11 +1,8 @@
 package com.afilaxy.presentation.emergency
 
-import com.afilaxy.domain.model.EmergencyStatus
 import com.afilaxy.domain.usecase.CreateEmergencyUseCase
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.LocationRepository
-import com.afilaxy.domain.repository.NotificationRepository
-import com.afilaxy.util.Logger
 import com.afilaxy.util.logDebug
 import com.afilaxy.util.logError
 import com.afilaxy.util.logInfo
@@ -28,7 +25,6 @@ import kotlinx.coroutines.launch
 class EmergencyViewModelWithLogging(
     private val emergencyRepository: EmergencyRepository,
     private val locationRepository: LocationRepository,
-    private val notificationRepository: NotificationRepository,
     private val createEmergencyUseCase: CreateEmergencyUseCase
 ) : KMMViewModel() {
     

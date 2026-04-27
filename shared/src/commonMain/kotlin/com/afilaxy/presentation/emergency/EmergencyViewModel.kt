@@ -4,7 +4,6 @@ import com.afilaxy.domain.model.EmergencyStatus
 import com.afilaxy.domain.usecase.CreateEmergencyUseCase
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.LocationRepository
-import com.afilaxy.domain.repository.NotificationRepository
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
 import kotlinx.coroutines.Job
@@ -20,7 +19,6 @@ import kotlinx.coroutines.launch
 class EmergencyViewModel(
     private val emergencyRepository: EmergencyRepository,
     private val locationRepository: LocationRepository,
-    private val notificationRepository: NotificationRepository,
     private val createEmergencyUseCase: CreateEmergencyUseCase
 ) : KMMViewModel() {
     

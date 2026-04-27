@@ -1,0 +1,307 @@
+## ── Detekt Configuration — Afilaxy KMM ─────────────────────────────────────────
+## Documentação: https://detekt.dev/docs/introduction/configurations
+
+build:
+  maxIssues: 0           # Mudar para 0 no CI quando quiser bloquear builds
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+## ── Complexidade ──────────────────────────────────────────────────────────────
+## Limites calibrados para o estado atual do código:
+## EmergencyRepositoryImpl (598 linhas) e EmergencyViewModel (434 linhas)
+## serão sinalizados — são candidatos à próxima refatoração.
+
+complexity:
+  active: true
+
+  LongMethod:
+    active: true
+    threshold: 60           # Funções acima de 60 linhas são sinalizadas
+    excludes:
+      # Composables são naturalmente longos — limite real é a legibilidade visual
+      - '**/ui/screens/**'
+      - '**/ui/components/**'
+      - '**/ui/theme/**'
+
+  LongParameterList:
+    active: true
+    functionThreshold: 7
+    constructorThreshold: 7
+    ignoreDefaultParameters: true
+
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 30
+    thresholdInClasses: 20
+    thresholdInInterfaces: 15
+    thresholdInObjects: 15
+    thresholdInEnums: 10
+    ignorePrivate: false
+    ignoreOverridden: true   # Não conta overrides (ex: ViewModels com muitos fun)
+
+  ComplexMethod:
+    active: false   # deprecated — substituído por CyclomaticComplexMethod abaixo
+
+  LargeClass:
+    active: true
+    threshold: 400          # Classes acima de 400 linhas são sinalizadas
+
+  NestedBlockDepth:
+    active: true
+    threshold: 5
+
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+
+## ── Estilo ────────────────────────────────────────────────────────────────────
+
+style:
+  active: true
+
+  MagicNumber:
+    active: true
+    ignoreNumbers:
+      - '-1'
+      - '0'
+      - '1'
+      - '2'
+      - '5'
+      - '10'
+      - '100'
+      - '1000'
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignorePropertyDeclaration: false
+    ignoreAnnotation: true
+    ignoreHashCodeFunction: true
+    ignoreEnums: true
+    excludes:
+      # Cores hex (0xFFRRGGBB) e valores dp/sp são por definição magic numbers em UI
+      - '**/ui/theme/**'
+      - '**/ui/screens/**'
+      - '**/ui/components/**'
+      - '**/ui/scaffold/**'
+      - '**/test/**'
+      - '**/commonTest/**'
+
+  MaxLineLength:
+    active: true
+    maxLineLength: 140      # Mais permissivo que o padrão (120) — KMM tem linhas longas
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: false
+    excludes:
+      # Telas de texto legal contêm strings longas intencionais
+      - '**/TermsScreen.kt'
+      - '**/PrivacyScreen.kt'
+      - '**/EducationScreenNew.kt'
+      - '**/HelpScreen.kt'
+
+  WildcardImport:
+    active: false  # KMM + Compose usa extensivamente wildcards legítimos (layout.*, runtime.*, icons.*)
+
+  UnusedImports:
+    active: true
+
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: 'Resolver antes de commitar'
+        value: 'FIXME:'
+      - reason: 'Resolver antes de commitar'
+        value: 'STOPSHIP:'
+    allowedPatterns: ''
+
+  ReturnCount:
+    active: true
+    max: 4                  # Mais permissivo — repositórios KMM têm múltiplos returns
+
+  ThrowsCount:
+    active: true
+    max: 3
+
+## ── Potenciais Bugs ───────────────────────────────────────────────────────────
+
+potential-bugs:
+  active: true
+
+  AvoidReferentialEquality:
+    active: true
+
+  DontDowncastCollectionTypes:
+    active: true
+
+  EqualsAlwaysReturnsTrueOrFalse:
+    active: true
+
+  ExitOutsideMain:
+    active: true
+
+  HasPlatformType:
+    active: true
+
+  IgnoredReturnValue:
+    active: true
+    restrictToConfig: true
+    returnValueAnnotations:
+      - 'CheckResult'
+      - 'CheckReturnValue'
+
+  ImplicitDefaultLocale:
+    active: true
+
+  MapGetWithNotNullAssertionOperator:
+    active: true
+
+  NullCheckOnMutableProperty:
+    active: true
+
+  UnconditionalJumpStatementInLoop:
+    active: true
+
+  UnnecessaryNotNullCheck:
+    active: true
+
+  UnsafeCallOnNullableType:
+    active: true
+    excludes:
+      - '**/test/**'
+      - '**/commonTest/**'
+
+  UnsafeCast:
+    active: true
+
+## ── Desempenho ────────────────────────────────────────────────────────────────
+
+performance:
+  active: true
+
+  ArrayPrimitive:
+    active: true
+
+  ForEachOnRange:
+    active: true
+
+  SpreadOperator:
+    active: true
+    excludes:
+      - '**/test/**'
+
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+## ── Exceções ──────────────────────────────────────────────────────────────────
+
+exceptions:
+  active: true
+
+  ExceptionRaisedInUnexpectedLocation:
+    active: true
+
+  PrintStackTrace:
+    active: true
+
+  RethrowCaughtException:
+    active: true
+
+  ReturnFromFinally:
+    active: true
+
+  SwallowedException:
+    active: true
+    ignoredExceptionTypes:
+      - 'InterruptedException'
+      - 'MalformedURLException'
+      - 'NumberFormatException'
+      - 'ParseException'
+      - 'CancellationException'
+    # O padrão '// Silently fail' é intencional nos repositórios KMM —
+    # erros de notificação e cache não devem propagar para o usuário.
+    # Repositórios que precisam de log devem usar Logger.e() explicitamente.
+    allowedExceptionNameRegex: '_|(ignore|expected|silently).*'
+    excludes:
+      - '**/data/repository/**'   # todos os repos usam catch { /* Silently fail */ }
+      - '**/ui/screens/**'
+      - '**/service/**'
+
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - 'ArrayIndexOutOfBoundsException'
+      - 'Error'
+      - 'IllegalMonitorStateException'
+      - 'NullPointerException'
+      - 'IndexOutOfBoundsException'
+      - 'RuntimeException'
+      - 'Throwable'
+    allowedExceptionNameRegex: '_|(ignore|expected).*'
+    excludes:
+      - '**/test/**'
+      - '**/commonTest/**'
+
+  TooGenericExceptionThrown:
+    active: true
+    exceptionNames:
+      - 'Error'
+      - 'RuntimeException'
+      - 'Throwable'
+
+## ── Nomenclatura ──────────────────────────────────────────────────────────────
+
+naming:
+  active: true
+
+  ClassNaming:
+    active: true
+    classPattern: '[A-Z][a-zA-Z0-9]*'
+
+  ConstructorParameterNaming:
+    active: true
+    parameterPattern: '[a-z][A-Za-z0-9]*'
+    privateParameterPattern: '[a-z][A-Za-z0-9]*'
+
+  EnumNaming:
+    active: true
+    enumEntryPattern: '[A-Z][_A-Z0-9]*'
+
+  FunctionNaming:
+    active: true
+    functionPattern: '([a-z][a-zA-Z0-9]*)|(`.*`)'
+    # Composables e funções de navegação usam PascalCase por convenção do Jetpack Compose
+    ignoreAnnotated:
+      - 'Composable'
+      - 'Preview'
+    excludes:
+      - '**/ui/**'          # Todas as funções UI (screens, components, scaffold, theme)
+      - '**/navigation/**'  # NavGraph usa PascalCase
+      - '**/test/**'
+      - '**/commonTest/**'
+
+  FunctionParameterNaming:
+    active: true
+    parameterPattern: '[a-z][A-Za-z0-9]*'
+
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][A-Za-z0-9]*'
+    privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'  # Permite _state, _loading etc.
+    excludeClassPattern: '$^'
+
+## ── Exclusões globais ─────────────────────────────────────────────────────────
+## Arquivos gerados automaticamente pelo Gradle (ex: WaqiConfig.kt)
+
+processors:
+  active: true
+  exclude:
+    - 'DetektProjectMetrics'
+
+output-reports:
+  active: true
+  exclude:
+    - 'TxtOutputReport'
+    - 'XmlOutputReport'
+    - 'MdOutputReport'

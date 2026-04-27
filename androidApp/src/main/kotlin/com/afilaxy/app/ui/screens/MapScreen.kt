@@ -22,6 +22,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +154,7 @@ fun MapScreen(
                         state = MarkerState(position = markerPos),
                         title = if (userLocation != null) "Você está aqui" else "Posição padrão (GPS indisponível)",
                         snippet = if (userLocation != null)
-                            "${String.format("%.5f", markerPos.latitude)}, ${String.format("%.5f", markerPos.longitude)}"
+                            "${String.format(Locale.ROOT, "%.5f", markerPos.latitude)}, ${String.format(Locale.ROOT, "%.5f", markerPos.longitude)}"
                         else
                             "São Paulo, SP"
                     )
@@ -301,13 +302,13 @@ fun MapErrorFallback(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = "Latitude: ${String.format("%.6f", latitude)}",
+                    text = "Latitude: ${String.format(Locale.ROOT, "%.6f", latitude)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 Text(
-                    text = "Longitude: ${String.format("%.6f", longitude)}",
+                    text = "Longitude: ${String.format(Locale.ROOT, "%.6f", longitude)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
