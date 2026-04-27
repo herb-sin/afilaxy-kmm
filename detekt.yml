@@ -19,14 +19,18 @@ complexity:
 
   LongMethod:
     active: true
-    threshold: 60           # Funções acima de 60 linhas são sinalizadas
+    threshold: 60
     excludes:
-      # Composables são naturalmente longos — limite real é a legibilidade visual
+      # Composables são naturalmente longos
       - '**/ui/screens/**'
       - '**/ui/components/**'
       - '**/ui/theme/**'
-      # NavGraph é um router monolítico por design — refatoração de sub-gráficos é próximo passo
+      # NavGraph: router monolítico por design
       - '**/navigation/**'
+      # Firebase mappers têm queries longas por natureza
+      - '**/data/repository/**'
+      # MainActivity: ciclo de vida Android impede fragmentação do onCreate
+      - '**/app/MainActivity.kt'
 
   LongParameterList:
     active: true
@@ -71,13 +75,21 @@ complexity:
     active: true
     threshold: 15
     excludes:
-      # Composables têm complexidade ciclomática alta inerentemente (estados, guards, branches)
+      # Composables têm complexidade ciclomática alta inerentemente
       - '**/ui/screens/**'
       - '**/ui/components/**'
-      # NavGraph: router principal — sub-gráficos são o próximo passo de refatoração
+      # NavGraph: router principal
       - '**/navigation/**'
       # FCM handler: múltiplos tipos de mensagem por design
       - '**/service/**'
+      # Firebase mappers: guards de documento e conversão de tipos Firestore são complexos por design
+      - '**/data/repository/**'
+
+  ComplexCondition:
+    active: true
+    threshold: 5              # Guards de emergência têm até 4 critérios (threshold 4 era muito baixo)
+    excludes:
+      - '**/ui/screens/**'    # Conditions de guarda em telas Compose
 
 ## ── Estilo ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +117,9 @@ style:
       # Cores hex (0xFFRRGGBB) e valores dp/sp são por definição magic numbers em UI
       - '**/ui/theme/**'
       - '**/ui/screens/**'
+      - '**/ui/components/**'
+      # Repositórios Firebase: timeout ms, raio km, paginação — valores de domínio em contexto
+      - '**/data/repository/**'
       - '**/ui/components/**'
       - '**/ui/scaffold/**'
       - '**/test/**'

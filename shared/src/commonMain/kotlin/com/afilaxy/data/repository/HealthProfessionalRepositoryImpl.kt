@@ -86,7 +86,7 @@ class HealthProfessionalRepositoryImpl(
     }
     
     override suspend fun updateSubscription(id: String, plan: SubscriptionPlan, expiryDate: Long) {
-        auth.currentUser ?: throw IllegalStateException("User not authenticated")
+        auth.currentUser ?: error("User not authenticated")
         collection.document(id).update(
             "subscriptionPlan" to plan.name,
             "subscriptionExpiry" to expiryDate

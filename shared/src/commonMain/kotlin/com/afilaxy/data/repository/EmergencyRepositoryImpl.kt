@@ -285,34 +285,26 @@ class EmergencyRepositoryImpl(
                 .where { ("isActive" equalTo true) and ("latitude" greaterThanOrEqualTo minLat) and ("latitude" lessThanOrEqualTo maxLat) }
                 .get()
 
-            val helpers = mutableListOf<Helper>()
-
-            for (doc in snapshot.documents) {
-                val id = doc.get<String?>("id") ?: continue
+            val helpers = snapshot.documents.mapNotNull { doc ->
+                val id = doc.get<String?>("id") ?: return@mapNotNull null
                 // Exclui o próprio usuário dos helpers visíveis
-                if (id == currentUserId) continue
-                val geoPoint = doc.get<GeoPoint?>("location")
-                if (geoPoint != null) {
-                    val distance = calculateDistance(
-                        latitude, longitude,
-                        geoPoint.latitude, geoPoint.longitude
-                    )
-
-                    if (distance <= radiusKm) {
-                        helpers.add(
-                            Helper(
-                                id = id,
-                                name = doc.get("name") ?: "Helper",
-                                email = "", // email não gravado — campo vazio por design (LGPD)
-                                latitude = geoPoint.latitude,
-                                longitude = geoPoint.longitude,
-                                isActive = doc.get("isActive") ?: false,
-                                lastUpdate = 0L, // não usado no mapa; evita crash Timestamp vs Long
-                                distance = distance
-                            )
-                        )
-                    }
-                }
+                if (id == currentUserId) return@mapNotNull null
+                val geoPoint = doc.get<GeoPoint?>("location") ?: return@mapNotNull null
+                val distance = calculateDistance(
+                    latitude, longitude,
+                    geoPoint.latitude, geoPoint.longitude
+                )
+                if (distance > radiusKm) return@mapNotNull null
+                Helper(
+                    id = id,
+                    name = doc.get("name") ?: "Helper",
+                    email = "", // email não gravado — campo vazio por design (LGPD)
+                    latitude = geoPoint.latitude,
+                    longitude = geoPoint.longitude,
+                    isActive = doc.get("isActive") ?: false,
+                    lastUpdate = 0L, // não usado no mapa; evita crash Timestamp vs Long
+                    distance = distance
+                )
             }
 
             Result.success(helpers.sortedBy { it.distance })
