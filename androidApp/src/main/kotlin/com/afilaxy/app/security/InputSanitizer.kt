@@ -4,14 +4,18 @@ import java.util.regex.Pattern
 
 object InputSanitizer {
 
+    private const val MAX_NAME_LENGTH = 50
+    private const val MAX_TEXT_LENGTH = 200
+
     // Regex de email com ponto escapado no domínio e sem backtracking catastrófico
     private val EMAIL_PATTERN = Pattern.compile(
         "^[a-zA-Z0-9._%+\\-]{1,64}@[a-zA-Z0-9\\-]{1,63}(?:\\.[a-zA-Z0-9\\-]{1,63})*\\.[a-zA-Z]{2,6}$"
     )
-    private val NAME_PATTERN = Pattern.compile("^[a-zA-Z\u00e0-\u00ff\u00c0-\u0178\\s]{1,50}$")
-    private val SAFE_TEXT_PATTERN = Pattern.compile("^[a-zA-Z0-9\\s._\\-]{1,200}$")
+    private val NAME_PATTERN = Pattern.compile("^[a-zA-Z\u00e0-\u00ff\u00c0-\u0178\\s]{1,$MAX_NAME_LENGTH}$")
+    private val SAFE_TEXT_PATTERN = Pattern.compile("^[a-zA-Z0-9\\s._\\-]{1,$MAX_TEXT_LENGTH}$")
 
     // Detecta operadores NoSQL — usado para rejeitar o input, não para sanitizar por remoção
+    @Suppress("MaxLineLength")
     private val NOSQL_PATTERN = Pattern.compile(
         """\$(?:where|ne|gt|gte|lt|lte|regex|or|and|exists|in|nin|not|nor|all|size|type|mod|text|search)|javascript:|eval\s*\(|function\s*\(""",
         Pattern.CASE_INSENSITIVE
@@ -31,7 +35,7 @@ object InputSanitizer {
         val trimmed = name.trim()
         
         // Check length before processing
-        if (trimmed.length > 50) return ""
+        if (trimmed.length > MAX_NAME_LENGTH) return ""
         
         if (NOSQL_PATTERN.matcher(trimmed).find()) return ""
         val cleaned = trimmed.replace(UNSAFE_CHARS, "")
@@ -40,7 +44,7 @@ object InputSanitizer {
 
     fun sanitizeText(text: String?): String {
         if (text.isNullOrBlank()) return ""
-        val trimmed = text.trim().take(200)
+        val trimmed = text.trim().take(MAX_TEXT_LENGTH)
 
         // Rejeita qualquer input que contenha operadores NoSQL — sem tentar "limpar"
         if (NOSQL_PATTERN.matcher(trimmed).find()) return ""

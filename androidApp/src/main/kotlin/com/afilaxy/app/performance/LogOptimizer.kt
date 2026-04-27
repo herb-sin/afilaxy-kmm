@@ -5,6 +5,7 @@ import android.util.Log
 object LogOptimizer {
 
     private const val MAX_LOG_LENGTH = 4000
+    private const val MAX_TAG_LENGTH = 23   // limite de caracteres de tag do logcat Android
 
     fun d(tag: String, message: String) {
         Log.d(sanitizeTag(tag), sanitize(message))
@@ -36,6 +37,6 @@ object LogOptimizer {
     private fun sanitizeTag(tag: String): String =
         tag
             .replace(Regex("[\\r\\n\\t\\x00-\\x1F\\x7F]"), "")
-            .take(23)
+            .take(MAX_TAG_LENGTH)
             .ifEmpty { "App" }
 }

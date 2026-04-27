@@ -14,6 +14,10 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class EmergencyViewModelWrapper : ViewModel(), KoinComponent {
+    private companion object {
+        const val MILLIS_PER_MINUTE = 60_000L
+    }
+
     private val sharedViewModel: SharedEmergencyViewModel by inject()
     private val authRepository: AuthRepository by inject()
     
@@ -31,7 +35,8 @@ class EmergencyViewModelWrapper : ViewModel(), KoinComponent {
                     sharedViewModel.onCreateEmergency()
                 }
                 is RateLimitResult.Limited -> {
-                    val minutes = (result.waitTimeMillis / 60_000).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+                    val minutes = (result.waitTimeMillis / MILLIS_PER_MINUTE)
+                        .coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
                     _rateLimitState.value = "Limite atingido. Aguarde $minutes minutos."
                 }
             }

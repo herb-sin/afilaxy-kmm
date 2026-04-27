@@ -6,13 +6,18 @@ import com.google.firebase.analytics.FirebaseAnalytics
 
 class AnalyticsManager(context: Context) {
     
+    private companion object {
+        const val MAX_EVENT_NAME_LENGTH = 40   // limite de chars de nome de evento Firebase Analytics
+        const val MAX_VALUE_STRING_LENGTH = 100 // limite de chars de valor de parâmetro string
+    }
+
     private val analytics = FirebaseAnalytics.getInstance(context)
 
     private fun sanitizeName(name: String): String =
-        name.replace(Regex("[^a-zA-Z0-9_]"), "_").take(40)
+        name.replace(Regex("[^a-zA-Z0-9_]"), "_").take(MAX_EVENT_NAME_LENGTH)
 
     private fun sanitizeValue(value: Any): Any = when (value) {
-        is String -> value.replace(Regex("[\\x00-\\x1F\\x7F]"), "").take(100)
+        is String -> value.replace(Regex("[\\x00-\\x1F\\x7F]"), "").take(MAX_VALUE_STRING_LENGTH)
         else -> value
     }
 
