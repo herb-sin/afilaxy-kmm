@@ -57,6 +57,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // Inclui símbolos de debug nativos no AAB para stack traces legíveis
+            // no painel de Crashes & ANRs do Play Console.
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             
             // Signing config from local.properties
             val properties = org.jetbrains.kotlin.konan.properties.Properties()

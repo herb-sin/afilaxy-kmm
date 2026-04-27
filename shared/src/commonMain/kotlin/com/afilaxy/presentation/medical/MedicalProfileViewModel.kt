@@ -1,6 +1,7 @@
 package com.afilaxy.presentation.medical
 
 import com.afilaxy.domain.model.*
+import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.MedicalRepository
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.stateIn
@@ -19,8 +20,12 @@ data class MedicalProfileState(
 
 class MedicalProfileViewModel(
     private val medicalRepository: MedicalRepository,
-    private val userId: String
+    private val authRepository: AuthRepository
 ) : KMMViewModel() {
+
+    /** userId resolvido em runtime — nunca fica vazio se o usuário está autenticado */
+    private val userId: String
+        get() = authRepository.getCurrentUserId() ?: ""
 
     private val _state = MutableStateFlow(MedicalProfileState())
     val state = _state.stateIn(

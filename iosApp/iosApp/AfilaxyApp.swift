@@ -275,6 +275,8 @@ class AppContainer: ObservableObject {
         _professionals?.freeze()
         _professionalDetail?.freeze()
         _risk?.freeze()
+        // 4. Cancela notificações de check-in pendentes — evita lembretes sem usuário autenticado
+        CheckInNotificationScheduler.shared.cancelAll()
     }
 
     func observeChildren() {
