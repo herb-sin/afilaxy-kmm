@@ -239,8 +239,7 @@ private fun EmergencyCard(
                 StatusBadge(status = emergency.status)
                 
                 RoleBadge(
-                    isRequester = isRequester,
-                    status = emergency.status
+                    isRequester = isRequester
                 )
             }
             
@@ -333,7 +332,7 @@ private fun StatusBadge(status: String) {
 }
 
 @Composable
-private fun RoleBadge(isRequester: Boolean, status: String) {
+private fun RoleBadge(isRequester: Boolean) {
     val text = if (isRequester) "Você solicitou" else "Você ajudou"
     val color = if (isRequester) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
     
