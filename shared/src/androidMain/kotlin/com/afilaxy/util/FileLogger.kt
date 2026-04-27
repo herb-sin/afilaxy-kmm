@@ -11,6 +11,7 @@ import kotlin.concurrent.write
 object FileLogger {
     private const val MAX_FILE_SIZE = 5 * 1024 * 1024L // 5MB
     private const val MAX_AGE_DAYS = 7L
+    private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1_000L
     private const val LOG_DIR = "logs"
 
     /** false em release builds — elimina todo IO de disco em produção */
@@ -88,7 +89,7 @@ object FileLogger {
     }
     
     private fun cleanOldLogs() {
-        val cutoffTime = System.currentTimeMillis() - (MAX_AGE_DAYS * 24 * 60 * 60 * 1000)
+        val cutoffTime = System.currentTimeMillis() - (MAX_AGE_DAYS * MILLIS_PER_DAY)
         getAllLogs().filter { it.lastModified() < cutoffTime }.forEach { it.delete() }
     }
 }

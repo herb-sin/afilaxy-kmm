@@ -21,7 +21,12 @@ class EmergencyViewModel(
     private val locationRepository: LocationRepository,
     private val createEmergencyUseCase: CreateEmergencyUseCase
 ) : KMMViewModel() {
-    
+    private companion object {
+        const val EMERGENCY_TIMEOUT_MS = 180_000L   // 3 minutos
+        const val HELPER_RADIUS_KM = 0.25           // 250 metros
+        const val OBSERVER_RETRY_DELAY_MS = 3_000L  // 3 segundos entre tentativas
+    }
+
     private val _state = MutableStateFlow(EmergencyState())
     val state: StateFlow<EmergencyState> = _state.asStateFlow()
     
@@ -113,7 +118,7 @@ class EmergencyViewModel(
                         // mesmo que isHelperMode=false no estado, o device pode estar registrado
                         // na coleção 'helpers' de uma sessão anterior (auto-match prevention).
                         try { emergencyRepository.deactivateHelper() } catch (_: Exception) {}
-                        val expiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + 180000L
+                        val expiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + EMERGENCY_TIMEOUT_MS
                         _state.update {
                             it.copy(
                                 emergencyId = emergencyId,
@@ -356,7 +361,7 @@ class EmergencyViewModel(
         incomingEmergenciesObserverJob?.cancel()
         incomingEmergenciesObserverJob = viewModelScope.coroutineScope.launch {
             try {
-                emergencyRepository.observeNearbyEmergencies(latitude, longitude, 0.25)
+                emergencyRepository.observeNearbyEmergencies(latitude, longitude, HELPER_RADIUS_KM)
                     .collect { emergencies ->
                         _state.update { it.copy(incomingEmergencies = emergencies) }
                     }
@@ -366,7 +371,7 @@ class EmergencyViewModel(
                 com.afilaxy.util.Logger.e("EmergencyViewModel", "observeIncomingEmergencies failed", e)
                 emergencyObserverStarted = false
                 // Reinicia o observer após 3s para recuperar de erros transitórios
-                kotlinx.coroutines.delay(3000)
+                kotlinx.coroutines.delay(OBSERVER_RETRY_DELAY_MS)
                 val lat = _state.value.userLatitude
                 val lon = _state.value.userLongitude
                 if (_state.value.isHelperMode && lat != 0.0 && lon != 0.0) {

@@ -154,7 +154,8 @@ fun MapScreen(
                         state = MarkerState(position = markerPos),
                         title = if (userLocation != null) "Você está aqui" else "Posição padrão (GPS indisponível)",
                         snippet = if (userLocation != null)
-                            "${String.format(Locale.ROOT, "%.5f", markerPos.latitude)}, ${String.format(Locale.ROOT, "%.5f", markerPos.longitude)}"
+                            "${String.format(Locale.ROOT, "%.5f", markerPos.latitude)}, " +
+                                "${String.format(Locale.ROOT, "%.5f", markerPos.longitude)}"
                         else
                             "São Paulo, SP"
                     )

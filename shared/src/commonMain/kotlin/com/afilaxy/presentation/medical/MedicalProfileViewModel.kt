@@ -27,10 +27,16 @@ class MedicalProfileViewModel(
     private val userId: String
         get() = authRepository.getCurrentUserId() ?: ""
 
+    private companion object {
+        const val SUBSCRIBE_TIMEOUT_MS = 5_000L
+        const val EMERGENCY_STEP_WAIT_MINUTES = 10
+        const val RESCUE_INHALER_DOSES = 2
+    }
+
     private val _state = MutableStateFlow(MedicalProfileState())
     val state = _state.stateIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
+        SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT_MS),
         MedicalProfileState()
     )
 
@@ -126,8 +132,8 @@ class MedicalProfileViewModel(
     fun getEmergencyProtocol(): List<EmergencyStep> {
         return _state.value.medicalProfile?.emergencyProtocol ?: listOf(
             EmergencyStep(1, "Sentar em posição vertical", "Tentar manter a calma"),
-            EmergencyStep(2, "Usar inalador de resgate", "Salbutamol: 2 jatos"),
-            EmergencyStep(3, "Se não houver melhora em 10 min", "Ligar para emergência")
+            EmergencyStep(2, "Usar inalador de resgate", "Salbutamol: $RESCUE_INHALER_DOSES jatos"),
+            EmergencyStep(3, "Se não houver melhora em $EMERGENCY_STEP_WAIT_MINUTES min", "Ligar para emergência")
         )
     }
 }

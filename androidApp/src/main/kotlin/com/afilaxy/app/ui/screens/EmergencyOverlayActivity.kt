@@ -89,7 +89,6 @@ class EmergencyOverlayActivity : ComponentActivity() {
         setContent {
             AflixyTheme {
                 EmergencyOverlayScreen(
-                    emergencyId = emergencyId,
                     requesterName = requesterName,
                     distance = distance,
                     onAccept = { 
@@ -128,7 +127,6 @@ class EmergencyOverlayActivity : ComponentActivity() {
 
 @Composable
 fun EmergencyOverlayScreen(
-    emergencyId: String,
     requesterName: String,
     distance: String,
     onAccept: () -> Unit,
