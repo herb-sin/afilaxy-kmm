@@ -13,6 +13,8 @@ data class ChatMessage(
     val isFromHelper: Boolean = false
 ) {
     companion object {
+        private const val ID_PREFIX_LENGTH = 8
+
         fun create(
             emergencyId: String,
             senderId: String,
@@ -22,7 +24,7 @@ data class ChatMessage(
         ): ChatMessage {
             val currentTime = getCurrentTimeMillis()
             return ChatMessage(
-                id = "${currentTime}_${senderId.take(8)}",
+                id = "${currentTime}_${senderId.take(ID_PREFIX_LENGTH)}",
                 emergencyId = emergencyId,
                 senderId = senderId,
                 senderName = senderName,

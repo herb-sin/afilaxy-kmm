@@ -6,16 +6,22 @@ import com.afilaxy.domain.repository.EmergencyRepository
 class CreateEmergencyUseCase(
     private val repository: EmergencyRepository
 ) {
+    private companion object {
+        const val MIN_LATITUDE = -90.0
+        const val MAX_LATITUDE = 90.0
+        const val MIN_LONGITUDE = -180.0
+        const val MAX_LONGITUDE = 180.0
+    }
+
     suspend fun execute(emergency: Emergency): Result<String> {
-        // Input validation
-        if (emergency.location.latitude < -90 || emergency.location.latitude > 90) {
+        if (emergency.location.latitude < MIN_LATITUDE || emergency.location.latitude > MAX_LATITUDE) {
             return Result.failure(IllegalArgumentException("Invalid latitude"))
         }
-        
-        if (emergency.location.longitude < -180 || emergency.location.longitude > 180) {
+
+        if (emergency.location.longitude < MIN_LONGITUDE || emergency.location.longitude > MAX_LONGITUDE) {
             return Result.failure(IllegalArgumentException("Invalid longitude"))
         }
-        
+
         return repository.createEmergency(emergency)
     }
 }

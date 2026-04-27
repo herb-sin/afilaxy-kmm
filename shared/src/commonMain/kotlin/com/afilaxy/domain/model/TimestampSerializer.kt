@@ -19,7 +19,9 @@ object TimestampSerializer : KSerializer<Long> {
             // Tenta decodificar como Long primeiro
             decoder.decodeLong()
         } catch (e: Exception) {
-            // Se falhar, assume que é um Timestamp do Firestore
+            // Firestore Timestamp não é diretamente deserializável como Long — fallback seguro.
+            // Exceção esperada durante migração de documentos antigos.
+            com.afilaxy.util.logDebug("TimestampSerializer: fallback para 0L — ${e::class.simpleName}")
             0L
         }
     }

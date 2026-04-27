@@ -30,6 +30,7 @@ import com.afilaxy.domain.model.PlanTier
 import com.afilaxy.domain.model.Specialty
 import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import org.koin.androidx.compose.koinViewModel
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -270,7 +271,7 @@ private fun StatsHeader(professionals: List<HealthProfessional>) {
             )
             
             StatItem(
-                value = String.format("%.1f", professionals.filter { it.rating > 0 }.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0),
+                value = String.format(Locale.ROOT, "%.1f", professionals.filter { it.rating > 0 }.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0),
                 label = "Avaliação",
                 icon = Icons.Default.Star
             )
