@@ -49,7 +49,10 @@ fun EmergencyResponseScreen(
         if (!acceptInProgress) {
             viewModel.preloadEmergencyId(emergencyId)
         } else {
-            FileLogger.log("DEBUG", "EmergencyResponseScreen", "preloadEmergencyId ignorado — acceptInProgress=true emergencyId=$emergencyId")
+            FileLogger.log(
+                "DEBUG", "EmergencyResponseScreen",
+                "preloadEmergencyId ignorado — acceptInProgress=true emergencyId=$emergencyId"
+            )
         }
         // Fallback: se após 1,5s o expiresAt ainda for null (tipo Firestore incompatível ou
         // campo ausente), injeta um valor estimado de 3 minutos a partir de agora.
@@ -67,7 +70,10 @@ fun EmergencyResponseScreen(
         // diferente desta tela. Ocorre quando o ViewModel ainda tem estado de uma
         // emergência anterior cancelada (race entre preloadEmergencyId e esta LaunchedEffect).
         if (state.emergencyId != null && state.emergencyId != emergencyId) {
-            FileLogger.log("WARN", "EmergencyResponseScreen", "ignored stale expiresAt from emergencyId=${state.emergencyId} (expected=$emergencyId)")
+            FileLogger.log(
+                "WARN", "EmergencyResponseScreen",
+                "ignored stale expiresAt from emergencyId=${state.emergencyId} (expected=$emergencyId)"
+            )
             return@LaunchedEffect
         }
         // expiresAt pode vir em segundos (Firestore Timestamp) ou milissegundos — normaliza
@@ -93,7 +99,10 @@ fun EmergencyResponseScreen(
 
     // Navegar para chat após aceitar
     LaunchedEffect(state.hasActiveEmergency, state.emergencyId, state.isLoading) {
-        FileLogger.log("DEBUG", "EmergencyResponseScreen", "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId} isLoading=${state.isLoading}")
+        FileLogger.log(
+            "DEBUG", "EmergencyResponseScreen",
+            "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId} isLoading=${state.isLoading}"
+        )
         if (state.hasActiveEmergency && state.emergencyId == emergencyId && !state.isRequester) {
             FileLogger.log("INFO", "EmergencyResponseScreen", "navigating to chat emergencyId=$emergencyId")
             navController.navigate("chat/$emergencyId") {
@@ -104,7 +113,10 @@ fun EmergencyResponseScreen(
             acceptInProgress = false
             state.error?.let { err ->
                 FileLogger.log("ERROR", "EmergencyResponseScreen", "acceptEmergency failed: $err emergencyId=$emergencyId")
-            } ?: FileLogger.log("WARN", "EmergencyResponseScreen", "acceptEmergency finished with no success and no error emergencyId=$emergencyId")
+            } ?: FileLogger.log(
+                "WARN", "EmergencyResponseScreen",
+                "acceptEmergency finished with no success and no error emergencyId=$emergencyId"
+            )
         }
     }
     

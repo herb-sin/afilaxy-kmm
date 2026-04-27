@@ -16,7 +16,11 @@ import kotlinx.coroutines.launch
 class LoginViewModel(
     private val authRepository: AuthRepository
 ) : KMMViewModel() {
-    
+
+    private companion object {
+        const val ERROR_MESSAGE_MAX_LENGTH = 200
+    }
+
     private val _state = MutableStateFlow(LoginState())
     val state: StateFlow<LoginState> = _state.asStateFlow()
     
@@ -63,7 +67,7 @@ class LoginViewModel(
                             // Sanitiza mensagem — exception.message pode conter dados externos (CWE-117)
                             error = exception.message
                                 ?.replace(Regex("[\\r\\n\\t\\x00-\\x1F]"), " ")
-                                ?.take(200)
+                                ?.take(ERROR_MESSAGE_MAX_LENGTH)
                                 ?: "Erro ao fazer login"
                         )
                     }

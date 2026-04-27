@@ -19,10 +19,14 @@ class HomeViewModel(
     private val locationRepository: LocationRepository
 ) : KMMViewModel() {
 
+    private companion object {
+        const val SUBSCRIBE_TIMEOUT_MS = 5_000L
+    }
+
     private val _state = MutableStateFlow(HomeState())
     val state = _state.stateIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
+        SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT_MS),
         HomeState()
     )
 

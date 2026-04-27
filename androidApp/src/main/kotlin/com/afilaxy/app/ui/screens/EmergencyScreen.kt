@@ -40,8 +40,8 @@ fun EmergencyScreen(
     LaunchedEffect(state.emergencyId, state.hasActiveEmergency, state.isRequester) {
         val id = state.emergencyId
         FileLogger.log("DEBUG", "EmergencyScreen", "hasActive=${state.hasActiveEmergency} isRequester=${state.isRequester} isLoading=${state.isLoading} emergencyId=$id")
-        if (id != null && state.hasActiveEmergency && state.isRequester && !state.isCreatingEmergency
-            && !viewModel.wasNavigatedToRequest(id)) {
+        if (id != null && state.hasActiveEmergency && state.isRequester
+            && !state.isCreatingEmergency && !viewModel.wasNavigatedToRequest(id)) {
             viewModel.markNavigatedToRequest(id)
             onNavigateToRequest(id)
         }

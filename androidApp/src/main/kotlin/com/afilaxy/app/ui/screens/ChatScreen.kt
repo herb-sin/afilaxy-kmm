@@ -57,7 +57,6 @@ fun ChatScreen(
     emergencyId: String,
     onNavigateBack: () -> Unit,
     onNavigateBackResolved: () -> Unit = onNavigateBack,
-    onNavigateToRating: (String, String) -> Unit = { _, _ -> },
     viewModel: ChatViewModel = koinViewModel { parametersOf(emergencyId) },
     emergencyViewModel: EmergencyViewModel? = null
 ) {
