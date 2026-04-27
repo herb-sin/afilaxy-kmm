@@ -358,8 +358,6 @@ fun NavGraph(
                     }
                 },
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToChat = {},
-                onNavigateToResponse = {},
                 viewModel = emergencyViewModel ?: koinViewModel()
             )
         }
