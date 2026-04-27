@@ -69,7 +69,7 @@ fun sharedModule(): Module = module {
     
     // New ViewModels for expanded features
     factory { HomeViewModel(get(), get()) }
-    factory { MedicalProfileViewModel(get(), get<AuthRepository>().getCurrentUserId() ?: "") }
+    factory { MedicalProfileViewModel(get(), get()) }
     factory { RiskViewModel(get(), get()) }
     factory { CheckInViewModel(get(), get()) }
 }

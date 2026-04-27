@@ -170,6 +170,10 @@ class EmergencyRepositoryImpl(
                     if (!isActive) throw Exception("Emergência não está ativa")
                     if (currentHelperId != null || currentStatus != "waiting") throw Exception("Emergência já foi aceita")
 
+                    // Guard anti auto-match: impede que o requester aceite sua própria emergência
+                    val requesterId = emergencyDoc.get<String?>("requesterId")
+                    if (requesterId == userId) throw Exception("Não é possível aceitar sua própria emergência")
+
                     update(
                         emergencyRef,
                         "status" to "matched",

@@ -172,7 +172,11 @@ service cloud.firestore {
 
     // Notificações — escritas pelo app client (idealmente migrar para Cloud Function)
     match /notifications/{notificationId} {
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll(['userId', 'type', 'timestamp'])
+        && request.resource.data.type is string
+        && request.resource.data.timestamp is number;
       allow read, update, delete: if false;
     }
 

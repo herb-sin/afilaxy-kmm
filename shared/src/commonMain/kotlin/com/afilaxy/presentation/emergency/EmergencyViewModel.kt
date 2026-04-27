@@ -267,6 +267,18 @@ class EmergencyViewModel(
                 emergencyRepository.deactivateHelper()
             }
             _state.update { EmergencyState() }
+            // Limpa sets de sessão — evita dados da conta anterior vazarem para a próxima
+            _notifiedEmergencyIds.clear()
+            _navigatedEmergencyIds.clear()
+            statusObserverJob?.cancel()
+            statusObserverJob = null
+            statusObservedId = null
+            incomingEmergenciesObserverJob?.cancel()
+            incomingEmergenciesObserverJob = null
+            emergencyObserverStarted = false
+            helpersObserverJob?.cancel()
+            helpersObserverJob = null
+            helpersObserverStarted = false
         }
     }
     

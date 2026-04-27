@@ -39,14 +39,17 @@ class EnvironmentalRepositoryImpl(
          * Registre em: https://aqicn.org/data-platform/token/
          */
         const val WAQI_DEFAULT_TOKEN = ""
-    }
 
-    private val httpClient = HttpClient {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            })
+        /** HttpClient singleton — compartilhado entre instâncias para evitar leak de threads OkHttp/URLSession */
+        val httpClient by lazy {
+            HttpClient {
+                install(ContentNegotiation) {
+                    json(Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    })
+                }
+            }
         }
     }
 
