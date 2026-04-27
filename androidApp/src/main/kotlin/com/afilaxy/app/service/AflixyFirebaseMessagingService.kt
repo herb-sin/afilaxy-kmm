@@ -21,9 +21,16 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
 
     private val authRepository: AuthRepository by inject()
 
+    private companion object {
+        const val SANITIZE_MAX_LENGTH = 200       // limite de CWE-117 para strings externas em log
+        const val VIBRATION_PAUSE_MS = 0L         // pausa inicial do padrão de vibração
+        const val VIBRATION_BUZZ_MS = 1_000L      // duração do buzz de emergência
+        const val VIBRATION_GAP_MS = 500L         // gap entre buzzes
+    }
+
     // Remove \n, \r e demais caracteres de controle de dados externos antes de logar (CWE-117)
     private fun String.sanitizeForLog(): String =
-        replace(Regex("[\\r\\n\\t\\x00-\\x1F\\x7F]"), " ").take(200)
+        replace(Regex("[\\r\\n\\t\\x00-\\x1F\\x7F]"), " ").take(SANITIZE_MAX_LENGTH)
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
@@ -166,7 +173,7 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(
                 NotificationChannel(channelId, "Emergências", NotificationManager.IMPORTANCE_HIGH).apply {
                     enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 1000, 500, 1000)
+                    vibrationPattern = longArrayOf(VIBRATION_PAUSE_MS, VIBRATION_BUZZ_MS, VIBRATION_GAP_MS, VIBRATION_BUZZ_MS)
                 }
             )
         }
@@ -179,7 +186,7 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
-                .setVibrate(longArrayOf(0, 1000, 500, 1000))
+                .setVibrate(longArrayOf(VIBRATION_PAUSE_MS, VIBRATION_BUZZ_MS, VIBRATION_GAP_MS, VIBRATION_BUZZ_MS))
                 .build()
         )
     }

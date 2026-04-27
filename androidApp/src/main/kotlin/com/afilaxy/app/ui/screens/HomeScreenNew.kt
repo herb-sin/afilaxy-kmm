@@ -336,7 +336,9 @@ private fun HomeWelcomeCard(
         1 -> Triple(
             listOf(Color(0xFFF4A825), Color(0xFFE65100)),
             "Você fez 1 pedido de socorro esta semana.",
-            "Alguém parou o que estava fazendo para te ajudar, de graça. Agendar uma consulta é o passo mais responsável, com a sua Saúde e com a pessoa que te ajudou. Ela pode precisar de você, assim como você precisou dela!"
+            "Alguém parou o que estava fazendo para te ajudar, de graça. " +
+                "Agendar uma consulta é o passo mais responsável, com a sua Saúde e com a pessoa " +
+                "que te ajudou. Ela pode precisar de você, assim como você precisou dela!"
         )
         2 -> Triple(
             listOf(Color(0xFFC62828), Color(0xFF7B1A1A)),
