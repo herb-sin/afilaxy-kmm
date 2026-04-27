@@ -270,8 +270,13 @@ private fun StatsHeader(professionals: List<HealthProfessional>) {
                 icon = Icons.Default.Verified
             )
             
+            val avgRating = professionals
+                .filter { it.rating > 0 }
+                .map { it.rating }
+                .average()
+                .takeIf { !it.isNaN() } ?: 0.0
             StatItem(
-                value = String.format(Locale.ROOT, "%.1f", professionals.filter { it.rating > 0 }.map { it.rating }.average().takeIf { !it.isNaN() } ?: 0.0),
+                value = String.format(Locale.ROOT, "%.1f", avgRating),
                 label = "Avaliação",
                 icon = Icons.Default.Star
             )

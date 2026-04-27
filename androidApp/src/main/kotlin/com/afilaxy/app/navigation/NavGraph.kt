@@ -30,6 +30,8 @@ import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 
 
+private const val ISO_MIN_DAYS_IN_FIRST_WEEK = 4 // ISO 8601: semana tem mínimo 4 dias
+
 @Composable
 fun NavGraph(
     startDestination: String? = null,
@@ -81,7 +83,7 @@ fun NavGraph(
             return@DisposableEffect onDispose {}
         }
         val cal = Calendar.getInstance().apply {
-            minimalDaysInFirstWeek = 4
+            minimalDaysInFirstWeek = ISO_MIN_DAYS_IN_FIRST_WEEK
             firstDayOfWeek = Calendar.MONDAY
         }
         val week = cal.get(Calendar.WEEK_OF_YEAR)
