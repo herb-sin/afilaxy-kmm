@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afilaxy.domain.model.AsthmaRiskLevel
 import com.afilaxy.domain.model.RiskScore
-import com.afilaxy.presentation.risk.RiskState
 import com.afilaxy.presentation.risk.RiskViewModel
 import org.koin.androidx.compose.koinViewModel
 

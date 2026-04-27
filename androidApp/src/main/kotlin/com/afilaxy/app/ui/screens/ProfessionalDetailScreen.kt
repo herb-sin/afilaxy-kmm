@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import com.afilaxy.domain.model.HealthProfessional
 import com.afilaxy.domain.model.PlanTier
 import com.afilaxy.domain.model.Specialty
-import com.afilaxy.domain.model.SubscriptionPlan
 import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import org.koin.androidx.compose.koinViewModel
 

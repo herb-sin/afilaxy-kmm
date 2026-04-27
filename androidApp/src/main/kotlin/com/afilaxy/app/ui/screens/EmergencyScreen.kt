@@ -6,7 +6,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -25,8 +24,6 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun EmergencyScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToChat: (String) -> Unit,
-    onNavigateToResponse: (String) -> Unit,
     onNavigateToRequest: (String) -> Unit,
     viewModel: EmergencyViewModel = koinViewModel()
 ) {
