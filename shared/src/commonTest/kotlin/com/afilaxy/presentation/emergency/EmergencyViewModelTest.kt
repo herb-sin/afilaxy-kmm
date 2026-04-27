@@ -3,7 +3,6 @@ package com.afilaxy.presentation.emergency
 import com.afilaxy.data.fake.FakeAuthRepository
 import com.afilaxy.data.fake.FakeEmergencyRepository
 import com.afilaxy.data.fake.FakeLocationRepository
-import com.afilaxy.data.fake.FakeNotificationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -23,7 +22,6 @@ class EmergencyViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var emergencyRepository: FakeEmergencyRepository
     private lateinit var locationRepository: FakeLocationRepository
-    private lateinit var notificationRepository: FakeNotificationRepository
     private lateinit var viewModel: EmergencyViewModel
 
     @BeforeTest
@@ -31,9 +29,8 @@ class EmergencyViewModelTest {
         Dispatchers.setMain(testDispatcher)
         emergencyRepository = FakeEmergencyRepository()
         locationRepository = FakeLocationRepository()
-        notificationRepository = FakeNotificationRepository()
         val createEmergencyUseCase = com.afilaxy.domain.usecase.CreateEmergencyUseCase(emergencyRepository)
-        viewModel = EmergencyViewModel(emergencyRepository, locationRepository, notificationRepository, createEmergencyUseCase)
+        viewModel = EmergencyViewModel(emergencyRepository, locationRepository, createEmergencyUseCase)
     }
 
     @Test
