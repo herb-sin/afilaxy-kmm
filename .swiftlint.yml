@@ -16,6 +16,8 @@ disabled_rules:
   # Complexidade ciclomática — navegação e máquinas de estado são inerentemente complexas
   # (mesmo tratamento dado ao EmergencyViewModel no detekt.yml)
   - cyclomatic_complexity
+  # Valores de enum String redundantes — puramente estilístico; --fix não corrige no 0.63.x
+  - redundant_string_enum_value
 
 opt_in_rules:
   - empty_count
