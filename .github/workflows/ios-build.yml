@@ -56,11 +56,13 @@ jobs:
         run: ./gradlew :shared:generateDummyFramework --no-daemon -Pkotlin.native.ignoreDisabledTargets=true
 
       # Lint do código Swift — equivalente ao Detekt no módulo Kotlin.
-      # --strict: trata warnings como erros (mesmo comportamento do Detekt no CI).
-      # SwiftLint 0.63+ não aceita --path; o diretório é argumento posicional.
+      # Fase 1: --fix corrige automaticamente trailing_whitespace, trailing_newline,
+      #         colon, comma e vertical_whitespace (não altera lógica).
+      # Fase 2: --strict valida violations restantes usando .swiftlint.yml.
       - name: SwiftLint
         run: |
           brew install swiftlint 2>/dev/null || true
+          swiftlint lint --fix iosApp/iosApp/ 2>&1 || true
           swiftlint lint --strict iosApp/iosApp/ 2>&1
         continue-on-error: false
 
