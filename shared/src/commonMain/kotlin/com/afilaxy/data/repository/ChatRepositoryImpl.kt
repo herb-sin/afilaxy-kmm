@@ -18,7 +18,10 @@ class ChatRepositoryImpl(
                 "senderId" to message.senderId,
                 "senderName" to message.senderName,
                 "message" to message.message,
-                "timestamp" to message.timestamp,
+                // Double garante tipo Firestore Number — mesmo tipo que o iOS grava.
+                // Kotlin Long pode ser serializado pelo gitlive SDK como Timestamp em alguns
+                // contextos, causando agrupamento por plataforma na query orderBy("timestamp").
+                "timestamp" to message.timestamp.toDouble(),
                 "isFromHelper" to message.isFromHelper
             )
             
