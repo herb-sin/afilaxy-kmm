@@ -256,7 +256,13 @@ struct ChatView: View {
                         else if let ms = d["timestamp"] as? Double { ts = Date(timeIntervalSince1970: ms / 1000) }
                         else if let t = d["timestamp"] as? Timestamp { ts = t.dateValue() }
                         else { ts = Date() }
-                        return (id: doc.documentID, senderId: senderId, senderName: senderName, text: text, timestamp: ts)
+                        return (
+                            id: doc.documentID,
+                            senderId: senderId,
+                            senderName: senderName,
+                            text: text,
+                            timestamp: ts
+                        )
                     }
                 }
             }
