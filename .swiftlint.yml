@@ -18,6 +18,9 @@ disabled_rules:
   - cyclomatic_complexity
   # Valores de enum String redundantes — puramente estilístico; --fix não corrige no 0.63.x
   - redundant_string_enum_value
+  # Posição do else — --fix une else-if em uma linha gerando line_length violation (loop)
+  # O estilo else-em-nova-linha é legível e aceito pelo time
+  - statement_position
 
 opt_in_rules:
   - empty_count
