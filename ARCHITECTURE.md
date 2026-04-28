@@ -1,285 +1,183 @@
-# Arquitetura - Afilaxy KMM
+# Afilaxy — Arquitetura do Sistema
 
-## 🏗️ Visão Geral
-
-O Afilaxy utiliza **Clean Architecture** + **MVVM** + **Kotlin Multiplatform Mobile** para maximizar o reuso de código entre Android e iOS.
+> Documentação gerada a partir do código-fonte. Atualizar junto com mudanças de domínio.
 
 ---
 
-## 📊 Camadas
+## Visão Geral — Kotlin Multiplatform Mobile (KMM)
 
-### 1. Domain Layer (Shared)
-**Responsabilidade**: Regras de negócio puras, independentes de framework
+```mermaid
+graph TD
+    subgraph shared["📦 shared (commonMain)"]
+        Domain["Domain Layer\n(Models, UseCases, Repositories)"]
+        Presentation["Presentation Layer\n(ViewModels, States)"]
+    end
 
-```
-domain/
-├── model/          # Entidades de negócio
-├── repository/     # Interfaces (contratos)
-└── usecase/        # Casos de uso
-```
+    subgraph androidApp["🤖 androidApp"]
+        AndroidUI["Jetpack Compose\n(Screens, NavGraph)"]
+        AndroidInfra["Infra Android\n(FCM, WorkManager, Biometric)"]
+    end
 
-**Princípios**:
-- ✅ Sem dependências externas
-- ✅ Testável isoladamente
-- ✅ Imutável (data classes)
+    subgraph iosApp["🍎 iosApp"]
+        SwiftUI["SwiftUI\n(Views, ViewModelProvider)"]
+    end
 
-### 2. Data Layer (Shared)
-**Responsabilidade**: Implementação de repositórios, acesso a dados
+    subgraph firebase["☁️ Firebase"]
+        Auth["Auth"]
+        Firestore["Firestore"]
+        FCM["Cloud Messaging"]
+        Functions["Functions v2"]
+    end
 
-```
-data/
-└── repository/     # Implementações concretas
-    ├── AuthRepositoryImpl
-    ├── EmergencyRepositoryImpl
-    ├── ChatRepositoryImpl
-    ├── LocationRepositoryImpl (expect/actual)
-    └── PreferencesRepositoryImpl
-```
-
-**Tecnologias**:
-- Firebase KMM (Auth, Firestore)
-- Multiplatform Settings
-- Coroutines
-
-### 3. Presentation Layer (Shared)
-**Responsabilidade**: ViewModels com lógica de apresentação
-
-```
-presentation/
-├── login/LoginViewModel
-├── auth/AuthViewModel
-├── emergency/EmergencyViewModel
-├── chat/ChatViewModel
-├── profile/ProfileViewModel
-└── rating/RatingViewModel
-```
-
-**Padrão**:
-- StateFlow para estados reativos
-- Eventos via métodos públicos
-- Sem referências a UI
-
-### 4. UI Layer (Platform-Specific)
-**Responsabilidade**: Interface do usuário nativa
-
-**Android**: Jetpack Compose
-**iOS**: SwiftUI
-
----
-
-## 🔄 Fluxo de Dados
-
-```
-UI → ViewModel → UseCase → Repository → DataSource (Firebase)
-                    ↓
-                  State
-                    ↓
-                   UI
-```
-
-### Exemplo: Login
-
-```kotlin
-// 1. UI (Android Compose)
-Button(onClick = { viewModel.onLoginClick() })
-
-// 2. ViewModel (Shared)
-fun onLoginClick() {
-    viewModelScope.launch {
-        _state.value = state.value.copy(isLoading = true)
-        authRepository.login(email, password)
-    }
-}
-
-// 3. Repository (Shared)
-suspend fun login(email: String, password: String): Result<User> {
-    return try {
-        val result = firebaseAuth.signInWithEmailAndPassword(email, password)
-        Result.success(result.user)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
-}
-
-// 4. State atualizado
-_state.value = state.value.copy(isLoading = false, user = user)
-
-// 5. UI reage automaticamente
-val state by viewModel.state.collectAsState()
-if (state.user != null) { /* navegar */ }
+    AndroidUI --> Presentation
+    SwiftUI --> Presentation
+    Presentation --> Domain
+    Domain --> firebase
+    AndroidInfra --> FCM
 ```
 
 ---
 
-## 🎯 Decisões Arquiteturais
+## Fluxo de Emergência — Máquina de Estados
 
-### 1. Por que Clean Architecture?
-- ✅ Separação de responsabilidades
-- ✅ Testabilidade
-- ✅ Independência de frameworks
-- ✅ Facilita manutenção
+```mermaid
+stateDiagram-v2
+    direction LR
 
-### 2. Por que MVVM?
-- ✅ Binding reativo (StateFlow)
-- ✅ Lifecycle-aware
-- ✅ Suportado nativamente (KMM-ViewModel)
+    [*] --> ACTIVE : createEmergency()\nUsuário solicita ajuda
 
-### 3. Por que Koin?
-- ✅ Leve e simples
-- ✅ Suporte KMM nativo
-- ✅ Sem geração de código
-- ✅ DSL Kotlin idiomático
+    ACTIVE --> HELPER_RESPONDING : acceptEmergency()\nHelper aceita no raio de 250m
+    ACTIVE --> CANCELLED : cancelEmergency()\nUsuário cancela
+    ACTIVE --> CANCELLED : Timeout 3 min\nsem helper disponível
 
-### 4. Por que Firebase KMM?
-- ✅ Backend-as-a-Service
-- ✅ Real-time database
-- ✅ Autenticação pronta
-- ✅ SDK multiplataforma oficial
+    HELPER_RESPONDING --> RESOLVED : resolveEmergency()\nAtendimento concluído
+    HELPER_RESPONDING --> CANCELLED : cancelEmergency()\nHelper ou usuário cancela
+
+    RESOLVED --> [*]
+    CANCELLED --> [*]
+```
+
+### Estados no Firestore
+
+| Estado (enum) | `status` no Firestore | Descrição |
+|--------------|----------------------|-----------|
+| `ACTIVE` | `"waiting"` | Aguardando helper no raio de 250m |
+| `HELPER_RESPONDING` | `"matched"` | Helper aceito, a caminho |
+| `RESOLVED` | `"resolved"` | Atendimento concluído |
+| `CANCELLED` | `"cancelled"` | Cancelada (timeout, usuário ou helper) |
 
 ---
 
-## 🔧 Padrões Utilizados
+## Fluxo de Risco de Asma — Score e Notificação
 
-### Repository Pattern
-```kotlin
-interface EmergencyRepository {
-    suspend fun createEmergency(emergency: Emergency): Result<String>
-    suspend fun getActiveEmergency(): Result<String?>
-}
+```mermaid
+flowchart TD
+    A["Dados Ambientais\nOpenMeteo + WAQI"] --> C["Motor de Risco\nHeurístico"]
+    B["Perfil Clínico\nTipo de asma, severidade"] --> C
+    D["Check-in Matinal\ntem bombinha?"] --> C
 
-class EmergencyRepositoryImpl(
-    private val firestore: FirebaseFirestore
-) : EmergencyRepository {
-    override suspend fun createEmergency(...) { /* impl */ }
-}
+    C --> E{"Score 0-100"}
+
+    E -->|"0–44\nBaixo 🟢"| F["Sem notificação"]
+    E -->|"45–64\nModerado 🟡"| G["Notificação matinal\npergunta sobre bombinha"]
+    E -->|"65–84\nAlto 🟠"| G
+    E -->|"85–100\nMuito Alto 🔴"| G
+
+    G --> H{"Check-in Noturno\nTeve crise hoje?"}
+    H -->|"Não"| I["ML label = 0"]
+    H -->|"Sim"| J["ML label = 1\nSeveridade registrada"]
+
+    I --> K[("Firestore\ncheckin_responses")]
+    J --> K
+    K --> L["Futuro modelo ML\nPrevisão personalizada"]
 ```
 
-### Observer Pattern (StateFlow)
-```kotlin
-class LoginViewModel {
-    private val _state = MutableStateFlow(LoginState())
-    val state: StateFlow<LoginState> = _state.asStateFlow()
-}
-```
+### Score de Risco — Faixas
 
-### Dependency Injection
-```kotlin
-val sharedModule = module {
-    single<AuthRepository> { AuthRepositoryImpl(get()) }
-    factory { LoginViewModel(get()) }
-}
-```
-
-### Expect/Actual (Platform-Specific)
-```kotlin
-// commonMain
-expect class LocationRepositoryImpl : LocationRepository
-
-// androidMain
-actual class LocationRepositoryImpl : LocationRepository {
-    // Google Play Services
-}
-
-// iosMain
-actual class LocationRepositoryImpl : LocationRepository {
-    // CoreLocation
-}
-```
+| Faixa | Nível | Ação |
+|-------|-------|------|
+| 0–44 | 🟢 Baixo | Nenhuma |
+| 45–64 | 🟡 Moderado | Notificação matinal |
+| 65–84 | 🟠 Alto | Notificação matinal |
+| 85–100 | 🔴 Muito Alto | Notificação matinal urgente |
 
 ---
 
-## 📱 Platform-Specific
+## Fluxo de Check-in
 
-### Android
-- **UI**: Jetpack Compose
-- **DI**: Koin Android
-- **Navigation**: Compose Navigation
-- **Permissions**: Accompanist
-- **Location**: Google Play Services
+```mermaid
+sequenceDiagram
+    participant W as WorkManager
+    participant App as Afilaxy App
+    participant U as Usuário
+    participant FS as Firestore
 
-### iOS
-- **UI**: SwiftUI
-- **Binding**: ObservableObject wrappers
-- **Navigation**: NavigationView
-- **Location**: CoreLocation (pendente)
-- **Push**: APNs (pendente)
+    Note over W: 07:30 — MorningCheckInWorker
+    W->>App: Notificação se score ≥ 45
+    App->>U: "Você está com sua bombinha?"
+    U->>App: ✅ Sim / ❌ Não
+    App->>FS: CheckInResponse MORNING\n(hasRescueInhaler, riskScore, aqi...)
 
----
-
-## 🔐 Segurança
-
-### Firebase Security Rules
-```javascript
-match /emergency_requests/{emergencyId} {
-  allow read: if request.auth != null;
-  allow create: if request.auth != null;
-  allow update: if request.auth.uid == resource.data.requesterId
-                || request.auth.uid == resource.data.helperId;
-}
-```
-
-### Validações
-- Email/senha no cliente
-- Token JWT no servidor (Firebase)
-- Transações atômicas (race conditions)
-
----
-
-## 🚀 Performance
-
-### Otimizações
-- ✅ StateFlow (cold flow, apenas subscribers ativos)
-- ✅ LazyColumn/LazyVStack (virtualização)
-- ✅ Firestore snapshots (apenas deltas)
-- ✅ Coroutines (não bloqueia UI)
-
-### Caching
-- ✅ Firestore offline persistence
-- ✅ Multiplatform Settings (preferências)
-
----
-
-## 📊 Métricas
-
-```
-Código Compartilhado: 85%
-- Domain: 100%
-- Data: 95% (LocationRepository é platform-specific)
-- Presentation: 100%
-- UI: 0% (nativo por design)
-
-Linhas de Código:
-- Kotlin (shared): 3.500 linhas
-- Kotlin (Android): 450 linhas
-- Swift (iOS): 650 linhas
-
-Arquivos:
-- Shared: 35 arquivos
-- Android: 25 arquivos
-- iOS: 20 arquivos
+    Note over W: 21:00 — EveningCheckInWorker
+    W->>App: Notificação diária
+    App->>U: "Teve crise de asma hoje?"
+    U->>App: ✅ Não tive / ⚠️ Tive uma crise
+    App->>FS: CheckInResponse EVENING\n(hadCrisisToday, crisisSeverity...)
 ```
 
 ---
 
-## 🎯 Benefícios Alcançados
+## Arquitetura de Camadas — shared module
 
-### Reuso de Código
-- ✅ Lógica de negócio única
-- ✅ Validações centralizadas
-- ✅ Menos bugs
-- ✅ Manutenção simplificada
+```mermaid
+graph BT
+    subgraph data["Data Layer"]
+        Repos["RepositoryImpl\n(Firestore, Location, Auth...)"]
+    end
 
-### Desenvolvimento
-- ✅ Equipe única (Kotlin)
-- ✅ Testes compartilhados
-- ✅ Deploy sincronizado
+    subgraph domain["Domain Layer"]
+        Models["Models\n(Emergency, CheckIn, RiskScore...)"]
+        Interfaces["Repository Interfaces"]
+        UseCases["Use Cases\n(CreateEmergency, SendChat,\nFindHelpers, ValidateInput...)"]
+    end
 
-### Qualidade
-- ✅ Type-safe
-- ✅ Null-safe
-- ✅ Testável
-- ✅ Escalável
+    subgraph presentation["Presentation Layer"]
+        VMs["ViewModels\n(Emergency, Home, Medical,\nCheckIn, Login...)"]
+    end
+
+    Repos --> Interfaces
+    Interfaces --> UseCases
+    Models --> UseCases
+    UseCases --> VMs
+```
 
 ---
 
-**Desenvolvido com ❤️ usando Kotlin Multiplatform** 🚀
+## CI/CD Pipeline
+
+```mermaid
+flowchart LR
+    Push["git push main"] --> A & B & C & D
+
+    A["Shared Tests\nJUnit / KMM\n~36s"]
+    B["Android CI\nDetekt + Build\n~4min"]
+    C["iOS Build\nSwiftLint + Archive\n+ TestFlight\n~10min"]
+    D["Secure Deploy\nAAB signing\n~2min"]
+
+    A & B & C & D --> Green["✅ All Green"]
+```
+
+---
+
+## Modelos de Domínio Principais
+
+| Modelo | Responsabilidade |
+|--------|----------------|
+| `Emergency` | Pedido de socorro com status, localização e severidade |
+| `EmergencyStatus` | Máquina de estados: ACTIVE → HELPER_RESPONDING → RESOLVED/CANCELLED |
+| `CheckInResponse` | Resposta de check-in matinal/noturno com contexto ambiental e clínico |
+| `RiskScore` | Score 0–100 com nível, fatores e recomendações |
+| `AsthmaRiskLevel` | LOW / MODERATE / HIGH / VERY_HIGH |
+| `EnvironmentalData` | AQI, temperatura, umidade, vento, UV, precipitação |
+| `HealthProfessional` | Profissional cadastrado com especialidade, rating e planos |
+| `UserProfile` | Perfil clínico: tipo de asma, severidade, medicamentos |
