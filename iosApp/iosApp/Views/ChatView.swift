@@ -246,14 +246,17 @@ struct ChatView: View {
             .addSnapshotListener { snapshot, _ in
                 guard let docs = snapshot?.documents else { return }
                 DispatchQueue.main.async {
+                    // Ordena client-side como fallback defensivo:
+                    // Firestore ordena por tipo antes de valor (Number < Timestamp),
+                    // causando agrupamento por plataforma se iOS e Android usarem tipos diferentes.
                     messages = docs.compactMap { doc in
                         let d = doc.data()
                         guard let senderId = d["senderId"] as? String,
                               let senderName = d["senderName"] as? String,
                               let text = d["message"] as? String else { return nil }
                         let ts: Date
-                        if let ms = d["timestamp"] as? Int64 { ts = Date(timeIntervalSince1970: Double(ms) / 1000) }
-                        else if let ms = d["timestamp"] as? Double { ts = Date(timeIntervalSince1970: ms / 1000) }
+                        if let ms = d["timestamp"] as? Double { ts = Date(timeIntervalSince1970: ms / 1000) }
+                        else if let ms = d["timestamp"] as? Int64 { ts = Date(timeIntervalSince1970: Double(ms) / 1000) }
                         else if let t = d["timestamp"] as? Timestamp { ts = t.dateValue() }
                         else { ts = Date() }
                         return (
@@ -263,7 +266,7 @@ struct ChatView: View {
                             text: text,
                             timestamp: ts
                         )
-                    }
+                    }.sorted { $0.timestamp < $1.timestamp }
                 }
             }
         // Listener do status da emergência — detecta quando A OUTRA PARTE resolve
@@ -292,7 +295,10 @@ struct ChatView: View {
         let name = Auth.auth().currentUser?.displayName ?? Auth.auth().currentUser?.email ?? "Usuário"
         messageText = ""
         let msgId = UUID().uuidString
-        let timestampMs = Int64(Date().timeIntervalSince1970 * 1000)
+        // Double garante tipo Firestore Number — mesmo tipo que o Android/KMM grava via Long.
+        // Int64 pode ser serializado pelo SDK como Timestamp em alguns contextos,
+        // causando agrupamento de mensagens por plataforma na query orderBy("timestamp").
+        let timestampMs = Double(Date().timeIntervalSince1970 * 1000)
         Firestore.firestore()
             .collection("emergency_chats")
             .document(emergencyId)
