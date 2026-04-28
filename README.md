@@ -1,10 +1,12 @@
 # 🫁 Afilaxy — Plataforma de Gestão de Asma
 
-[![Android CI](https://github.com/afilaxy/afilaxy-kmm/workflows/Android%20CI/badge.svg)](https://github.com/afilaxy/afilaxy-kmm/actions)
-[![Shared Tests](https://github.com/afilaxy/afilaxy-kmm/workflows/Shared%20Module%20Tests/badge.svg)](https://github.com/afilaxy/afilaxy-kmm/actions)
+[![Android CI](https://github.com/herb-sin/afilaxy-kmm/actions/workflows/android-build.yml/badge.svg)](https://github.com/herb-sin/afilaxy-kmm/actions)
+[![Shared Tests](https://github.com/herb-sin/afilaxy-kmm/actions/workflows/shared-tests.yml/badge.svg)](https://github.com/herb-sin/afilaxy-kmm/actions)
+[![iOS Build](https://github.com/herb-sin/afilaxy-kmm/actions/workflows/ios-build.yml/badge.svg)](https://github.com/herb-sin/afilaxy-kmm/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg)](https://kotlinlang.org)
 [![KMM](https://img.shields.io/badge/KMM-Ready-brightgreen.svg)](https://kotlinlang.org/docs/multiplatform.html)
+[![Version](https://img.shields.io/badge/version-2.1.0--kmm-orange.svg)](https://github.com/herb-sin/afilaxy-kmm/releases)
 
 A única plataforma digital de gestão de asma em português no Brasil. O Afilaxy preenche o vazio entre as consultas médicas — onde a maioria das crises acontece — conectando pacientes a dados, especialistas e boas práticas médicas antes que a emergência aconteça.
 
@@ -45,30 +47,39 @@ Enquanto o mercado global vende mais medicamentos, o Afilaxy garante que o inves
 
 ```
 shared/
-├── commonMain/          # 📦 Código compartilhado
+├── commonMain/          # 📦 Código compartilhado (Android + iOS)
 │   ├── domain/         # 🎯 Regras de negócio
-│   │   ├── model/      # User, Emergency, ChatMessage, MedicalProfile, etc.
-│   │   ├── repository/ # Interfaces
-│   │   └── usecase/    # Lógica de negócio
-│   ├── data/           # 💾 Implementações
-│   │   └── repository/ # Firebase, GPS, Preferences
-│   ├── presentation/   # 🎨 ViewModels compartilhados
-│   └── di/             # 💉 Koin
-├── androidMain/        # 🤖 Android específico
-└── iosMain/            # 🍎 iOS específico
+│   │   ├── model/      # Emergency, CheckIn, RiskScore, HealthProfessional...
+│   │   ├── repository/ # Interfaces (EmergencyRepository, LocationRepository...)
+│   │   └── usecase/    # CreateEmergency, FindHelpers, SendChatMessage...
+│   ├── data/           # 💾 Implementações (Firestore, GPS, Preferences)
+│   ├── presentation/   # 🎨 13 ViewModels compartilhados
+│   ├── util/           # Logger multiplataforma, TimeUtils
+│   └── di/             # 💉 Koin modules
+├── androidMain/        # 🤖 AndroidLogger, AndroidPlatform
+└── iosMain/            # 🍎 IOSLogger, IOSPlatform
 ```
+
+📐 **Diagramas detalhados**: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ### Stack Tecnológico
 
-| Tecnologia | Uso |
-|-----------|-----|
-| **Kotlin 2.0.21** | Linguagem principal (shared + Android) |
-| **Swift / SwiftUI** | UI iOS nativa |
-| **Firebase** | Auth, Firestore, Cloud Messaging |
-| **Koin 3.5.0** | Dependency Injection |
-| **KMM-ViewModel** | ViewModels compartilhados |
-| **Jetpack Compose** | UI Android (Material Design 3) |
-| **Coroutines + Flow** | Async/reativo |
+| Tecnologia | Versão | Uso |
+|-----------|--------|-----|
+| **Kotlin** | 2.0.21 | Linguagem principal (shared + Android) |
+| **Swift / SwiftUI** | — | UI iOS nativa |
+| **Firebase** | BOM 33.9.0 | Auth, Firestore, Cloud Messaging, Analytics |
+| **Koin** | 3.5.6 | Dependency Injection (Android + KMM) |
+| **KMM-ViewModel** | 1.0.0-ALPHA-16 | ViewModels compartilhados Android/iOS |
+| **Jetpack Compose** | BOM 2025.02 | UI Android (Material Design 3) |
+| **Coroutines + Flow** | 1.7.3 | Async/reativo |
+| **Ktor** | 2.3.7 | HTTP client (OpenMeteo + WAQI API) |
+| **kotlinx-serialization** | 1.6.0 | JSON serialization (Firestore, APIs) |
+| **kotlinx-datetime** | 0.5.0 | Datas multiplataforma |
+| **Detekt** | — | Análise estática Kotlin (CI obrigatório) |
+| **SwiftLint** | — | Análise estática Swift (CI obrigatório) |
+| **WorkManager** | 2.9.0 | Check-ins agendados matinal/noturno |
+| **Google Maps** | 4.3.3 | Mapa de helpers e UBS |
 
 ---
 
@@ -78,12 +89,12 @@ shared/
 
 - JDK 17+
 - Android Studio Hedgehog+
-- Xcode 15+ (macOS, para iOS)
+- Xcode 16+ (macOS, para iOS)
 
 ### Android
 
 ```bash
-git clone https://github.com/afilaxy/afilaxy-kmm.git
+git clone https://github.com/herb-sin/afilaxy-kmm.git
 cd afilaxy-kmm
 ./gradlew androidApp:assembleDebug
 ```
@@ -92,6 +103,7 @@ cd afilaxy-kmm
 
 ```bash
 cd iosApp
+xcodegen generate   # gera o .xcodeproj a partir do project.yml
 pod install
 open iosApp.xcworkspace
 ```
@@ -99,42 +111,45 @@ open iosApp.xcworkspace
 ### Configurar Firebase
 
 1. Adicione `google-services.json` em `androidApp/`
-2. Adicione `GoogleService-Info.plist` em `iosApp/`
+2. Adicione `GoogleService-Info.plist` em `iosApp/iosApp/`
 
-### Configurar Google Maps
+### Configurar APIs de Dados Ambientais
 
 1. Copie `local.properties.example` para `local.properties`
-2. Adicione sua API key do Google Maps:
+2. Adicione as chaves necessárias:
 ```properties
-MAPS_API_KEY=SUA_API_KEY_AQUI
+MAPS_API_KEY_ANDROID=SUA_KEY_AQUI
+WAQI_API_TOKEN=SEU_TOKEN_AQUI
 ```
 
-📖 **Guia completo**: [SETUP_MAPS.md](SETUP_MAPS.md)
+📖 **Guia completo**: [SETUP_MAPS.md](SETUP_MAPS.md) | [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ---
 
 ## 📱 Estado Atual das Plataformas
 
-### Android — Funcional e Publicado na Google Play
+### Android — v2.1.0 · Publicado na Google Play
 
 | Feature | Status |
 |---------|--------|
 | Autenticação (Firebase Auth) | ✅ |
-| Emergência P2P com geolocalização (GPS) | ✅ |
+| Emergência P2P com geolocalização | ✅ |
 | Chat em tempo real (Firestore) | ✅ |
 | Push notifications (FCM) | ✅ |
-| Modo Apoiador (helper toggle) | ✅ |
-| Busca de apoiadores no raio de 5km | ✅ |
+| Modo Apoiador (helper toggle, raio 250m) | ✅ |
 | Check-ins proativos (manhã/noite) | ✅ |
+| Score de risco de crise (AQI + clima + perfil) | ✅ |
+| Notificações preditivas baseadas em risco | ✅ |
 | Perfil médico (medicações, exames, protocolo) | ✅ |
 | Feed da comunidade (posts, likes) | ✅ |
 | Portal de profissionais de saúde | ✅ |
 | Dashboard para pneumologistas | ✅ |
-| Sistema de avaliação (rating) | ✅ |
 | Histórico de emergências | ✅ |
-| **Total: 20 telas** | ✅ |
+| Mapa com geolocalização e helpers | ✅ |
+| Conteúdo educativo (autocuidado, UBS) | ✅ |
+| **Total: 25 telas** | ✅ |
 
-### iOS — Publicado na App Store
+### iOS — Publicado na App Store · Deploy automático via TestFlight
 
 | Feature | Status |
 |---------|--------|
@@ -144,6 +159,7 @@ MAPS_API_KEY=SUA_API_KEY_AQUI
 | Push notifications | ✅ |
 | Modo Apoiador | ✅ |
 | Check-ins proativos | ✅ |
+| Score de risco de crise | ✅ |
 | Perfil médico | ✅ |
 | Feed da comunidade | ✅ |
 | Portal de profissionais | ✅ |
@@ -158,29 +174,41 @@ MAPS_API_KEY=SUA_API_KEY_AQUI
 
 ### ✅ Implementado
 
-- **Emergência P2P:** Geolocalização + chat em tempo real com apoiadores próximos
-- **Check-ins Proativos:** Diário de sintomas e uso de medicação (manhã/noite)
+- **Emergência P2P:** Geolocalização + chat em tempo real com apoiadores próximos (raio 250m)
+- **Score de Risco Preditivo:** Motor heurístico que combina AQI (WAQI), clima (OpenMeteo), perfil clínico e histórico de crises para gerar score 0–100 em 4 níveis (Baixo 🟢 / Moderado 🟡 / Alto 🟠 / Muito Alto 🔴)
+- **Check-ins Proativos:** Diário de sintomas e uso de medicação (manhã/noite) com notificações baseadas no score de risco
 - **Perfil Médico Completo:** Tipo de asma, medicações por categoria, exames, protocolo de crise e contatos de emergência
-- **Portal de Profissionais:** Listagem de pneumologistas e alergistas com filtro por especialidade
+- **Portal de Profissionais:** Listagem de pneumologistas e alergistas com filtro por especialidade e planos de assinatura
 - **Dashboard Profissional:** Métricas de pacientes, alertas críticos e taxa de adesão
 - **Feed da Comunidade:** Posts, likes e compartilhamento de experiências
-- **Sistema de Rating:** Avaliação de apoiadores após emergência resolvida
-- **Portal Web (React + Vite):** Landing page para adesão de profissionais com planos de assinatura
+- **Portal Web:** Landing page para adesão de profissionais com planos de assinatura (React + Vite)
+- **Testes Automatizados:** Unit tests dos ViewModels e repositories (CI verde em shared + Android)
 
 ### 🚧 Em Desenvolvimento
 
 - **GPS iOS (CoreLocation):** Integração de geolocalização nativa para iOS
 - **Assinaturas (Stripe):** Planos pagos para profissionais de saúde
-- **Testes automatizados:** Unit e integration tests dos ViewModels e repositories
 
 ### 🔮 Roadmap
 
-- Algoritmo preditivo com dados ambientais (qualidade do ar, clima)
 - Dashboard de RWE para gestores públicos e indústria farmacêutica
 - Integração com DataSUS
 - Hotspots de crises (clustering geoespacial)
-- Notificações preditivas personalizadas
 - Mapa de UBS com disponibilidade de medicação gratuita
+- Modelo ML personalizado (substituir heurística por predição supervisionada com dados dos check-ins)
+
+---
+
+## ⚙️ CI/CD
+
+4 pipelines automáticos em todo `git push main`:
+
+| Pipeline | Runner | O que faz |
+|----------|--------|-----------|
+| **Shared Tests** | ubuntu | Compila e roda testes unitários KMM |
+| **Android CI** | ubuntu | Detekt + build debug Android |
+| **iOS Build & Export** | macos-15 / Xcode 16 | SwiftLint + archive + upload TestFlight |
+| **Secure Deploy** | ubuntu | Assina AAB + deploy interno Play Store |
 
 ---
 
@@ -214,6 +242,11 @@ Contribuições são bem-vindas! Veja [CONTRIBUTING.md](CONTRIBUTING.md) para de
 4. Push para a branch (`git push origin feature/nova-funcionalidade`)
 5. Abra um Pull Request
 
+### Qualidade de Código
+
+- **Kotlin:** `./gradlew detekt` — deve retornar BUILD SUCCESSFUL sem violations
+- **Swift:** SwiftLint roda automaticamente no CI iOS com `--strict`
+
 ---
 
 ## 📄 Licença
@@ -237,6 +270,8 @@ MIT License - veja [LICENSE](LICENSE) para detalhes.
 - [Koin](https://insert-koin.io/)
 - [KMM-ViewModel](https://github.com/rickclephas/KMM-ViewModel)
 - [Multiplatform Settings](https://github.com/russhwolf/multiplatform-settings)
+- [WAQI](https://waqi.info/) — World Air Quality Index API
+- [Open-Meteo](https://open-meteo.com/) — API de clima open source
 
 ---
 
