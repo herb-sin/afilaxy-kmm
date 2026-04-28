@@ -57,11 +57,11 @@ jobs:
 
       # Lint do código Swift — equivalente ao Detekt no módulo Kotlin.
       # --strict: trata warnings como erros (mesmo comportamento do Detekt no CI).
-      # SwiftLint já está disponível no runner macos-15 via Homebrew.
+      # SwiftLint 0.63+ não aceita --path; o diretório é argumento posicional.
       - name: SwiftLint
         run: |
           brew install swiftlint 2>/dev/null || true
-          swiftlint lint --strict --path iosApp/iosApp/ 2>&1
+          swiftlint lint --strict iosApp/iosApp/ 2>&1
         continue-on-error: false
 
       # Instala o XcodeGen para gerar o .xcodeproj a partir do project.yml
