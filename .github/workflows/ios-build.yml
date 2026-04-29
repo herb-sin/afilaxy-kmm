@@ -166,10 +166,12 @@ jobs:
           echo "${{ secrets.APPLE_API_KEY }}" \
             > "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
 
-      # O Xcode 26 no runner macos-26 vem sem o iOS 26 platform component pré-instalado.
-      # Sem ele, xcodebuild retorna "iOS 26.0 is not installed" ao tentar o archive.
-      - name: Download iOS 26 platform component
-        run: xcodebuild -downloadPlatform iOS
+      # Inicializa os SDKs incluídos no Xcode.app (iphoneos, iphoneos26.0 etc).
+      # -downloadPlatform iOS baixa o runtime do SIMULADOR (CoreSimulator) e falha
+      # em CI headless com "Unable to connect to simulator" (exit 70).
+      # -runFirstLaunch inicializa pacotes e SDKs de dispositivo sem precisar de simulador.
+      - name: Initialize Xcode SDKs
+        run: sudo xcodebuild -runFirstLaunch
 
       # Arquiva usando Automatic signing com autenticação via API key.
       # -allowProvisioningUpdates + -authenticationKey* permite que o Xcode:
