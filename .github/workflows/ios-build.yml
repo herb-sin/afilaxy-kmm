@@ -186,6 +186,7 @@ jobs:
             -scheme iosApp \
             -configuration Release \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
