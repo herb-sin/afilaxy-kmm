@@ -166,12 +166,16 @@ jobs:
           echo "${{ secrets.APPLE_API_KEY }}" \
             > "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
 
-      # Inicializa os SDKs incluídos no Xcode.app (iphoneos, iphoneos26.0 etc).
-      # -downloadPlatform iOS baixa o runtime do SIMULADOR (CoreSimulator) e falha
-      # em CI headless com "Unable to connect to simulator" (exit 70).
-      # -runFirstLaunch inicializa pacotes e SDKs de dispositivo sem precisar de simulador.
+      # Xcode 26 separa o componente de plataforma iOS (iPhoneOS.platform) do Xcode.app base.
+      # Sem ele, archive falha com "iOS 26.0 is not installed" mesmo com SDKROOT correto.
+      # -downloadAllPlatforms instala todos os componentes de plataforma disponíveis (iphoneos, watchos, tvos…)
+      # sem precisar do daemon de simulador (diferente de -downloadPlatform iOS).
       - name: Initialize Xcode SDKs
-        run: sudo xcodebuild -runFirstLaunch
+        run: |
+          sudo xcodebuild -runFirstLaunch
+          xcodebuild -downloadAllPlatforms 2>&1 || true
+          echo "=== SDKs disponíveis ==="
+          xcodebuild -showsdks 2>&1 | grep -i ios || true
 
       # Arquiva usando Automatic signing com autenticação via API key.
       # -allowProvisioningUpdates + -authenticationKey* permite que o Xcode:
