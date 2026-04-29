@@ -191,8 +191,37 @@ fun EmergencyResponseScreen(
                             MaterialTheme.colorScheme.onPrimaryContainer,
                         textAlign = TextAlign.Center
                     )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Triagem passiva: helper confirma que tem o medicamento antes de aceitar.
+                    // Card âmbar — mesma UX que EmergencyOverlayActivity e iOS EmergencyResponseView.
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        color = androidx.compose.ui.graphics.Color(0xFFFFF3CD)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "💊 Você tem a bombinha com",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = androidx.compose.ui.graphics.Color(0xFF856404),
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Sulfato de Salbutamol com você?",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                color = androidx.compose.ui.graphics.Color(0xFF856404),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
                     
                     Button(
                         onClick = {
@@ -200,13 +229,10 @@ fun EmergencyResponseScreen(
                             FileLogger.log("INFO", "EmergencyResponseScreen", "acceptEmergency tapped emergencyId=$emergencyId")
                             viewModel.onAcceptEmergency(emergencyId)
                         },
-                        // Dupla guarda: `state.isLoading` (ViewModel) e `acceptInProgress` (local).
-                        // Necessário porque duas instâncias do back stack geram ViewModels distintos
-                        // com estados independentes — só o flag local é imune a essa duplicação.
                         enabled = !state.isLoading && !acceptInProgress,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                            containerColor = androidx.compose.ui.graphics.Color(0xFF2E7D32)
                         )
                     ) {
                         if (state.isLoading) {
@@ -215,7 +241,7 @@ fun EmergencyResponseScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text("Aceitar e Ajudar")
+                            Text("Sim, aceitar!")
                         }
                     }
                     
@@ -225,7 +251,7 @@ fun EmergencyResponseScreen(
                         onClick = { navController.popBackStack() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Recusar")
+                        Text("Não, recusar")
                     }
                 }
             }
