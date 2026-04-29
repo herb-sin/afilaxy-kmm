@@ -214,10 +214,10 @@ struct ChatView: View {
             .document(emergencyId)
             .updateData(["status": "resolved", "active": false, "resolvedAt": nowMs])
         container.resolvedEmergencyId = emergencyId
-        container.emergency.clearEmergencyStateSwift(cancelledId: emergencyId)
+        // NÃO chama clearEmergencyStateSwift aqui — isso colapsa a navegação antes do
+        // rating sheet aparecer. A limpeza só acontece em dismissAndClearState(),
+        // chamado após o usuário submeter ou pular a avaliação.
         // Mostra avaliação se soubermos quem avaliar.
-        // IMPORTANTE: não postamos AfilaxyEmergencyResolved aqui — o dismiss
-        // só ocorre DEPOIS que o usuário submete ou pula a avaliação (via dismissAndClearState).
         if reviewedId != nil {
             showRatingSheet = true
         } else {
@@ -255,10 +255,16 @@ struct ChatView: View {
                               let senderName = d["senderName"] as? String,
                               let text = d["message"] as? String else { return nil }
                         let ts: Date
-                        if let ms = d["timestamp"] as? Double { ts = Date(timeIntervalSince1970: ms / 1000) }
-                        else if let ms = d["timestamp"] as? Int64 { ts = Date(timeIntervalSince1970: Double(ms) / 1000) }
-                        else if let t = d["timestamp"] as? Timestamp { ts = t.dateValue() }
-                        else { ts = Date() }
+                        // Firestore SDK iOS entrega todos os números como NSNumber.
+                        // Cast direto `as? Double` falha para Long do Android (NSNumber wrapping Int).
+                        // NSNumber.doubleValue converte qualquer tipo numérico de forma segura.
+                        if let num = d["timestamp"] as? NSNumber {
+                            ts = Date(timeIntervalSince1970: num.doubleValue / 1000)
+                        } else if let t = d["timestamp"] as? Timestamp {
+                            ts = t.dateValue()
+                        } else {
+                            ts = Date()
+                        }
                         return (
                             id: doc.documentID,
                             senderId: senderId,

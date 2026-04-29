@@ -43,7 +43,9 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
 
         remoteMessage.data.let { data ->
             when (data["type"]) {
-                "emergency_request", "emergency" -> {
+                // "new_emergency" é o tipo gerado pelo NotificationRepositoryImpl (KMM).
+                // "emergency_request" e "emergency" são aliases de versões anteriores.
+                "new_emergency", "emergency_request", "emergency" -> {
                     Log.d("FCM", "Emerg\u00eancia recebida")
                     val emergencyId = data["emergencyId"] ?: ""
                     val requesterName = data["requesterName"] ?: "Algu\u00e9m"
