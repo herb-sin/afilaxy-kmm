@@ -172,8 +172,38 @@ fun EmergencyOverlayScreen(
                     color = Color.Gray,
                     textAlign = TextAlign.Center
                 )
-                
-                Spacer(modifier = Modifier.height(24.dp))
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Triagem passiva: helper confirma que tem o medicamento antes de aceitar.
+                // Reduz respostas de voluntários sem o Salbutamol, aumentando a efetividade.
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFF3CD) // amarelo âmbar — atenção sem alarme
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "💊 Você tem a bombinha com",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF856404),
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Sulfato de Salbutamol com você?",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF856404),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -184,15 +214,15 @@ fun EmergencyOverlayScreen(
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
                     ) {
-                        Text("Recusar", color = Color.White)
+                        Text("Não, recusar", color = Color.White)
                     }
                     
                     Button(
                         onClick = onAccept,
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                     ) {
-                        Text("Aceitar Ajudar", color = Color.White)
+                        Text("Sim, aceitar!", color = Color.White)
                     }
                 }
             }

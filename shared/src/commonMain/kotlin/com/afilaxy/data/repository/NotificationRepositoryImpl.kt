@@ -33,8 +33,11 @@ class NotificationRepositoryImpl(
                         "timestamp"   to getCurrentTimeMillis(),
                         "to"          to helper.get<String>("fcmToken"),
                         "emergencyId" to emergencyId,
-                        "title"       to "Nova Emergência Próxima!",
-                        "body"        to "Há uma emergência a ${distance.toString().take(4)}km de você"
+                        // Triagem passiva: a pergunta do Sulfato de Salbutamol fica
+                        // na tela de aceitar/rejeitar dentro do app, não no push —
+                        // o push é o gatilho; o contexto é dado pela UI.
+                        "title"       to "🚨 Alguém precisa de ajuda a ${distance.toString().take(4)}km de você",
+                        "body"        to "Abra o app para ver detalhes e aceitar o pedido de socorro."
                     ))
                 }
             }
@@ -55,8 +58,8 @@ class NotificationRepositoryImpl(
                 "timestamp"   to getCurrentTimeMillis(),
                 "to"          to fcmToken,
                 "emergencyId" to emergencyId,
-                "title"       to "Helper Aceitou!",
-                "body"        to "Um helper aceitou sua emergência"
+                "title"       to "✅ Ajuda a caminho!",
+                "body"        to "Mande sua localização no chat."
             ))
         } catch (e: Exception) {
             // Silently fail
@@ -75,8 +78,8 @@ class NotificationRepositoryImpl(
                 "timestamp"   to getCurrentTimeMillis(),
                 "to"          to fcmToken,
                 "emergencyId" to emergencyId,
-                "title"       to "Nova Mensagem",
-                "body"        to "$senderName enviou uma mensagem"
+                "title"       to "💬 $senderName",
+                "body"        to "$senderName enviou uma mensagem no chat de emergência."
             ))
         } catch (e: Exception) {
             // Silently fail
@@ -95,8 +98,8 @@ class NotificationRepositoryImpl(
                 "timestamp"   to getCurrentTimeMillis(),
                 "to"          to fcmToken,
                 "emergencyId" to emergencyId,
-                "title"       to "Emergência Resolvida",
-                "body"        to "A emergência foi resolvida com sucesso"
+                "title"       to "✅ Emergência encerrada",
+                "body"        to "A situação foi resolvida."
             ))
         } catch (e: Exception) {
             // Silently fail
