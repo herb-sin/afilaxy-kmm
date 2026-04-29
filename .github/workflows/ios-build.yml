@@ -17,7 +17,8 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-15  # Xcode 16.4 — fixado para builds consistentes
+    runs-on: macos-26  # Xcode 26 (iOS 26 SDK) — obrigatório a partir de 2026-04-29
+                       # A Apple exige iOS 26 SDK para uploads ao App Store Connect.
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -51,6 +52,11 @@ jobs:
       # O framework real é compilado pelo xcodebuild archive via integração CocoaPods.
       - name: Inject WAQI API token
         run: echo "WAQI_API_TOKEN=${{ secrets.WAQI_API_TOKEN }}" >> local.properties
+
+      # Seleciona explicitamente o Xcode 26 — a Apple passou a exigir o iOS 26 SDK
+      # para novos uploads ao App Store Connect a partir de abril de 2026.
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app/Contents/Developer
 
       - name: Generate KMM dummy framework
         run: ./gradlew :shared:generateDummyFramework --no-daemon -Pkotlin.native.ignoreDisabledTargets=true
