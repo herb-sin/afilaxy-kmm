@@ -25,6 +25,25 @@ struct EmergencyResponseView: View {
                     .foregroundColor(.secondary)
             }
 
+            // Triagem passiva: a pergunta aparece antes dos botões para que o helper
+            // confirme que tem o medicamento antes de decidir aceitar ou recusar.
+            Section {
+                HStack(spacing: 12) {
+                    Text("💊")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Você tem a bombinha com")
+                            .font(.subheadline)
+                            .foregroundColor(Color(red: 0.52, green: 0.39, blue: 0.02))
+                        Text("Sulfato de Salbutamol com você?")
+                            .font(.subheadline).bold()
+                            .foregroundColor(Color(red: 0.52, green: 0.39, blue: 0.02))
+                    }
+                }
+                .padding(.vertical, 4)
+                .listRowBackground(Color(red: 1.0, green: 0.95, blue: 0.80))
+            }
+
             Section {
                 if isUnavailable {
                 Section {
@@ -66,7 +85,7 @@ struct EmergencyResponseView: View {
                         if isAccepting {
                             ProgressView().frame(maxWidth: .infinity).padding(.vertical, 8)
                         } else {
-                            Label("Aceitar e Ajudar", systemImage: "heart.fill")
+                            Label("Sim, aceitar!", systemImage: "heart.fill")
                                 .frame(maxWidth: .infinity).foregroundColor(.white).padding(.vertical, 8)
                         }
                     }
@@ -76,7 +95,7 @@ struct EmergencyResponseView: View {
                     Button(role: .destructive) {
                         dismiss()
                     } label: {
-                        Label("Recusar", systemImage: "xmark.circle")
+                        Label("Não, recusar", systemImage: "xmark.circle")
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                     }
                     .disabled(isAccepting)
