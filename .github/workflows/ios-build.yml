@@ -166,6 +166,11 @@ jobs:
           echo "${{ secrets.APPLE_API_KEY }}" \
             > "/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
 
+      # O Xcode 26 no runner macos-26 vem sem o iOS 26 platform component pré-instalado.
+      # Sem ele, xcodebuild retorna "iOS 26.0 is not installed" ao tentar o archive.
+      - name: Download iOS 26 platform component
+        run: xcodebuild -downloadPlatform iOS
+
       # Arquiva usando Automatic signing com autenticação via API key.
       # -allowProvisioningUpdates + -authenticationKey* permite que o Xcode:
       #   1. Associe o certificado do keychain ao perfil correto automaticamente
