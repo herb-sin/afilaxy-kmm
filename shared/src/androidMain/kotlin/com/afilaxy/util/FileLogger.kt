@@ -9,22 +9,26 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 object FileLogger {
-    private const val MAX_FILE_SIZE = 5 * 1024 * 1024L // 5MB
-    private const val MAX_AGE_DAYS = 7L
+    private const val MAX_FILE_SIZE_DEBUG   = 5 * 1024 * 1024L // 5 MB em debug
+    private const val MAX_FILE_SIZE_RELEASE = 3 * 1024 * 1024L // 3 MB em release
+    private const val MAX_AGE_DAYS_DEBUG    = 7L
+    private const val MAX_AGE_DAYS_RELEASE  = 3L
     private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1_000L
     private const val LOG_DIR = "logs"
 
-    /** false em release builds — elimina todo IO de disco em produção */
+    /** Sempre true — habilitado em debug e release para diagnóstico em campo.
+     *  Limites de tamanho e retenção são mais conservadores em release. */
     private var isEnabled: Boolean = false
+    private var isDebug: Boolean = false
 
     private lateinit var logDir: File
     private val lock = ReentrantReadWriteLock()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
     fun initialize(context: Context) {
-        isEnabled = (context.applicationInfo.flags and
+        isDebug = (context.applicationInfo.flags and
             android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        if (!isEnabled) return  // Release: não cria diretório de logs em disco
+        isEnabled = true  // Habilitado em debug e release para diagnóstico em campo
         logDir = File(context.cacheDir, LOG_DIR)
         if (!logDir.exists()) {
             logDir.mkdirs()
@@ -42,7 +46,8 @@ object FileLogger {
 
                 logFile.appendText(logEntry)
 
-                if (logFile.length() > MAX_FILE_SIZE) {
+                val maxSize = if (isDebug) MAX_FILE_SIZE_DEBUG else MAX_FILE_SIZE_RELEASE
+                if (logFile.length() > maxSize) {
                     rotateLogFile()
                 }
             } catch (e: Exception) {
@@ -89,7 +94,8 @@ object FileLogger {
     }
     
     private fun cleanOldLogs() {
-        val cutoffTime = System.currentTimeMillis() - (MAX_AGE_DAYS * MILLIS_PER_DAY)
+        val maxAge = if (isDebug) MAX_AGE_DAYS_DEBUG else MAX_AGE_DAYS_RELEASE
+        val cutoffTime = System.currentTimeMillis() - (maxAge * MILLIS_PER_DAY)
         getAllLogs().filter { it.lastModified() < cutoffTime }.forEach { it.delete() }
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.PermissionChecker
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.launch
@@ -37,6 +38,7 @@ import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.util.FileLogger
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 
@@ -134,7 +136,28 @@ fun HomeScreenNew(
             HomeWelcomeCard(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
                 weeklyCount = weeklyCount,
-                totalEmergencies = totalEmergencies
+                totalEmergencies = totalEmergencies,
+                onExportLogs = {
+                    val logFiles = FileLogger.getAllLogs()
+                    if (logFiles.isEmpty()) return@HomeWelcomeCard
+                    val uris = logFiles.mapNotNull { file ->
+                        try {
+                            FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                file
+                            )
+                        } catch (_: Exception) { null }
+                    }
+                    if (uris.isEmpty()) return@HomeWelcomeCard
+                    val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                        type = "text/plain"
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                        putExtra(Intent.EXTRA_SUBJECT, "Afilaxy Logs")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Exportar logs Afilaxy"))
+                }
             )
         }
 

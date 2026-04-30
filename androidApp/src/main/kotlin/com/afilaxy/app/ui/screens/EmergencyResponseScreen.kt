@@ -44,6 +44,12 @@ fun EmergencyResponseScreen(
     LaunchedEffect(Unit) {
         FileLogger.log("INFO", "EmergencyResponseScreen", "opened emergencyId=$emergencyId")
         viewModel.fetchEmergencyExpiresAt(emergencyId)
+        // Inicia o observer de status em tempo real — crítico quando a tela abre via intent
+        // do EmergencyOverlayActivity, contexto em que o accept já ocorreu no repositório
+        // mas o ViewModel ainda não observa este emergencyId.
+        viewModel.observeEmergencyStatus(emergencyId)
+        FileLogger.log("DEBUG", "EmergencyResponseScreen",
+            "observeEmergencyStatus iniciado emergencyId=$emergencyId")
         // Garante que o ViewModel conhece o emergencyId mesmo em cold start via notificação,
         // mas NÃO reseta o estado se um accept já estava em curso (guard local).
         if (!acceptInProgress) {
@@ -101,13 +107,22 @@ fun EmergencyResponseScreen(
     }
 
     // Navegar para chat após aceitar
-    LaunchedEffect(state.hasActiveEmergency, state.emergencyId, state.isLoading) {
+    // Path 1: accept disparado por esta tela via onAcceptEmergency() → hasActiveEmergency=true
+    // Path 2: accept disparado pelo EmergencyOverlayActivity diretamente no repositório
+    //         (bypassa o ViewModel) → hasActiveEmergency permanece false após preloadEmergencyId,
+    //         mas o Firestore emite status="matched" que é observado aqui.
+    LaunchedEffect(state.hasActiveEmergency, state.emergencyId, state.isLoading, state.emergencyStatus) {
         FileLogger.log(
             "DEBUG", "EmergencyResponseScreen",
-            "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId} isLoading=${state.isLoading}"
+            "hasActiveEmergency=${state.hasActiveEmergency} emergencyId=${state.emergencyId} " +
+            "isLoading=${state.isLoading} emergencyStatus=${state.emergencyStatus}"
         )
-        if (state.hasActiveEmergency && state.emergencyId == emergencyId && !state.isRequester) {
-            FileLogger.log("INFO", "EmergencyResponseScreen", "navigating to chat emergencyId=$emergencyId")
+        val matchedViaStatus = state.emergencyStatus == "matched" && !state.isRequester
+        val matchedViaState  = state.hasActiveEmergency && state.emergencyId == emergencyId && !state.isRequester
+        if (matchedViaState || matchedViaStatus) {
+            FileLogger.log("INFO", "EmergencyResponseScreen",
+                "navigating to chat emergencyId=$emergencyId " +
+                "(matchedViaState=$matchedViaState matchedViaStatus=$matchedViaStatus)")
             navController.navigate("chat/$emergencyId") {
                 popUpTo("emergency_response/$emergencyId") { inclusive = true }
             }
