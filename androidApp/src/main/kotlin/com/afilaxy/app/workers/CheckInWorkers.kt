@@ -67,7 +67,28 @@ class MorningCheckInWorker(
 
             WorkManager.getInstance(context).enqueueUniqueWork(
                 WORK_NAME,
+                // KEEP: não substitui se já estiver agendado (chamado de scheduleNext dentro do doWork).
+                // REPLACE é usado apenas pelo AflixyApplication na inicialização first-run.
                 ExistingWorkPolicy.REPLACE,
+                request
+            )
+        }
+
+        /** Agenda com KEEP — usado na inicialização do app para não resetar worker já agendado. */
+        fun scheduleNextKeep(context: Context, inhalerName: String? = null, riskScore: Int = 0) {
+            val delay = minutesUntil(hour = 7, minute = 30)
+            val data = workDataOf(
+                KEY_INHALER_NAME to (inhalerName ?: ""),
+                KEY_RISK_SCORE to riskScore
+            )
+            val request = OneTimeWorkRequestBuilder<MorningCheckInWorker>()
+                .setInitialDelay(delay, TimeUnit.MINUTES)
+                .setInputData(data)
+                .addTag(WORK_NAME)
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                WORK_NAME,
+                ExistingWorkPolicy.KEEP,
                 request
             )
         }
@@ -171,6 +192,20 @@ class EveningCheckInWorker(
                 request
             )
         }
+
+        /** Agenda com KEEP — usado na inicialização do app para não resetar worker já agendado. */
+        fun scheduleNextKeep(context: Context) {
+            val delay = minutesUntil(hour = 21, minute = 0)
+            val request = OneTimeWorkRequestBuilder<EveningCheckInWorker>()
+                .setInitialDelay(delay, TimeUnit.MINUTES)
+                .addTag(WORK_NAME)
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                request
+            )
+        }
     }
 
     override suspend fun doWork(): Result {
@@ -232,7 +267,12 @@ private const val MILLIS_PER_MINUTE = 60_000L
 const val NOTIFICATION_ID_MORNING = 5001
 const val NOTIFICATION_ID_EVENING = 5002
 
-/** Calcula minutos até o próximo horário-alvo (mesmo dia ou dia seguinte). */
+/** Calcula minutos até o próximo horário-alvo (mesmo dia ou dia seguinte).
+ *
+ * Usa `!after(now)` em vez de `before(now)` para cobrir o caso de borda onde
+ * target == now (worker acabou de disparar). `maxOf(60L, ...)` garante mínimo
+ * de 1 hora de delay, evitando que o ciclo dispare em loop rápido.
+ */
 fun minutesUntil(hour: Int, minute: Int): Long {
     val now = Calendar.getInstance()
     val target = Calendar.getInstance().apply {
@@ -240,7 +280,8 @@ fun minutesUntil(hour: Int, minute: Int): Long {
         set(Calendar.MINUTE, minute)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
-        if (before(now)) add(Calendar.DAY_OF_YEAR, 1)
+        // !after(now) cobre: target < now OU target == now
+        if (!after(now)) add(Calendar.DAY_OF_YEAR, 1)
     }
-    return (target.timeInMillis - now.timeInMillis) / MILLIS_PER_MINUTE
+    return maxOf(60L, (target.timeInMillis - now.timeInMillis) / MILLIS_PER_MINUTE)
 }
