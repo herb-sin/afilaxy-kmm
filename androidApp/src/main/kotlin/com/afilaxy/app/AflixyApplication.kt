@@ -64,8 +64,11 @@ class AflixyApplication : Application() {
             // Cria canais de notificação (necessário Android 8+)
             createCheckInNotificationChannel(this@AflixyApplication)
             // Agenda workers de check-in (idempotente — ExistingWorkPolicy.REPLACE)
-            MorningCheckInWorker.scheduleNext(this@AflixyApplication)
-            EveningCheckInWorker.scheduleNext(this@AflixyApplication)
+            // KEEP: se o worker já estiver agendado do último ciclo, não substituir.
+            // REPLACE causaria reset do delay a cada abertura do app, podendo disparar
+            // uma notificação imediatamente se minutesUntil() retornar 0 (borda de horário).
+            MorningCheckInWorker.scheduleNextKeep(this@AflixyApplication)
+            EveningCheckInWorker.scheduleNextKeep(this@AflixyApplication)
             LogOptimizer.d("AflixyApp", "Check-in workers agendados")
         }
     }
