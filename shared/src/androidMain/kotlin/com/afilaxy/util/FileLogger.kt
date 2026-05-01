@@ -28,7 +28,10 @@ object FileLogger {
     fun initialize(context: Context) {
         isDebug = (context.applicationInfo.flags and
             android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        isEnabled = true  // Habilitado em debug e release para diagnóstico em campo
+        // Only enabled in debug builds. Release builds must not write plaintext logs
+        // containing emergency IDs, session events, or user data to disk (LGPD compliance).
+        isEnabled = isDebug
+        if (!isEnabled) return
         logDir = File(context.cacheDir, LOG_DIR)
         if (!logDir.exists()) {
             logDir.mkdirs()

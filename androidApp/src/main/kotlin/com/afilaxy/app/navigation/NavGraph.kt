@@ -70,10 +70,10 @@ fun NavGraph(
 
     // ── Stats do usuário ────────────────────────────────────────────────────────
     // Listener no nível do NavGraph: executado UMA vez por sessão, nunca
-    // recriado ao navegar entre rotas. Eleva responsabilidade que antes vivia
-    // no HomeScreenNew (onde o DisposableEffect era destruido/recriado a cada
-    // navegação ida/volta, gerando snapshot duplo e log de listener recriado).
-    val weeklyCountState    = remember { mutableStateOf(-1) }
+    // recriado ao navegar entre rotas. NavGraph é código Android-específico,
+    // então o native Firebase SDK é usado aqui diretamente.
+    // TODO: mover para HomeViewModel quando a feature de stats for expandida.
+    val weeklyCountState      = remember { mutableStateOf(-1) }
     val totalEmergenciesState = remember { mutableStateOf(-1) }
 
     DisposableEffect(Unit) {
@@ -220,13 +220,18 @@ fun NavGraph(
         composable(AppRoutes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
-                    // Email verification is enforced at registration time (EmailVerificationScreen).
-                    // Existing users (registered before this feature) are NOT blocked here
-                    // to avoid locking out the current user base.
-                    // Future: add account-age check to enforce for new users only.
-                    val dest = postAuthDestination()
-                    navController.navigate(dest) {
-                        popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                    scope.launch {
+                        val isVerified = authRepository.isEmailVerified()
+                        if (!isVerified) {
+                            navController.navigate(AppRoutes.EMAIL_VERIFICATION) {
+                                popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                            }
+                        } else {
+                            val dest = postAuthDestination()
+                            navController.navigate(dest) {
+                                popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                            }
+                        }
                     }
                 },
                 onRegisterClick = { navController.navigate(AppRoutes.REGISTER) }

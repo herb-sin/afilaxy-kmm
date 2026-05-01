@@ -20,11 +20,13 @@ object Validator {
      * - Mínimo 8 caracteres
      * - Pelo menos 1 letra maiúscula
      * - Pelo menos 1 dígito
+     * - Pelo menos 1 caractere especial
      */
     fun isValidPassword(password: String): Boolean {
         return password.length >= MIN_PASSWORD_LENGTH &&
                password.any { it.isUpperCase() } &&
-               password.any { it.isDigit() }
+               password.any { it.isDigit() } &&
+               password.any { !it.isLetterOrDigit() }
     }
 
     fun isValidName(name: String): Boolean {

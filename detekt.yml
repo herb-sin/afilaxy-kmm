@@ -57,9 +57,6 @@ complexity:
       - '**/presentation/**'
       - '**/domain/repository/**'
 
-  ComplexMethod:
-    active: false   # deprecated — substituído por CyclomaticComplexMethod abaixo
-
   LargeClass:
     active: true
     threshold: 400          # Classes acima de 400 linhas são sinalizadas

@@ -1,17 +1,19 @@
 package com.afilaxy.data.repository
 
+import com.afilaxy.domain.model.EMERGENCY_TIMEOUT_MS
 import com.afilaxy.domain.model.Emergency
 import com.afilaxy.domain.model.EmergencyStatus
 import com.afilaxy.domain.model.Helper
 import com.afilaxy.domain.model.Location
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.EmergencyRepository
+import com.afilaxy.util.haversineDistance
 import dev.gitlive.firebase.auth.FirebaseAuth
+import kotlin.math.round
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.GeoPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlin.math.*
 
 class EmergencyRepositoryImpl(
     private val firestore: FirebaseFirestore,
@@ -47,7 +49,7 @@ class EmergencyRepositoryImpl(
                 "status" to "waiting",
                 "active" to true,
                 "timestamp" to currentTime,
-                "expiresAt" to (currentTime + 180000) // 3 min
+                "expiresAt" to (currentTime + EMERGENCY_TIMEOUT_MS)
             )
             
             // Criar emergência
@@ -180,7 +182,7 @@ class EmergencyRepositoryImpl(
                         "helperId" to userId,
                         "helperName" to helperName,
                         "matchedAt" to getCurrentTimeMillis(),
-                        "expiresAt" to (getCurrentTimeMillis() + 180000)
+                        "expiresAt" to (getCurrentTimeMillis() + EMERGENCY_TIMEOUT_MS)
                     )
                 }
             }
@@ -290,7 +292,7 @@ class EmergencyRepositoryImpl(
                 // Exclui o próprio usuário dos helpers visíveis
                 if (id == currentUserId) return@mapNotNull null
                 val geoPoint = doc.get<GeoPoint?>("location") ?: return@mapNotNull null
-                val distance = calculateDistance(
+                val distance = haversineDistance(
                     latitude, longitude,
                     geoPoint.latitude, geoPoint.longitude
                 )
@@ -404,7 +406,7 @@ class EmergencyRepositoryImpl(
                     if (requesterId == currentUserId) return@mapNotNull null
                     val lat = doc.get<Double?>("latitude") ?: return@mapNotNull null
                     val lon = doc.get<Double?>("longitude") ?: return@mapNotNull null
-                    val distance = calculateDistance(latitude, longitude, lat, lon)
+                    val distance = haversineDistance(latitude, longitude, lat, lon)
                     if (distance > radiusKm) return@mapNotNull null
                     Emergency(
                         id = doc.id,
@@ -453,7 +455,7 @@ class EmergencyRepositoryImpl(
                     // Exclui o próprio usuário do resultado
                     if (id == currentUserId) return@mapNotNull null
                     val geoPoint = doc.get<GeoPoint?>("location") ?: return@mapNotNull null
-                    val distance = calculateDistance(
+                    val distance = haversineDistance(
                         latitude, longitude,
                         geoPoint.latitude, geoPoint.longitude
                     )
@@ -485,20 +487,6 @@ class EmergencyRepositoryImpl(
             }
     }
 
-    /**
-     * Calcular distância entre dois pontos (fórmula Haversine)
-     */
-    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val r = 6371.0
-        val dLat = (lat2 - lat1) * PI / 180.0
-        val dLon = (lon2 - lon1) * PI / 180.0
-        val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(lat1 * PI / 180.0) * cos(lat2 * PI / 180.0) *
-                sin(dLon / 2) * sin(dLon / 2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return r * c
-    }
-
     // Geohash precision=9 — compatível com geofire-common usado na Cloud Function
     private fun encodeGeohash(latitude: Double, longitude: Double, precision: Int = 9): String {
         val base32 = "0123456789bcdefghjkmnpqrstuvwxyz"
@@ -526,6 +514,15 @@ class EmergencyRepositoryImpl(
 
     override suspend fun updateSeverity(emergencyId: String, severity: String): Result<Unit> {
         return try {
+            val userId = auth.currentUser?.uid
+                ?: return Result.failure(IllegalStateException("User not authenticated"))
+            val doc = firestore.collection("emergency_requests").document(emergencyId).get()
+            if (!doc.exists) return Result.failure(IllegalStateException("Emergência não encontrada"))
+            val requesterId = doc.get<String?>("requesterId")
+            val helperId = doc.get<String?>("helperId")
+            if (requesterId != userId && helperId != userId) {
+                return Result.failure(IllegalStateException("Não autorizado: apenas participantes podem atualizar a severidade"))
+            }
             firestore.collection("emergency_requests").document(emergencyId)
                 .update(mapOf("severity" to severity))
             Result.success(Unit)
@@ -534,6 +531,15 @@ class EmergencyRepositoryImpl(
 
     override suspend fun updateSamuCalled(emergencyId: String): Result<Unit> {
         return try {
+            val userId = auth.currentUser?.uid
+                ?: return Result.failure(IllegalStateException("User not authenticated"))
+            val doc = firestore.collection("emergency_requests").document(emergencyId).get()
+            if (!doc.exists) return Result.failure(IllegalStateException("Emergência não encontrada"))
+            val requesterId = doc.get<String?>("requesterId")
+            val helperId = doc.get<String?>("helperId")
+            if (requesterId != userId && helperId != userId) {
+                return Result.failure(IllegalStateException("Não autorizado: apenas participantes podem registrar chamada do SAMU"))
+            }
             firestore.collection("emergency_requests").document(emergencyId)
                 .update(mapOf(
                     "samuCalled" to true,

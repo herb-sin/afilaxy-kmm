@@ -11,9 +11,13 @@
     @org.koin.core.annotation.* <methods>;
 }
 
-# Keep Kotlin Multiplatform
--keep class kotlin.** { *; }
--keep class kotlinx.** { *; }
+# Keep only the Kotlin reflection and coroutine internals that are accessed via reflection.
+# Avoid blanket -keep class kotlin.** { *; } — it defeats R8 shrinking on all stdlib code.
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.reflect.** { *; }
+-keepclassmembers class kotlin.coroutines.** { *; }
+-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }
+-keep class kotlinx.serialization.** { *; }
 -dontwarn kotlin.**
 -dontwarn kotlinx.**
 

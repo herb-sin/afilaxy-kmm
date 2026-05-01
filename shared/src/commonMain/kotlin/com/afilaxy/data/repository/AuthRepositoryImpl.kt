@@ -3,6 +3,7 @@ package com.afilaxy.data.repository
 import com.afilaxy.domain.model.User
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.AuthRepository
+import com.afilaxy.util.Logger
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
@@ -59,7 +60,7 @@ class AuthRepositoryImpl(
             try {
                 firebaseUser.sendEmailVerification()
             } catch (e: Exception) {
-                // Falha silenciosa — conta criada, mas email não enviado
+                Logger.e("AuthRepository", "Falha ao enviar email de verificação uid=${firebaseUser.uid}: ${e.message}", e)
             }
 
             // Criar perfil no Firestore
@@ -94,7 +95,7 @@ class AuthRepositoryImpl(
         try {
             auth.signOut()
         } catch (e: Exception) {
-            // Silently fail - logout should always succeed
+            Logger.e("AuthRepository", "Falha ao fazer logout: ${e.message}", e)
         }
     }
     
@@ -113,14 +114,14 @@ class AuthRepositoryImpl(
     
     override suspend fun updateFcmToken(token: String) {
         val firebaseUser = auth.currentUser ?: return
-        
         try {
             firestore
                 .collection("users")
                 .document(firebaseUser.uid)
                 .update("fcmToken" to token)
         } catch (e: Exception) {
-            // Silently fail
+            // FCM token failure means the user won't receive push alerts — log at error level.
+            Logger.e("AuthRepository", "Falha ao atualizar FCM token uid=${firebaseUser.uid}: ${e.message}", e)
         }
     }
     
@@ -140,7 +141,6 @@ class AuthRepositoryImpl(
     
     override suspend fun updateUserLocation(latitude: Double, longitude: Double) {
         val firebaseUser = auth.currentUser ?: return
-        
         try {
             firestore
                 .collection("users")
@@ -150,7 +150,7 @@ class AuthRepositoryImpl(
                     "longitude" to longitude
                 ))
         } catch (e: Exception) {
-            // Silently fail
+            Logger.e("AuthRepository", "Falha ao atualizar localização uid=${firebaseUser.uid}: ${e.message}", e)
         }
     }
     
@@ -186,7 +186,7 @@ class AuthRepositoryImpl(
         try {
             auth.currentUser?.reload()
         } catch (e: Exception) {
-            // Falha silenciosa
+            Logger.e("AuthRepository", "Falha ao recarregar usuário: ${e.message}", e)
         }
     }
 

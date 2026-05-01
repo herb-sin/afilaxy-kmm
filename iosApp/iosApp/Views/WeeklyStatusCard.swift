@@ -8,11 +8,12 @@ struct WeeklyStatusCard: View {
     // Total acumulado de todas as semanas — nunca zera na virada ISO.
     // -1 enquanto carrega (exibe skeleton junto com weeklyCount=-1).
     var totalEmergencies: Int = -1
+    var onExportLogs: (() -> Void)? = nil
 
     private var config: StatusConfig { StatusConfig.from(count: weeklyCount) }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             // Background gradient
             LinearGradient(
                 colors: config.gradientColors,
@@ -110,6 +111,19 @@ struct WeeklyStatusCard: View {
         }
         .frame(maxWidth: .infinity)
         .shadow(color: config.shadowColor, radius: 12, x: 0, y: 6)
+
+        // Botão de exportação de logs — discreto, só em debug, mesmo padrão do Android
+        #if DEBUG
+        if let onExportLogs {
+            Button(action: onExportLogs) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.55))
+                    .frame(width: 32, height: 32)
+            }
+            .padding(6)
+        }
+        #endif
     }
 }
 

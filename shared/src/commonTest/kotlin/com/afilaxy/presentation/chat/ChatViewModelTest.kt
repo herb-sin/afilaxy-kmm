@@ -3,6 +3,7 @@ package com.afilaxy.presentation.chat
 import app.cash.turbine.test
 import com.afilaxy.data.fake.FakeAuthRepository
 import com.afilaxy.data.fake.FakeChatRepository
+import com.afilaxy.data.fake.FakeEmergencyRepository
 import com.afilaxy.domain.model.ChatMessage
 import com.afilaxy.domain.model.User
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,7 @@ class ChatViewModelTest {
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var viewModel: ChatViewModel
     
+    private lateinit var emergencyRepository: FakeEmergencyRepository
     private val testEmergencyId = "test-emergency-123"
     private val testUser = User(
         uid = "test-user-id",
@@ -39,10 +41,12 @@ class ChatViewModelTest {
         Dispatchers.setMain(testDispatcher)
         chatRepository = FakeChatRepository()
         authRepository = FakeAuthRepository(currentUser = testUser)
+        emergencyRepository = FakeEmergencyRepository()
         viewModel = ChatViewModel(
             emergencyId = testEmergencyId,
             chatRepository = chatRepository,
-            authRepository = authRepository
+            authRepository = authRepository,
+            emergencyRepository = emergencyRepository
         )
     }
     
@@ -92,7 +96,8 @@ class ChatViewModelTest {
         val newViewModel = ChatViewModel(
             emergencyId = testEmergencyId,
             chatRepository = chatRepository,
-            authRepository = authRepository
+            authRepository = authRepository,
+            emergencyRepository = emergencyRepository
         )
         
         newViewModel.sendMessage("Test message")

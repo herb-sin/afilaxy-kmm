@@ -10,7 +10,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        // JetBrains Compose dev previews — restricted to avoid resolving other groups from this repo
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev") {
+            content {
+                includeGroup("org.jetbrains.compose")
+                includeGroupByRegex("org\\.jetbrains\\.compose\\..*")
+            }
+        }
     }
 }
 
