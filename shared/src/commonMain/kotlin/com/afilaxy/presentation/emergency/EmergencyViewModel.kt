@@ -1,5 +1,6 @@
 package com.afilaxy.presentation.emergency
 
+import com.afilaxy.domain.model.EMERGENCY_TIMEOUT_MS
 import com.afilaxy.domain.model.EmergencyStatus
 import com.afilaxy.domain.usecase.CreateEmergencyUseCase
 import com.afilaxy.domain.repository.EmergencyRepository
@@ -22,7 +23,6 @@ class EmergencyViewModel(
     private val createEmergencyUseCase: CreateEmergencyUseCase
 ) : KMMViewModel() {
     private companion object {
-        const val EMERGENCY_TIMEOUT_MS = 180_000L   // 3 minutos
         const val HELPER_RADIUS_KM = 0.25           // 250 metros
         const val OBSERVER_RETRY_DELAY_MS = 3_000L  // 3 segundos entre tentativas
     }
@@ -68,7 +68,7 @@ class EmergencyViewModel(
      *  Usa 3 minutos a partir de agora como estimativa conservadora para destravar o countdown. */
     fun applyFallbackExpiresAt() {
         if (_state.value.emergencyExpiresAt == null) {
-            _state.update { it.copy(emergencyExpiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + 180_000L) }
+            _state.update { it.copy(emergencyExpiresAt = com.afilaxy.domain.model.getCurrentTimeMillis() + EMERGENCY_TIMEOUT_MS) }
         }
     }
 

@@ -86,20 +86,28 @@ class EmergencyOverlayActivity : ComponentActivity() {
             registerReceiver(cancelReceiver, filter, "com.afilaxy.permission.CANCEL_EMERGENCY", null)
         }
         
+        val isAccepting = mutableStateOf(false)
+
         setContent {
             AflixyTheme {
                 EmergencyOverlayScreen(
                     requesterName = requesterName,
                     distance = distance,
-                    onAccept = { 
+                    isAccepting = isAccepting.value,
+                    onAccept = {
+                        if (isAccepting.value) return@EmergencyOverlayScreen
+                        isAccepting.value = true
                         lifecycleScope.launch {
                             emergencyRepository.acceptEmergency(emergencyId)
+                            // Only navigate after the transaction completes (success or failure).
+                            // Calling finish() before this cancels the lifecycleScope coroutine,
+                            // orphaning the Firestore runTransaction and leaving active=true.
+                            finish()
+                            startMainActivity(emergencyId)
                         }
-                        finish()
-                        startMainActivity(emergencyId)
                     },
-                    onDecline = { 
-                        finish() 
+                    onDecline = {
+                        finish()
                     }
                 )
             }
@@ -129,6 +137,7 @@ class EmergencyOverlayActivity : ComponentActivity() {
 fun EmergencyOverlayScreen(
     requesterName: String,
     distance: String,
+    isAccepting: Boolean = false,
     onAccept: () -> Unit,
     onDecline: () -> Unit
 ) {
@@ -219,10 +228,19 @@ fun EmergencyOverlayScreen(
                     
                     Button(
                         onClick = onAccept,
+                        enabled = !isAccepting,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                     ) {
-                        Text("Sim, aceitar!", color = Color.White)
+                        if (isAccepting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Sim, aceitar!", color = Color.White)
+                        }
                     }
                 }
             }

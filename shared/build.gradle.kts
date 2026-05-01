@@ -21,13 +21,23 @@ val waqiToken: String = run {
 // Gera WaqiConfig.kt na fase de configuração (antes de qualquer compilação)
 val waqiDir = layout.buildDirectory.dir("generated/waqi/com/afilaxy/config").get().asFile
 waqiDir.mkdirs()
+// Split token into parts so R8 cannot inline it as a single string literal.
+// This is a defence-in-depth measure; the definitive fix is routing WAQI calls
+// through a Firebase Function so no token reaches the client binary at all.
+val tokenParts = if (waqiToken.isNotBlank()) {
+    val mid = waqiToken.length / 2
+    Pair(waqiToken.substring(0, mid), waqiToken.substring(mid))
+} else Pair("", "")
+
 waqiDir.resolve("WaqiConfig.kt").writeText(
     """
     |package com.afilaxy.config
     |
     |/** Auto-generated — NÃO editar manualmente. Veja shared/build.gradle.kts */
     |object WaqiConfig {
-    |    const val API_TOKEN = "$waqiToken"
+    |    private val p1 = "${tokenParts.first}"
+    |    private val p2 = "${tokenParts.second}"
+    |    val API_TOKEN: String get() = if (p1.isNotBlank()) p1 + p2 else "demo"
     |}
     """.trimMargin()
 )

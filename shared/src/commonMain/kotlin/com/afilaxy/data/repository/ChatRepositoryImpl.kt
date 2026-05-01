@@ -50,13 +50,10 @@ class ChatRepositoryImpl(
                 com.afilaxy.util.Logger.d("ChatRepository", "snapshot docs=${snapshot.documents.size}")
                 snapshot.documents.mapNotNull { doc ->
                     try {
-                        val ts = doc.id.let {
-                            try { doc.get<Long>("timestamp") }
-                            catch (e1: Exception) {
-                                try { doc.get<Double>("timestamp").toLong() }
-                                catch (e2: Exception) { 0L }
-                            }
-                        }
+                        // Try Double first (Android stores as Double, iOS native may store as Timestamp).
+                        // Firestore KMM serialises both Number and Timestamp as Double when using get<Double>.
+                        val ts = try { doc.get<Double>("timestamp").toLong() }
+                            catch (e: Exception) { doc.get<Long?>("timestamp") ?: 0L }
                         com.afilaxy.util.Logger.d("ChatRepository", "doc=${doc.id} ts=$ts")
                         ChatMessage(
                             id = doc.get("id") as? String ?: doc.id,

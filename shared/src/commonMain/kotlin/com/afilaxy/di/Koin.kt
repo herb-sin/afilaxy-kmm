@@ -16,6 +16,7 @@ import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.presentation.medical.MedicalProfileViewModel
 import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.risk.RiskViewModel
+import com.afilaxy.presentation.ubs.UBSMapViewModel
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
@@ -47,6 +48,7 @@ fun sharedModule(): Module = module {
         EnvironmentalRepositoryImpl(get(), token, get())
     }
     single<CheckInRepository> { CheckInRepositoryImpl(get(), get()) }
+    single<UBSRepository> { UBSRepositoryImpl(get()) }
 
     // LocationRepository é injetado no platformModule()
     
@@ -58,7 +60,7 @@ fun sharedModule(): Module = module {
     // ViewModels
     factory { AuthViewModel(get()) }
     factory { LoginViewModel(get()) }
-    factory { (emergencyId: String) -> ChatViewModel(emergencyId, get(), get()) }
+    factory { (emergencyId: String) -> ChatViewModel(emergencyId, get(), get(), get()) }
     single { EmergencyViewModel(get(), get(), get()) }
     factory { ProfileViewModel(get(), get()) }
     factory { HistoryViewModel(get(), get()) }
@@ -71,6 +73,7 @@ fun sharedModule(): Module = module {
     factory { MedicalProfileViewModel(get(), get()) }
     factory { RiskViewModel(get(), get()) }
     factory { CheckInViewModel(get(), get()) }
+    factory { UBSMapViewModel(get(), get()) }
 }
 
 /**

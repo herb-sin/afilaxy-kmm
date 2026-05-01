@@ -28,10 +28,17 @@ export const createCheckoutSession = onCall(async (request) => {
         throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
-    const { priceId, email, metadata } = request.data;
+    const { priceId, metadata } = request.data;
 
-    if (!priceId || !email || !metadata) {
+    if (!priceId || !metadata) {
         throw new HttpsError('invalid-argument', 'Missing required fields');
+    }
+
+    // Use the verified Firebase Auth token email — never trust client-supplied email.
+    // A client could supply any address to associate the subscription with a different identity.
+    const verifiedEmail = request.auth!.token.email;
+    if (!verifiedEmail) {
+        throw new HttpsError('failed-precondition', 'Email verification required');
     }
 
     try {
@@ -45,7 +52,7 @@ export const createCheckoutSession = onCall(async (request) => {
         await profRef.set(
             {
                 name: metadata.name,
-                email: email,
+                email: verifiedEmail,
                 crm: metadata.crm,
                 specialty: 'PNEUMOLOGIST',
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -67,7 +74,7 @@ export const createCheckoutSession = onCall(async (request) => {
         const session = await getStripe().checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'subscription',
-            customer_email: email,
+            customer_email: verifiedEmail,
             line_items: [{ price: priceId, quantity: 1 }],
             metadata: {
                 professionalId: professionalId,
@@ -160,6 +167,59 @@ export const stripeWebhook = onRequest(async (req, res) => {
             res.json({ received: true });
         } catch (error) {
             console.error('Error cancelling subscription:', error);
+            res.status(500).send('Internal error');
+        }
+    }
+    // Pagamento falhou — assinatura entra em atraso antes de ser cancelada pelo Stripe.
+    // Marcar como PAST_DUE imediatamente para evitar acesso indevido durante o período de retry.
+    else if (event.type === 'invoice.payment_failed') {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+        try {
+            const snapshot = await admin.firestore()
+                .collection('health_professionals')
+                .where('stripeCustomerId', '==', customerId)
+                .limit(1)
+                .get();
+            if (!snapshot.empty) {
+                await snapshot.docs[0].ref.update({
+                    subscriptionPlan: 'PAST_DUE',
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                console.log(`⚠️ Payment failed for ${snapshot.docs[0].id} — marked PAST_DUE`);
+            }
+            res.json({ received: true });
+        } catch (error) {
+            console.error('Error handling payment_failed:', error);
+            res.status(500).send('Internal error');
+        }
+    }
+    // Atualização da assinatura (renovação, downgrade, upgrade, mudança de status).
+    // Sincroniza subscriptionExpiry a cada renovação bem-sucedida e atualiza status.
+    else if (event.type === 'customer.subscription.updated') {
+        const subscription = event.data.object;
+        const customerId = subscription.customer;
+        const status = subscription.status; // 'active', 'past_due', 'canceled', etc.
+        const currentPeriodEnd = subscription.current_period_end * 1000; // Unix → ms
+        try {
+            const snapshot = await admin.firestore()
+                .collection('health_professionals')
+                .where('stripeCustomerId', '==', customerId)
+                .limit(1)
+                .get();
+            if (!snapshot.empty) {
+                const planStatus = status === 'active' ? undefined : 'PAST_DUE';
+                const update: Record<string, any> = {
+                    subscriptionExpiry: currentPeriodEnd,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                };
+                if (planStatus) update.subscriptionPlan = planStatus;
+                await snapshot.docs[0].ref.update(update);
+                console.log(`🔄 Subscription updated for ${snapshot.docs[0].id}: status=${status}, expiry=${new Date(currentPeriodEnd).toISOString()}`);
+            }
+            res.json({ received: true });
+        } catch (error) {
+            console.error('Error handling subscription.updated:', error);
             res.status(500).send('Internal error');
         }
     }

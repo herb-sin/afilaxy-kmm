@@ -29,6 +29,10 @@ struct HomeView: View {
     @State private var statsListener: ListenerRegistration? = nil
     // Localização para o RiskWidget — nil enquanto não obtida ou sem permissão
     @State private var riskLocation: CLLocationCoordinate2D? = nil
+    #if DEBUG
+    @State private var showLogShareSheet = false
+    @State private var logShareItems: [URL] = []
+    #endif
 
     /// String "yyyy-MM-dd" para hoje — usada como chave de comparação do check-in.
     private var todayKey: String {
@@ -140,12 +144,32 @@ struct HomeView: View {
                     }
             }
         }
+        #if DEBUG
+        .sheet(isPresented: $showLogShareSheet) {
+            ActivityShareSheet(items: logShareItems) {
+                showLogShareSheet = false
+            }
+        }
+        #endif
     }
     
     // MARK: - Hero Section
 
     private var heroSection: some View {
+        #if DEBUG
+        WeeklyStatusCard(
+            weeklyCount: weeklyCount,
+            totalEmergencies: totalEmergencies,
+            onExportLogs: {
+                let urls = FileLogger.shared.getAllLogFileURLs()
+                guard !urls.isEmpty else { return }
+                logShareItems = urls
+                showLogShareSheet = true
+            }
+        )
+        #else
         WeeklyStatusCard(weeklyCount: weeklyCount, totalEmergencies: totalEmergencies)
+        #endif
     }
 
 

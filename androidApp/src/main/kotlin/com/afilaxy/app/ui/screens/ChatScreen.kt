@@ -38,13 +38,10 @@ import androidx.activity.compose.BackHandler
 import android.view.WindowManager
 import com.afilaxy.app.R
 import com.afilaxy.domain.model.ChatMessage
-import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 
 /**
@@ -70,33 +67,9 @@ fun ChatScreen(
     // possa ligar ao SAMU 192 em nome do usuário em crise.
     var showSamuCard by remember { mutableStateOf(false) }
 
-    val emergencyRepo: EmergencyRepository = koinInject()
-    val scope = rememberCoroutineScope()
-
-    // Participantes da emergência (para saber quem avaliar)
-    var reviewedId by remember { mutableStateOf<String?>(null) }
-    var isRequester by remember { mutableStateOf(false) }
-    LaunchedEffect(emergencyId) {
-        emergencyRepo.getEmergencyParticipants(emergencyId).onSuccess { (requesterId, helperId) ->
-            val currentUserId = state.currentUserId
-            reviewedId = if (currentUserId == requesterId) helperId else requesterId
-            isRequester = currentUserId == requesterId
-        }
-    }
-
-    // Observa o status da emergência DIRETAMENTE via EmergencyRepository (Firestore snapshot).
-    // Mesmo padrão do statusListener do iOS ChatView — funciona para os dois lados
-    // (requester e helper) sem depender do ViewModel, evitando a race condition que
-    // existia antes entre emergencyStatus e currentEmergency chegando juntos.
-    var resolvedByOther by remember { mutableStateOf(false) }
-    LaunchedEffect(emergencyId) {
-        emergencyRepo.observeEmergencyStatus(emergencyId).collect { status ->
-            if (status == "resolved" || status == "finished") {
-                resolvedByOther = true
-            }
-        }
-    }
-
+    val reviewedId = state.reviewedId
+    val isRequester = state.isRequester
+    val resolvedByOther = state.isResolvedByOther
     val isResolved = resolvedByOther
     val resolvedBannerText = when {
         resolvedByOther -> "✅ Emergência encerrada pela outra parte"
@@ -149,11 +122,9 @@ fun ChatScreen(
                     // Botão SAMU — só visível para o requester (quem está em crise)
                     if (!isResolved && isRequester && !samuCalled) {
                         TextButton(onClick = {
-                            scope.launch {
-                                emergencyRepo.updateSamuCalled(emergencyId)
-                                samuCalled = true
-                                showSamuCard = true  // abre cartão tela cheia
-                            }
+                            viewModel.onSamuCalled()
+                            samuCalled = true
+                            showSamuCard = true
                         }) {
                             Text("🚑 SAMU", color = MaterialTheme.colorScheme.error)
                         }
@@ -321,15 +292,10 @@ fun ChatScreen(
     }
 
     if (showRatingDialog) {
-        val rid = reviewedId
         RatingDialog(
             onSubmit = { rating, comment ->
                 showRatingDialog = false
-                if (rid != null) {
-                    scope.launch {
-                        emergencyRepo.submitReview(emergencyId, rid, rating, comment)
-                    }
-                }
+                viewModel.submitReview(rating, comment)
                 onNavigateBack()
             },
             onSkip = {

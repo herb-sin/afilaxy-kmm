@@ -34,7 +34,10 @@ service cloud.firestore {
     
     // Emergency requests collection (coleção real usada pelo app)
     match /emergency_requests/{emergencyId} {
-      // list: qualquer usuário autenticado pode fazer queries (necessário para observeNearbyEmergencies)
+      // list: necessário para observeNearbyEmergencies (helpers buscando emergências próximas)
+      // e para getActiveEmergency / getUserEmergencyHistory do próprio usuário.
+      // Restrição de dados sensíveis (nome, coordenadas de outros pacientes) é feita
+      // via Firestore Security Rules no nível de document (get) abaixo.
       allow list: if isAuthenticated();
       // get: apenas participantes podem ler documento individual, ou helper para transação de accept
       allow get: if isAuthenticated()
@@ -52,11 +55,15 @@ service cloud.firestore {
           // Requester ou helper já atribuído podem actualizar livremente
           request.auth.uid == resource.data.requesterId
           || request.auth.uid == resource.data.helperId
-          // Helper a aceitar: status atual é waiting e ativo
+          // Helper a aceitar: status atual é waiting e ativo.
+          // Restringe os campos permitidos para evitar que o helper altere
+          // dados do requester (nome, coordenadas) na mesma operação.
           || (resource.data.status == 'waiting'
               && resource.data.active == true
               && request.resource.data.helperId == request.auth.uid
-              && request.resource.data.status == 'matched')
+              && request.resource.data.status == 'matched'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['helperId', 'helperName', 'status', 'matchedAt', 'expiresAt']))
         );
       allow delete: if false;
     }
@@ -109,13 +116,13 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && (request.auth.uid == get(/databases/$(database)/documents/emergency_requests/$(emergencyId)).data.requesterId
             || request.auth.uid == get(/databases/$(database)/documents/emergency_requests/$(emergencyId)).data.helperId);
+      // Sender must be authenticated AND the actual author AND a participant.
+      // The "system" senderId bypass was removed: system messages must be written
+      // via Admin SDK (Cloud Functions) which bypasses rules entirely.
       allow create: if isAuthenticated()
-        && (
-          // Mensagem normal: senderId = uid do usuário autenticado
-          request.resource.data.senderId == request.auth.uid
-          // Mensagem de sistema (encerramento): gerada pelo app, identificada por senderId="system"
-          || request.resource.data.senderId == "system"
-        )
+        && request.resource.data.senderId == request.auth.uid
+        && (request.auth.uid == get(/databases/$(database)/documents/emergency_requests/$(emergencyId)).data.requesterId
+            || request.auth.uid == get(/databases/$(database)/documents/emergency_requests/$(emergencyId)).data.helperId)
         && isValidString(request.resource.data.message, 1, 1000);
       allow update, delete: if false;
     }

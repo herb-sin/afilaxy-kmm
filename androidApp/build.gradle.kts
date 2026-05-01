@@ -105,7 +105,9 @@ android {
     lint {
         disable.add("MissingTranslation")
         disable.add("ExtraTranslation")
-        abortOnError = false
+        abortOnError = true
+        // Suppress noisy warnings that aren't actionable yet, but keep security checks active
+        warning += "UnusedResources"
     }
     
     packaging {

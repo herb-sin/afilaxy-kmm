@@ -13,5 +13,8 @@ data class ChatState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val emergencyId: String = "",
-    val currentUserId: String? = null
+    val currentUserId: String? = null,
+    val reviewedId: String? = null,
+    val isRequester: Boolean = false,
+    val isResolvedByOther: Boolean = false
 )
