@@ -4,8 +4,7 @@ struct EducationView: View {
     @State private var selectedCategory: EducationCategory = .basics
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 LazyVStack(spacing: 20) {
                     // Welcome Card
                     HeroGradientCard {
@@ -48,9 +47,9 @@ struct EducationView: View {
                 .padding()
             }
             .background(Color.afiBackground)
-            .navigationTitle("Educação")
-            .navigationBarTitleDisplayMode(.large)
         }
+        .navigationTitle("Educação")
+        .navigationBarTitleDisplayMode(.large)
     }
     
     @ViewBuilder
