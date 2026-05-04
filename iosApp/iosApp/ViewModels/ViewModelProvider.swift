@@ -291,8 +291,8 @@ class RiskViewModelWrapper: ObservableObject {
     static func empty() -> RiskViewModelWrapper { RiskViewModelWrapper() }
     private init() { self.viewModel = nil }
 
-    func loadRiskScore(latitude: Double, longitude: Double) {
-        viewModel?.loadRiskScore(latitude: latitude, longitude: longitude)
+    func loadRiskScore(latitude: Double, longitude: Double, crises7d: Int32 = -1, crises30d: Int32 = -1) {
+        viewModel?.loadRiskScore(latitude: latitude, longitude: longitude, crises7d: crises7d, crises30d: crises30d)
     }
 
     func freeze() {
