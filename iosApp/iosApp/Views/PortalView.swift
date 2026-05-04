@@ -3,19 +3,15 @@ import shared
 
 struct PortalView: View {
     @EnvironmentObject var container: AppContainer
-    
+
     var body: some View {
         let isHealthProfessional = container.profile.state?.profile?.isHealthProfessional == true
-        
-        NavigationView {
-            if isHealthProfessional {
-                ProfessionalDashboardView()
-            } else {
-                ProfessionalListView()
-            }
+        // ContentView already wraps this in a NavigationStack — no NavigationView needed here.
+        if isHealthProfessional {
+            ProfessionalDashboardView()
+        } else {
+            ProfessionalListView()
         }
-        .navigationTitle("Portal")
-        .navigationBarTitleDisplayMode(.large)
     }
 }
 

@@ -2,7 +2,7 @@ package com.afilaxy.di
 
 import com.afilaxy.data.repository.*
 import com.afilaxy.domain.repository.*
-import com.afilaxy.domain.usecase.*
+import com.afilaxy.domain.usecase.CreateEmergencyUseCase
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.chat.ChatViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
@@ -33,7 +33,7 @@ fun sharedModule(): Module = module {
     single { Firebase.firestore }
     
     // Repositories
-    single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
+    single<AuthRepository> { AuthRepositoryImpl(get(), get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get()) }
     single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
@@ -54,8 +54,6 @@ fun sharedModule(): Module = module {
     
     // Use Cases
     factory { CreateEmergencyUseCase(get()) }
-    factory { FindHelpersUseCase(get()) }
-    factory { SendChatMessageUseCase(get()) }
 
     // ViewModels
     factory { AuthViewModel(get()) }

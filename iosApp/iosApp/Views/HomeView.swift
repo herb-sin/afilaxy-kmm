@@ -32,6 +32,7 @@ struct HomeView: View {
     #if DEBUG
     @State private var showLogShareSheet = false
     @State private var logShareItems: [URL] = []
+    @State private var showClearLogsAlert = false
     #endif
 
     /// String "yyyy-MM-dd" para hoje — usada como chave de comparação do check-in.
@@ -165,8 +166,17 @@ struct HomeView: View {
                 guard !urls.isEmpty else { return }
                 logShareItems = urls
                 showLogShareSheet = true
+            },
+            onClearLogs: {
+                showClearLogsAlert = true
             }
         )
+        .alert("Limpar logs?", isPresented: $showClearLogsAlert) {
+            Button("Limpar", role: .destructive) { FileLogger.shared.clearAllLogs() }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Todos os arquivos de log serão apagados.")
+        }
         #else
         WeeklyStatusCard(weeklyCount: weeklyCount, totalEmergencies: totalEmergencies)
         #endif
@@ -368,11 +378,13 @@ struct HomeView: View {
                 
                 ForEach(container.pendingIncomingEmergencies, id: \.id) { emergency in
                     PendingEmergencyRow(emergency: emergency) {
-                        // Accept emergency
-                        container.dismissIncomingEmergency(id: emergency.id)
-                        // TODO: Navigate to emergency response
+                        // Navigate to emergency response — same path as FCM notification
+                        NotificationCenter.default.post(
+                            name: .init("AfilaxyOpenEmergency"),
+                            object: nil,
+                            userInfo: ["emergencyId": emergency.id]
+                        )
                     } onDismiss: {
-                        // Dismiss emergency
                         container.dismissIncomingEmergency(id: emergency.id)
                     }
                 }
@@ -694,7 +706,7 @@ struct NpsSheetView: View {
     @State private var selected = -1
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 28) {
                 VStack(spacing: 8) {
                     Text("Você recomendaria o Afilaxy?")

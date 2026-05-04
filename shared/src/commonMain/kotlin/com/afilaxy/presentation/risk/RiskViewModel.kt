@@ -29,13 +29,18 @@ class RiskViewModel(
      * Calcula o score de risco para as coordenadas fornecidas.
      * Chamado pela HomeScreen após obter a localização do usuário.
      */
-    fun loadRiskScore(latitude: Double, longitude: Double) {
+    fun loadRiskScore(
+        latitude: Double,
+        longitude: Double,
+        crises7d: Int = -1,
+        crises30d: Int = -1
+    ) {
         val userId = authRepository.getCurrentUserId() ?: return
 
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            environmentalRepository.calculateRiskScore(userId, latitude, longitude)
+            environmentalRepository.calculateRiskScore(userId, latitude, longitude, crises7d, crises30d)
                 .onSuccess { score ->
                     _state.update { it.copy(riskScore = score, isLoading = false) }
                 }

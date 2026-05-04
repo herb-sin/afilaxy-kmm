@@ -58,8 +58,7 @@ struct EmergencyView: View {
                     _ = await locationManager.fetchCurrentLocation()
                     await MainActor.run {
                         FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "async fetch done — calling onCreateEmergency")
-                        // Create emergency using direct method call
-                        // container.emergency.vm.onCreateEmergency()
+                        container.emergency.vm?.onCreateEmergency()
                     }
                 }
             }

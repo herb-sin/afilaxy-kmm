@@ -52,7 +52,8 @@ class LoginViewModel(
             
             authRepository.login(currentState.email, currentState.password)
                 .onSuccess { user ->
-                    _state.update { 
+                    authRepository.createSession()
+                    _state.update {
                         it.copy(
                             isLoading = false,
                             isLoggedIn = true,

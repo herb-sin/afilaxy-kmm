@@ -9,11 +9,12 @@ struct WeeklyStatusCard: View {
     // -1 enquanto carrega (exibe skeleton junto com weeklyCount=-1).
     var totalEmergencies: Int = -1
     var onExportLogs: (() -> Void)? = nil
+    var onClearLogs: (() -> Void)? = nil
 
     private var config: StatusConfig { StatusConfig.from(count: weeklyCount) }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             // Background gradient
             LinearGradient(
                 colors: config.gradientColors,
@@ -111,19 +112,30 @@ struct WeeklyStatusCard: View {
         }
         .frame(maxWidth: .infinity)
         .shadow(color: config.shadowColor, radius: 12, x: 0, y: 6)
-
-        // Botão de exportação de logs — discreto, só em debug, mesmo padrão do Android
-        #if DEBUG
-        if let onExportLogs {
-            Button(action: onExportLogs) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.55))
-                    .frame(width: 32, height: 32)
+        .overlay(alignment: .topTrailing) {
+            // Botões de log — discretos no canto superior direito, só em debug
+            #if DEBUG
+            HStack(spacing: 2) {
+                if let onClearLogs {
+                    Button(action: onClearLogs) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.45))
+                            .frame(width: 28, height: 28)
+                    }
+                }
+                if let onExportLogs {
+                    Button(action: onExportLogs) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.55))
+                            .frame(width: 28, height: 28)
+                    }
+                }
             }
-            .padding(6)
+            .padding(8)
+            #endif
         }
-        #endif
     }
 }
 

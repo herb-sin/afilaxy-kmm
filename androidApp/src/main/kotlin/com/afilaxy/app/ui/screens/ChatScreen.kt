@@ -173,7 +173,7 @@ fun ChatScreen(
                     ) {
                         items(
                             items = state.messages,
-                            key = { it.timestamp }
+                            key = { it.id }
                         ) { message ->
                             MessageBubble(
                                 message = message,

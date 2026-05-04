@@ -269,6 +269,9 @@ class AppContainer: ObservableObject {
         // 3. Agora é seguro encerrar cada ViewModel (seus Combine cancellables já foram
         //    cancelados em passo 1; os freezes abaixo também têm seus próprios cancels)
         _emergency?.freezeSwift()
+        // Clear session_id from NSUserDefaults so the KMM session guard doesn't
+        // misfire on next login (multiplatform-settings uses standard UserDefaults).
+        UserDefaults.standard.removeObject(forKey: "session_id")
         _auth?.signOutSwift()
         _history?.freeze()
         _profile?.freeze()

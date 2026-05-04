@@ -53,6 +53,8 @@ struct ContentView: View {
     @AppStorage("checkin_morning_done_date") private var morningDoneDate = ""
     @AppStorage("checkin_evening_done_date") private var eveningDoneDate = ""
     
+    @State private var showSessionInvalidatedAlert = false
+
     // Emergency handling
     @State private var emergencyRouteActive = false
     @State private var chatNavigatedId: String? = nil
@@ -176,10 +178,24 @@ struct ContentView: View {
             .onReceive(container.auth.$state) { authState in
                 // Detecta logout — performLogout() sinaliza via Firebase → Kotlin → StateFlow → polling
                 if authState?.isAuthenticated == false {
-                    isLoggedIn = false
-                    resolvedEmergencyIds = []  // limpa na saída de sessão
+                    if authState?.isSessionInvalidated == true {
+                        // Outro dispositivo fez login — mostrar alerta antes de ir para o login
+                        showSessionInvalidatedAlert = true
+                    } else {
+                        isLoggedIn = false
+                    }
+                    resolvedEmergencyIds = []
                     CheckInNotificationScheduler.shared.cancelAll()
                 }
+            }
+            .alert("Sessão encerrada", isPresented: $showSessionInvalidatedAlert) {
+                Button("OK") {
+                    showSessionInvalidatedAlert = false
+                    container.auth.vm?.clearSessionInvalidated()
+                    isLoggedIn = false
+                }
+            } message: {
+                Text("Sua conta foi acessada em outro dispositivo. Por segurança, você foi desconectado.")
             }
             .onReceive(NotificationCenter.default.publisher(for: .init("AfilaxyOpenCheckIn"))) { notification in
                 let typeStr = notification.userInfo?["checkInType"] as? String ?? "MORNING"

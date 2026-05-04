@@ -82,6 +82,13 @@ struct ProfileView: View {
         }
         .navigationTitle("Meu Perfil")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // ProfileViewModel.init() runs before Firebase Auth restores the session on iOS.
+            // Force a reload here — auth is always ready when a tab's view appears.
+            if container.profile.state?.profile == nil {
+                container.profile.vm?.loadProfile()
+            }
+        }
         .sheet(isPresented: $showEditSheet, onDismiss: {
             // Reseta flag ao fechar — garante que re-abrir o sheet
             // sempre carrega os dados mais recentes do perfil salvo.
@@ -333,7 +340,7 @@ struct EditProfileSheet: View {
     let onSave: () -> Void
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section("Informações Pessoais") {
                     TextField("Nome completo", text: $name)
