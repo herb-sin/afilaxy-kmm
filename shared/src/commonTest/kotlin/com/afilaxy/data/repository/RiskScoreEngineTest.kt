@@ -97,14 +97,14 @@ class RiskScoreEngineTest {
 
     @Test
     fun `paciente com 1 crise no mes em ambiente bom ainda e LOW`() {
-        // 1 crise em 30d = +5 pts; sem outros fatores → score = 5
+        // Nova escala: crises30d=1 → 3 pts; sem outros fatores → score = 3 → LOW
         val result = RiskScoreEngine.calculate(
             env = envBom(),
             crises30d = 1, crises7d = 0, samuCalledCount = 0,
             monthOfYear = 5
         )
         assertEquals("LOW", result.level)
-        assertEquals(5, result.score)
+        assertEquals(3, result.score)
     }
 
     @Test
@@ -365,32 +365,32 @@ class RiskScoreEngineTest {
     @Test
     fun `crises7d cap e aplicado em 30 pontos maximo`() {
         // crises7d=10 → 10*15 = 150 → cap em 30
+        // Nova escala não-linear: crises7d >= 5 → sempre 55 pts
         val resultado10crises = RiskScoreEngine.calculate(
             env = null, crises30d = 0, crises7d = 10,
             samuCalledCount = 0, monthOfYear = 5
         )
-        val resultado2crises = RiskScoreEngine.calculate(
-            env = null, crises30d = 0, crises7d = 2,
+        val resultado5crises = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 5,
             samuCalledCount = 0, monthOfYear = 5
         )
-        // Ambos devem ter o mesmo score de crises7d (30)
-        assertEquals(resultado10crises.score, resultado2crises.score,
-            "Cap de crises7d deve igualar scores. 10crises=${resultado10crises.score}, 2crises=${resultado2crises.score}")
+        assertEquals(resultado10crises.score, resultado5crises.score,
+            "crises7d >= 5 devem ter o mesmo score. 10=${resultado10crises.score}, 5=${resultado5crises.score}")
     }
 
     @Test
-    fun `crises30d cap e aplicado em 20 pontos maximo`() {
-        // crises30d=10 → 10*5 = 50 → cap em 20
-        val resultado10 = RiskScoreEngine.calculate(
-            env = null, crises30d = 10, crises7d = 0,
+    fun `crises30d escala nao linear com teto em 8 crises por mes`() {
+        // Nova escala: crises30d >= 8 → sempre 25 pts (mesmo score)
+        val resultado20 = RiskScoreEngine.calculate(
+            env = null, crises30d = 20, crises7d = 0,
             samuCalledCount = 0, monthOfYear = 5
         )
-        val resultado4 = RiskScoreEngine.calculate(
-            env = null, crises30d = 4, crises7d = 0,
+        val resultado8 = RiskScoreEngine.calculate(
+            env = null, crises30d = 8, crises7d = 0,
             samuCalledCount = 0, monthOfYear = 5
         )
-        assertEquals(resultado10.score, resultado4.score,
-            "Cap de crises30d deve igualar scores. 10=${resultado10.score}, 4=${resultado4.score}")
+        assertEquals(resultado20.score, resultado8.score,
+            "crises30d >= 8 devem ter o mesmo score. 20=${resultado20.score}, 8=${resultado8.score}")
     }
 
     @Test
