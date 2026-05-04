@@ -5,49 +5,48 @@ struct EducationView: View {
     
     var body: some View {
         ScrollView {
-                LazyVStack(spacing: 20) {
-                    // Welcome Card
-                    HeroGradientCard {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "graduationcap.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                                
-                                Text("Educação sobre Asma")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            }
-                            
-                            Text("Conhecimento é poder! Entenda melhor sua condição e aprenda a viver bem com asma.")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.9))
+            LazyVStack(spacing: 20) {
+                // Welcome Card
+                HeroGradientCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "graduationcap.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
+
+                            Text("Educação sobre Asma")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
                         }
+
+                        Text("Conhecimento é poder! Entenda melhor sua condição e aprenda a viver bem com asma.")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.9))
                     }
-                    
-                    // Category Selector
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(EducationCategory.allCases, id: \.self) { category in
-                                CategoryChip(
-                                    category: category,
-                                    isSelected: selectedCategory == category
-                                ) {
-                                    selectedCategory = category
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Content based on selected category
-                    contentForCategory(selectedCategory)
                 }
-                .padding()
+
+                // Category Selector
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(EducationCategory.allCases, id: \.self) { category in
+                            CategoryChip(
+                                category: category,
+                                isSelected: selectedCategory == category
+                            ) {
+                                selectedCategory = category
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
+                // Content based on selected category
+                contentForCategory(selectedCategory)
             }
-            .background(Color.afiBackground)
+            .padding()
         }
+        .background(Color.afiBackground)
         .navigationTitle("Educação")
         .navigationBarTitleDisplayMode(.large)
     }
