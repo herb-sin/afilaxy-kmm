@@ -18,12 +18,14 @@ import kotlinx.datetime.toLocalDateTime
 
 data class CheckInState(
     val type: CheckInType = CheckInType.MORNING,
-    val rescueInhalerName: String? = null,  // null = usa nome genérico
+    val rescueInhalerName: String? = null,
+    val asmaType: String? = null,
+    val asmaTypeSeverity: String? = null,
     val isLoading: Boolean = false,
     val isSubmitted: Boolean = false,
     val alreadyDoneToday: Boolean = false,
     val error: String? = null,
-    // Contexto ambiental para enricher o dado
+    // Contexto ambiental e clínico para enriquecer o dado para ML
     val riskScore: Int? = null,
     val aqi: Int? = null,
     val temperature: Float? = null,
@@ -60,9 +62,18 @@ class CheckInViewModel(
                 return@launch
             }
 
-            // Busca nome da bombinha de resgate
+            // Busca nome da bombinha e tipo de asma do perfil médico (contexto clínico para ML)
             val inhalerName = checkInRepository.getRescueInhalerName(userId).getOrNull()
-            _state.update { it.copy(isLoading = false, rescueInhalerName = inhalerName) }
+            val (asmaType, asmaTypeSeverity) = checkInRepository.getAsmaTypeInfo(userId).getOrNull()
+                ?: Pair(null, null)
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    rescueInhalerName = inhalerName,
+                    asmaType = asmaType,
+                    asmaTypeSeverity = asmaTypeSeverity
+                )
+            }
         }
     }
 
@@ -86,7 +97,9 @@ class CheckInViewModel(
                 humidity = _state.value.humidity,
                 hourOfDay = now.hour,
                 dayOfWeek = now.dayOfWeek.ordinal + 1,
-                monthOfYear = now.monthNumber
+                monthOfYear = now.monthNumber,
+                asmaType = _state.value.asmaType,
+                asmaTypeSeverity = _state.value.asmaTypeSeverity
             )
 
             checkInRepository.saveCheckIn(response)
@@ -124,7 +137,9 @@ class CheckInViewModel(
                 humidity = _state.value.humidity,
                 hourOfDay = now.hour,
                 dayOfWeek = now.dayOfWeek.ordinal + 1,
-                monthOfYear = now.monthNumber
+                monthOfYear = now.monthNumber,
+                asmaType = _state.value.asmaType,
+                asmaTypeSeverity = _state.value.asmaTypeSeverity
             )
 
             checkInRepository.saveCheckIn(response)
