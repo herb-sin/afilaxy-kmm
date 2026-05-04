@@ -9,9 +9,12 @@ import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.util.haversineDistance
 import dev.gitlive.firebase.auth.FirebaseAuth
-import kotlin.math.round
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.GeoPoint
+import kotlin.math.round
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -107,8 +110,12 @@ class EmergencyRepositoryImpl(
             }
 
             // Grava coordenadas obfuscadas no Firestore — sem email (PII desnecessária para o mapa)
+            val helperName = auth.currentUser?.displayName
+                ?: auth.currentUser?.email?.substringBefore("@")
+                ?: ""
             val helperData = mapOf(
                 "id" to userId,
+                "name" to helperName,
                 "location" to GeoPoint(obfuscatedLat, obfuscatedLon),
                 "latitude" to obfuscatedLat,
                 "longitude" to obfuscatedLon,
@@ -336,6 +343,35 @@ class EmergencyRepositoryImpl(
             }
 
             firestore.collection("emergency_requests").document(emergencyId).update(updates)
+
+            // Post system message for parity with iOS resolve path — both parties see closure in chat
+            if (status == EmergencyStatus.RESOLVED) {
+                @OptIn(ExperimentalUuidApi::class)
+                val msgId = Uuid.random().toString()
+                val resolverName = try {
+                    firestore.collection("users").document(userId).get().get<String?>("name")
+                        ?: auth.currentUser?.displayName
+                        ?: "Usuário"
+                } catch (e: Exception) { auth.currentUser?.displayName ?: "Usuário" }
+                try {
+                    firestore.collection("emergency_chats")
+                        .document(emergencyId)
+                        .collection("messages")
+                        .document(msgId)
+                        .set(mapOf(
+                            "id" to msgId,
+                            "emergencyId" to emergencyId,
+                            "senderId" to userId,
+                            "senderName" to resolverName,
+                            "message" to "✅ $resolverName encerrou a emergência.",
+                            "timestamp" to FieldValue.serverTimestamp,
+                            "isFromHelper" to (userId == helperId)
+                        ))
+                } catch (e: Exception) {
+                    com.afilaxy.util.Logger.e("EmergencyRepo", "Falha ao enviar mensagem de encerramento: ${e.message}", e)
+                }
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -578,6 +614,7 @@ class EmergencyRepositoryImpl(
             firestore.collection("nps_responses").add(mapOf(
                 "userId" to userId,
                 "score" to score,
+                "platform" to com.afilaxy.util.platformName(),
                 "timestamp" to getCurrentTimeMillis()
             ))
             Result.success(Unit)

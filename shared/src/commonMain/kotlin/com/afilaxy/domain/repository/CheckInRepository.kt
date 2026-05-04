@@ -13,6 +13,9 @@ interface CheckInRepository {
     /** Retorna o nome do broncodilatador de resgate do perfil médico do usuário. */
     suspend fun getRescueInhalerName(userId: String): Result<String?>
 
+    /** Retorna (asmaType, asmaTypeSeverity) do perfil médico para enriquecer check-ins com contexto clínico. */
+    suspend fun getAsmaTypeInfo(userId: String): Result<Pair<String?, String?>>
+
     /** Retorna check-ins dos últimos [days] dias para alimentar o motor de risco. */
     suspend fun getRecentCheckIns(userId: String, days: Int = 7): Result<List<CheckInResponse>>
 }

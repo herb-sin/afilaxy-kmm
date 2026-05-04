@@ -110,6 +110,18 @@ class CheckInRepositoryImpl(
         }
     }
 
+    override suspend fun getAsmaTypeInfo(userId: String): Result<Pair<String?, String?>> {
+        return try {
+            val doc = firestore.collection("medical_profiles").document(userId).get()
+            if (!doc.exists) return Result.success(Pair(null, null))
+            val asmaType = doc.get<String?>("asmaType")
+            val severity = doc.get<String?>("severity")
+            Result.success(Pair(asmaType, severity))
+        } catch (e: Exception) {
+            Result.success(Pair(null, null))
+        }
+    }
+
     override suspend fun getRecentCheckIns(
         userId: String,
         days: Int

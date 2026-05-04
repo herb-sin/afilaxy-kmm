@@ -135,23 +135,29 @@ struct ProfileView: View {
                 // Dados clínicos
                 VStack(spacing: 12) {
                     InfoGridItem(title: "Tipo de Asma", value: profile.healthData?.conditions.first ?? "Não informado", icon: "lungs.fill", accentColor: .afiPrimary)
-                    // Medicação
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Medicação Atual").font(.subheadline).fontWeight(.semibold).foregroundColor(.afiPrimary)
-                            Spacer()
-                            Image(systemName: "pills.fill").foregroundColor(.afiPrimary)
-                        }
-                        HStack(spacing: 8) {
-                            MedicationTypeCard(type: "Controle", count: profile.healthData?.medications.filter { $0.contains("controle") || $0.contains("manutencao") }.count ?? 0)
-                            MedicationTypeCard(type: "Resgate",  count: profile.healthData?.medications.filter { $0.contains("resgate")  || $0.contains("bronco")     }.count ?? 0)
-                            MedicationTypeCard(type: "Outros",   count: max(0, (profile.healthData?.medications.count ?? 0) - 2))
-                        }
+                    // Medicação Atual — texto literal (sem categorização por keyword)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Medicação Atual")
+                            .font(.subheadline).fontWeight(.semibold).foregroundColor(.afiPrimary)
+                        let medsText = profile.healthData?.medications
+                            .filter { !$0.isEmpty }
+                            .joined(separator: ", ")
+                        Text(medsText?.isEmpty == false ? medsText! : "Não informado")
+                            .font(.body)
+                            .foregroundColor(medsText?.isEmpty == false ? .primary : .secondary)
                     }
                     .padding(8).background(Color(UIColor.secondarySystemBackground)).cornerRadius(10)
                     // Contato + Protocolo lado a lado
                     HStack(spacing: 12) {
-                        InfoGridItem(title: "Contato de Emergência", value: profile.emergencyContact?.name ?? "Não informado", icon: "phone.fill", accentColor: .afiError)
+                        let contactValue: String = {
+                            let name = profile.emergencyContact?.name ?? ""
+                            let phone = profile.emergencyContact?.phone ?? ""
+                            if !name.isEmpty && !phone.isEmpty { return "\(name)\n\(phone)" }
+                            if !name.isEmpty { return name }
+                            if !phone.isEmpty { return phone }
+                            return "Não informado"
+                        }()
+                        InfoGridItem(title: "Contato de Emergência", value: contactValue, icon: "phone.fill", accentColor: .afiError)
                         NavigationLink(destination: HelpView()) {
                             InfoGridItem(title: "Protocolo de Crise", value: "Ver passos", icon: "list.clipboard.fill", accentColor: .afiWarning)
                         }.buttonStyle(.plain)
@@ -232,36 +238,6 @@ struct ProfileView: View {
 
     private func split(_ s: String) -> [String] {
         s.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-    }
-}
-
-struct MedicationTypeCard: View {
-    let type: String
-    let count: Int
-    
-    private var color: Color {
-        switch type {
-        case "Controle": return .afiSuccess
-        case "Resgate": return .afiError
-        default: return .afiSecondary
-        }
-    }
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            Text("\(count)")
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundColor(color)
-            
-            Text(type)
-                .font(.caption2)
-                .foregroundColor(.afiTextSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(color.opacity(0.1))
-        .cornerRadius(8)
     }
 }
 

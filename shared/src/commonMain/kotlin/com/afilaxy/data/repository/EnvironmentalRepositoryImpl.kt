@@ -190,16 +190,40 @@ class EnvironmentalRepositoryImpl(
             val month = Clock.System.now()
                 .toLocalDateTime(TimeZone.currentSystemDefault()).monthNumber
 
-            Result.success(
-                RiskScoreEngine.calculate(
-                    env = env,
-                    crises30d = crises30d,
-                    crises7d = crises7d,
-                    samuCalledCount = samuCalledCount,
-                    monthOfYear = month,
-                    recentCheckIns = recentCheckIns
-                )
+            val riskScore = RiskScoreEngine.calculate(
+                env = env,
+                crises30d = crises30d,
+                crises7d = crises7d,
+                samuCalledCount = samuCalledCount,
+                monthOfYear = month,
+                recentCheckIns = recentCheckIns
             )
+
+            // Persist risk score snapshot for trend analysis and future ML training
+            try {
+                val today = Clock.System.now()
+                    .toLocalDateTime(TimeZone.currentSystemDefault()).date
+                firestore.collection("risk_scores")
+                    .document(userId)
+                    .collection("snapshots")
+                    .document(today.toString())
+                    .set(mapOf(
+                        "userId" to userId,
+                        "date" to today.toString(),
+                        "score" to riskScore.score,
+                        "level" to riskScore.level,
+                        "crises7d" to crises7d,
+                        "crises30d" to crises30d,
+                        "aqi" to (env?.aqi ?: 0),
+                        "temperature" to (env?.temperatureCelsius ?: 0f),
+                        "humidity" to (env?.humidity ?: 0f),
+                        "timestamp" to getCurrentTimeMillis()
+                    ))
+            } catch (e: Exception) {
+                com.afilaxy.util.Logger.e("EnvironmentalRepo", "Falha ao persistir risk score: ${e.message}", e)
+            }
+
+            Result.success(riskScore)
         } catch (e: Exception) {
             Result.failure(e)
         }

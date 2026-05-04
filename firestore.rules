@@ -214,6 +214,11 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions (Admin SDK) can write
     }
 
+    // Risk score snapshots — written by app (one per user per day), read by owner only
+    match /risk_scores/{userId}/snapshots/{date} {
+      allow read, write: if isOwner(userId);
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
