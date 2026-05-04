@@ -18,12 +18,13 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId) 
+      allow create: if isOwner(userId)
         && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.email, 5, 100);
       allow update: if isOwner(userId)
         && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role);
-      allow delete: if isOwner(userId);
+      // Account deletion must go through a Cloud Function (cascade cleanup of emergencies, FCM tokens etc.)
+      allow delete: if false;
     }
     
     // Public helper profiles (name only) for nearby search
@@ -34,16 +35,16 @@ service cloud.firestore {
     
     // Emergency requests collection (coleção real usada pelo app)
     match /emergency_requests/{emergencyId} {
-      // list: necessário para observeNearbyEmergencies (helpers buscando emergências próximas)
-      // e para getActiveEmergency / getUserEmergencyHistory do próprio usuário.
-      // Restrição de dados sensíveis (nome, coordenadas de outros pacientes) é feita
-      // via Firestore Security Rules no nível de document (get) abaixo.
+      // list: authenticated users can query — clients must include a where() clause on their
+      // own uid. Firestore cannot enforce per-row filtering on list, so app-level queries
+      // must always filter by requesterId or helperId == request.auth.uid.
       allow list: if isAuthenticated();
-      // get: apenas participantes podem ler documento individual, ou helper para transação de accept
+      // get: only participants, or any authenticated user for active emergencies (needed for
+      // the atomic accept transaction). Active emergencies are public within the app by design
+      // (helpers must read them to accept). Scope is reduced to authenticated users only.
       allow get: if isAuthenticated()
         && (request.auth.uid == resource.data.requesterId
             || request.auth.uid == resource.data.helperId
-            // Helper pode ler qualquer emergência ativa para transação atômica de accept
             || resource.data.active == true);
       allow create: if isAuthenticated()
         && request.resource.data.requesterId == request.auth.uid

@@ -7,6 +7,7 @@ import com.afilaxy.domain.repository.ChatRepository
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,12 +50,19 @@ class ChatViewModel(
 
     private fun loadParticipants() {
         viewModelScope.coroutineScope.launch {
-            emergencyRepository.getEmergencyParticipants(emergencyId).onSuccess { (requesterId, helperId) ->
-                val currentUserId = _state.value.currentUserId
-                val isRequester = currentUserId == requesterId
-                // Determine who to review: the other party
-                val reviewedId = if (isRequester) helperId else requesterId
-                _state.update { it.copy(reviewedId = reviewedId, isRequester = isRequester) }
+            // Retry up to 5 times with 1s delay: helperId may be null immediately after accept
+            // due to Firestore propagation lag between the runTransaction write and first read.
+            repeat(5) { attempt ->
+                emergencyRepository.getEmergencyParticipants(emergencyId).onSuccess { (requesterId, helperId) ->
+                    val currentUserId = _state.value.currentUserId
+                    val isRequester = currentUserId == requesterId
+                    val reviewedId = if (isRequester) helperId else requesterId
+                    if (requesterId != null && (helperId != null || attempt == 4)) {
+                        _state.update { it.copy(reviewedId = reviewedId, isRequester = isRequester) }
+                        return@launch
+                    }
+                }
+                if (attempt < 4) delay(1_000L)
             }
         }
     }

@@ -3,19 +3,26 @@ package com.afilaxy.data.repository
 import com.afilaxy.domain.model.User
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.AuthRepository
+import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.util.Logger
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Implementação do AuthRepository usando Firebase Authentication
  * Compatível com KMM (comum para Android e iOS)
  */
+private const val PREF_SESSION_ID = "session_id"
+
 class AuthRepositoryImpl(
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val preferences: PreferencesRepository
 ) : AuthRepository {
     
     override suspend fun login(email: String, password: String): Result<User> {
@@ -92,6 +99,7 @@ class AuthRepositoryImpl(
     }
     
     override suspend fun logout() {
+        preferences.putString(PREF_SESSION_ID, "")
         try {
             auth.signOut()
         } catch (e: Exception) {
@@ -188,6 +196,33 @@ class AuthRepositoryImpl(
         } catch (e: Exception) {
             Logger.e("AuthRepository", "Falha ao recarregar usuário: ${e.message}", e)
         }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override suspend fun createSession() {
+        val userId = auth.currentUser?.uid ?: return
+        val sessionId = Uuid.random().toString()
+        preferences.putString(PREF_SESSION_ID, sessionId)
+        try {
+            firestore.collection("users").document(userId)
+                .update(mapOf("sessionId" to sessionId))
+        } catch (e: Exception) {
+            Logger.e("AuthRepository", "Falha ao registrar sessão uid=$userId: ${e.message}", e)
+        }
+    }
+
+    override fun observeSessionInvalidation(): Flow<Boolean> {
+        val userId = auth.currentUser?.uid ?: return flowOf(false)
+        val localSessionId = preferences.getString(PREF_SESSION_ID, null)
+        if (localSessionId.isNullOrBlank()) return flowOf(false)
+
+        return firestore.collection("users").document(userId).snapshots
+            .map { snapshot ->
+                if (!snapshot.exists) return@map false
+                val remoteSessionId = snapshot.get<String?>("sessionId")
+                // Emite true apenas quando outro dispositivo sobrescreveu o sessionId
+                !remoteSessionId.isNullOrBlank() && remoteSessionId != localSessionId
+            }
     }
 
     /**

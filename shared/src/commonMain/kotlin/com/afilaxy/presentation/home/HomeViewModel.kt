@@ -7,6 +7,7 @@ import com.rickclephas.kmm.viewmodel.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class HomeState(
@@ -24,19 +25,19 @@ class HomeViewModel(
 
     fun requestHelp() {
         viewModelScope.coroutineScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val location = locationRepository.getCurrentLocation()
                 if (location != null) {
                     emergencyRepository.createEmergency(location.latitude, location.longitude)
                         .onFailure { e ->
-                            _state.value = _state.value.copy(isLoading = false, error = e.message)
+                            _state.update { it.copy(isLoading = false, error = e.message) }
                             return@launch
                         }
                 }
-                _state.value = _state.value.copy(isLoading = false)
+                _state.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
-                _state.value = _state.value.copy(isLoading = false, error = e.message)
+                _state.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }

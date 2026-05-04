@@ -2,7 +2,9 @@ package com.afilaxy.data.repository
 
 import com.afilaxy.domain.model.ChatMessage
 import com.afilaxy.domain.repository.ChatRepository
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -18,10 +20,9 @@ class ChatRepositoryImpl(
                 "senderId" to message.senderId,
                 "senderName" to message.senderName,
                 "message" to message.message,
-                // Double garante tipo Firestore Number — mesmo tipo que o iOS grava.
-                // Kotlin Long pode ser serializado pelo gitlive SDK como Timestamp em alguns
-                // contextos, causando agrupamento por plataforma na query orderBy("timestamp").
-                "timestamp" to message.timestamp.toDouble(),
+                // Server timestamp — set by Firestore servers, immune to device clock skew
+                // between iOS and Android devices. Eliminates cross-platform message ordering issues.
+                "timestamp" to FieldValue.serverTimestamp,
                 "isFromHelper" to message.isFromHelper
             )
             
@@ -50,10 +51,18 @@ class ChatRepositoryImpl(
                 com.afilaxy.util.Logger.d("ChatRepository", "snapshot docs=${snapshot.documents.size}")
                 snapshot.documents.mapNotNull { doc ->
                     try {
-                        // Try Double first (Android stores as Double, iOS native may store as Timestamp).
-                        // Firestore KMM serialises both Number and Timestamp as Double when using get<Double>.
-                        val ts = try { doc.get<Double>("timestamp").toLong() }
-                            catch (e: Exception) { doc.get<Long?>("timestamp") ?: 0L }
+                        val ts: Long = try {
+                            // New format: server timestamp → Firestore Timestamp type
+                            val t = doc.get<Timestamp>("timestamp")
+                            t.seconds * 1000L + t.nanoseconds / 1_000_000L
+                        } catch (e1: Exception) {
+                            try {
+                                // Legacy: stored as Double (old messages before server timestamp migration)
+                                doc.get<Double>("timestamp").toLong()
+                            } catch (e2: Exception) {
+                                doc.get<Long?>("timestamp") ?: 0L
+                            }
+                        }
                         com.afilaxy.util.Logger.d("ChatRepository", "doc=${doc.id} ts=$ts")
                         ChatMessage(
                             id = doc.get("id") as? String ?: doc.id,

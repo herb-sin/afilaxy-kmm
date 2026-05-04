@@ -143,28 +143,43 @@ class EnvironmentalRepositoryImpl(
     override suspend fun calculateRiskScore(
         userId: String,
         latitude: Double,
-        longitude: Double
+        longitude: Double,
+        crises7dOverride: Int,
+        crises30dOverride: Int
     ): Result<RiskScore> {
         return try {
             val env = getEnvironmentalData(latitude, longitude).getOrNull()
 
-            // Histórico de crises dos últimos 30 dias (emergências registradas)
-            val thirtyDaysAgo = getCurrentTimeMillis() - 30L * 24 * 3600 * 1000
-            val sevenDaysAgo = getCurrentTimeMillis() - 7L * 24 * 3600 * 1000
+            // Use caller-provided counts when available (from NavGraph via native SDK — always correct).
+            // Only fall back to internal Firestore query if not provided (e.g., iOS, tests).
+            val crises7d: Int
+            val crises30d: Int
+            if (crises7dOverride >= 0 && crises30dOverride >= 0) {
+                crises7d = crises7dOverride
+                crises30d = crises30dOverride.coerceAtMost(50)
+            } else {
+                // Fallback: read user_stats via dev.gitlive (may have type serialization issues)
+                val userStatsDoc = try { firestore.collection("user_stats").document(userId).get() }
+                    catch (e: Exception) { null }
+                val total = userStatsDoc?.let {
+                    try { (it.get<Double?>("totalEmergencies") ?: it.get<Long?>("totalEmergencies")?.toDouble())?.toInt() }
+                    catch (e: Exception) { null }
+                } ?: 0
+                @Suppress("UNCHECKED_CAST")
+                val weeklyMap = try { userStatsDoc?.get<Any?>("weeklyCount") as? Map<String, Any> }
+                    catch (e: Exception) { null }
+                crises30d = total.coerceAtMost(50)
+                crises7d = weeklyMap?.values?.maxOfOrNull { v ->
+                    when (v) { is Long -> v.toInt(); is Double -> v.toInt(); is Number -> v.toInt(); else -> 0 }
+                } ?: 0
+            }
 
-            val history = try {
+            // samuCalled: query emergency_requests without timestamp filter
+            val samuCalledCount = try {
                 firestore.collection("emergency_requests")
-                    .where { ("requesterId" equalTo userId) and ("timestamp" greaterThanOrEqualTo thirtyDaysAgo) }
-                    .get().documents
-            } catch (e: Exception) { emptyList() }
-
-            val crises30d = history.size
-            val crises7d = history.count { doc ->
-                (doc.get<Long?>("timestamp") ?: 0L) >= sevenDaysAgo
-            }
-            val samuCalledCount = history.count { doc ->
-                doc.get<Boolean?>("samuCalled") == true
-            }
+                    .where { ("requesterId" equalTo userId) and ("samuCalled" equalTo true) }
+                    .get().documents.size
+            } catch (e: Exception) { 0 }
 
             // Check-ins da Agenda de Saúde (últimos 7 dias)
             val recentCheckIns = try {
@@ -208,11 +223,31 @@ internal object RiskScoreEngine {
         val recommendations = mutableListOf<String>()
 
         // ── Histórico de crises (emergências registradas) ─────────────────────
-        score += (crises7d * 15).coerceAtMost(30)
-        if (crises7d > 0) factors.add("${crises7d} crise(s) nos últimos 7 dias")
+        // Clinical reference: ≥2 crises/week = uncontrolled asthma (GINA guidelines).
+        // Scoring is non-linear: 1 crisis is moderate, 2+ is severe, 5+ forces VERY_HIGH alone.
+        val crises7dScore = when {
+            crises7d >= 5 -> 55   // 5+ crises: extreme — VERY_HIGH alone
+            crises7d >= 3 -> 40   // 3-4 crises: severe — HIGH alone
+            crises7d == 2 -> 28   // 2 crises: uncontrolled per guidelines
+            crises7d == 1 -> 14   // 1 crisis: moderate signal
+            else -> 0
+        }
+        score += crises7dScore
+        if (crises7d > 0) {
+            val label = if (crises7d >= 2) "⚠️ ${crises7d} crise(s) nos últimos 7 dias — asma não controlada"
+                        else "${crises7d} crise(s) nos últimos 7 dias"
+            factors.add(label)
+        }
 
-        score += (crises30d * 5).coerceAtMost(20)
-        if (crises30d >= 3) factors.add("${crises30d} crises no último mês")
+        val crises30dScore = when {
+            crises30d >= 8 -> 25
+            crises30d >= 4 -> 15
+            crises30d >= 2 -> 8
+            crises30d == 1 -> 3
+            else -> 0
+        }
+        score += crises30dScore
+        if (crises30d >= 2) factors.add("${crises30d} crises no último mês")
 
         if (samuCalledCount > 0) {
             score += 15

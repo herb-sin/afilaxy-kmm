@@ -29,6 +29,9 @@ object AppRoutes {
     // Rotas sem tela de configurações dedicada — usadas como strings no NavGraph
     const val EMAIL_VERIFICATION = "email_verification"
     const val EDUCATION = "education"
+    const val CHECK_IN = "check_in/{type}"
+
+    fun checkIn(type: String) = "check_in/$type"
 
     fun professionalDetail(id: String) = "professional_detail/$id"
     fun emergencyResponse(emergencyId: String) = "emergency_response/$emergencyId"

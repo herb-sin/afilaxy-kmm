@@ -16,5 +16,9 @@ interface AuthRepository {
     suspend fun sendEmailVerification(): Result<Unit>
     suspend fun isEmailVerified(): Boolean
     suspend fun reloadUser()
+    /** Grava um sessionId único no Firestore e localmente. Deve ser chamado após login bem-sucedido. */
+    suspend fun createSession()
+    /** Emite true quando outro dispositivo sobrescreve o sessionId — sessão atual deve ser encerrada. */
+    fun observeSessionInvalidation(): Flow<Boolean>
 }
 

@@ -169,6 +169,7 @@ struct ChatView: View {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let displayName = Auth.auth().currentUser?.displayName ?? "Usuário"
         let db = Firestore.firestore()
+        let resolvedAtMs = Int64(Date().timeIntervalSince1970 * 1000)
         // Marca como resolvido localmente ANTES de escrever no Firestore —
         // impede que o statusListener reaja ao próprio echo de status=resolved.
         didResolveLocally = true
@@ -178,7 +179,6 @@ struct ChatView: View {
         // 1. Escreve mensagem de sistema visível para os dois lados
         // senderId deve ser o uid real (regra do Firestore exige auth.uid == senderId)
         let msgId = UUID().uuidString
-        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         db.collection("emergency_chats")
             .document(emergencyId)
             .collection("messages")
@@ -186,33 +186,16 @@ struct ChatView: View {
             .setData([
                 "id": msgId,
                 "emergencyId": emergencyId,
-                "senderId": "system",   // mantido para renderização especial na UI
-                "senderName": "Sistema",
-                "message": "✅ Emergência encerrada. O chat foi bloqueado.",
-                "timestamp": nowMs,
-                "isFromHelper": false
-            ]) { [self] error in
-                // Se a regra bloquear (senderId=system), envia com uid real para garantir entrega
-                if error != nil {
-                    db.collection("emergency_chats")
-                        .document(emergencyId)
-                        .collection("messages")
-                        .document(msgId)
-                        .setData([
-                            "id": msgId,
-                            "emergencyId": emergencyId,
-                            "senderId": uid,
-                            "senderName": displayName,
-                            "message": "✅ \(displayName) encerrou a emergência.",
-                            "timestamp": nowMs,
-                            "isFromHelper": false
-                        ])
-                }
-            }
+                "senderId": uid,
+                "senderName": displayName,
+                "message": "✅ \(displayName) encerrou a emergência.",
+                "timestamp": FieldValue.serverTimestamp(),
+                "isFromHelper": !isRequester
+            ])
         // 2. Atualiza status da emergência
         db.collection("emergency_requests")
             .document(emergencyId)
-            .updateData(["status": "resolved", "active": false, "resolvedAt": nowMs])
+            .updateData(["status": "resolved", "active": false, "resolvedAt": resolvedAtMs])
         container.resolvedEmergencyId = emergencyId
         // NÃO chama clearEmergencyStateSwift aqui — isso colapsa a navegação antes do
         // rating sheet aparecer. A limpeza só acontece em dismissAndClearState(),
@@ -301,10 +284,8 @@ struct ChatView: View {
         let name = Auth.auth().currentUser?.displayName ?? Auth.auth().currentUser?.email ?? "Usuário"
         messageText = ""
         let msgId = UUID().uuidString
-        // Double garante tipo Firestore Number — mesmo tipo que o Android/KMM grava via Long.
-        // Int64 pode ser serializado pelo SDK como Timestamp em alguns contextos,
-        // causando agrupamento de mensagens por plataforma na query orderBy("timestamp").
-        let timestampMs = Double(Date().timeIntervalSince1970 * 1000)
+        // Server timestamp — set by Firestore servers, immune to device clock skew.
+        // Eliminates cross-platform ordering issues between iOS and Android.
         Firestore.firestore()
             .collection("emergency_chats")
             .document(emergencyId)
@@ -316,8 +297,8 @@ struct ChatView: View {
                 "senderId": uid,
                 "senderName": name,
                 "message": text,
-                "timestamp": timestampMs,
-                "isFromHelper": false
+                "timestamp": FieldValue.serverTimestamp(),
+                "isFromHelper": !isRequester
             ])
     }
 }
@@ -372,7 +353,7 @@ struct RatingSheetView: View {
     @State private var comment = ""
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 Text("Como foi o atendimento?")
                     .font(.title3).bold()

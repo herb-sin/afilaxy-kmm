@@ -1,5 +1,8 @@
 package com.afilaxy.app.navigation
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -18,8 +21,10 @@ import androidx.navigation.navArgument
 import com.afilaxy.app.ui.screens.*
 import com.afilaxy.app.ui.scaffold.AfilaxyAppScaffoldSimple
 
+import com.afilaxy.domain.model.CheckInType
 import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.PreferencesRepository
+import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -41,7 +46,31 @@ fun NavGraph(
     val navController = rememberNavController()
     val prefs: PreferencesRepository = koinInject()
     val authRepository: AuthRepository = koinInject()
+    val authViewModel: AuthViewModel = koinViewModel()
+    val authState by authViewModel.state.collectAsState()
     val scope = rememberCoroutineScope()
+
+    // Session invalidation: AuthViewModel detects it, NavGraph reacts by showing alert + redirect
+    val showSessionDialog = remember { mutableStateOf(false) }
+    LaunchedEffect(authState.isSessionInvalidated) {
+        if (authState.isSessionInvalidated) {
+            showSessionDialog.value = true
+        }
+    }
+    if (showSessionDialog.value) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Sessão encerrada") },
+            text = { Text("Sua conta foi acessada em outro dispositivo. Por segurança, você foi desconectado.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSessionDialog.value = false
+                    authViewModel.clearSessionInvalidated()
+                    navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
+                }) { Text("OK") }
+            }
+        )
+    }
 
     // Destino pós-autenticação: consentimento se ainda não apresentado, home caso contrário
     fun postAuthDestination() =
@@ -76,8 +105,10 @@ fun NavGraph(
     val weeklyCountState      = remember { mutableStateOf(-1) }
     val totalEmergenciesState = remember { mutableStateOf(-1) }
 
-    DisposableEffect(Unit) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid
+    // Key = uid: effect re-runs when Firebase Auth restores the session after cold start.
+    // With Unit as key it ran once before auth was ready → uid was null → no listener created.
+    DisposableEffect(authState.user?.uid) {
+        val uid = authState.user?.uid ?: FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
             weeklyCountState.value = 0
             return@DisposableEffect onDispose {}
@@ -298,6 +329,18 @@ fun NavGraph(
 
         composable(AppRoutes.MAP_PHARMACY) {
             MapScreen(navController = navController, pharmacyMode = true)
+        }
+
+        composable(
+            route = AppRoutes.CHECK_IN,
+            arguments = listOf(navArgument("type") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val typeStr = backStackEntry.arguments?.getString("type") ?: "MORNING"
+            val checkInType = if (typeStr == "EVENING") CheckInType.EVENING else CheckInType.MORNING
+            CheckInScreen(
+                type = checkInType,
+                onDone = { navController.popBackStack() }
+            )
         }
 
         composable(AppRoutes.PROFILE) {

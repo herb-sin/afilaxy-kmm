@@ -29,15 +29,19 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.PermissionChecker
+import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.app.ui.components.RiskWidget
 import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
+import com.afilaxy.app.BuildConfig
 import com.afilaxy.util.FileLogger
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
@@ -110,15 +114,17 @@ fun HomeScreenNew(
                 riskLat = loc.latitude
                 riskLng = loc.longitude
             } else {
-                // Fallback: LocationManager caso Fused não tenha cache
-                val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                // No cached location — request a fresh fix (up to 10s, balanced accuracy)
                 @Suppress("MissingPermission")
-                val fallback = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                    ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                    ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
-                if (fallback != null) {
-                    riskLat = fallback.latitude
-                    riskLng = fallback.longitude
+                val fresh = withTimeoutOrNull(10_000) {
+                    val req = CurrentLocationRequest.Builder()
+                        .setPriority(Priority.PRIORITY_BALANCED_POWER_ACCURACY)
+                        .build()
+                    fusedClient.getCurrentLocation(req, null).await()
+                }
+                if (fresh != null) {
+                    riskLat = fresh.latitude
+                    riskLng = fresh.longitude
                 }
             }
         } catch (_: Exception) { /* Sem permissão — RiskWidget não exibido */ }
@@ -137,7 +143,8 @@ fun HomeScreenNew(
                 userName = authState.user?.displayName ?: authState.user?.name ?: "Usuário",
                 weeklyCount = weeklyCount,
                 totalEmergencies = totalEmergencies,
-                onExportLogs = {
+                // Botões de log visíveis apenas em builds de debug — ocultos em produção
+                onExportLogs = if (BuildConfig.DEBUG) ({
                     val logFiles = FileLogger.getAllLogs()
                     if (logFiles.isEmpty()) return@HomeWelcomeCard
                     val uris = logFiles.mapNotNull { file ->
@@ -157,14 +164,22 @@ fun HomeScreenNew(
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Exportar logs Afilaxy"))
-                }
+                }) else null,
+                onClearLogs = if (BuildConfig.DEBUG) ({ FileLogger.clearLogs() }) else null
             )
         }
 
-        // Widget de risco de crise — visível apenas se localização disponível
+        // Widget de risco de crise — visível apenas se localização disponível.
+        // Passa weeklyCount e totalEmergencies do NavGraph (fonte autoritativa via SDK nativo)
+        // para evitar problemas de tipo na re-leitura do Firestore via dev.gitlive.
         if (riskLat != 0.0 && riskLng != 0.0) {
             item {
-                RiskWidget(latitude = riskLat, longitude = riskLng)
+                RiskWidget(
+                    latitude = riskLat,
+                    longitude = riskLng,
+                    crises7d = weeklyCount,
+                    crises30d = totalEmergencies
+                )
             }
         }
 
@@ -342,7 +357,8 @@ private fun HomeWelcomeCard(
     weeklyCount: Int,
     // Total acumulado de todas as semanas — nunca zera na virada de semana.
     totalEmergencies: Int = -1,
-    onExportLogs: (() -> Unit)? = null
+    onExportLogs: (() -> Unit)? = null,
+    onClearLogs: (() -> Unit)? = null
 ) {
     // Cor do gradiente e mensagens dependem da contagem semanal
     val (gradientColors, headline, body) = when (weeklyCount) {
@@ -449,19 +465,58 @@ private fun HomeWelcomeCard(
             }
 
         }
-        // Botão de exportação de logs (dev) — discreto no canto superior direito
-        if (onExportLogs != null) {
-            IconButton(
-                onClick = onExportLogs,
+        // Botões de log (dev) — discretos no canto superior direito
+        if (onExportLogs != null || onClearLogs != null) {
+            var showClearDialog by remember { mutableStateOf(false) }
+
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(32.dp)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                Icon(
-                    Icons.Default.Share,
-                    contentDescription = "Exportar Logs",
-                    tint = Color.White.copy(alpha = 0.55f),
-                    modifier = Modifier.size(16.dp)
+                if (onClearLogs != null) {
+                    IconButton(
+                        onClick = { showClearDialog = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Limpar Logs",
+                            tint = Color.White.copy(alpha = 0.45f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+                if (onExportLogs != null) {
+                    IconButton(
+                        onClick = onExportLogs,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Exportar Logs",
+                            tint = Color.White.copy(alpha = 0.55f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            if (showClearDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearDialog = false },
+                    title = { Text("Limpar logs?") },
+                    text = { Text("Todos os arquivos de log serão apagados.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showClearDialog = false
+                            onClearLogs?.invoke()
+                        }) { Text("Limpar") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearDialog = false }) { Text("Cancelar") }
+                    }
                 )
             }
         }

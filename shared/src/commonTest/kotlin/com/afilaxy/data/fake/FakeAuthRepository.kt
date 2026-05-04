@@ -83,6 +83,10 @@ class FakeAuthRepository(
 
     override suspend fun reloadUser() { /* no-op */ }
 
+    override suspend fun createSession() { /* no-op in tests */ }
+
+    override fun observeSessionInvalidation(): Flow<Boolean> = flowOf(false)
+
     // Test helpers
     fun setCurrentUser(user: User?) {
         currentUser = user

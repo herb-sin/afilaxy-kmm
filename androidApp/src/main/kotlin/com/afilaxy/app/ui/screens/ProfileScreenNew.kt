@@ -342,28 +342,6 @@ private fun ProfileInfoCard(
     }
 }
 
-// ── MedCountChip ─────────────────────────────────────────────────────────────────
-
-@Composable
-private fun MedCountChip(label: String, count: Int, color: Color, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        color = color.copy(alpha = 0.12f)
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(count.toString(), style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold, color = color)
-            Text(label, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
 // ── AgendaDeSaudeCard ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -399,23 +377,32 @@ private fun AgendaDeSaudeCard(
                 Modifier.fillMaxWidth()
             )
             // Medicação
-
-            val meds = profile?.healthData?.medications ?: emptyList()
-            val controle = meds.count { it.contains("controle", ignoreCase = true) || it.contains("manutenc", ignoreCase = true) }
-            val resgate  = meds.count { it.contains("resgate",  ignoreCase = true) || it.contains("bronco",   ignoreCase = true) }
-            val outros   = maxOf(0, meds.size - controle - resgate)
+            val medsText = profile?.healthData?.medications
+                ?.filter { it.isNotBlank() }
+                ?.joinToString(", ")
+                ?.takeIf { it.isNotBlank() }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Medicação Atual", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
-                    MedCountChip("Controle", controle, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-                    MedCountChip("Resgate",  resgate,  MaterialTheme.colorScheme.error,   Modifier.weight(1f))
-                    MedCountChip("Outros",   outros,   MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                }
+                Text(
+                    text = medsText ?: "Não informado",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (medsText != null) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
                 ProfileInfoCard(
                     "Contato Emergência",
-                    profile?.emergencyContact?.name?.takeIf { it.isNotBlank() } ?: "Não informado",
+                    profile?.emergencyContact?.let { c ->
+                        val name = c.name.takeIf { it.isNotBlank() }
+                        val phone = c.phone.takeIf { it.isNotBlank() }
+                        when {
+                            name != null && phone != null -> "$name\n$phone"
+                            name != null -> name
+                            phone != null -> phone
+                            else -> "Não informado"
+                        }
+                    } ?: "Não informado",
                     Icons.Default.ContactPhone,
                     Modifier.weight(1f)
                 )

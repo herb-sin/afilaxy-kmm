@@ -27,14 +27,16 @@ import org.koin.androidx.compose.koinViewModel
 fun RiskWidget(
     latitude: Double,
     longitude: Double,
+    crises7d: Int = -1,
+    crises30d: Int = -1,
     modifier: Modifier = Modifier,
     viewModel: RiskViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
-    LaunchedEffect(latitude, longitude) {
+    LaunchedEffect(latitude, longitude, crises7d, crises30d) {
         if (latitude != 0.0 && longitude != 0.0) {
-            viewModel.loadRiskScore(latitude, longitude)
+            viewModel.loadRiskScore(latitude, longitude, crises7d, crises30d)
         }
     }
 

@@ -138,7 +138,13 @@ fun EmergencyResponseScreen(
         }
     }
     
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short) }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("🆘 Emergência Disponível") },

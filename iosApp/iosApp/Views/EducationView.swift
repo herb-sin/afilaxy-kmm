@@ -4,7 +4,7 @@ struct EducationView: View {
     @State private var selectedCategory: EducationCategory = .basics
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 20) {
                     // Welcome Card
