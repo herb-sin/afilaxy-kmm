@@ -106,35 +106,58 @@ fun NavGraph(
     val totalEmergenciesState = remember { mutableStateOf(-1) }
 
     // Key = uid: effect re-runs when Firebase Auth restores the session after cold start.
-    // With Unit as key it ran once before auth was ready → uid was null → no listener created.
     DisposableEffect(authState.user?.uid) {
         val uid = authState.user?.uid ?: FirebaseAuth.getInstance().currentUser?.uid
         if (uid == null) {
             weeklyCountState.value = 0
             return@DisposableEffect onDispose {}
         }
-        val cal = Calendar.getInstance().apply {
-            minimalDaysInFirstWeek = ISO_MIN_DAYS_IN_FIRST_WEEK
-            firstDayOfWeek = Calendar.MONDAY
+        // Compute the last 7 date keys (YYYY-MM-DD UTC) for rolling-7-day window.
+        // Using UTC to match the Cloud Function's dateKey = new Date(ts).toISOString().slice(0,10)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
         }
-        val week = cal.get(Calendar.WEEK_OF_YEAR)
-        val year = cal.weekYear
-        val weekKey = "%d-W%02d".format(year, week)
+        val last7Days = (0 until 7).map { daysAgo ->
+            val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+            cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
+            sdf.format(cal.time)
+        }
+
         val listener = FirebaseFirestore.getInstance()
             .collection("user_stats")
             .document(uid)
             .addSnapshotListener { doc, error ->
                 if (error != null) { weeklyCountState.value = 0; return@addSnapshotListener }
+
+                // Rolling 7-day sum from dailyCount (new field added by Cloud Function)
+                // Falls back to weeklyCount (ISO week) for older records without dailyCount
                 @Suppress("UNCHECKED_CAST")
-                val map = doc?.get("weeklyCount") as? Map<String, Any>
-                val raw = map?.get(weekKey)
-                weeklyCountState.value = when (raw) {
-                    is Long   -> raw.toInt()
-                    is Double -> raw.toInt()
-                    is Int    -> raw
-                    is Number -> raw.toInt()
-                    else      -> 0
+                val dailyMap = doc?.get("dailyCount") as? Map<String, Any>
+                val rolling7d = if (dailyMap != null) {
+                    last7Days.sumOf { dateKey ->
+                        when (val v = dailyMap[dateKey]) {
+                            is Long   -> v.toInt()
+                            is Double -> v.toInt()
+                            is Number -> v.toInt()
+                            else      -> 0
+                        }
+                    }
+                } else {
+                    // Fallback to ISO week for users who haven't had a new emergency yet
+                    val cal = Calendar.getInstance().apply {
+                        minimalDaysInFirstWeek = ISO_MIN_DAYS_IN_FIRST_WEEK
+                        firstDayOfWeek = Calendar.MONDAY
+                    }
+                    val weekKey = "%d-W%02d".format(cal.weekYear, cal.get(Calendar.WEEK_OF_YEAR))
+                    @Suppress("UNCHECKED_CAST")
+                    val weekMap = doc?.get("weeklyCount") as? Map<String, Any>
+                    when (val v = weekMap?.get(weekKey)) {
+                        is Long -> v.toInt(); is Double -> v.toInt()
+                        is Number -> v.toInt(); else -> 0
+                    }
                 }
+                weeklyCountState.value = rolling7d
+
                 val rawTotal = doc?.get("totalEmergencies")
                 totalEmergenciesState.value = when (rawTotal) {
                     is Long   -> rawTotal.toInt()

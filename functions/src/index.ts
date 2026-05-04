@@ -782,11 +782,15 @@ export const onEmergencyFinalized = onDocumentUpdated(
             statsFlat.totalResponseTimeSec = inc(Math.round((resolvedAt - matchedAt) / 1000));
             statsFlat.totalResponseCount   = inc(1);
         }
+        // weeklyCount: ISO week (legacy, kept for compatibility)
+        // dailyCount: per-day count for rolling-7-day window on the client
+        const dateKey = new Date(timestamp).toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
         const weeklyPath = new admin.firestore.FieldPath('weeklyCount', weekKey);
+        const dailyPath  = new admin.firestore.FieldPath('dailyCount',  dateKey);
         batch.set(
             statsRef,
-            { ...statsFlat, weeklyCount: { [weekKey]: inc(1) } },
-            { mergeFields: [...Object.keys(statsFlat), weeklyPath] }
+            { ...statsFlat, weeklyCount: { [weekKey]: inc(1) }, dailyCount: { [dateKey]: inc(1) } },
+            { mergeFields: [...Object.keys(statsFlat), weeklyPath, dailyPath] }
         );
 
         // ── emergency_analytics/{region}_{weekKey} ────────────────────────────

@@ -256,52 +256,62 @@ struct HomeView: View {
     // MARK: - Fetch weekly stats (listener em tempo real)
     private func fetchWeeklyStatus() {
         guard let uid = Auth.auth().currentUser?.uid else {
-            FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "fetchWeeklyStatus: uid nil, não iniciando listener")
+            FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "fetchWeeklyStatus: uid nil")
             return
         }
 
-        // Cancela listener anterior se existir (evita duplicatas em reappear)
         statsListener?.remove()
-        weeklyCount = -1  // mostra skeleton enquanto carrega
+        weeklyCount = -1
 
-        // Semana ISO 8601 em UTC — mesma referência usada pela Cloud Function.
-        var cal = Calendar(identifier: .iso8601)
-        cal.timeZone = TimeZone(identifier: "UTC")!
-        let week = cal.component(.weekOfYear, from: Date())
-        let year = cal.component(.yearForWeekOfYear, from: Date())
-        let weekKey = String(format: "%d-W%02d", year, week)
-        FileLogger.shared.write(level: "DEBUG", tag: "HomeView", message: "fetchWeeklyStatus uid=\(uid) weekKey=\(weekKey)")
+        // Compute last-7-day date keys in UTC to match Cloud Function's dailyCount format
+        let sdf: DateFormatter = {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            f.timeZone = TimeZone(identifier: "UTC")
+            f.locale = Locale(identifier: "en_US_POSIX")
+            return f
+        }()
+        let last7Days: [String] = (0..<7).map { daysAgo in
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+            return sdf.string(from: date)
+        }
+        FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
+            message: "fetchWeeklyStatus uid=\(uid) last7Days=\(last7Days.first ?? "?")")
 
         statsListener = Firestore.firestore()
             .collection("user_stats")
             .document(uid)
             .addSnapshotListener { snapshot, error in
                 if let error = error {
-                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "weeklyCount error: \(error.localizedDescription)")
+                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "stats error: \(error.localizedDescription)")
                     weeklyCount = 0
                     return
                 }
                 guard let data = snapshot?.data() else {
-                    FileLogger.shared.write(level: "WARN", tag: "HomeView", message: "weeklyCount: snapshot sem dados (uid=\(uid) weekKey=\(weekKey) exists=\(snapshot?.exists ?? false))")
-                    weeklyCount = 0
-                    return
+                    weeklyCount = 0; return
                 }
-                let weekly = data["weeklyCount"] as? [String: Any]
-                let raw = weekly?[weekKey]
-                FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
-                    message: "weeklyCount weekKey=\(weekKey) weekly=\(String(describing: weekly)) raw=\(String(describing: raw)) rawType=\(type(of: raw))")
-                if let r = raw {
-                    let resolved = (r as? NSNumber)?.intValue ?? 0
-                    weeklyCount = resolved
+
+                // Rolling 7-day sum from dailyCount (falls back to ISO weeklyCount for older records)
+                if let daily = data["dailyCount"] as? [String: Any] {
+                    let rolling = last7Days.reduce(0) { sum, dateKey in
+                        sum + ((daily[dateKey] as? NSNumber)?.intValue ?? 0)
+                    }
+                    weeklyCount = rolling
                 } else {
-                    weeklyCount = 0
-                    FileLogger.shared.write(level: "DEBUG", tag: "HomeView", message: "weeklyCount: chave \(weekKey) não encontrada no mapa. Keys disponíveis: \(weekly?.keys.joined(separator: ",") ?? "mapa nil")")
+                    // Fallback: ISO week (legacy records before dailyCount was added)
+                    var cal = Calendar(identifier: .iso8601)
+                    cal.timeZone = TimeZone(identifier: "UTC")!
+                    let weekKey = String(format: "%d-W%02d",
+                        cal.component(.yearForWeekOfYear, from: Date()),
+                        cal.component(.weekOfYear, from: Date()))
+                    let weekly = data["weeklyCount"] as? [String: Any]
+                    weeklyCount = (weekly?[weekKey] as? NSNumber)?.intValue ?? 0
                 }
-                // Lê o total acumulado de emergências (campo escrito pela Cloud Function)
+
                 let rawTotal = data["totalEmergencies"] as? NSNumber
                 totalEmergencies = rawTotal?.intValue ?? 0
                 FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
-                    message: "weeklyCount resolved=\(weeklyCount) totalEmergencies=\(totalEmergencies)")
+                    message: "stats resolved rolling7d=\(weeklyCount) total=\(totalEmergencies)")
             }
     }
     
