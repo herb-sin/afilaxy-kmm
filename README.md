@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg)](https://kotlinlang.org)
 [![KMM](https://img.shields.io/badge/KMM-Ready-brightgreen.svg)](https://kotlinlang.org/docs/multiplatform.html)
-[![Version](https://img.shields.io/badge/version-2.1.0--kmm-orange.svg)](https://github.com/herb-sin/afilaxy-kmm/releases)
+[![Version](https://img.shields.io/badge/version-2.2.0-orange.svg)](https://github.com/herb-sin/afilaxy-kmm/releases)
 
 A única plataforma digital de gestão de asma em português no Brasil. O Afilaxy preenche o vazio entre as consultas médicas — onde a maioria das crises acontece — conectando pacientes a dados, especialistas e boas práticas médicas antes que a emergência aconteça.
 
@@ -51,7 +51,7 @@ shared/
 │   ├── domain/         # 🎯 Regras de negócio
 │   │   ├── model/      # Emergency, CheckIn, RiskScore, HealthProfessional...
 │   │   ├── repository/ # Interfaces (EmergencyRepository, LocationRepository...)
-│   │   └── usecase/    # CreateEmergency, FindHelpers, SendChatMessage...
+│   │   └── usecase/    # CreateEmergencyUseCase
 │   ├── data/           # 💾 Implementações (Firestore, GPS, Preferences)
 │   ├── presentation/   # 🎨 13 ViewModels compartilhados
 │   ├── util/           # Logger multiplataforma, TimeUtils
@@ -128,7 +128,7 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 
 ## 📱 Estado Atual das Plataformas
 
-### Android — v2.1.0 · Publicado na Google Play
+### Android — v2.2.0 · Publicado na Google Play
 
 | Feature | Status |
 |---------|--------|
@@ -138,7 +138,7 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 | Push notifications (FCM) | ✅ |
 | Modo Apoiador (helper toggle, raio 250m) | ✅ |
 | Check-ins proativos (manhã/noite) | ✅ |
-| Score de risco de crise (AQI + clima + perfil) | ✅ |
+| Score de risco de crise (AQI + clima + perfil clínico) | ✅ |
 | Notificações preditivas baseadas em risco | ✅ |
 | Perfil médico (medicações, exames, protocolo) | ✅ |
 | Feed da comunidade (posts, likes) | ✅ |
@@ -147,6 +147,8 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 | Histórico de emergências | ✅ |
 | Mapa com geolocalização e helpers | ✅ |
 | Conteúdo educativo (autocuidado, UBS) | ✅ |
+| Sessão única por dispositivo (kick-out automático) | ✅ |
+| Persistência do histórico de risco diário | ✅ |
 | **Total: 25 telas** | ✅ |
 
 ### iOS — Publicado na App Store · Deploy automático via TestFlight
@@ -175,13 +177,15 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 ### ✅ Implementado
 
 - **Emergência P2P:** Geolocalização + chat em tempo real com apoiadores próximos (raio 250m)
-- **Score de Risco Preditivo:** Motor heurístico que combina AQI (WAQI), clima (OpenMeteo), perfil clínico e histórico de crises para gerar score 0–100 em 4 níveis (Baixo 🟢 / Moderado 🟡 / Alto 🟠 / Muito Alto 🔴)
-- **Check-ins Proativos:** Diário de sintomas e uso de medicação (manhã/noite) com notificações baseadas no score de risco
+- **Score de Risco Preditivo:** Motor heurístico com escala não-linear calibrada pelas diretrizes GINA — combina AQI (WAQI), clima (OpenMeteo), perfil clínico, SAMU acionado e crises dos últimos 7 dias (janela deslizante) para gerar score 0–100 em 4 níveis (Baixo 🟢 / Moderado 🟡 / Alto 🟠 / Muito Alto 🔴). Histórico diário persistido em `risk_scores/{uid}/snapshots/{date}` para futura análise de tendência e ML
+- **Check-ins Proativos:** Diário de sintomas, uso de medicação e contexto clínico (tipo de asma, gravidade) com notificações baseadas no score de risco
 - **Perfil Médico Completo:** Tipo de asma, medicações por categoria, exames, protocolo de crise e contatos de emergência
 - **Portal de Profissionais:** Listagem de pneumologistas e alergistas com filtro por especialidade e planos de assinatura
 - **Dashboard Profissional:** Métricas de pacientes, alertas críticos e taxa de adesão
 - **Feed da Comunidade:** Posts, likes e compartilhamento de experiências
 - **Portal Web:** Landing page para adesão de profissionais com planos de assinatura (React + Vite)
+- **Sessão Única por Dispositivo:** Login em um novo dispositivo encerra automaticamente a sessão anterior com alerta ao usuário — prevenção de acesso simultâneo à mesma conta
+- **Contagem de Crises (Janela Deslizante):** Contador de pedidos de socorro usa os últimos 7 dias corridos (não semana ISO), garantindo que crises de domingo não sejam ignoradas na segunda-feira
 - **Testes Automatizados:** Unit tests dos ViewModels e repositories (CI verde em shared + Android)
 
 ### 🚧 Em Desenvolvimento
