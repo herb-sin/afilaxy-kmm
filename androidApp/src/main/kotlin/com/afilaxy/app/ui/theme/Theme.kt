@@ -6,10 +6,17 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalView
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+
+internal object ThemeState {
+    var preference by mutableStateOf("system")
+}
 
 private val DarkColorScheme = darkColorScheme(
     primary = AflixyBlue,
@@ -70,16 +77,23 @@ fun AflixyTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val activity = view.context as ComponentActivity
-            activity.enableEdgeToEdge(
-                statusBarStyle = SystemBarStyle.light(
-                    scrim = android.graphics.Color.TRANSPARENT,
-                    darkScrim = android.graphics.Color.TRANSPARENT
-                ),
-                navigationBarStyle = SystemBarStyle.light(
-                    scrim = android.graphics.Color.TRANSPARENT,
-                    darkScrim = android.graphics.Color.TRANSPARENT
+            if (darkTheme) {
+                activity.enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+                    navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                 )
-            )
+            } else {
+                activity.enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.light(
+                        scrim = android.graphics.Color.TRANSPARENT,
+                        darkScrim = android.graphics.Color.TRANSPARENT
+                    ),
+                    navigationBarStyle = SystemBarStyle.light(
+                        scrim = android.graphics.Color.TRANSPARENT,
+                        darkScrim = android.graphics.Color.TRANSPARENT
+                    )
+                )
+            }
         }
     }
 

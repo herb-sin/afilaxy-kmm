@@ -114,7 +114,7 @@ jobs:
         path: web-dist/
         
     - name: Deploy to Firebase Hosting
-      uses: FirebaseExtended/action-hosting-deploy@v0
+      uses: FirebaseExtended/action-hosting-deploy@092436dca3ec6dacb231d965ae56f7ff6c09f258 # v0
       with:
         repoToken: '${{ secrets.GITHUB_TOKEN }}'
         firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'

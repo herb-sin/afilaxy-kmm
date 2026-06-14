@@ -151,7 +151,7 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 | Persistência do histórico de risco diário | ✅ |
 | **Total: 25 telas** | ✅ |
 
-### iOS — Publicado na App Store · Deploy automático via TestFlight
+### iOS — TestFlight (beta) · Deploy automático via CI/CD
 
 | Feature | Status |
 |---------|--------|
@@ -169,6 +169,7 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 | Layout adaptativo iPhone/iPad | ✅ |
 | GPS / CoreLocation | 🚧 Em integração |
 | **Total: 13 telas** | ✅ |
+| **Distribuição** | TestFlight (beta) |
 
 ---
 
@@ -218,19 +219,50 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 
 ## 💰 Modelo de Negócio
 
-### Assinaturas B2B para Profissionais de Saúde
+O modelo evolui em três estágios, do mais imediato ao mais estratégico:
 
-Pneumologistas, alergistas e fisioterapeutas pagam mensalidade para:
+### Estágio 1 — B2B · Ativo
 
-- ✅ Ganhar visibilidade junto a pacientes qualificados
-- ✅ Acesso ao dashboard de monitoramento de pacientes
-- ✅ Gerar conteúdo educativo
-- ✅ Apoiar iniciativa de saúde pública
+Assinaturas para profissionais de saúde interessados no público asmático:
 
-**Planos:**
-- **Básico** (R$ 99/mês): Perfil listado
-- **Pro** (R$ 199/mês): Destaque + badge
-- **Premium** (R$ 399/mês): Topo da lista + analytics
+- Pneumologistas e alergistas
+- Fisioterapeutas pulmonares
+- Psicólogos e psicanalistas (pacientes asmáticos têm maior incidência de ansiedade)
+- Outros especialistas que atendem esse perfil de paciente
+
+Benefícios da assinatura:
+- ✅ Visibilidade junto a pacientes qualificados e engajados
+- ✅ Dashboard com dados de adesão e crises dos pacientes que vincularam o profissional no app
+- ✅ Canal para publicação de conteúdo educativo
+- ✅ Apoio a uma iniciativa de saúde pública
+
+**Plano:**
+- **Profissional da Saúde** (R$ 199/mês): Perfil listado com informações de especialidade, área de atuação, contato, completude do perfil, conteúdo publicado, atividade na plataforma e analytics do próprio perfil.
+
+> ⚠️ **Nota regulatória:** A plataforma não exibe avaliações públicas de profissionais de saúde por pacientes, em conformidade com as resoluções do CFM, COFFITO e CFP que vedam essa prática. O critério de destaque é exclusivamente objetivo e não comercial.
+
+---
+
+### Estágio 2 — B2B2G · Em estruturação
+
+Com a base de dados consolidada, parcerias com clínicas e operadoras de saúde para uso dos dados populacionais na previsão de demanda por medicamentos e internações, reduzindo custos operacionais e qualificando o atendimento.
+
+---
+
+### Estágio 3 — B2G · Visão de longo prazo
+
+O Governo passa a ser cliente dos dados agregados para identificar municípios e bairros com maior incidência de asma, alocando recursos — UBS, medicamentos, campanhas — com muito maior assertividade. O objetivo é transformar o comportamento informal de socorro em dado clínico inteligente que retroalimenta o SUS.
+
+---
+
+## 🏆 Trajetória
+
+| Programa | Resultado |
+|----------|-----------|
+| **Ideiaz** | Participante |
+| **InovAtiva Brasil** | Graduado |
+| **Parque Tecnológico de Santos** | Empresa apoiada |
+| **InovAtiva Impacto 2026** | Candidato (mentorias regulatórias, tecnológicas e de mercado) |
 
 ---
 

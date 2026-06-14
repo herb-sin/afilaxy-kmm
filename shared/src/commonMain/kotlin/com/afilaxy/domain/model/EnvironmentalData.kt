@@ -35,7 +35,10 @@ data class RiskScore(
     val level: String,                     // AsthmaRiskLevel.name
     val factors: List<String>,             // Fatores que contribuíram ao score
     val recommendations: List<String>,     // Recomendações para o paciente
-    val calculatedAt: Long = 0L
+    val calculatedAt: Long = 0L,
+    val aqi: Int? = null,
+    val temperature: Float? = null,
+    val humidity: Float? = null
 ) {
     val riskLevel: AsthmaRiskLevel
         get() = AsthmaRiskLevel.entries.firstOrNull { it.name == level } ?: AsthmaRiskLevel.LOW

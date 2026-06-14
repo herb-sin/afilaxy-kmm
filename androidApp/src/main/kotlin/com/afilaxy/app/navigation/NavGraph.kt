@@ -113,7 +113,8 @@ fun NavGraph(
             return@DisposableEffect onDispose {}
         }
         // Compute the last 7 date keys (YYYY-MM-DD UTC) for rolling-7-day window.
-        // Using UTC to match the Cloud Function's dateKey = new Date(ts).toISOString().slice(0,10)
+        // UTC matches the Cloud Function's dateKey = new Date(ts).toISOString().slice(0,10)
+        // SimpleDateFormat is safe here: constructed on main thread, list fully evaluated before listener fires.
         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
             timeZone = java.util.TimeZone.getTimeZone("UTC")
         }
@@ -143,8 +144,8 @@ fun NavGraph(
                         }
                     }
                 } else {
-                    // Fallback to ISO week for users who haven't had a new emergency yet
-                    val cal = Calendar.getInstance().apply {
+                    // Fallback: ISO week (legacy records without dailyCount) — use UTC to match Cloud Function
+                    val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
                         minimalDaysInFirstWeek = ISO_MIN_DAYS_IN_FIRST_WEEK
                         firstDayOfWeek = Calendar.MONDAY
                     }
@@ -312,8 +313,9 @@ fun NavGraph(
                     }
                 },
                 onLogout = {
-                    navController.navigate(AppRoutes.LOGIN) {
-                        popUpTo(0) { inclusive = true }
+                    scope.launch {
+                        authRepository.logout()
+                        navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
                     }
                 }
             )
@@ -337,6 +339,7 @@ fun NavGraph(
                     weeklyCount = weeklyCountState.value,
                     totalEmergencies = totalEmergenciesState.value,
                     onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
+                    onNavigateToCheckIn = { type -> navController.navigate(AppRoutes.checkIn(type)) },
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) }
@@ -360,8 +363,14 @@ fun NavGraph(
         ) { backStackEntry ->
             val typeStr = backStackEntry.arguments?.getString("type") ?: "MORNING"
             val checkInType = if (typeStr == "EVENING") CheckInType.EVENING else CheckInType.MORNING
+            val riskViewModel: com.afilaxy.presentation.risk.RiskViewModel = org.koin.androidx.compose.koinViewModel()
+            val riskState by riskViewModel.state.collectAsState()
             CheckInScreen(
                 type = checkInType,
+                riskScore = riskState.riskScore?.score,
+                aqi = riskState.riskScore?.aqi,
+                temperature = riskState.riskScore?.temperature,
+                humidity = riskState.riskScore?.humidity,
                 onDone = { navController.popBackStack() }
             )
         }

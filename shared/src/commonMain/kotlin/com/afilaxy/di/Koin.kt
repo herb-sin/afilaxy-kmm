@@ -56,7 +56,7 @@ fun sharedModule(): Module = module {
     factory { CreateEmergencyUseCase(get()) }
 
     // ViewModels
-    factory { AuthViewModel(get()) }
+    single { AuthViewModel(get()) }
     factory { LoginViewModel(get()) }
     factory { (emergencyId: String) -> ChatViewModel(emergencyId, get(), get(), get()) }
     single { EmergencyViewModel(get(), get(), get()) }

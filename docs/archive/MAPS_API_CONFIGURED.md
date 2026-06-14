@@ -3,7 +3,7 @@
 ## ✅ Configuração Concluída
 
 ### API Key Configurada
-- **API Key**: `AIzaSyCujufLrPYhqCL6_ObFO9GFnWz9LOopd9s`
+- **API Key**: `[REVOKED]`
 - **Android**: Configurada via `local.properties` → `AndroidManifest.xml`
 - **iOS**: Configurada no `Info.plist` + inicialização no `AfilaxyApp.swift`
 

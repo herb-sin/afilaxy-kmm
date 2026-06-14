@@ -270,7 +270,14 @@ struct ContentView: View {
             EducationView()
         case .checkIn(let typeStr):
             let checkInType: CheckInType = typeStr == "MORNING" ? .morning : .evening
-            CheckInView(type: checkInType) {
+            let riskScore = container.risk.state?.riskScore
+            CheckInView(
+                type: checkInType,
+                riskScore: riskScore?.score,
+                aqi: riskScore?.aqi?.int32Value,
+                temperature: riskScore?.temperature?.floatValue,
+                humidity: riskScore?.humidity?.floatValue
+            ) {
                 // Marca o check-in como concluído para hoje — oculta o banner na Home
                 let f = DateFormatter()
                 f.dateFormat = "yyyy-MM-dd"

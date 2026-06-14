@@ -50,18 +50,23 @@ class ChatViewModel(
 
     private fun loadParticipants() {
         viewModelScope.coroutineScope.launch {
-            // Retry up to 5 times with 1s delay: helperId may be null immediately after accept
-            // due to Firestore propagation lag between the runTransaction write and first read.
             repeat(5) { attempt ->
-                emergencyRepository.getEmergencyParticipants(emergencyId).onSuccess { (requesterId, helperId) ->
-                    val currentUserId = _state.value.currentUserId
-                    val isRequester = currentUserId == requesterId
-                    val reviewedId = if (isRequester) helperId else requesterId
-                    if (requesterId != null && (helperId != null || attempt == 4)) {
-                        _state.update { it.copy(reviewedId = reviewedId, isRequester = isRequester) }
-                        return@launch
+                emergencyRepository.getEmergencyParticipants(emergencyId)
+                    .onSuccess { (requesterId, helperId) ->
+                        val currentUserId = _state.value.currentUserId
+                        val isRequester = currentUserId == requesterId
+                        val reviewedId = if (isRequester) helperId else requesterId
+                        if (requesterId != null && (helperId != null || attempt == 4)) {
+                            _state.update { it.copy(reviewedId = reviewedId, isRequester = isRequester) }
+                            return@launch
+                        }
                     }
-                }
+                    .onFailure { e ->
+                        if (attempt == 4) {
+                            com.afilaxy.util.Logger.e("ChatViewModel",
+                                "loadParticipants failed after 5 attempts: ${e.message}", e)
+                        }
+                    }
                 if (attempt < 4) delay(1_000L)
             }
         }

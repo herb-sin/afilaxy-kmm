@@ -4,6 +4,7 @@ import FirebaseAuth
 
 struct ProfileView: View {
     @EnvironmentObject var container: AppContainer
+    @AppStorage("theme_preference") private var themePreference: String = "system"
     @State private var showEditSheet = false
     @State private var name = ""
     @State private var phone = ""
@@ -61,7 +62,9 @@ struct ProfileView: View {
                     
                     agendaDeSaudeSection(profile: profile)
                 }
-                
+
+                themeCard
+
                 if let error = state?.error {
                     ErrorCard(message: error)
                 }
@@ -95,7 +98,7 @@ struct ProfileView: View {
             fieldsLoaded = false
         }) {
             EditProfileSheet(
-                name: $name, phone: $phone, bloodType: $bloodType,
+                name: $name, phone: $phone,
                 allergies: $allergies, medications: $medications,
                 conditions: $conditions, healthNotes: $healthNotes,
                 emergencyName: $emergencyName, emergencyPhone: $emergencyPhone,
@@ -115,6 +118,33 @@ struct ProfileView: View {
             emergencyName = profile.emergencyContact?.name ?? ""
             emergencyPhone = profile.emergencyContact?.phone ?? ""
             emergencyRelationship = profile.emergencyContact?.relationship ?? ""
+        }
+    }
+
+    @ViewBuilder
+    private var themeCard: some View {
+        AfilaxyCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "paintbrush.fill").foregroundColor(.afiPrimary)
+                    Text("Aparência").font(.headline).fontWeight(.semibold)
+                }
+                Divider()
+                HStack(spacing: 8) {
+                    ForEach([("system", "Sistema"), ("light", "Claro"), ("dark", "Escuro")], id: \.0) { value, label in
+                        Button(action: { themePreference = value }) {
+                            Text(label)
+                                .font(.subheadline)
+                                .fontWeight(themePreference == value ? .semibold : .regular)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(themePreference == value ? Color.afiPrimary : Color(UIColor.secondarySystemBackground))
+                                .foregroundColor(themePreference == value ? .white : .primary)
+                                .cornerRadius(8)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -198,9 +228,13 @@ struct ProfileView: View {
         }
 
         let updated: UserProfile
+        let safeName = name.trimmingCharacters(in: .whitespaces).isEmpty
+            ? (existingProfile?.name ?? name)
+            : name.trimmingCharacters(in: .whitespaces)
+
         if let profile = existingProfile {
             updated = profile.doCopy(
-                uid: profile.uid, name: name, email: profile.email, phone: phone,
+                uid: profile.uid, name: safeName, email: profile.email, phone: phone,
                 photoUrl: profile.photoUrl,
                 healthData: UserHealthData(
                     bloodType: bloodType,
@@ -216,7 +250,7 @@ struct ProfileView: View {
             // Conta nova: cria perfil com os dados preenchidos agora
             updated = UserProfile(
                 uid: currentUid,
-                name: name.isEmpty ? (Auth.auth().currentUser?.displayName ?? "") : name,
+                name: safeName.isEmpty ? (Auth.auth().currentUser?.displayName ?? "") : safeName,
                 email: currentEmail,
                 phone: phone,
                 photoUrl: nil,
@@ -305,7 +339,6 @@ struct EditProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var name: String
     @Binding var phone: String
-    @Binding var bloodType: String
     @Binding var allergies: String
     @Binding var medications: String
     @Binding var conditions: String
