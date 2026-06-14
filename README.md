@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg)](https://kotlinlang.org)
 [![KMM](https://img.shields.io/badge/KMM-Ready-brightgreen.svg)](https://kotlinlang.org/docs/multiplatform.html)
-[![Version](https://img.shields.io/badge/version-2.2.0-orange.svg)](https://github.com/herb-sin/afilaxy-kmm/releases)
+[![Version](https://img.shields.io/badge/version-2.3.0-orange.svg)](https://github.com/herb-sin/afilaxy-kmm/releases)
 
 A única plataforma digital de gestão de asma em português no Brasil. O Afilaxy preenche o vazio entre as consultas médicas — onde a maioria das crises acontece — conectando pacientes a dados, especialistas e boas práticas médicas antes que a emergência aconteça.
 
@@ -128,7 +128,7 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 
 ## 📱 Estado Atual das Plataformas
 
-### Android — v2.2.0 · Publicado na Google Play
+### Android — v2.3.0 · Publicado na Google Play
 
 | Feature | Status |
 |---------|--------|

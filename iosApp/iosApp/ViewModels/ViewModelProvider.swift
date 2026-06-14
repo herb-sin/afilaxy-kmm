@@ -324,8 +324,8 @@ class CheckInViewModelWrapper: ObservableObject {
 
     var vm: CheckInViewModel? { viewModel }
 
-    func initialize(type: CheckInType, riskScore: KotlinInt? = nil, aqi: KotlinInt? = nil) {
-        viewModel?.initialize(type: type, riskScore: riskScore, aqi: aqi, temperature: nil, humidity: nil)
+    func initialize(type: CheckInType, riskScore: KotlinInt? = nil, aqi: KotlinInt? = nil, temperature: KotlinFloat? = nil, humidity: KotlinFloat? = nil) {
+        viewModel?.initialize(type: type, riskScore: riskScore, aqi: aqi, temperature: temperature, humidity: humidity)
     }
 
     func submitMorning(hasInhaler: Bool) {
