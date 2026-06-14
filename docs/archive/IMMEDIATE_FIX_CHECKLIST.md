@@ -32,7 +32,7 @@ Find the source file that generates `index-05aVf9ai.js` and replace:
 ```javascript
 // REMOVE THIS (vulnerable):
 const Dh=Jf({
-  apiKey:"AIzaSyA_zwgmvohqQim5xp4IvtMe2EI7DE2ylW4",
+  apiKey:"[REVOKED]",
   authDomain:"afilaxy-app.firebaseapp.com",
   projectId:"afilaxy-app",
   storageBucket:"afilaxy-app.firebasestorage.app",
@@ -78,7 +78,7 @@ firebase deploy --only hosting
 #### Check 1: No Hardcoded Credentials
 ```bash
 # This should return empty:
-grep -r "AIzaSyA_zwgmvohqQim5xp4IvtMe2EI7DE2ylW4" web-dist/
+grep -r "[REVOKED]" web-dist/
 ```
 
 #### Check 2: Environment Variables Working

@@ -133,7 +133,7 @@ jobs:
 
       # Importa o certificado de distribuição Apple (P12 em base64)
       - name: Import Apple Distribution Certificate
-        uses: apple-actions/import-codesign-certs@v2
+        uses: apple-actions/import-codesign-certs@8f3fb608891dd2244cdab3d69cd68c0d37a7fe93 # v2
         with:
           p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_P12 }}
           p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
@@ -141,7 +141,7 @@ jobs:
       # Baixa o Provisioning Profile via App Store Connect API
       - name: Download Provisioning Profile
         id: provisioning
-        uses: apple-actions/download-provisioning-profiles@v1
+        uses: apple-actions/download-provisioning-profiles@3167792207a5b26099bc0ca22b5010a323dd2a0b # v1
         with:
           bundle-id: 'com.afilaxy.app'
           issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
@@ -179,10 +179,9 @@ jobs:
       - name: Initialize Xcode SDKs
         run: |
           sudo xcodebuild -runFirstLaunch 2>&1 || true
-          xcodebuild -downloadPlatform iOS 2>&1 || xcodebuild -downloadAllPlatforms 2>&1 || true
+          xcodebuild -downloadPlatform iOS 2>&1 || xcodebuild -downloadAllPlatforms 2>&1
           echo "=== SDKs disponíveis ==="
           xcodebuild -showsdks 2>&1 | grep -i ios
-          # Falha explicitamente se iphoneos não estiver disponível
           xcodebuild -showsdks 2>&1 | grep -q "iphoneos" || (echo "❌ iphoneos SDK não disponível" && exit 1)
 
       # Arquiva usando Automatic signing com autenticação via API key.

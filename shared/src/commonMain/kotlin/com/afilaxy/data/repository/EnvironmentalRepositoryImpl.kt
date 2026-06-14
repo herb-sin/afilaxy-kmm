@@ -169,15 +169,28 @@ class EnvironmentalRepositoryImpl(
                 val weeklyMap = try { userStatsDoc?.get<Any?>("weeklyCount") as? Map<String, Any> }
                     catch (e: Exception) { null }
                 crises30d = total.coerceAtMost(50)
-                crises7d = weeklyMap?.values?.maxOfOrNull { v ->
+                // Use current ISO week key (UTC) matching Cloud Function format
+                val nowDate = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                val dayOfYear = nowDate.date.dayOfYear
+                val weekdayNum = nowDate.date.dayOfWeek.ordinal + 1  // 1=Mon, 7=Sun
+                val isoWeek = (dayOfYear - weekdayNum + 10) / 7
+                val currentWeekKey = "${nowDate.year}-W${isoWeek.toString().padStart(2, '0')}"
+                crises7d = weeklyMap?.get(currentWeekKey)?.let { v ->
+                    when (v) { is Long -> v.toInt(); is Double -> v.toInt(); is Number -> v.toInt(); else -> 0 }
+                } ?: weeklyMap?.values?.maxOfOrNull { v ->
                     when (v) { is Long -> v.toInt(); is Double -> v.toInt(); is Number -> v.toInt(); else -> 0 }
                 } ?: 0
             }
 
-            // samuCalled: query emergency_requests without timestamp filter
+            // samuCalled: last 12 months to bound the scan as the dataset grows
+            val twelveMonthsAgo = getCurrentTimeMillis() - 365L * 24 * 3600 * 1000
             val samuCalledCount = try {
                 firestore.collection("emergency_requests")
-                    .where { ("requesterId" equalTo userId) and ("samuCalled" equalTo true) }
+                    .where {
+                        ("requesterId" equalTo userId) and
+                        ("samuCalled" equalTo true) and
+                        ("timestamp" greaterThanOrEqualTo twelveMonthsAgo)
+                    }
                     .get().documents.size
             } catch (e: Exception) { 0 }
 
@@ -392,7 +405,10 @@ internal object RiskScoreEngine {
             level = level.name,
             factors = factors,
             recommendations = recommendations,
-            calculatedAt = getCurrentTimeMillis()
+            calculatedAt = getCurrentTimeMillis(),
+            aqi = env?.aqi,
+            temperature = env?.temperatureCelsius,
+            humidity = env?.humidity
         )
     }
 }

@@ -38,12 +38,15 @@ jobs:
         echo "VERSION_CODE=${{ github.run_number }}" >> local.properties
         echo "WAQI_API_TOKEN=${{ secrets.WAQI_API_TOKEN }}" >> local.properties
     
+    - name: Run Detekt static analysis
+      run: ./gradlew detekt --stacktrace
+
     - name: Run shared module tests
       run: ./gradlew shared:testDebugUnitTest --stacktrace
-    
+
     - name: Run Android unit tests
       run: ./gradlew androidApp:testDebugUnitTest --stacktrace
-    
+
     - name: Build Android Debug APK
       run: ./gradlew androidApp:assembleDebug --stacktrace
     

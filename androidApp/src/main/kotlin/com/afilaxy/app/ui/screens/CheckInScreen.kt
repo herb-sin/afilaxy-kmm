@@ -26,13 +26,15 @@ fun CheckInScreen(
     quickAnswer: Boolean? = null,   // true=sim, false=não (via action da notificação)
     riskScore: Int? = null,
     aqi: Int? = null,
+    temperature: Float? = null,
+    humidity: Float? = null,
     onDone: () -> Unit,
     viewModel: CheckInViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(type) {
-        viewModel.initialize(type, riskScore, aqi)
+        viewModel.initialize(type, riskScore, aqi, temperature, humidity)
     }
 
     // Resposta rápida via action da notificação

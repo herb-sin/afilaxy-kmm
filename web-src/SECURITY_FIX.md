@@ -7,7 +7,7 @@
 The file `/web-dist/assets/index-05aVf9ai.js` contains hardcoded Firebase configuration credentials:
 
 ```javascript
-apiKey: "AIzaSyA_zwgmvohqQim5xp4IvtMe2EI7DE2ylW4",
+apiKey: "[REVOKED]",
 authDomain: "afilaxy-app.firebaseapp.com",
 projectId: "afilaxy-app",
 storageBucket: "afilaxy-app.firebasestorage.app",

@@ -15,7 +15,7 @@ The Firebase API key was hardcoded in the client-side JavaScript bundle, exposin
 ### 1. Removed Hardcoded API Key
 **Before:**
 ```javascript
-const Dh=Jf({apiKey:window.FIREBASE_API_KEY||\"AIzaSyA_zwgmvohqQim5xp4IvtMe2EI7DE2ylW4\",...});
+const Dh=Jf({apiKey:window.FIREBASE_API_KEY||\"[REVOKED]\",...});
 ```
 
 **After:**

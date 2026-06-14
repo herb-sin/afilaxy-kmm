@@ -30,7 +30,12 @@ service cloud.firestore {
     // Public helper profiles (name only) for nearby search
     match /helpers/{helperId} {
       allow read: if isAuthenticated();
-      allow write: if isOwner(helperId);
+      allow create, update: if isOwner(helperId)
+        && request.resource.data.keys().hasOnly(['id','name','location','latitude','longitude','geohash','isActive','lastUpdate'])
+        && request.resource.data.latitude is number
+        && request.resource.data.longitude is number
+        && (!('name' in request.resource.data) || isValidString(request.resource.data.name, 1, 100));
+      allow delete: if isOwner(helperId);
     }
     
     // Emergency requests collection (coleção real usada pelo app)
@@ -102,7 +107,9 @@ service cloud.firestore {
     
     // User ratings
     match /ratings/{ratingId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid
+            || resource.data.reviewedId == request.auth.uid);
       allow create: if isAuthenticated()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.rating >= 1

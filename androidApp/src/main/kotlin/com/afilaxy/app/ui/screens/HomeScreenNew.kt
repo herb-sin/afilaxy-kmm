@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -43,6 +44,7 @@ import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.app.BuildConfig
 import com.afilaxy.util.FileLogger
+import java.util.Calendar
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 
@@ -53,6 +55,7 @@ fun HomeScreenNew(
     weeklyCount: Int = -1,
     totalEmergencies: Int = -1,
     onNavigateToEmergency: () -> Unit,
+    onNavigateToCheckIn: ((type: String) -> Unit)? = null,
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToPharmacyMap: () -> Unit = {},
@@ -180,6 +183,18 @@ fun HomeScreenNew(
                     crises7d = weeklyCount,
                     crises30d = totalEmergencies
                 )
+            }
+        }
+
+        // Check-in card — exibido apenas se houver navegação e dentro da janela horária
+        if (onNavigateToCheckIn != null) {
+            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            val morningDone = prefsRepo.getBoolean("checkin_morning_done_${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())}", false)
+            val eveningDone = prefsRepo.getBoolean("checkin_evening_done_${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())}", false)
+            if (hour < 14 && !morningDone) {
+                item { HomeCheckInCard(type = "MORNING", onNavigate = { onNavigateToCheckIn("MORNING") }) }
+            } else if (hour >= 18 && !eveningDone) {
+                item { HomeCheckInCard(type = "EVENING", onNavigate = { onNavigateToCheckIn("EVENING") }) }
             }
         }
 
@@ -524,6 +539,38 @@ private fun HomeWelcomeCard(
 }
 
 @Composable
+private fun HomeCheckInCard(type: String, onNavigate: () -> Unit) {
+    val isMorning = type == "MORNING"
+    val emoji = if (isMorning) "💊" else "🌙"
+    val title = if (isMorning) "Check-in Matinal" else "Check-in Noturno"
+    val subtitle = if (isMorning) "Você está com sua bombinha hoje?" else "Você teve crise hoje?"
+    Surface(
+        onClick = onNavigate,
+        shape = RoundedCornerShape(16.dp),
+        color = if (isMorning)
+            MaterialTheme.colorScheme.tertiaryContainer
+        else
+            MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(emoji, style = MaterialTheme.typography.headlineMedium)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
 private fun HomeEmergencyButton(
     onClick: () -> Unit,
     isActive: Boolean
@@ -730,12 +777,13 @@ private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPh
             )
             Spacer(modifier = Modifier.height(12.dp))
             HomeSupportLinkRow(
-                title = "Farmácias 24h",
-                subtitle = "Encontre medicamentos",
-                icon = Icons.Default.Add,
-                color = Color(0xFF2E7D32)
+                title = "SAMU 192",
+                subtitle = "Emergência médica",
+                icon = Icons.Default.Phone,
+                color = Color(0xFFC62828)
             ) {
-                onNavigateToPharmacyMap()
+                val uri = Uri.parse("tel:192")
+                context.startActivity(Intent(Intent.ACTION_DIAL, uri))
             }
             Spacer(modifier = Modifier.height(8.dp))
             HomeSupportLinkRow(
@@ -747,13 +795,12 @@ private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPh
             )
             Spacer(modifier = Modifier.height(8.dp))
             HomeSupportLinkRow(
-                title = "SAMU 192",
-                subtitle = "Emergência médica",
-                icon = Icons.Default.Phone,
-                color = Color(0xFFC62828)
+                title = "Farmácias 24h",
+                subtitle = "Encontre medicamentos",
+                icon = Icons.Default.Add,
+                color = Color(0xFF2E7D32)
             ) {
-                val uri = Uri.parse("tel:192")
-                context.startActivity(Intent(Intent.ACTION_DIAL, uri))
+                onNavigateToPharmacyMap()
             }
         }
     }

@@ -215,32 +215,7 @@ fun EmergencyResponseScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Triagem passiva: helper confirma que tem o medicamento antes de aceitar.
-                    // Card âmbar — mesma UX que EmergencyOverlayActivity e iOS EmergencyResponseView.
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                        color = androidx.compose.ui.graphics.Color(0xFFFFF3CD)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "💊 Você tem a bombinha com",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = androidx.compose.ui.graphics.Color(0xFF856404),
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Sulfato de Salbutamol com você?",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = androidx.compose.ui.graphics.Color(0xFF856404),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+                    InhalerConfirmationCard()
 
                     Spacer(modifier = Modifier.height(20.dp))
                     

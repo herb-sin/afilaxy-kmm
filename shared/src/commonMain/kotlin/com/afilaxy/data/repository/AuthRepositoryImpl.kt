@@ -8,6 +8,7 @@ import com.afilaxy.util.Logger
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlin.uuid.ExperimentalUuidApi
@@ -99,7 +100,16 @@ class AuthRepositoryImpl(
     }
     
     override suspend fun logout() {
+        val uid = auth.currentUser?.uid
         preferences.putString(PREF_SESSION_ID, "")
+        // Clear sessionId in Firestore so the stale token doesn't confuse future sessions
+        if (uid != null) {
+            try {
+                firestore.collection("users").document(uid).update(mapOf("sessionId" to ""))
+            } catch (e: Exception) {
+                Logger.e("AuthRepository", "Falha ao limpar sessionId no logout: ${e.message}", e)
+            }
+        }
         try {
             auth.signOut()
         } catch (e: Exception) {
@@ -145,6 +155,7 @@ class AuthRepositoryImpl(
                 null
             }
         }
+        .distinctUntilChangedBy { it?.uid }
     }
     
     override suspend fun updateUserLocation(latitude: Double, longitude: Double) {

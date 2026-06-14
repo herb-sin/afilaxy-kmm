@@ -62,10 +62,9 @@ class CheckInViewModel(
                 return@launch
             }
 
-            // Busca nome da bombinha e tipo de asma do perfil médico (contexto clínico para ML)
-            val inhalerName = checkInRepository.getRescueInhalerName(userId).getOrNull()
-            val (asmaType, asmaTypeSeverity) = checkInRepository.getAsmaTypeInfo(userId).getOrNull()
-                ?: Pair(null, null)
+            // Single Firestore read for all medical context (inhaler name + asma type + severity)
+            val (inhalerName, asmaType, asmaTypeSeverity) =
+                checkInRepository.getMedicalContext(userId).getOrNull() ?: Triple(null, null, null)
             _state.update {
                 it.copy(
                     isLoading = false,

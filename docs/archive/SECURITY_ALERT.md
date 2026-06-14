@@ -2,7 +2,7 @@
 
 ## Problema Identificado
 - **API Key do Google Maps exposta** no arquivo `.env`
-- **Chave:** `AIzaSyA1RVZ1EXBjACjCgf_f-hpnGdnf2FzNWvc`
+- **Chave:** `[REVOKED]`
 - **Arquivo:** `/home/afilaxy/Projetos/afilaxy-kmm/.env`
 
 ## Ações Imediatas Necessárias
@@ -10,7 +10,7 @@
 ### 1. Revogar a API Key
 1. Acesse o [Google Cloud Console](https://console.cloud.google.com/)
 2. Vá para "APIs & Services" > "Credentials"
-3. Encontre a API Key: `AIzaSyA1RVZ1EXBjACjCgf_f-hpnGdnf2FzNWvc`
+3. Encontre a API Key: `[REVOKED]`
 4. **REVOGUE IMEDIATAMENTE** esta chave
 
 ### 2. Criar Nova API Key

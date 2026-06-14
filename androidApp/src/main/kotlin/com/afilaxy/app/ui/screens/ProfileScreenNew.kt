@@ -17,8 +17,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.afilaxy.app.ui.theme.ThemeState
 import com.afilaxy.domain.model.EmergencyContact
 import com.afilaxy.domain.model.EmergencyHistory
 import com.afilaxy.domain.model.UserHealthData
@@ -208,6 +212,11 @@ fun ProfileScreenNew(
             )
         }
 
+        // ── Aparência ─────────────────────────────────────────────────────────────────────────
+        item {
+            ThemePreferenceCard()
+        }
+
         // ── Sair da Conta ──────────────────────────────────────────────────────────────────────
         item {
             Card(
@@ -280,9 +289,10 @@ fun ProfileScreenNew(
                     val split: (String) -> List<String> = { s ->
                         s.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                     }
+                    val safeName = editName.trim().takeIf { it.isNotBlank() } ?: current.name
                     viewModel.updateProfile(
                         current.copy(
-                            name = editName,
+                            name = safeName,
                             phone = editPhone,
                             healthData = UserHealthData(
                                 bloodType  = profile?.healthData?.bloodType ?: "",
@@ -514,8 +524,8 @@ private fun EditProfileSheetContent(
         // Seção 1: Informações Pessoais
         item {
             EditSection(icon = Icons.Default.Person, title = "Informações Pessoais") {
-                ProfileTextField("Nome completo", name, onNameChange)
-                ProfileTextField("Telefone", phone, onPhoneChange)
+                ProfileTextField("Nome completo *", name, onNameChange)
+                ProfileTextField("Telefone", phone, onPhoneChange, keyboardType = KeyboardType.Phone)
             }
         }
         // Seção 2: Dados de Saúde
@@ -539,7 +549,7 @@ private fun EditProfileSheetContent(
         item {
             EditSection(icon = Icons.Default.ContactPhone, title = "Contato de Emergência") {
                 ProfileTextField("Nome", emergName, onEmergNameChange)
-                ProfileTextField("Telefone", emergPhone, onEmergPhoneChange)
+                ProfileTextField("Telefone", emergPhone, onEmergPhoneChange, keyboardType = KeyboardType.Phone)
                 ProfileTextField("Parentesco (ex: Mãe)", emergRel, onEmergRelChange)
             }
         }
@@ -579,6 +589,53 @@ private fun EditSection(
     }
 }
 
+// ── ThemePreferenceCard ───────────────────────────────────────────────────────────
+
+@Composable
+private fun ThemePreferenceCard() {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Settings, null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    "Aparência",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("system" to "Sistema", "light" to "Claro", "dark" to "Escuro")
+                    .forEach { (value, label) ->
+                        FilterChip(
+                            selected = ThemeState.preference == value,
+                            onClick = {
+                                ThemeState.preference = value
+                                context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                                    .edit().putString("theme_preference", value).apply()
+                            },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+            }
+        }
+    }
+}
+
 // ── ProfileTextField ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -586,7 +643,8 @@ private fun ProfileTextField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     OutlinedTextField(
         value = value,
@@ -594,6 +652,7 @@ private fun ProfileTextField(
         label = { Text(label) },
         singleLine = singleLine,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp)
+        shape = RoundedCornerShape(10.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
     )
 }

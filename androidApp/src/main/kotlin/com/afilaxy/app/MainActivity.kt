@@ -17,6 +17,8 @@ import androidx.lifecycle.lifecycleScope
 import com.afilaxy.app.navigation.AppRoutes
 import com.afilaxy.app.navigation.NavGraph
 import com.afilaxy.app.ui.theme.AflixyTheme
+import com.afilaxy.app.ui.theme.ThemeState
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
 import com.google.android.gms.location.LocationServices
@@ -63,6 +65,9 @@ class MainActivity : ComponentActivity() {
             } else android.util.Log.e("FCM", "Falha ao obter token")
         }
 
+        ThemeState.preference = getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+            .getString("theme_preference", "system") ?: "system"
+
         resolveIntent(intent)
 
         if (FirebaseAuth.getInstance().currentUser != null) {
@@ -71,7 +76,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             KoinAndroidContext {
-                AflixyTheme {
+                val darkTheme = when (ThemeState.preference) {
+                    "dark" -> true
+                    "light" -> false
+                    else -> isSystemInDarkTheme()
+                }
+                AflixyTheme(darkTheme = darkTheme) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background

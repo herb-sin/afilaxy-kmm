@@ -1,15 +1,19 @@
 package com.afilaxy.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,6 +41,7 @@ fun EmergencyRequestScreen(
     alreadyInChat: (String) -> Boolean = { false }
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
     val emergencyRepo: EmergencyRepository = koinInject()
     val prefs: PreferencesRepository = koinInject()
     val scope = rememberCoroutineScope()
@@ -206,6 +211,21 @@ fun EmergencyRequestScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
                     
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:192")))
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Ligar SAMU 192")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     Button(
                         onClick = {
                             FileLogger.log("INFO", "EmergencyRequestScreen", "cancelEmergency tapped hasActive=${state.hasActiveEmergency}")

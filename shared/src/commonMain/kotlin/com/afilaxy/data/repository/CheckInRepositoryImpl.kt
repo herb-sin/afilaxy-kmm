@@ -2,7 +2,6 @@ package com.afilaxy.data.repository
 
 import com.afilaxy.domain.model.CheckInResponse
 import com.afilaxy.domain.model.CheckInType
-import com.afilaxy.domain.model.MedicationType
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.CheckInRepository
 import dev.gitlive.firebase.auth.FirebaseAuth
@@ -90,35 +89,34 @@ class CheckInRepositoryImpl(
     }
 
     override suspend fun getRescueInhalerName(userId: String): Result<String?> {
-        return try {
-            val doc = firestore.collection("medical_profiles")
-                .document(userId)
-                .get()
-
-            if (!doc.exists) return Result.success(null)
-
-            // Busca na lista de medicamentos o primeiro do tipo RESGATE
-            @Suppress("UNCHECKED_CAST")
-            val medications = doc.get<List<Map<String, Any?>>?>("medications") ?: emptyList()
-            val rescueName = medications.firstOrNull { med ->
-                med["type"] == MedicationType.RESGATE.name && med["isActive"] != false
-            }?.get("name") as? String
-
-            Result.success(rescueName)
-        } catch (e: Exception) {
-            Result.success(null) // fallback silencioso — usa nome genérico
-        }
+        return getMedicalContext(userId).map { (inhalerName, _, _) -> inhalerName }
     }
 
     override suspend fun getAsmaTypeInfo(userId: String): Result<Pair<String?, String?>> {
+        return getMedicalContext(userId).map { (_, asmaType, severity) -> Pair(asmaType, severity) }
+    }
+
+    override suspend fun getMedicalContext(userId: String): Result<Triple<String?, String?, String?>> {
         return try {
-            val doc = firestore.collection("medical_profiles").document(userId).get()
-            if (!doc.exists) return Result.success(Pair(null, null))
-            val asmaType = doc.get<String?>("asmaType")
-            val severity = doc.get<String?>("severity")
-            Result.success(Pair(asmaType, severity))
+            // Lê de users/{userId}.healthData — fonte que o usuário preenche
+            // via tela de edição de perfil (ProfileScreen/ProfileView).
+            val doc = firestore.collection("users").document(userId).get()
+            if (!doc.exists) return Result.success(Triple(null, null, null))
+
+            @Suppress("UNCHECKED_CAST")
+            val healthData = doc.get<Map<String, Any?>?>("healthData")
+
+            @Suppress("UNCHECKED_CAST")
+            val medications = healthData?.get("medications") as? List<*>
+            val inhalerName = medications?.firstOrNull { it != null && it.toString().isNotBlank() }?.toString()
+
+            @Suppress("UNCHECKED_CAST")
+            val conditions = healthData?.get("conditions") as? List<*>
+            val asmaType = conditions?.firstOrNull { it != null && it.toString().isNotBlank() }?.toString()
+
+            Result.success(Triple(inhalerName, asmaType, null))
         } catch (e: Exception) {
-            Result.success(Pair(null, null))
+            Result.success(Triple(null, null, null))
         }
     }
 

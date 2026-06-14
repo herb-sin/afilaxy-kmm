@@ -9,7 +9,7 @@
 ## Hardcoded Credentials Found
 ```javascript
 const firebaseConfig = {
-  apiKey: "AIzaSyA_zwgmvohqQim5xp4IvtMe2EI7DE2ylW4",
+  apiKey: "[REVOKED]",
   authDomain: "afilaxy-app.firebaseapp.com", 
   projectId: "afilaxy-app",
   storageBucket: "afilaxy-app.firebasestorage.app",

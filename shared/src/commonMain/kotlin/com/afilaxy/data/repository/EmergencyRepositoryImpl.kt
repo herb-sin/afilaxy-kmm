@@ -364,7 +364,8 @@ class EmergencyRepositoryImpl(
                             "senderId" to userId,
                             "senderName" to resolverName,
                             "message" to "✅ $resolverName encerrou a emergência.",
-                            "timestamp" to FieldValue.serverTimestamp,
+                            // Client-side Long to match ChatRepositoryImpl sort path (avoids ts=0 pending state)
+                            "timestamp" to getCurrentTimeMillis().toDouble(),
                             "isFromHelper" to (userId == helperId)
                         ))
                 } catch (e: Exception) {

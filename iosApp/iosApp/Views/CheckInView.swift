@@ -8,6 +8,10 @@ import shared
 struct CheckInView: View {
     let type: CheckInType
     let quickAnswer: Bool?
+    let riskScore: Int32?
+    let aqi: Int32?
+    let temperature: Float?
+    let humidity: Float?
     let onDone: () -> Void
 
     @StateObject private var wrapper: CheckInViewModelWrapper = {
@@ -17,9 +21,21 @@ struct CheckInView: View {
         return CheckInViewModelWrapper.empty()
     }()
 
-    init(type: CheckInType, quickAnswer: Bool? = nil, onDone: @escaping () -> Void) {
+    init(
+        type: CheckInType,
+        quickAnswer: Bool? = nil,
+        riskScore: Int32? = nil,
+        aqi: Int32? = nil,
+        temperature: Float? = nil,
+        humidity: Float? = nil,
+        onDone: @escaping () -> Void
+    ) {
         self.type = type
         self.quickAnswer = quickAnswer
+        self.riskScore = riskScore
+        self.aqi = aqi
+        self.temperature = temperature
+        self.humidity = humidity
         self.onDone = onDone
     }
 
@@ -50,7 +66,13 @@ struct CheckInView: View {
             }
         }
         .onAppear {
-            wrapper.initialize(type: type)
+            wrapper.initialize(
+                type: type,
+                riskScore: riskScore != nil ? KotlinInt(value: riskScore!) : nil,
+                aqi: aqi != nil ? KotlinInt(value: aqi!) : nil,
+                temperature: temperature != nil ? KotlinFloat(value: temperature!) : nil,
+                humidity: humidity != nil ? KotlinFloat(value: humidity!) : nil
+            )
         }
         .onChange(of: wrapper.state?.isSubmitted) { isSubmitted in
             // Resposta rápida via action da notificação

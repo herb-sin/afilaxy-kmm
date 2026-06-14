@@ -412,6 +412,7 @@ struct AfilaxyApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var container = AppContainer()
     @State private var isKoinInitialized = false
+    @AppStorage("theme_preference") private var themePreference: String = "system"
 
     init() {
         // Initialize Firebase first
@@ -463,6 +464,10 @@ struct AfilaxyApp: App {
             } else if isKoinInitialized {
                 ContentView()
                     .environmentObject(container)
+                    .preferredColorScheme(
+                        themePreference == "dark" ? .dark :
+                        themePreference == "light" ? .light : nil
+                    )
             } else {
                 VStack(spacing: 16) {
                     ProgressView()

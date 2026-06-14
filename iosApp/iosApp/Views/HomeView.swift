@@ -410,7 +410,7 @@ struct HomeView: View {
                 subtitle: "Saúde e bem-estar",
                 icon: "heart.text.square.fill"
             ) {
-                navigationPath.append(AppRoute.education)
+                navigationPath.append(AppRoute.autocuidado)
             }
 
             ActionCard(
@@ -437,24 +437,6 @@ struct HomeView: View {
                 
                 VStack(spacing: 8) {
                     SupportLinkRow(
-                        title: "Farmácias 24h",
-                        subtitle: "Encontre medicamentos",
-                        icon: "cross.fill",
-                        color: .afiSuccess
-                    ) {
-                        showPharmacyMap = true
-                    }
-                    
-                    SupportLinkRow(
-                        title: "Protocolo de Crise",
-                        subtitle: "Passos para emergência",
-                        icon: "list.clipboard.fill",
-                        color: .afiWarning
-                    ) {
-                        navigationPath.append(AppRoute.help)
-                    }
-                    
-                    SupportLinkRow(
                         title: "SAMU 192",
                         subtitle: "Emergência médica",
                         icon: "phone.fill",
@@ -463,6 +445,24 @@ struct HomeView: View {
                         if let url = URL(string: "tel://192") {
                             UIApplication.shared.open(url)
                         }
+                    }
+
+                    SupportLinkRow(
+                        title: "Protocolo de Crise",
+                        subtitle: "Passos para emergência",
+                        icon: "list.clipboard.fill",
+                        color: .afiWarning
+                    ) {
+                        navigationPath.append(AppRoute.help)
+                    }
+
+                    SupportLinkRow(
+                        title: "Farmácias 24h",
+                        subtitle: "Encontre medicamentos",
+                        icon: "cross.fill",
+                        color: .afiSuccess
+                    ) {
+                        showPharmacyMap = true
                     }
                 }
             }
@@ -479,7 +479,11 @@ struct HomeView: View {
         if let cached = LocationManager.shared.currentLocation {
             let coord = cached.coordinate
             riskLocation = coord
-            container.risk.loadRiskScore(latitude: coord.latitude, longitude: coord.longitude)
+            container.risk.loadRiskScore(
+                latitude: coord.latitude, longitude: coord.longitude,
+                crises7d: Int32(weeklyCount >= 0 ? weeklyCount : -1),
+                crises30d: Int32(totalEmergencies >= 0 ? totalEmergencies : -1)
+            )
             FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
                 message: "fetchLocationForRisk: usando cache lat=\(coord.latitude) lon=\(coord.longitude)")
             return
@@ -494,7 +498,11 @@ struct HomeView: View {
             }
             await MainActor.run {
                 riskLocation = coord
-                container.risk.loadRiskScore(latitude: coord.latitude, longitude: coord.longitude)
+                container.risk.loadRiskScore(
+                    latitude: coord.latitude, longitude: coord.longitude,
+                    crises7d: Int32(weeklyCount >= 0 ? weeklyCount : -1),
+                    crises30d: Int32(totalEmergencies >= 0 ? totalEmergencies : -1)
+                )
                 FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
                     message: "fetchLocationForRisk: OK lat=\(coord.latitude) lon=\(coord.longitude)")
             }
@@ -579,26 +587,6 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Navigation Destination Builder
-    @ViewBuilder
-    private func destinationView(for route: AppRoute) -> some View {
-        switch route {
-        case .emergency:
-            EmergencyView()
-        case .history:
-            HistoryView()
-        case .professionals:
-            ProfessionalListView()
-        case .education:
-            EducationView()
-        case .help:
-            HelpView()
-        case .professionalDetail(let id):
-            ProfessionalDetailView(professionalId: id)
-        default:
-            EmptyView()
-        }
-    }
 }
 
 // MARK: - Supporting Views
