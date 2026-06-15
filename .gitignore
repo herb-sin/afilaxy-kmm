@@ -108,3 +108,6 @@ scripts/node_modules/
 # Web hosting build output
 web-dist/
 web-dist-secure/
+
+# Datasets de ML — dados de saúde pseudonimizados, não commitar
+scripts/*.csv
