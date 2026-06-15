@@ -371,7 +371,12 @@ fun NavGraph(
                 aqi = riskState.riskScore?.aqi,
                 temperature = riskState.riskScore?.temperature,
                 humidity = riskState.riskScore?.humidity,
-                onDone = { navController.popBackStack() }
+                onDone = {
+                    val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                    val prefKey = if (checkInType == CheckInType.MORNING) "checkin_morning_done_$today" else "checkin_evening_done_$today"
+                    prefs.putBoolean(prefKey, true)
+                    navController.popBackStack()
+                }
             )
         }
 
