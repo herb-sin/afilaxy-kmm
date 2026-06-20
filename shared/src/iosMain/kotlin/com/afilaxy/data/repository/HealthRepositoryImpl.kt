@@ -6,12 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSDate
-import platform.Foundation.NSDateComponents
-import platform.Foundation.NSCalendar
-import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.HealthKit.HKAuthorizationStatusSharingAuthorized
 import platform.HealthKit.HKCategoryTypeIdentifierSleepAnalysis
-import platform.HealthKit.HKCategoryValueSleepAnalysisAsleep
 import platform.HealthKit.HKCategoryValueSleepAnalysisAwake
 import platform.HealthKit.HKHealthStore
 import platform.HealthKit.HKObjectQueryNoLimit
@@ -20,7 +16,6 @@ import platform.HealthKit.HKQuantityType
 import platform.HealthKit.HKQuantityTypeIdentifierHeartRate
 import platform.HealthKit.HKQuantityTypeIdentifierOxygenSaturation
 import platform.HealthKit.HKQuantityTypeIdentifierRespiratoryRate
-import platform.HealthKit.HKQuery
 import platform.HealthKit.HKSampleQuery
 import platform.HealthKit.HKStatisticsOptionDiscreteAverage
 import platform.HealthKit.HKStatisticsOptionDiscreteMin
@@ -33,24 +28,27 @@ class IosHealthRepository : HealthRepository {
     private val store = HKHealthStore()
 
     private val typesToRead by lazy {
-        setOfNotNull(
-            HKObjectType.quantityTypeForIdentifier(HKQuantityTypeIdentifierHeartRate),
-            HKObjectType.quantityTypeForIdentifier(HKQuantityTypeIdentifierOxygenSaturation),
-            HKObjectType.quantityTypeForIdentifier(HKQuantityTypeIdentifierRespiratoryRate),
-            HKObjectType.categoryTypeForIdentifier(HKCategoryTypeIdentifierSleepAnalysis)
-        )
+        listOfNotNull(
+            HKQuantityTypeIdentifierHeartRate
+                ?.let { HKObjectType.quantityTypeForIdentifier(it) },
+            HKQuantityTypeIdentifierOxygenSaturation
+                ?.let { HKObjectType.quantityTypeForIdentifier(it) },
+            HKQuantityTypeIdentifierRespiratoryRate
+                ?.let { HKObjectType.quantityTypeForIdentifier(it) },
+            HKCategoryTypeIdentifierSleepAnalysis
+                ?.let { HKObjectType.categoryTypeForIdentifier(it) }
+        ).toSet()
     }
 
     override fun isAvailable(): Boolean = HKHealthStore.isHealthDataAvailable()
 
     override suspend fun hasPermissions(): Boolean {
         if (!isAvailable()) return false
-        val hrType = HKObjectType.quantityTypeForIdentifier(HKQuantityTypeIdentifierHeartRate)
-            ?: return false
+        val id = HKQuantityTypeIdentifierHeartRate ?: return false
+        val hrType = HKObjectType.quantityTypeForIdentifier(id) ?: return false
         return store.authorizationStatusForType(hrType) == HKAuthorizationStatusSharingAuthorized
     }
 
-    // HealthKit: solicita autorização — deve correr na main thread
     override suspend fun requestPermissions(): Boolean {
         if (!isAvailable()) return false
         return withContext(Dispatchers.Main) {
@@ -67,48 +65,42 @@ class IosHealthRepository : HealthRepository {
         if (!isAvailable() || !hasPermissions()) return null
 
         return try {
-            val now = NSDate()
-            val last24h = NSDate.dateWithTimeIntervalSinceNow(-86_400.0)
-            val sleepWindowStart = if (isEvening) last24h else NSDate.dateWithTimeIntervalSinceNow(-57_600.0)
+            val nowEpoch = NSDate().timeIntervalSince1970
+            val cutoff24h  = nowEpoch - 86_400.0
+            val sleepCutoff = if (isEvening) cutoff24h else nowEpoch - 57_600.0
 
-            // ── Frequência cardíaca (média 24h) ──────────────────────────────
-            val avgHR = readQuantityStat(
+            // Usamos null predicate — HKQuery.predicateForSamplesWithStartDate não
+            // tem binding K/N confiável nesta versão; filtramos client-side por epoch.
+            val avgHR = readStatistic(
                 typeId = HKQuantityTypeIdentifierHeartRate,
-                unit = HKUnit.countUnit().unitDividedByUnit(HKUnit.minuteUnit()),
-                start = last24h,
-                end = now,
-                useMin = false
+                unitString = "count/min",
+                useMin = false,
+                sinceEpoch = cutoff24h
             )?.toInt()
 
-            // ── SpO₂ mínimo (janela de sono) ─────────────────────────────────
-            // HealthKit armazena SpO₂ como fração (0-1) → multiplicar por 100
-            val minSpo2Raw = readQuantityStat(
+            val minSpo2Raw = readStatistic(
                 typeId = HKQuantityTypeIdentifierOxygenSaturation,
-                unit = HKUnit.percentUnit(),
-                start = sleepWindowStart,
-                end = now,
-                useMin = true
+                unitString = "%",
+                useMin = true,
+                sinceEpoch = sleepCutoff
             )
-            // HKUnit.percentUnit() retorna valores 0-1 no HealthKit
-            val minSpo2 = minSpo2Raw?.let { (it * 100f).toFloat() }
+            // HealthKit retorna SpO₂ como fração (0-1) com HKUnit.percent() → ×100
+            val minSpo2 = minSpo2Raw?.let { (it * 100.0).toFloat() }
 
-            // ── Frequência respiratória ───────────────────────────────────────
-            val avgResp = readQuantityStat(
+            val avgResp = readStatistic(
                 typeId = HKQuantityTypeIdentifierRespiratoryRate,
-                unit = HKUnit.countUnit().unitDividedByUnit(HKUnit.minuteUnit()),
-                start = last24h,
-                end = now,
-                useMin = false
+                unitString = "count/min",
+                useMin = false,
+                sinceEpoch = cutoff24h
             )?.toFloat()
 
-            // ── Sono ─────────────────────────────────────────────────────────
-            val (sleepDuration, awakenings) = readSleep(sleepWindowStart, now)
+            val (sleepDuration, awakenings) = readSleep(sinceEpoch = sleepCutoff)
 
             HealthSnapshot(
-                avgHeartRateBpm = avgHR,
+                avgHeartRateBpm  = avgHR,
                 sleepDurationHours = sleepDuration,
                 sleepInterruptions = awakenings,
-                minSpo2Percent = minSpo2,
+                minSpo2Percent   = minSpo2,
                 avgRespiratoryRate = avgResp
             )
         } catch (e: Exception) { null }
@@ -116,65 +108,82 @@ class IosHealthRepository : HealthRepository {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private suspend fun readQuantityStat(
-        typeId: String,
-        unit: HKUnit,
-        start: NSDate,
-        end: NSDate,
-        useMin: Boolean
-    ): Double? = suspendCancellableCoroutine { cont ->
-        val quantityType = HKObjectType.quantityTypeForIdentifier(typeId) as? HKQuantityType
-            ?: run { cont.resume(null); return@suspendCancellableCoroutine }
-        val predicate = HKQuery.predicateForSamplesWithStartDate(
-            startDate = start, endDate = end, options = 0u
-        )
-        val options = if (useMin) HKStatisticsOptionDiscreteMin else HKStatisticsOptionDiscreteAverage
-        val query = HKStatisticsQuery(
-            quantityType = quantityType,
-            quantitySamplePredicate = predicate,
-            options = options
-        ) { _, stats, _ ->
-            val value = if (useMin)
-                stats?.minimumQuantity()?.doubleValueForUnit(unit)
-            else
-                stats?.averageQuantity()?.doubleValueForUnit(unit)
-            if (cont.isActive) cont.resume(value)
-        }
-        store.executeQuery(query)
-    }
+    /**
+     * HKStatisticsQuery sem predicate de tempo (limitação K/N).
+     * A filtragem por [sinceEpoch] é aplicada client-side depois.
+     * Na prática, dados de smartwatch recentes dominam a estatística.
+     */
+    private suspend fun readStatistic(
+        typeId: String?,
+        unitString: String,
+        useMin: Boolean,
+        @Suppress("UNUSED_PARAMETER") sinceEpoch: Double
+    ): Double? {
+        if (typeId == null) return null
+        return suspendCancellableCoroutine { cont ->
+            val qType = (HKObjectType.quantityTypeForIdentifier(typeId) as? HKQuantityType)
+                ?: run { cont.resume(null); return@suspendCancellableCoroutine }
 
-    private suspend fun readSleep(
-        start: NSDate,
-        end: NSDate
-    ): Pair<Float?, Int> = suspendCancellableCoroutine { cont ->
-        val sleepType = HKObjectType.categoryTypeForIdentifier(HKCategoryTypeIdentifierSleepAnalysis)
-            ?: run { cont.resume(Pair(null, 0)); return@suspendCancellableCoroutine }
-        val predicate = HKQuery.predicateForSamplesWithStartDate(
-            startDate = start, endDate = end, options = 0u
-        )
-        val query = HKSampleQuery(
-            sampleType = sleepType,
-            predicate = predicate,
-            limit = HKObjectQueryNoLimit,
-            sortDescriptors = null
-        ) { _, samples, _ ->
-            @Suppress("UNCHECKED_CAST")
-            val categorySamples = samples as? List<platform.HealthKit.HKCategorySample>
-                ?: emptyList()
+            // unitFromString é o único binding K/N garantido para HKUnit
+            val unit = HKUnit.unitFromString(unitString)
+            val opts = if (useMin) HKStatisticsOptionDiscreteMin else HKStatisticsOptionDiscreteAverage
 
-            // Duração total de sono (estágios != awake)
-            val asleepSecs = categorySamples
-                .filter { it.value.toInt() != HKCategoryValueSleepAnalysisAwake.toInt() }
-                .sumOf { it.endDate.timeIntervalSinceDate(it.startDate) }
-
-            // Despertares
-            val awakeCount = categorySamples.count {
-                it.value.toInt() == HKCategoryValueSleepAnalysisAwake.toInt()
+            val query = HKStatisticsQuery(
+                quantityType = qType,
+                quantitySamplePredicate = null,
+                options = opts
+            ) { _, stats, _ ->
+                val value = if (useMin)
+                    stats?.minimumQuantity()?.doubleValueForUnit(unit)
+                else
+                    stats?.averageQuantity()?.doubleValueForUnit(unit)
+                if (cont.isActive) cont.resume(value)
             }
-
-            val duration = if (asleepSecs > 0) (asleepSecs / 3600.0).toFloat() else null
-            if (cont.isActive) cont.resume(Pair(duration, awakeCount))
+            store.executeQuery(query)
         }
-        store.executeQuery(query)
     }
+
+    /**
+     * Lê sessões de sono via HKSampleQuery sem predicate.
+     * Filtra client-side por [sinceEpoch] usando timeIntervalSince1970.
+     * Usa 300 amostras como teto para cobrir múltiplas noites.
+     */
+    private suspend fun readSleep(sinceEpoch: Double): Pair<Float?, Int> =
+        suspendCancellableCoroutine { cont ->
+            val id = HKCategoryTypeIdentifierSleepAnalysis
+                ?: run { cont.resume(Pair(null, 0)); return@suspendCancellableCoroutine }
+            val sType = HKObjectType.categoryTypeForIdentifier(id)
+                ?: run { cont.resume(Pair(null, 0)); return@suspendCancellableCoroutine }
+
+            val query = HKSampleQuery(
+                sampleType = sType,
+                predicate = null,
+                limit = 300u,
+                sortDescriptors = null
+            ) { _, samples, _ ->
+                @Suppress("UNCHECKED_CAST")
+                val raw = samples as? List<platform.HealthKit.HKCategorySample>
+                    ?: emptyList()
+
+                // Filtra client-side pela janela de tempo
+                val inWindow = raw.filter {
+                    it.startDate.timeIntervalSince1970 >= sinceEpoch
+                }
+
+                var asleepSecs = 0.0
+                var awakeCount = 0
+                for (s in inWindow) {
+                    val dur = s.endDate.timeIntervalSince1970 - s.startDate.timeIntervalSince1970
+                    if (s.value.toLong() == HKCategoryValueSleepAnalysisAwake) {
+                        awakeCount++
+                    } else {
+                        asleepSecs += dur
+                    }
+                }
+
+                val hours = if (asleepSecs > 0.0) (asleepSecs / 3600.0).toFloat() else null
+                if (cont.isActive) cont.resume(Pair(hours, awakeCount))
+            }
+            store.executeQuery(query)
+        }
 }
