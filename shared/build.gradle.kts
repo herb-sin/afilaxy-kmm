@@ -114,6 +114,8 @@ kotlin {
             implementation("com.google.android.gms:play-services-location:21.3.0")
             // Ktor engine Android
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
+            // Health Connect — leitura de dados de smartwatch
+            implementation("androidx.health.connect:connect-client:1.1.0-rc01")
         }
 
         iosMain.dependencies {
@@ -126,7 +128,7 @@ kotlin {
 
 android {
     namespace = "com.afilaxy.shared"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         minSdk = 23
     }
