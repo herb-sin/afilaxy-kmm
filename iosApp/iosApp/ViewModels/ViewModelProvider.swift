@@ -328,12 +328,12 @@ class CheckInViewModelWrapper: ObservableObject {
         viewModel?.initialize(type: type, riskScore: riskScore, aqi: aqi, temperature: temperature, humidity: humidity)
     }
 
-    func submitMorning(hasInhaler: Bool) {
-        viewModel?.submitMorningCheckIn(hasInhaler: hasInhaler)
+    func submitMorning(hasInhaler: Bool, nocturnalSymptoms: Bool = false, onControllerMedication: Bool = false) {
+        viewModel?.submitMorningCheckIn(hasInhaler: hasInhaler, nocturnalSymptoms: nocturnalSymptoms, onControllerMedication: onControllerMedication)
     }
 
-    func submitEvening(hadCrisis: Bool, severity: String? = nil, usedRescueInhaler: KotlinBoolean? = nil) {
-        viewModel?.submitEveningCheckIn(hadCrisis: hadCrisis, severity: severity, usedRescueInhaler: usedRescueInhaler)
+    func submitEvening(hadCrisis: Bool, severity: String? = nil, usedRescueInhaler: Bool = false, onControllerMedication: Bool = false) {
+        viewModel?.submitEveningCheckIn(hadCrisis: hadCrisis, severity: severity, usedRescueInhaler: usedRescueInhaler, onControllerMedication: onControllerMedication)
     }
 
     func freeze() {
