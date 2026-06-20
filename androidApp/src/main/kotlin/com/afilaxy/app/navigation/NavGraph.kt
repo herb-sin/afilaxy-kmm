@@ -342,7 +342,8 @@ fun NavGraph(
                     onNavigateToCheckIn = { type -> navController.navigate(AppRoutes.checkIn(type)) },
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
-                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) }
+                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
+                    onNavigateToPortal = { navController.navigate(AppRoutes.PORTAL) }
                 )
             }
         }
@@ -438,6 +439,9 @@ fun NavGraph(
                             "onNavigateToRequest ignorado — back stack=$routes")
                         return@EmergencyScreen
                     }
+                    // Salva timestamp para o diálogo pós-crise (exibido 60 min depois)
+                    prefs.putString("last_emergency_requested_at", System.currentTimeMillis().toString())
+                    prefs.putBoolean("post_crisis_dialog_shown", false)
                     navController.navigate("emergency_request/$emergencyId") {
                         launchSingleTop = true  // evita duplicata se já estiver no topo
                     }

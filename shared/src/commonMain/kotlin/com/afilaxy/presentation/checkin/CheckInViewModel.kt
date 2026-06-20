@@ -76,8 +76,12 @@ class CheckInViewModel(
         }
     }
 
-    /** Check-in matinal: usuário responde se está com a bombinha. */
-    fun submitMorningCheckIn(hasInhaler: Boolean) {
+    /** Check-in matinal com checkboxes. */
+    fun submitMorningCheckIn(
+        hasInhaler: Boolean,
+        nocturnalSymptoms: Boolean,
+        onControllerMedication: Boolean
+    ) {
         val userId = authRepository.getCurrentUserId() ?: return
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
@@ -90,6 +94,8 @@ class CheckInViewModel(
                 timestamp = getCurrentTimeMillis(),
                 hasRescueInhaler = hasInhaler,
                 rescueInhalerName = _state.value.rescueInhalerName,
+                nocturnalSymptoms = nocturnalSymptoms,
+                onControllerMedication = onControllerMedication,
                 riskScore = _state.value.riskScore,
                 aqi = _state.value.aqi,
                 temperature = _state.value.temperature,
@@ -111,11 +117,12 @@ class CheckInViewModel(
         }
     }
 
-    /** Check-in noturno: usuário responde se teve crise hoje. */
+    /** Check-in noturno com checkboxes. */
     fun submitEveningCheckIn(
         hadCrisis: Boolean,
         severity: String? = null,
-        usedRescueInhaler: Boolean? = null
+        usedRescueInhaler: Boolean,
+        onControllerMedication: Boolean
     ) {
         val userId = authRepository.getCurrentUserId() ?: return
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
@@ -129,7 +136,8 @@ class CheckInViewModel(
                 timestamp = getCurrentTimeMillis(),
                 hadCrisisToday = hadCrisis,
                 crisisSeverity = if (hadCrisis) severity else null,
-                usedRescueInhaler = if (hadCrisis) usedRescueInhaler else null,
+                usedRescueInhaler = usedRescueInhaler,
+                onControllerMedication = onControllerMedication,
                 riskScore = _state.value.riskScore,
                 aqi = _state.value.aqi,
                 temperature = _state.value.temperature,

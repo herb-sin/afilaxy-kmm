@@ -318,13 +318,27 @@ internal object RiskScoreEngine {
             }
 
             // Sem bombinha de resgate disponível
-            val withoutInhaler = recentCheckIns.any {
-                it.hasRescueInhaler == false
-            }
+            val withoutInhaler = recentCheckIns.any { it.hasRescueInhaler == false }
             if (withoutInhaler) {
                 score += 8
                 factors.add("Sem bombinha de resgate disponível")
                 recommendations.add("Providencie uma bombinha de resgate com seu médico")
+            }
+
+            // Sintomas noturnos (critério GINA: acordar de noite por asma = controle insuficiente)
+            val nocturnalCount = recentCheckIns.count { it.nocturnalSymptoms == true }
+            if (nocturnalCount > 0) {
+                score += (nocturnalCount * 10).coerceAtMost(20)
+                factors.add("$nocturnalCount noite(s) com sintomas noturnos esta semana")
+                recommendations.add("Sintomas noturnos indicam controle insuficiente — consulte seu médico")
+            }
+
+            // Não está fazendo o tratamento (baixa aderência = maior risco de crise)
+            val notOnMedication = recentCheckIns.any { it.onControllerMedication == false }
+            if (notOnMedication) {
+                score += 12
+                factors.add("Tratamento não realizado em algum dia da semana")
+                recommendations.add("Retome seu tratamento de manutenção e converse com seu médico")
             }
         }
 

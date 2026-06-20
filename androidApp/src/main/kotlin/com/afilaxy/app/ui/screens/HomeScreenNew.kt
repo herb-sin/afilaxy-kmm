@@ -59,6 +59,7 @@ fun HomeScreenNew(
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToPharmacyMap: () -> Unit = {},
+    onNavigateToPortal: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
 ) {
@@ -73,6 +74,7 @@ fun HomeScreenNew(
     var showHelperPermission by remember { mutableStateOf(false) }
     var showHelperConsentDialog by remember { mutableStateOf(false) }
     var showNps by remember { mutableStateOf(false) }
+    var showPostCrisisDialog by remember { mutableStateOf(false) }
 
     // NPS: exibe uma vez, 7 dias após a primeira emergência
     LaunchedEffect(Unit) {
@@ -82,6 +84,19 @@ fun HomeScreenNew(
         val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
         if (!npsShown && System.currentTimeMillis() - firstAt >= sevenDaysMs) {
             showNps = true
+        }
+    }
+
+    // Diálogo pós-crise: exibido 60 min após um pedido de emergência realizado
+    LaunchedEffect(Unit) {
+        val requestedAtStr = prefsRepo.getString("last_emergency_requested_at", null) ?: return@LaunchedEffect
+        val requestedAt = requestedAtStr.toLongOrNull() ?: return@LaunchedEffect
+        val dialogShown = prefsRepo.getBoolean("post_crisis_dialog_shown", false)
+        val elapsed = System.currentTimeMillis() - requestedAt
+        val sixtyMinMs = 60L * 60 * 1000
+        val fortyEightHMs = 48L * 60 * 60 * 1000
+        if (!dialogShown && elapsed >= sixtyMinMs && elapsed <= fortyEightHMs) {
+            showPostCrisisDialog = true
         }
     }
 
@@ -181,7 +196,8 @@ fun HomeScreenNew(
                     latitude = riskLat,
                     longitude = riskLng,
                     crises7d = weeklyCount,
-                    crises30d = totalEmergencies
+                    crises30d = totalEmergencies,
+                    onNavigateToPortal = onNavigateToPortal
                 )
             }
         }
@@ -268,6 +284,47 @@ fun HomeScreenNew(
                     helperIntended = emergencyState.isHelperMode
                 }) {
                     Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo pós-crise: exibido após 60 min de um pedido de emergência
+    if (showPostCrisisDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPostCrisisDialog = false
+                prefsRepo.putBoolean("post_crisis_dialog_shown", true)
+            },
+            icon = {
+                Icon(
+                    Icons.Default.MedicalServices,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("Felizmente a crise passou") },
+            text = {
+                Text(
+                    "A asma precisa de controle contínuo. Que tal agendar uma consulta " +
+                    "com um especialista parceiro do Afilaxy?"
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showPostCrisisDialog = false
+                    prefsRepo.putBoolean("post_crisis_dialog_shown", true)
+                    onNavigateToPortal()
+                }) {
+                    Text("Agendar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPostCrisisDialog = false
+                    prefsRepo.putBoolean("post_crisis_dialog_shown", true)
+                }) {
+                    Text("Agora Não")
                 }
             }
         )

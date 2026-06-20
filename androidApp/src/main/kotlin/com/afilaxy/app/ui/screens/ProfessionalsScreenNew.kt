@@ -266,7 +266,7 @@ private fun StatsHeader(professionals: List<HealthProfessional>) {
             
             StatItem(
                 value = professionals.count { it.subscriptionPlan.tier() != PlanTier.NONE }.toString(),
-                label = "Verificados",
+                label = "Parceiros",
                 icon = Icons.Default.Verified
             )
             
@@ -358,12 +358,28 @@ private fun ProfessionalCardNew(
                         
                         if (professional.subscriptionPlan.tier() != PlanTier.NONE) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                Icons.Default.Verified,
-                                contentDescription = "Perfil Verificado",
-                                tint = Color(0xFF1DA1F2),
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Surface(
+                                color = Color(0xFF1DA1F2).copy(alpha = 0.1f),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Verified,
+                                        contentDescription = null,
+                                        tint = Color(0xFF1DA1F2),
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        "Parceiro Afilaxy",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF1DA1F2)
+                                    )
+                                }
+                            }
                         }
                     }
                     
