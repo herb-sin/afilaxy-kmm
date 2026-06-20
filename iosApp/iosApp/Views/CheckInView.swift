@@ -59,7 +59,7 @@ struct CheckInView: View {
                         wrapper.submitEvening(
                             hadCrisis: true,
                             severity: severity,
-                            usedRescueInhaler: usedInhaler.map { KotlinBoolean(value: $0) }
+                            usedRescueInhaler: usedInhaler ?? false
                         )
                     }
                 )
