@@ -5,6 +5,7 @@ import com.afilaxy.domain.repository.HealthRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import platform.Foundation.NSDate
 import platform.HealthKit.HKAuthorizationStatusSharingAuthorized
 import platform.HealthKit.HKCategoryTypeIdentifierSleepAnalysis
 import platform.HealthKit.HKCategoryValueSleepAnalysisAwake
@@ -63,35 +64,33 @@ class IosHealthRepository : HealthRepository {
         if (!isAvailable() || !hasPermissions()) return null
 
         return try {
-            // timeIntervalSince1970 não tem binding K/N confiável; usamos
-            // timeIntervalSinceNow (negativo para datas passadas) como referência.
-            val window24h = -86_400.0
-            val sleepWindow = if (isEvening) window24h else -57_600.0
+            // timeIntervalSinceReferenceDate é a única @property garantida em NSDate no K/N.
+            // É relativa a 2001-01-01; diferenças em segundos são idênticas às diferenças epoch.
+            val nowRef = NSDate().timeIntervalSinceReferenceDate
+            val sinceRef24h = nowRef - 86_400.0
+            val sleepSinceRef = if (isEvening) sinceRef24h else nowRef - 57_600.0
 
             val avgHR = readStatistic(
                 typeId = HKQuantityTypeIdentifierHeartRate,
                 unitString = "count/min",
-                useMin = false,
-                sinceEpoch = 0.0
+                useMin = false
             )?.toInt()
 
             val minSpo2Raw = readStatistic(
                 typeId = HKQuantityTypeIdentifierOxygenSaturation,
                 unitString = "%",
-                useMin = true,
-                sinceEpoch = 0.0
+                useMin = true
             )
-            // HealthKit retorna SpO₂ como fração (0-1) com HKUnit.percent() → ×100
+            // HealthKit retorna SpO₂ como fração (0-1); ×100 converte para percentual.
             val minSpo2 = minSpo2Raw?.let { (it * 100.0).toFloat() }
 
             val avgResp = readStatistic(
                 typeId = HKQuantityTypeIdentifierRespiratoryRate,
                 unitString = "count/min",
-                useMin = false,
-                sinceEpoch = 0.0
+                useMin = false
             )?.toFloat()
 
-            val (sleepDuration, awakenings) = readSleep(windowSeconds = sleepWindow)
+            val (sleepDuration, awakenings) = readSleep(sinceRef = sleepSinceRef)
 
             HealthSnapshot(
                 avgHeartRateBpm  = avgHR,
@@ -105,23 +104,16 @@ class IosHealthRepository : HealthRepository {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * HKStatisticsQuery sem predicate de tempo (limitação K/N).
-     * A filtragem por [sinceEpoch] é aplicada client-side depois.
-     * Na prática, dados de smartwatch recentes dominam a estatística.
-     */
     private suspend fun readStatistic(
         typeId: String?,
         unitString: String,
-        useMin: Boolean,
-        @Suppress("UNUSED_PARAMETER") sinceEpoch: Double
+        useMin: Boolean
     ): Double? {
         if (typeId == null) return null
         return suspendCancellableCoroutine { cont ->
             val qType = (HKObjectType.quantityTypeForIdentifier(typeId) as? HKQuantityType)
                 ?: run { cont.resume(null); return@suspendCancellableCoroutine }
 
-            // unitFromString é o único binding K/N garantido para HKUnit
             val unit = HKUnit.unitFromString(unitString)
             val opts = if (useMin) HKStatisticsOptionDiscreteMin else HKStatisticsOptionDiscreteAverage
 
@@ -141,11 +133,10 @@ class IosHealthRepository : HealthRepository {
     }
 
     /**
-     * Lê sessões de sono via HKSampleQuery sem predicate.
-     * Filtra client-side usando timeIntervalSinceNow (negativo para datas passadas).
-     * [windowSeconds] é negativo: ex -86400.0 = últimas 24h.
+     * Filtra client-side usando timeIntervalSinceReferenceDate (única @property de NSDate no K/N).
+     * [sinceRef] = nowRef - windowSecs; amostras com startDate.ref >= sinceRef estão na janela.
      */
-    private suspend fun readSleep(windowSeconds: Double): Pair<Float?, Int> =
+    private suspend fun readSleep(sinceRef: Double): Pair<Float?, Int> =
         suspendCancellableCoroutine { cont ->
             val id = HKCategoryTypeIdentifierSleepAnalysis
                 ?: run { cont.resume(Pair(null, 0)); return@suspendCancellableCoroutine }
@@ -162,18 +153,16 @@ class IosHealthRepository : HealthRepository {
                 val raw = samples as? List<platform.HealthKit.HKCategorySample>
                     ?: emptyList()
 
-                // timeIntervalSinceNow é negativo para datas passadas:
-                // amostra dentro da janela se seu timeIntervalSinceNow >= windowSeconds
                 val inWindow = raw.filter {
-                    (it.startDate?.timeIntervalSinceNow ?: Double.MIN_VALUE) >= windowSeconds
+                    (it.startDate?.timeIntervalSinceReferenceDate ?: Double.MIN_VALUE) >= sinceRef
                 }
 
                 var asleepSecs = 0.0
                 var awakeCount = 0
                 for (s in inWindow) {
-                    // dur = (endTI - nowEpoch) - (startTI - nowEpoch) = endTI - startTI > 0
-                    val dur = (s.endDate?.timeIntervalSinceNow ?: 0.0) -
-                              (s.startDate?.timeIntervalSinceNow ?: 0.0)
+                    val endRef = s.endDate?.timeIntervalSinceReferenceDate ?: 0.0
+                    val startRef = s.startDate?.timeIntervalSinceReferenceDate ?: 0.0
+                    val dur = endRef - startRef
                     if (s.value.toLong() == HKCategoryValueSleepAnalysisAwake) {
                         awakeCount++
                     } else {
