@@ -5,12 +5,10 @@ import com.afilaxy.domain.repository.HealthRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import platform.Foundation.NSDate
 import platform.HealthKit.HKAuthorizationStatusSharingAuthorized
 import platform.HealthKit.HKCategoryTypeIdentifierSleepAnalysis
 import platform.HealthKit.HKCategoryValueSleepAnalysisAwake
 import platform.HealthKit.HKHealthStore
-import platform.HealthKit.HKObjectQueryNoLimit
 import platform.HealthKit.HKObjectType
 import platform.HealthKit.HKQuantityType
 import platform.HealthKit.HKQuantityTypeIdentifierHeartRate
@@ -65,24 +63,23 @@ class IosHealthRepository : HealthRepository {
         if (!isAvailable() || !hasPermissions()) return null
 
         return try {
-            val nowEpoch = NSDate().timeIntervalSince1970
-            val cutoff24h  = nowEpoch - 86_400.0
-            val sleepCutoff = if (isEvening) cutoff24h else nowEpoch - 57_600.0
+            // timeIntervalSince1970 não tem binding K/N confiável; usamos
+            // timeIntervalSinceNow (negativo para datas passadas) como referência.
+            val window24h = -86_400.0
+            val sleepWindow = if (isEvening) window24h else -57_600.0
 
-            // Usamos null predicate — HKQuery.predicateForSamplesWithStartDate não
-            // tem binding K/N confiável nesta versão; filtramos client-side por epoch.
             val avgHR = readStatistic(
                 typeId = HKQuantityTypeIdentifierHeartRate,
                 unitString = "count/min",
                 useMin = false,
-                sinceEpoch = cutoff24h
+                sinceEpoch = 0.0
             )?.toInt()
 
             val minSpo2Raw = readStatistic(
                 typeId = HKQuantityTypeIdentifierOxygenSaturation,
                 unitString = "%",
                 useMin = true,
-                sinceEpoch = sleepCutoff
+                sinceEpoch = 0.0
             )
             // HealthKit retorna SpO₂ como fração (0-1) com HKUnit.percent() → ×100
             val minSpo2 = minSpo2Raw?.let { (it * 100.0).toFloat() }
@@ -91,10 +88,10 @@ class IosHealthRepository : HealthRepository {
                 typeId = HKQuantityTypeIdentifierRespiratoryRate,
                 unitString = "count/min",
                 useMin = false,
-                sinceEpoch = cutoff24h
+                sinceEpoch = 0.0
             )?.toFloat()
 
-            val (sleepDuration, awakenings) = readSleep(sinceEpoch = sleepCutoff)
+            val (sleepDuration, awakenings) = readSleep(windowSeconds = sleepWindow)
 
             HealthSnapshot(
                 avgHeartRateBpm  = avgHR,
@@ -145,10 +142,10 @@ class IosHealthRepository : HealthRepository {
 
     /**
      * Lê sessões de sono via HKSampleQuery sem predicate.
-     * Filtra client-side por [sinceEpoch] usando timeIntervalSince1970.
-     * Usa 300 amostras como teto para cobrir múltiplas noites.
+     * Filtra client-side usando timeIntervalSinceNow (negativo para datas passadas).
+     * [windowSeconds] é negativo: ex -86400.0 = últimas 24h.
      */
-    private suspend fun readSleep(sinceEpoch: Double): Pair<Float?, Int> =
+    private suspend fun readSleep(windowSeconds: Double): Pair<Float?, Int> =
         suspendCancellableCoroutine { cont ->
             val id = HKCategoryTypeIdentifierSleepAnalysis
                 ?: run { cont.resume(Pair(null, 0)); return@suspendCancellableCoroutine }
@@ -165,15 +162,18 @@ class IosHealthRepository : HealthRepository {
                 val raw = samples as? List<platform.HealthKit.HKCategorySample>
                     ?: emptyList()
 
-                // Filtra client-side pela janela de tempo
+                // timeIntervalSinceNow é negativo para datas passadas:
+                // amostra dentro da janela se seu timeIntervalSinceNow >= windowSeconds
                 val inWindow = raw.filter {
-                    it.startDate.timeIntervalSince1970 >= sinceEpoch
+                    (it.startDate?.timeIntervalSinceNow ?: Double.MIN_VALUE) >= windowSeconds
                 }
 
                 var asleepSecs = 0.0
                 var awakeCount = 0
                 for (s in inWindow) {
-                    val dur = s.endDate.timeIntervalSince1970 - s.startDate.timeIntervalSince1970
+                    // dur = (endTI - nowEpoch) - (startTI - nowEpoch) = endTI - startTI > 0
+                    val dur = (s.endDate?.timeIntervalSinceNow ?: 0.0) -
+                              (s.startDate?.timeIntervalSinceNow ?: 0.0)
                     if (s.value.toLong() == HKCategoryValueSleepAnalysisAwake) {
                         awakeCount++
                     } else {
