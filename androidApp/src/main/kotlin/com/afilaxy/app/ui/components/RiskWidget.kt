@@ -2,8 +2,11 @@ package com.afilaxy.app.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +33,7 @@ fun RiskWidget(
     crises7d: Int = -1,
     crises30d: Int = -1,
     modifier: Modifier = Modifier,
+    onNavigateToPortal: (() -> Unit)? = null,
     viewModel: RiskViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -42,7 +46,7 @@ fun RiskWidget(
 
     when {
         state.isLoading -> RiskWidgetLoading(modifier)
-        state.riskScore != null -> RiskWidgetContent(state.riskScore!!, modifier)
+        state.riskScore != null -> RiskWidgetContent(state.riskScore!!, modifier, onNavigateToPortal)
         // Erro ou sem localização: não exibe o widget
     }
 }
@@ -67,7 +71,11 @@ private fun RiskWidgetLoading(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RiskWidgetContent(score: RiskScore, modifier: Modifier = Modifier) {
+private fun RiskWidgetContent(
+    score: RiskScore,
+    modifier: Modifier = Modifier,
+    onNavigateToPortal: (() -> Unit)? = null
+) {
     val level = score.riskLevel
     val (gradientStart, gradientEnd) = when (level) {
         AsthmaRiskLevel.LOW       -> Color(0xFF1B5E20) to Color(0xFF2E7D32)
@@ -138,6 +146,35 @@ private fun RiskWidgetContent(score: RiskScore, modifier: Modifier = Modifier) {
                     color = Color.White,
                     trackColor = Color.White.copy(alpha = 0.3f)
                 )
+
+                // CTA para especialistas quando risco > 50
+                if (score.score > 50 && onNavigateToPortal != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToPortal() },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Sua pontuação de risco está alta esta semana. Que tal agendar uma avaliação? Veja especialistas perto de você agora",
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
 
                 // Detalhes expansíveis
                 if (showDetails && (score.factors.isNotEmpty() || score.recommendations.isNotEmpty())) {

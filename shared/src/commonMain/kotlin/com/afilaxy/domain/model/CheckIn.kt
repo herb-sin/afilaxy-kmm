@@ -36,6 +36,10 @@ data class CheckInResponse(
     val dayOfWeek: Int? = null,           // 1=seg, 7=dom
     val monthOfYear: Int? = null,
 
+    // ── Campos clínicos do check-in reformulado ───────────────────────────
+    val nocturnalSymptoms: Boolean? = null,    // "Acordei de noite com crise" (matinal)
+    val onControllerMedication: Boolean? = null, // "Estou fazendo o tratamento" (matinal + noturno)
+
     // ── Perfil clínico capturado automaticamente ───────────────────────────
     val asmaType: String? = null,         // AsmaType.name
     val asmaTypeSeverity: String? = null  // "leve", "moderada", "grave"

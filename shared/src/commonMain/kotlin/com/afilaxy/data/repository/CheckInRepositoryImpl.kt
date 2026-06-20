@@ -39,6 +39,8 @@ class CheckInRepositoryImpl(
                 "hourOfDay" to response.hourOfDay,
                 "dayOfWeek" to response.dayOfWeek,
                 "monthOfYear" to response.monthOfYear,
+                "nocturnalSymptoms" to response.nocturnalSymptoms,
+                "onControllerMedication" to response.onControllerMedication,
                 "asmaType" to response.asmaType,
                 "asmaTypeSeverity" to response.asmaTypeSeverity
             )
@@ -80,7 +82,9 @@ class CheckInRepositoryImpl(
                     rescueInhalerName = doc.get("rescueInhalerName"),
                     hadCrisisToday = doc.get("hadCrisisToday"),
                     crisisSeverity = doc.get("crisisSeverity"),
-                    usedRescueInhaler = doc.get("usedRescueInhaler")
+                    usedRescueInhaler = doc.get("usedRescueInhaler"),
+                    nocturnalSymptoms = doc.get("nocturnalSymptoms"),
+                    onControllerMedication = doc.get("onControllerMedication")
                 )
             )
         } catch (e: Exception) {
@@ -144,7 +148,9 @@ class CheckInRepositoryImpl(
                         rescueInhalerName = doc.get("rescueInhalerName"),
                         hadCrisisToday = doc.get("hadCrisisToday"),
                         crisisSeverity = doc.get("crisisSeverity"),
-                        usedRescueInhaler = doc.get("usedRescueInhaler")
+                        usedRescueInhaler = doc.get("usedRescueInhaler"),
+                        nocturnalSymptoms = doc.get("nocturnalSymptoms"),
+                        onControllerMedication = doc.get("onControllerMedication")
                     )
                 } catch (e: Exception) { null }
             }

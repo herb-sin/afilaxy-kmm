@@ -20,7 +20,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.afilaxy.app.ui.theme.ThemeState
 import com.afilaxy.domain.model.EmergencyContact
@@ -66,14 +70,14 @@ fun ProfileScreenNew(
     LaunchedEffect(profile) {
         if (profile != null) {
             editName        = profile.name
-            editPhone       = profile.phone
+            editPhone       = profile.phone.filter { it.isDigit() }.take(11)
             editBloodType   = profile.healthData?.bloodType ?: ""
             editAllergies   = profile.healthData?.allergies?.joinToString(", ") ?: ""
             editMedications = profile.healthData?.medications?.joinToString(", ") ?: ""
             editConditions  = profile.healthData?.conditions?.joinToString(", ") ?: ""
             editNotes       = profile.healthData?.notes ?: ""
             editEmergName   = profile.emergencyContact?.name ?: ""
-            editEmergPhone  = profile.emergencyContact?.phone ?: ""
+            editEmergPhone  = (profile.emergencyContact?.phone ?: "").filter { it.isDigit() }.take(11)
             editEmergRel    = profile.emergencyContact?.relationship ?: ""
         }
     }
@@ -497,6 +501,16 @@ private fun EditProfileSheetContent(
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
+    var nameError by remember { mutableStateOf(false) }
+
+    val onPhoneDigits: (String) -> Unit = { raw -> onPhoneChange(raw.filter { it.isDigit() }.take(11)) }
+    val onEmergPhoneDigits: (String) -> Unit = { raw -> onEmergPhoneChange(raw.filter { it.isDigit() }.take(11)) }
+
+    val validateAndSave: () -> Unit = {
+        nameError = name.trim().isBlank()
+        if (!nameError) onSave()
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp),
@@ -514,7 +528,7 @@ private fun EditProfileSheetContent(
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
-                    TextButton(onClick = onSave) {
+                    TextButton(onClick = validateAndSave) {
                         Text("Salvar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
@@ -524,8 +538,20 @@ private fun EditProfileSheetContent(
         // Seção 1: Informações Pessoais
         item {
             EditSection(icon = Icons.Default.Person, title = "Informações Pessoais") {
-                ProfileTextField("Nome completo *", name, onNameChange)
-                ProfileTextField("Telefone", phone, onPhoneChange, keyboardType = KeyboardType.Phone)
+                ProfileTextField(
+                    label = "Nome completo *",
+                    value = name,
+                    onValueChange = { onNameChange(it); nameError = false },
+                    isError = nameError,
+                    errorMessage = if (nameError) "Nome é obrigatório" else null
+                )
+                ProfileTextField(
+                    label = "Telefone",
+                    value = phone,
+                    onValueChange = onPhoneDigits,
+                    keyboardType = KeyboardType.Phone,
+                    visualTransformation = BrPhoneVisualTransformation
+                )
             }
         }
         // Seção 2: Dados de Saúde
@@ -549,7 +575,13 @@ private fun EditProfileSheetContent(
         item {
             EditSection(icon = Icons.Default.ContactPhone, title = "Contato de Emergência") {
                 ProfileTextField("Nome", emergName, onEmergNameChange)
-                ProfileTextField("Telefone", emergPhone, onEmergPhoneChange, keyboardType = KeyboardType.Phone)
+                ProfileTextField(
+                    label = "Telefone",
+                    value = emergPhone,
+                    onValueChange = onEmergPhoneDigits,
+                    keyboardType = KeyboardType.Phone,
+                    visualTransformation = BrPhoneVisualTransformation
+                )
                 ProfileTextField("Parentesco (ex: Mãe)", emergRel, onEmergRelChange)
             }
         }
@@ -644,15 +676,71 @@ private fun ProfileTextField(
     value: String,
     onValueChange: (String) -> Unit,
     singleLine: Boolean = true,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = singleLine,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
-    )
+    Column {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            singleLine = singleLine,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            isError = isError,
+            visualTransformation = visualTransformation
+        )
+        if (isError && errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+            )
+        }
+    }
+}
+
+// ── BrPhoneVisualTransformation ───────────────────────────────────────────────────
+
+private object BrPhoneVisualTransformation : VisualTransformation {
+    // Posição do dígito i na string formatada (base-0)
+    private val offsets10 = intArrayOf(1, 2, 5, 6, 7, 8, 10, 11, 12, 13)   // (XX) XXXX-XXXX
+    private val offsets11 = intArrayOf(1, 2, 5, 6, 7, 8, 9, 11, 12, 13, 14) // (XX) XXXXX-XXXX
+
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digits = text.text
+        val n = digits.length
+        val is11 = n >= 11
+
+        val formatted = when {
+            n == 0 -> ""
+            n <= 2 -> "(${digits}"
+            n <= 6 -> "(${digits.substring(0, 2)}) ${digits.substring(2)}"
+            n <= 10 -> "(${digits.substring(0, 2)}) ${digits.substring(2, 6)}-${digits.substring(6)}"
+            else -> "(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7, 11)}"
+        }
+
+        val arr = if (is11) offsets11 else offsets10
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int = when {
+                offset <= 0 -> 0
+                offset <= n -> arr[offset - 1] + 1
+                else -> formatted.length
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 0) return 0
+                var i = n - 1
+                while (i >= 0 && arr[i] >= offset) i--
+                return (i + 1).coerceIn(0, n)
+            }
+        }
+
+        return TransformedText(AnnotatedString(formatted), offsetMapping)
+    }
 }
