@@ -14,6 +14,7 @@ import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.presentation.medical.MedicalProfileViewModel
+import com.afilaxy.domain.repository.HealthRepository
 import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.risk.RiskViewModel
 import com.afilaxy.presentation.ubs.UBSMapViewModel
@@ -70,7 +71,7 @@ fun sharedModule(): Module = module {
     factory { HomeViewModel(get(), get()) }
     factory { MedicalProfileViewModel(get(), get()) }
     factory { RiskViewModel(get(), get()) }
-    factory { CheckInViewModel(get(), get()) }
+    factory { CheckInViewModel(get(), get(), get<HealthRepository>()) }
     factory { UBSMapViewModel(get(), get()) }
 }
 

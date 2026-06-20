@@ -1,6 +1,8 @@
 package com.afilaxy.di
 
+import com.afilaxy.data.repository.IosHealthRepository
 import com.afilaxy.data.repository.LocationRepositoryImpl
+import com.afilaxy.domain.repository.HealthRepository
 import com.afilaxy.domain.repository.LocationRepository
 import com.russhwolf.settings.NSUserDefaultsSettings
 import com.russhwolf.settings.Settings
@@ -14,5 +16,9 @@ actual fun platformModule() = module {
     
     single<LocationRepository> {
         LocationRepositoryImpl()
+    }
+
+    single<HealthRepository> {
+        IosHealthRepository()
     }
 }

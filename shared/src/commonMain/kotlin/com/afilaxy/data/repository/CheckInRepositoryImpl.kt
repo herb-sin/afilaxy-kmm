@@ -41,6 +41,10 @@ class CheckInRepositoryImpl(
                 "monthOfYear" to response.monthOfYear,
                 "nocturnalSymptoms" to response.nocturnalSymptoms,
                 "onControllerMedication" to response.onControllerMedication,
+                "heartRateBpm" to response.heartRateBpm,
+                "sleepDurationHours" to response.sleepDurationHours,
+                "sleepInterruptions" to response.sleepInterruptions,
+                "minSpo2Percent" to response.minSpo2Percent,
                 "asmaType" to response.asmaType,
                 "asmaTypeSeverity" to response.asmaTypeSeverity
             )
@@ -84,7 +88,11 @@ class CheckInRepositoryImpl(
                     crisisSeverity = doc.get("crisisSeverity"),
                     usedRescueInhaler = doc.get("usedRescueInhaler"),
                     nocturnalSymptoms = doc.get("nocturnalSymptoms"),
-                    onControllerMedication = doc.get("onControllerMedication")
+                    onControllerMedication = doc.get("onControllerMedication"),
+                    heartRateBpm = doc.get<Long?>("heartRateBpm")?.toInt(),
+                    sleepDurationHours = doc.get<Double?>("sleepDurationHours")?.toFloat(),
+                    sleepInterruptions = doc.get<Long?>("sleepInterruptions")?.toInt(),
+                    minSpo2Percent = doc.get<Double?>("minSpo2Percent")?.toFloat()
                 )
             )
         } catch (e: Exception) {
@@ -150,7 +158,11 @@ class CheckInRepositoryImpl(
                         crisisSeverity = doc.get("crisisSeverity"),
                         usedRescueInhaler = doc.get("usedRescueInhaler"),
                         nocturnalSymptoms = doc.get("nocturnalSymptoms"),
-                        onControllerMedication = doc.get("onControllerMedication")
+                        onControllerMedication = doc.get("onControllerMedication"),
+                        heartRateBpm = doc.get<Long?>("heartRateBpm")?.toInt(),
+                        sleepDurationHours = doc.get<Double?>("sleepDurationHours")?.toFloat(),
+                        sleepInterruptions = doc.get<Long?>("sleepInterruptions")?.toInt(),
+                        minSpo2Percent = doc.get<Double?>("minSpo2Percent")?.toFloat()
                     )
                 } catch (e: Exception) { null }
             }

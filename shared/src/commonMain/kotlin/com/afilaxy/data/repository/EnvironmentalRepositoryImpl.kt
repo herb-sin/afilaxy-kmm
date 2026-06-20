@@ -340,6 +340,50 @@ internal object RiskScoreEngine {
                 factors.add("Tratamento não realizado em algum dia da semana")
                 recommendations.add("Retome seu tratamento de manutenção e converse com seu médico")
             }
+
+            // ── Dados do smartwatch ───────────────────────────────────────────
+            // SpO₂ mínimo noturno (dessaturação = comprometimento respiratório direto)
+            val minSpo2 = recentCheckIns.mapNotNull { it.minSpo2Percent }.minOrNull()
+            if (minSpo2 != null) {
+                when {
+                    minSpo2 < 90f -> {
+                        score += 25
+                        factors.add("SpO₂ noturno crítico (${minSpo2.toInt()}%) — dessaturação grave")
+                        recommendations.add("Procure atendimento médico urgente — dessaturação grave detectada no sono")
+                    }
+                    minSpo2 < 93f -> {
+                        score += 15
+                        factors.add("SpO₂ noturno baixo (${minSpo2.toInt()}%)")
+                        recommendations.add("Consulte seu médico sobre oximetria noturna")
+                    }
+                    minSpo2 < 95f -> {
+                        score += 8
+                        factors.add("SpO₂ ligeiramente reduzido (${minSpo2.toInt()}%)")
+                    }
+                }
+            }
+
+            // Sono insuficiente (< 5h agrava inflamação e reatividade brônquica)
+            val snoValues = recentCheckIns.mapNotNull { it.sleepDurationHours }
+            if (snoValues.isNotEmpty()) {
+                val avgSleep = snoValues.average().toFloat()
+                if (avgSleep < 5f) {
+                    score += 8
+                    factors.add("Sono curto (${avgSleep.toInt()}h em média esta semana)")
+                    recommendations.add("Sono insuficiente agrava reatividade brônquica — tente dormir 7-8h")
+                }
+            }
+
+            // Sono fragmentado (despertares frequentes = sintomas noturnos objetivos)
+            val interruptionValues = recentCheckIns.mapNotNull { it.sleepInterruptions?.toFloat() }
+            if (interruptionValues.isNotEmpty()) {
+                val avgInterruptions = interruptionValues.average()
+                if (avgInterruptions >= 2.0) {
+                    score += 10
+                    factors.add("Sono fragmentado (${avgInterruptions.toInt()}+ interrupções/noite)")
+                    recommendations.add("Despertares frequentes podem indicar broncoespasmo noturno — consulte seu médico")
+                }
+            }
         }
 
         // ── Qualidade do ar ────────────────────────────────────────────────────

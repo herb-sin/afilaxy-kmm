@@ -40,6 +40,12 @@ data class CheckInResponse(
     val nocturnalSymptoms: Boolean? = null,    // "Acordei de noite com crise" (matinal)
     val onControllerMedication: Boolean? = null, // "Estou fazendo o tratamento" (matinal + noturno)
 
+    // ── Dados de saúde do smartwatch (opcionais) ─────────────────────────
+    val heartRateBpm: Int? = null,
+    val sleepDurationHours: Float? = null,
+    val sleepInterruptions: Int? = null,
+    val minSpo2Percent: Float? = null,
+
     // ── Perfil clínico capturado automaticamente ───────────────────────────
     val asmaType: String? = null,         // AsmaType.name
     val asmaTypeSeverity: String? = null  // "leve", "moderada", "grave"

@@ -1,6 +1,8 @@
 package com.afilaxy.di
 
+import com.afilaxy.data.repository.AndroidHealthRepository
 import com.afilaxy.data.repository.LocationRepositoryImpl
+import com.afilaxy.domain.repository.HealthRepository
 import com.afilaxy.domain.repository.LocationRepository
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
@@ -16,5 +18,9 @@ actual fun platformModule() = module {
     
     single<LocationRepository> {
         LocationRepositoryImpl(get())
+    }
+
+    single<HealthRepository> {
+        AndroidHealthRepository(get())
     }
 }
