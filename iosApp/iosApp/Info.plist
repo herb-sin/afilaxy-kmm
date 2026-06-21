@@ -59,6 +59,11 @@
 		<string>remote-notification</string>
 	</array>
 
+	<key>NSHealthShareUsageDescription</key>
+	<string>O Afilaxy lê dados de frequência cardíaca, sono, SpO₂ e frequência respiratória do Apple Health para enriquecer seu check-in diário e melhorar a avaliação do risco de crise asmática.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>O Afilaxy não grava dados no Apple Health.</string>
+
 	<!-- Criptografia: apenas HTTPS/TLS padrão via Firebase — isenta de documentação EAR -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
