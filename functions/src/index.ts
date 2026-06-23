@@ -70,16 +70,13 @@ export const createCheckoutSession = onCall(async (request) => {
             });
         }
 
-        // 3. Criar sessão do Stripe
+        // 3. Criar sessão do Stripe — plano único PARTNER
         const session = await getStripe().checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'subscription',
             customer_email: verifiedEmail,
             line_items: [{ price: priceId, quantity: 1 }],
-            metadata: {
-                professionalId: professionalId,
-                planType: metadata.planType || 'BASIC',
-            },
+            metadata: { professionalId: professionalId },
             success_url: `https://afilaxy.com/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `https://afilaxy.com/cancel`,
         });
@@ -105,35 +102,34 @@ export const stripeWebhook = onRequest(async (req, res) => {
 
     console.log('Stripe event received:', event.type);
 
-    // Processar evento de checkout completo
+    // Checkout concluído — ativa plano PARTNER com expiração real do Stripe
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         const professionalId = session.metadata?.professionalId;
-        const planType = session.metadata?.planType;
 
-        if (!professionalId || !planType) {
-            console.error('Missing metadata in checkout session');
+        if (!professionalId) {
+            console.error('Missing professionalId in checkout session metadata');
             res.status(400).send('Missing metadata');
             return;
         }
 
         try {
-            // Calcular data de expiração (30 dias)
-            const expiryDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
+            // Buscar a subscription para obter current_period_end real (evita fixar 30 dias)
+            const subscription = await getStripe().subscriptions.retrieve(session.subscription);
+            const expiryDate = subscription.current_period_end * 1000; // Unix → ms
 
-            // Atualizar Firestore
             await admin.firestore()
                 .collection('health_professionals')
                 .doc(professionalId)
                 .update({
-                    subscriptionPlan: planType.toUpperCase(),
+                    subscriptionPlan: 'PARTNER',
                     subscriptionExpiry: expiryDate,
                     stripeCustomerId: session.customer,
                     stripeSubscriptionId: session.subscription,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-            console.log(`✅ Subscription updated for ${professionalId}: ${planType}`);
+            console.log(`✅ PARTNER ativado para ${professionalId}, expira em ${new Date(expiryDate).toISOString()}`);
             res.json({ received: true });
         } catch (error) {
             console.error('Error updating subscription:', error);
@@ -170,36 +166,17 @@ export const stripeWebhook = onRequest(async (req, res) => {
             res.status(500).send('Internal error');
         }
     }
-    // Pagamento falhou — assinatura entra em atraso antes de ser cancelada pelo Stripe.
-    // Marcar como PAST_DUE imediatamente para evitar acesso indevido durante o período de retry.
+    // Pagamento falhou — Stripe reprocessa automaticamente por alguns dias antes de cancelar.
+    // Não alteramos o plano aqui; o acesso só é revogado em customer.subscription.deleted.
     else if (event.type === 'invoice.payment_failed') {
         const invoice = event.data.object;
-        const customerId = invoice.customer;
-        try {
-            const snapshot = await admin.firestore()
-                .collection('health_professionals')
-                .where('stripeCustomerId', '==', customerId)
-                .limit(1)
-                .get();
-            if (!snapshot.empty) {
-                await snapshot.docs[0].ref.update({
-                    subscriptionPlan: 'PAST_DUE',
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-                console.log(`⚠️ Payment failed for ${snapshot.docs[0].id} — marked PAST_DUE`);
-            }
-            res.json({ received: true });
-        } catch (error) {
-            console.error('Error handling payment_failed:', error);
-            res.status(500).send('Internal error');
-        }
+        console.log(`⚠️ Pagamento falhou para customer ${invoice.customer} — Stripe vai retentar`);
+        res.json({ received: true });
     }
-    // Atualização da assinatura (renovação, downgrade, upgrade, mudança de status).
-    // Sincroniza subscriptionExpiry a cada renovação bem-sucedida e atualiza status.
+    // Renovação ou mudança de período — sincroniza expiry com current_period_end real do Stripe.
     else if (event.type === 'customer.subscription.updated') {
         const subscription = event.data.object;
         const customerId = subscription.customer;
-        const status = subscription.status; // 'active', 'past_due', 'canceled', etc.
         const currentPeriodEnd = subscription.current_period_end * 1000; // Unix → ms
         try {
             const snapshot = await admin.firestore()
@@ -208,14 +185,11 @@ export const stripeWebhook = onRequest(async (req, res) => {
                 .limit(1)
                 .get();
             if (!snapshot.empty) {
-                const planStatus = status === 'active' ? undefined : 'PAST_DUE';
-                const update: Record<string, any> = {
+                await snapshot.docs[0].ref.update({
                     subscriptionExpiry: currentPeriodEnd,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                };
-                if (planStatus) update.subscriptionPlan = planStatus;
-                await snapshot.docs[0].ref.update(update);
-                console.log(`🔄 Subscription updated for ${snapshot.docs[0].id}: status=${status}, expiry=${new Date(currentPeriodEnd).toISOString()}`);
+                });
+                console.log(`🔄 Expiry sincronizado para ${snapshot.docs[0].id}: ${new Date(currentPeriodEnd).toISOString()}`);
             }
             res.json({ received: true });
         } catch (error) {

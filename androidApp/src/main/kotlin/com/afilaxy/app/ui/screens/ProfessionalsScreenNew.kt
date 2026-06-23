@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.afilaxy.domain.model.HealthProfessional
-import com.afilaxy.domain.model.PlanTier
 import com.afilaxy.domain.model.Specialty
 import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -265,7 +264,7 @@ private fun StatsHeader(professionals: List<HealthProfessional>) {
             )
             
             StatItem(
-                value = professionals.count { it.subscriptionPlan.tier() != PlanTier.NONE }.toString(),
+                value = professionals.count { it.subscriptionPlan.isActive() }.toString(),
                 label = "Parceiros",
                 icon = Icons.Default.Verified
             )
@@ -356,7 +355,7 @@ private fun ProfessionalCardNew(
                             overflow = TextOverflow.Ellipsis
                         )
                         
-                        if (professional.subscriptionPlan.tier() != PlanTier.NONE) {
+                        if (professional.subscriptionPlan.isActive()) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 color = Color(0xFF1DA1F2).copy(alpha = 0.1f),

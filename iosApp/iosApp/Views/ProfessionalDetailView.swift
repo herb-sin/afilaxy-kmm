@@ -47,8 +47,8 @@ struct ProfessionalDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text(p.name).font(.title2).bold()
-                            if p.subscriptionPlan.tier() == .premium {
-                                Image(systemName: "checkmark.seal.fill").foregroundColor(.blue)
+                            if p.subscriptionPlan.isActive() {
+                                Image(systemName: "checkmark.seal.fill").foregroundColor(Color(red: 0.114, green: 0.631, blue: 0.949))
                             }
                         }
                         Text(specialtyLabel(p.specialty)).foregroundColor(.secondary)
@@ -57,13 +57,14 @@ struct ProfessionalDetailView: View {
                 }
                 .padding()
 
-                // Badge do plano
-                if p.subscriptionPlan.tier() != .none {
+                // Badge de parceiro
+                if p.subscriptionPlan.isActive() {
                     HStack {
-                        Text(planBadge(p.subscriptionPlan))
+                        Label("Parceiro Afilaxy", systemImage: "checkmark.seal.fill")
                             .font(.caption).bold()
+                            .foregroundColor(Color(red: 0.114, green: 0.631, blue: 0.949))
                             .padding(.horizontal, 12).padding(.vertical, 6)
-                            .background(planColor(p.subscriptionPlan))
+                            .background(Color(red: 0.114, green: 0.631, blue: 0.949).opacity(0.1))
                             .cornerRadius(20)
                         Spacer()
                     }.padding(.horizontal)
@@ -140,28 +141,4 @@ struct ProfessionalDetailView: View {
         return "Especialista"
     }
 
-    private func planBadge(_ plan: SubscriptionPlan) -> String {
-        let duration: String
-        switch plan.durationMonths() {
-        case 3:  duration = " · Trimestral"
-        case 6:  duration = " · Semestral"
-        case 12: duration = " · Anual"
-        default: duration = ""
-        }
-        switch plan.tier() {
-        case .premium: return "⭐ Premium\(duration)"
-        case .pro:     return "✨ Pro\(duration)"
-        case .basic:   return "Básico\(duration)"
-        default:       return ""
-        }
-    }
-
-    private func planColor(_ plan: SubscriptionPlan) -> Color {
-        switch plan.tier() {
-        case .premium: return Color(red: 1, green: 0.84, blue: 0)
-        case .pro:     return Color(red: 0.75, green: 0.75, blue: 0.75)
-        case .basic:   return Color(red: 0.8, green: 0.5, blue: 0.2)
-        default:       return Color(.secondarySystemBackground)
-        }
-    }
 }
