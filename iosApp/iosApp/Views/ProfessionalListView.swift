@@ -4,7 +4,6 @@ import shared
 struct ProfessionalListView: View {
     @EnvironmentObject var container: AppContainer
     @State private var selectedSpecialty: ProfessionalSpecialty? = nil
-    @State private var selectedPlan: SubscriptionPlan? = nil
     @State private var searchText = ""
     @State private var showFilters = false
     @State private var sortBy: SortOption = .name
@@ -45,7 +44,6 @@ struct ProfessionalListView: View {
                     // Filter Controls
                     FilterControlsCard(
                         selectedSpecialty: $selectedSpecialty,
-                        selectedPlan: $selectedPlan,
                         sortBy: $sortBy,
                         showOnlyAvailable: $showOnlyAvailable,
                         onSpecialtyChange: { specialty in
@@ -103,11 +101,6 @@ struct ProfessionalListView: View {
                 let specialtyString = String(describing: professional.specialty).lowercased()
                 return specialtyString == specialty.lowercased()
             }
-        }
-        
-        // Filter by plan
-        if let plan = selectedPlan {
-            filtered = filtered.filter { $0.subscriptionPlan == plan }
         }
         
         // Filter by availability - using mock data since isAvailable doesn't exist
@@ -241,7 +234,6 @@ struct StatBadge: View {
 
 struct FilterControlsCard: View {
     @Binding var selectedSpecialty: ProfessionalSpecialty?
-    @Binding var selectedPlan: SubscriptionPlan?
     @Binding var sortBy: SortOption
     @Binding var showOnlyAvailable: Bool
     let onSpecialtyChange: (ProfessionalSpecialty?) -> Void
@@ -368,16 +360,11 @@ struct ProfessionalCard: View {
         return ("Especialista", "stethoscope", AfilaxyColors.primary)
     }
     
-    private var planInfo: (String, Color) {
-        // Mock plan info since enum doesn't exist
-        return ("PRO", .blue)
-    }
-    
     var body: some View {
         NavigationLink(value: AppRoute.professionalDetail(professional.id)) {
             AfilaxyCard {
                 VStack(spacing: 12) {
-                    // Header with Avatar and Plan Badge
+                    // Header with Avatar and Partner badge
                     HStack {
                         Circle()
                             .fill(specialtyInfo.2.opacity(0.2))
@@ -387,18 +374,13 @@ struct ProfessionalCard: View {
                                     .font(.title3)
                                     .foregroundColor(specialtyInfo.2)
                             }
-                        
+
                         Spacer()
-                        
-                        if true { // Mock plan check since subscriptionPlan doesn't exist
-                            Text(planInfo.0)
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(planInfo.1)
-                                .clipShape(Capsule())
+
+                        if professional.subscriptionPlan.isActive() {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.caption)
+                                .foregroundColor(Color(red: 0.114, green: 0.631, blue: 0.949))
                         }
                     }
                     
@@ -409,12 +391,6 @@ struct ProfessionalCard: View {
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .lineLimit(1)
-                            
-                            if true { // Mock premium check
-                                Image(systemName: "checkmark.seal.fill")
-                                    .foregroundColor(.blue)
-                                    .font(.caption)
-                            }
                         }
                         
                         Text(specialtyInfo.0)

@@ -19,7 +19,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.afilaxy.domain.model.HealthProfessional
-import com.afilaxy.domain.model.PlanTier
 import com.afilaxy.domain.model.Specialty
 import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -168,30 +167,21 @@ private fun ProfessionalDetailContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Badge do plano
-        if (professional.subscriptionPlan.tier() != PlanTier.NONE) {
-            val duration = when (professional.subscriptionPlan.durationMonths()) {
-                3 -> " · Trimestral"
-                6 -> " · Semestral"
-                12 -> " · Anual"
-                else -> ""
-            }
+        // Badge de parceiro
+        if (professional.subscriptionPlan.isActive()) {
             AssistChip(
                 onClick = {},
-                label = {
-                    Text(when (professional.subscriptionPlan.tier()) {
-                        PlanTier.PREMIUM -> "⭐ PREMIUM$duration"
-                        PlanTier.PRO -> "✨ PRO$duration"
-                        PlanTier.BASIC -> "📋 BÁSICO$duration"
-                        PlanTier.NONE -> ""
-                    })
+                label = { Text("Parceiro Afilaxy", color = Color(0xFF1DA1F2)) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Verified,
+                        contentDescription = null,
+                        tint = Color(0xFF1DA1F2),
+                        modifier = Modifier.size(16.dp)
+                    )
                 },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = when (professional.subscriptionPlan.tier()) {
-                        PlanTier.PREMIUM -> Color(0xFFFFD700)
-                        PlanTier.PRO -> Color(0xFFC0C0C0)
-                        else -> MaterialTheme.colorScheme.secondaryContainer
-                    }
+                    containerColor = Color(0xFF1DA1F2).copy(alpha = 0.1f)
                 )
             )
             Spacer(modifier = Modifier.height(16.dp))

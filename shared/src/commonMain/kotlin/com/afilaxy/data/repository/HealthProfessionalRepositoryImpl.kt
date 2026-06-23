@@ -127,7 +127,7 @@ class HealthProfessionalRepositoryImpl(
 
     // Ordenação por critério técnico — plano de assinatura não influencia posição (CFM)
     private fun calculatePriority(professional: HealthProfessional): Double {
-        val hasSubscription = if (professional.subscriptionPlan.tier() != com.afilaxy.domain.model.PlanTier.NONE) 0.001 else 0.0
+        val hasSubscription = if (professional.subscriptionPlan.isActive()) 0.001 else 0.0
         return professional.rating + hasSubscription
     }
     

@@ -38,45 +38,7 @@ enum class Specialty {
 @Serializable
 enum class SubscriptionPlan {
     NONE,
-    // Mensal
-    BASIC,
-    PRO,
-    PREMIUM,
-    // Trimestral (3 meses)
-    BASIC_QUARTERLY,
-    PRO_QUARTERLY,
-    PREMIUM_QUARTERLY,
-    // Semestral (6 meses)
-    BASIC_SEMIANNUAL,
-    PRO_SEMIANNUAL,
-    PREMIUM_SEMIANNUAL,
-    // Anual (12 meses)
-    BASIC_ANNUAL,
-    PRO_ANNUAL,
-    PREMIUM_ANNUAL;
+    PARTNER;
 
-    fun tier(): PlanTier = when (this) {
-        NONE -> PlanTier.NONE
-        BASIC, BASIC_QUARTERLY, BASIC_SEMIANNUAL, BASIC_ANNUAL -> PlanTier.BASIC
-        PRO, PRO_QUARTERLY, PRO_SEMIANNUAL, PRO_ANNUAL -> PlanTier.PRO
-        PREMIUM, PREMIUM_QUARTERLY, PREMIUM_SEMIANNUAL, PREMIUM_ANNUAL -> PlanTier.PREMIUM
-    }
-
-    fun durationMonths(): Int = when (this) {
-        NONE -> 0
-        BASIC, PRO, PREMIUM -> MONTHS_MONTHLY
-        BASIC_QUARTERLY, PRO_QUARTERLY, PREMIUM_QUARTERLY -> MONTHS_QUARTERLY
-        BASIC_SEMIANNUAL, PRO_SEMIANNUAL, PREMIUM_SEMIANNUAL -> MONTHS_SEMIANNUAL
-        BASIC_ANNUAL, PRO_ANNUAL, PREMIUM_ANNUAL -> MONTHS_ANNUAL
-    }
-
-    companion object {
-        const val MONTHS_MONTHLY = 1
-        const val MONTHS_QUARTERLY = 3
-        const val MONTHS_SEMIANNUAL = 6
-        const val MONTHS_ANNUAL = 12
-    }
+    fun isActive(): Boolean = this == PARTNER
 }
-
-@Serializable
-enum class PlanTier { NONE, BASIC, PRO, PREMIUM }
