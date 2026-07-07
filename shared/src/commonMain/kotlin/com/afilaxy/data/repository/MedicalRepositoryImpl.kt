@@ -77,7 +77,7 @@ class MedicalRepositoryImpl(
             val doc = firestore.collection("medications").document(medicationId).get()
             if (!doc.exists) return Result.failure(NoSuchElementException("Medicação não encontrada"))
             if (doc.get<String?>("userId") != currentUid) {
-                return Result.failure(SecurityException("Operação não autorizada"))
+                return Result.failure(IllegalStateException("Operação não autorizada"))
             }
             firestore.collection("medications").document(medicationId).delete()
             Result.success(Unit)
@@ -128,7 +128,7 @@ class MedicalRepositoryImpl(
             val doc = firestore.collection("emergency_contacts").document(contactId).get()
             if (!doc.exists) return Result.failure(NoSuchElementException("Contato não encontrado"))
             if (doc.get<String?>("userId") != currentUid) {
-                return Result.failure(SecurityException("Operação não autorizada"))
+                return Result.failure(IllegalStateException("Operação não autorizada"))
             }
             firestore.collection("emergency_contacts").document(contactId).delete()
             Result.success(Unit)
