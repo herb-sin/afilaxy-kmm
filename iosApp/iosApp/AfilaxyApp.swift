@@ -422,7 +422,13 @@ struct AfilaxyApp: App {
     init() {
         // Initialize Firebase first
         FirebaseApp.configure()
-        
+
+        // Configure Google Sign-In with the client ID from GoogleService-Info.plist.
+        // GIDSignIn v7+ crashes if signIn(withPresenting:) is called without this.
+        if let clientID = FirebaseApp.app()?.options.clientID {
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+        }
+
         // Initialize Google Maps SDK
         if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
            let plist = NSDictionary(contentsOfFile: path),

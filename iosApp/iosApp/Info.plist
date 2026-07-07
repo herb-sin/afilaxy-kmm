@@ -64,8 +64,7 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>O Afilaxy não grava dados no Apple Health.</string>
 
-	<!-- Google Sign-In: URL scheme reverso necessário para o redirect OAuth do GIDSignIn -->
-	<!-- Substitua YOUR_REVERSED_CLIENT_ID pelo valor REVERSED_CLIENT_ID do GoogleService-Info.plist real -->
+	<!-- Google Sign-In: REVERSED_CLIENT_ID do GoogleService-Info.plist (redirect OAuth) -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
