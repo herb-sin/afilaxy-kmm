@@ -178,6 +178,9 @@ dependencies {
     // EncryptedSharedPreferences — armazenamento seguro de preferências
     implementation("androidx.security:security-crypto:1.0.0")
 
+    // multiplatform-settings — necessário para injetar Settings no AnalyticsManager
+    implementation("com.russhwolf:multiplatform-settings:1.1.1")
+
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
