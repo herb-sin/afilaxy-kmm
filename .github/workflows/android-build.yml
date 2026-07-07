@@ -49,11 +49,38 @@ jobs:
 
     - name: Build Android Debug APK
       run: ./gradlew androidApp:assembleDebug --stacktrace
-    
+
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug-${{ github.sha }}
         path: androidApp/build/outputs/apk/debug/*.apk
         retention-days: 7
+
+    # ── Release AAB (apenas em push para main) ───────────────────────────────
+    - name: Decode keystore
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode \
+          > androidApp/upload_keystore.jks
+
+    - name: Inject signing properties
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "KEYSTORE_FILE=upload_keystore.jks" >> local.properties
+        echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> local.properties
+        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> local.properties
+        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> local.properties
+
+    - name: Build Android Release AAB
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: ./gradlew androidApp:bundleRelease --stacktrace
+
+    - name: Upload AAB artifact
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-${{ github.sha }}
+        path: androidApp/build/outputs/bundle/release/*.aab
+        retention-days: 30
 
