@@ -7,6 +7,7 @@ import FirebaseFirestore
 import UserNotifications
 import Combine
 import GoogleMaps
+import GoogleSignIn
 
 // MARK: - AppDelegate (APNs + FCM)
 
@@ -65,6 +66,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         default:
             completionHandler(.noData)
         }
+    }
+
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        return GIDSignIn.sharedInstance.handle(url)
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

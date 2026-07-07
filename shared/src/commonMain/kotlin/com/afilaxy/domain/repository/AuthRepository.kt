@@ -20,5 +20,7 @@ interface AuthRepository {
     suspend fun createSession()
     /** Emite true quando outro dispositivo sobrescreve o sessionId — sessão atual deve ser encerrada. */
     fun observeSessionInvalidation(): Flow<Boolean>
+    /** Autentica com um idToken do Google obtido pela plataforma (Android/iOS). */
+    suspend fun loginWithGoogleCredential(idToken: String): Result<User>
 }
 

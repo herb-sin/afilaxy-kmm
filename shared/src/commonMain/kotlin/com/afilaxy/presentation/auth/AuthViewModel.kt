@@ -99,6 +99,22 @@ class AuthViewModel(
         _state.update { it.copy(isSessionInvalidated = false) }
     }
     
+    fun onGoogleSignInResult(idToken: String) {
+        viewModelScope.coroutineScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            authRepository.loginWithGoogleCredential(idToken)
+                .onSuccess { user ->
+                    authRepository.createSession()
+                    _state.update { it.copy(user = user, isAuthenticated = true, isLoading = false) }
+                }
+                .onFailure { exception ->
+                    _state.update {
+                        it.copy(isLoading = false, error = getErrorMessage(exception))
+                    }
+                }
+        }
+    }
+
     /**
      * Login with email and password
      */

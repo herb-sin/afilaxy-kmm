@@ -2,6 +2,7 @@ import SwiftUI
 import FirebaseMessaging
 import FirebaseAuth
 import FirebaseFirestore
+import GoogleSignIn
 
 struct LoginView: View {
     let onLoginSuccess: () -> Void
@@ -54,6 +55,29 @@ struct LoginView: View {
                     .cornerRadius(10)
                     .disabled(state?.isLoading == true || email.isBlank || password.isBlank)
 
+                    HStack {
+                        Rectangle().frame(height: 1).foregroundColor(Color(.systemGray4))
+                        Text("ou").font(.caption).foregroundColor(.secondary).fixedSize()
+                        Rectangle().frame(height: 1).foregroundColor(Color(.systemGray4))
+                    }
+
+                    Button(action: signInWithGoogle) {
+                        HStack(spacing: 8) {
+                            Text("G")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.blue)
+                            Text("Entrar com Google")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(.systemGray3), lineWidth: 1))
+                    .cornerRadius(10)
+                    .disabled(state?.isLoading == true)
+
                     Button { showRegister = true } label: {
                         Text("Criar Conta").foregroundColor(.red)
                     }
@@ -104,6 +128,18 @@ struct LoginView: View {
 
     private func login() {
         container.auth.vm?.onLogin(email: email, password: password)
+    }
+
+    private func signInWithGoogle() {
+        guard let rootVC = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first?.keyWindow?.rootViewController else { return }
+
+        GIDSignIn.sharedInstance.signIn(withPresenting: rootVC) { result, error in
+            guard let result = result, error == nil else { return }
+            guard let idToken = result.user.idToken?.tokenString else { return }
+            container.auth.vm?.onGoogleSignInResult(idToken: idToken)
+        }
     }
 
     private func sendPasswordReset() {

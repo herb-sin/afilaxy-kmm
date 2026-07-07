@@ -9,5 +9,7 @@ data class User(
     val name: String? = null,
     val displayName: String? = null,
     val fcmToken: String? = null,
-    val isHelper: Boolean = false
+    val isHelper: Boolean = false,
+    val photoUrl: String? = null,
+    val authProvider: String? = null
 )

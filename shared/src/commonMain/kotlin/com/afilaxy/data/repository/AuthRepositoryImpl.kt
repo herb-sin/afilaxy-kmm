@@ -6,6 +6,8 @@ import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.util.Logger
 import dev.gitlive.firebase.auth.FirebaseAuth
+import dev.gitlive.firebase.auth.GoogleAuthProvider
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -166,10 +168,11 @@ class AuthRepositoryImpl(
                 .document(firebaseUser.uid)
                 .update(mapOf(
                     "latitude" to latitude,
-                    "longitude" to longitude
+                    "longitude" to longitude,
+                    "locationUpdatedAt" to FieldValue.serverTimestamp
                 ))
         } catch (e: Exception) {
-            Logger.e("AuthRepository", "Falha ao atualizar localização uid=${firebaseUser.uid}: ${e.message}", e)
+            Logger.e("AuthRepository", "Falha ao atualizar localização: ${e.message}", e)
         }
     }
     
@@ -240,6 +243,31 @@ class AuthRepositoryImpl(
      * Mapeia FirebaseUser + documento Firestore para o modelo User do domínio.
      * Método centralizado para evitar duplicação em login, getCurrentUser e observeAuthState.
      */
+    override suspend fun loginWithGoogleCredential(idToken: String): Result<User> {
+        return try {
+            val credential = GoogleAuthProvider.credential(idToken, null)
+            val result = auth.signInWithCredential(credential)
+            val firebaseUser = result.user
+                ?: return Result.failure(Exception("Usuário não encontrado após autenticação Google"))
+
+            // Cria ou atualiza o documento do usuário no Firestore sem sobrescrever dados existentes
+            val updates = buildMap<String, Any?> {
+                put("uid", firebaseUser.uid)
+                put("email", firebaseUser.email ?: "")
+                put("authProvider", "google")
+                put("updatedAt", getCurrentTimeMillis())
+                firebaseUser.displayName?.let { put("name", it) }
+                firebaseUser.photoURL?.let { put("photoUrl", it) }
+            }
+            firestore.collection("users").document(firebaseUser.uid)
+                .set(updates, merge = true)
+
+            Result.success(mapFirebaseUser(firebaseUser))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private suspend fun mapFirebaseUser(firebaseUser: dev.gitlive.firebase.auth.FirebaseUser): User {
         val userDoc = firestore
             .collection("users")
@@ -250,7 +278,9 @@ class AuthRepositoryImpl(
             email = firebaseUser.email ?: "",
             name = userDoc.get<String?>("name") ?: firebaseUser.displayName,
             fcmToken = userDoc.get<String?>("fcmToken"),
-            isHelper = userDoc.get<Boolean?>("isHelper") ?: false
+            isHelper = userDoc.get<Boolean?>("isHelper") ?: false,
+            photoUrl = userDoc.get<String?>("photoUrl") ?: firebaseUser.photoURL,
+            authProvider = userDoc.get<String?>("authProvider")
         )
     }
 

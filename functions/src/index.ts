@@ -84,7 +84,7 @@ export const createCheckoutSession = onCall(async (request) => {
         return { sessionId: session.id, url: session.url };
     } catch (error: any) {
         console.error('Error creating checkout session:', error);
-        throw new HttpsError('internal', error.message);
+        throw new HttpsError('internal', 'Erro ao processar pagamento. Tente novamente.');
     }
 });
 
@@ -622,6 +622,40 @@ export const onUserLocationUpdate = onDocumentUpdated(
 
 // migrateHelperLocations removida — migração concluída, função era pública sem autenticação
 // Para re-executar se necessário, usar Admin SDK localmente via script Node.js
+
+/**
+ * Cron diário às 03:00 BRT — limpa coordenadas GPS de usuários inativos há mais de 24h.
+ * Preserva dados históricos mas nulifica latitude/longitude para não expor localização stale.
+ */
+export const cleanStaleLocations = onSchedule(
+    { schedule: '0 6 * * *', timeZone: 'UTC' },
+    async () => {
+        const db = admin.firestore();
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24h atrás
+
+        const snapshot = await db.collection('users')
+            .where('locationUpdatedAt', '<', new Date(cutoff))
+            .where('latitude', '!=', null)
+            .get();
+
+        if (snapshot.empty) {
+            console.log('cleanStaleLocations: nenhuma localização stale encontrada');
+            return;
+        }
+
+        const batch = db.batch();
+        snapshot.docs.forEach((doc) => {
+            batch.update(doc.ref, {
+                latitude: admin.firestore.FieldValue.delete(),
+                longitude: admin.firestore.FieldValue.delete(),
+                locationUpdatedAt: admin.firestore.FieldValue.delete(),
+            });
+        });
+
+        await batch.commit();
+        console.log(`✅ cleanStaleLocations: ${snapshot.size} localizações removidas`);
+    }
+);
 
 /**
  * Cloud Task handler — expira uma emergência específica.
