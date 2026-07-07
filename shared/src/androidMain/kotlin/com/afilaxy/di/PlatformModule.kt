@@ -1,7 +1,7 @@
 package com.afilaxy.di
 
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.security.crypto.MasterKeys
 import com.afilaxy.data.repository.AndroidHealthRepository
 import com.afilaxy.data.repository.LocationRepositoryImpl
 import com.afilaxy.domain.repository.HealthRepository
@@ -15,13 +15,11 @@ actual fun platformModule() = module {
     single<Settings> {
         val context: Context = get()
         val prefs = try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
             EncryptedSharedPreferences.create(
-                context,
                 "afilaxy_prefs_enc",
-                masterKey,
+                masterKeyAlias,
+                context,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
