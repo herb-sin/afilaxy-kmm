@@ -116,6 +116,8 @@ kotlin {
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
             // Health Connect — leitura de dados de smartwatch
             implementation("androidx.health.connect:connect-client:1.1.0-rc01")
+            // EncryptedSharedPreferences — armazenamento seguro de preferências
+            implementation("androidx.security:security-crypto:1.0.0")
         }
 
         iosMain.dependencies {
