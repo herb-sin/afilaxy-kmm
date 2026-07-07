@@ -10,6 +10,9 @@ target 'iosApp' do
   pod 'Firebase/Auth',      '~> 11.0'
   pod 'Firebase/Messaging', '~> 11.0'
 
+  # Google Sign-In
+  pod 'GoogleSignIn', '~> 7.0'
+
   # FirebaseFirestore pré-compilado — evita compilar gRPC/BoringSSL/abseil do zero no CI
   # Mantido pela comunidade: https://github.com/invertase/firestore-ios-sdk-frameworks
   pod 'FirebaseFirestore', :git => 'https://github.com/invertase/firestore-ios-sdk-frameworks.git', :tag => '11.10.0'

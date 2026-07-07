@@ -43,7 +43,7 @@ fun sharedModule(): Module = module {
     single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get(), get()) }
     
     // New repositories for expanded features
-    single<MedicalRepository> { MedicalRepositoryImpl(get()) }
+    single<MedicalRepository> { MedicalRepositoryImpl(get(), get()) }
     single<EnvironmentalRepository> {
         val token = com.afilaxy.config.WaqiConfig.API_TOKEN.ifBlank { "demo" }
         EnvironmentalRepositoryImpl(get(), token, get())

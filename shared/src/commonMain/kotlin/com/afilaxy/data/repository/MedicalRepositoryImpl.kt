@@ -2,12 +2,14 @@ package com.afilaxy.data.repository
 
 import com.afilaxy.domain.model.*
 import com.afilaxy.domain.repository.MedicalRepository
+import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 class MedicalRepositoryImpl(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ) : MedicalRepository {
 
     override suspend fun getMedicalProfile(userId: String): Result<MedicalProfile> {
@@ -52,7 +54,7 @@ class MedicalRepositoryImpl(
 
     override suspend fun addMedication(userId: String, medication: Medication): Result<Unit> {
         return try {
-            firestore.collection("medications").document(medication.id).set(medication)
+            firestore.collection("medications").document(medication.id).set(medication.copy(userId = userId))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -69,7 +71,14 @@ class MedicalRepositoryImpl(
     }
 
     override suspend fun removeMedication(medicationId: String): Result<Unit> {
+        val currentUid = auth.currentUser?.uid
+            ?: return Result.failure(IllegalStateException("Usuário não autenticado"))
         return try {
+            val doc = firestore.collection("medications").document(medicationId).get()
+            if (!doc.exists) return Result.failure(NoSuchElementException("Medicação não encontrada"))
+            if (doc.get<String?>("userId") != currentUid) {
+                return Result.failure(SecurityException("Operação não autorizada"))
+            }
             firestore.collection("medications").document(medicationId).delete()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -96,7 +105,7 @@ class MedicalRepositoryImpl(
 
     override suspend fun addEmergencyContact(userId: String, contact: MedicalEmergencyContact): Result<Unit> {
         return try {
-            firestore.collection("emergency_contacts").document(contact.id).set(contact)
+            firestore.collection("emergency_contacts").document(contact.id).set(contact.copy(userId = userId))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -113,7 +122,14 @@ class MedicalRepositoryImpl(
     }
 
     override suspend fun removeEmergencyContact(contactId: String): Result<Unit> {
+        val currentUid = auth.currentUser?.uid
+            ?: return Result.failure(IllegalStateException("Usuário não autenticado"))
         return try {
+            val doc = firestore.collection("emergency_contacts").document(contactId).get()
+            if (!doc.exists) return Result.failure(NoSuchElementException("Contato não encontrado"))
+            if (doc.get<String?>("userId") != currentUid) {
+                return Result.failure(SecurityException("Operação não autorizada"))
+            }
             firestore.collection("emergency_contacts").document(contactId).delete()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -140,7 +156,7 @@ class MedicalRepositoryImpl(
 
     override suspend fun addMedicalExam(userId: String, exam: MedicalExam): Result<Unit> {
         return try {
-            firestore.collection("medical_exams").document(exam.id).set(exam)
+            firestore.collection("medical_exams").document(exam.id).set(exam.copy(userId = userId))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

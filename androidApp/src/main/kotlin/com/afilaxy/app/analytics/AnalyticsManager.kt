@@ -3,15 +3,29 @@ package com.afilaxy.app.analytics
 import android.content.Context
 import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.russhwolf.settings.Settings
 
-class AnalyticsManager(context: Context) {
-    
+class AnalyticsManager(context: Context, private val settings: Settings) {
+
     private companion object {
-        const val MAX_EVENT_NAME_LENGTH = 40   // limite de chars de nome de evento Firebase Analytics
-        const val MAX_VALUE_STRING_LENGTH = 100 // limite de chars de valor de parâmetro string
+        const val MAX_EVENT_NAME_LENGTH = 40
+        const val MAX_VALUE_STRING_LENGTH = 100
+        const val KEY_ANALYTICS_CONSENT = "analytics_consent"
     }
 
     private val analytics = FirebaseAnalytics.getInstance(context)
+
+    init {
+        // Desabilita coleta por padrão; só habilita se o usuário consentiu explicitamente.
+        val hasConsent = settings.getBoolean(KEY_ANALYTICS_CONSENT, false)
+        analytics.setAnalyticsCollectionEnabled(hasConsent)
+    }
+
+    fun updateConsent(enabled: Boolean) {
+        analytics.setAnalyticsCollectionEnabled(enabled)
+    }
+
+    private fun hasConsent(): Boolean = settings.getBoolean(KEY_ANALYTICS_CONSENT, false)
 
     private fun sanitizeName(name: String): String =
         name.replace(Regex("[^a-zA-Z0-9_]"), "_").take(MAX_EVENT_NAME_LENGTH)
@@ -22,6 +36,7 @@ class AnalyticsManager(context: Context) {
     }
 
     fun logEvent(eventName: String, params: Map<String, Any>? = null) {
+        if (!hasConsent()) return
         val safeEvent = sanitizeName(eventName).ifBlank { return }
         val bundle = Bundle()
         params?.forEach { (key, value) ->

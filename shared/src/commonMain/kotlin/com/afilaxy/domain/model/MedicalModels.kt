@@ -5,10 +5,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Medication(
     val id: String,
+    val userId: String = "",
     val name: String,
     val dosage: String,
     val frequency: String,
-    val timing: String? = null, // "Noite", "Se necessário"
+    val timing: String? = null,
     val type: MedicationType,
     val isActive: Boolean = true
 )
@@ -51,6 +52,7 @@ enum class HealthStatus {
 @Serializable
 data class MedicalExam(
     val id: String,
+    val userId: String = "",
     val type: ExamType,
     val date: String,
     val results: String,
@@ -76,6 +78,7 @@ data class EmergencyStep(
 @Serializable
 data class MedicalEmergencyContact(
     val id: String,
+    val userId: String = "",
     val name: String,
     val relationship: String,
     val phone: String,

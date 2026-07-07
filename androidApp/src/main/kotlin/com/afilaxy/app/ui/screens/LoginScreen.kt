@@ -1,5 +1,7 @@
 package com.afilaxy.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
@@ -12,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -26,6 +29,9 @@ import com.afilaxy.app.security.InputSanitizer
 import com.afilaxy.app.util.FcmHelper
 import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.presentation.login.LoginViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -44,10 +50,33 @@ fun LoginScreen(
     val focusManager = LocalFocusManager.current
     val authRepository: AuthRepository = koinInject()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var passwordVisible by remember { mutableStateOf(false) }
     var resetEmailSent by remember { mutableStateOf(false) }
     var resetError by remember { mutableStateOf<String?>(null) }
+
+    val googleSignInClient = remember {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        GoogleSignIn.getClient(context, gso)
+    }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            account.idToken?.let { idToken ->
+                viewModel.onGoogleSignInResult(idToken)
+            }
+        } catch (e: ApiException) {
+            // Usuário cancelou ou erro transitório — não exibe mensagem de erro
+        }
+    }
     
     LaunchedEffect(state.isLoggedIn) {
         if (state.isLoggedIn) {
@@ -174,7 +203,53 @@ fun LoginScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f))
+                Text(
+                    text = "  ou  ",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = {
+                    // Força exibir o seletor de contas mesmo que já haja uma sessão Google
+                    googleSignInClient.signOut().addOnCompleteListener {
+                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                    }
+                },
+                enabled = !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "G",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Entrar com Google",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Botão de Registro
             TextButton(

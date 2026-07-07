@@ -37,7 +37,7 @@ class AflixyApplication : Application() {
                 sharedModule(),
                 platformModule(),
                 module {
-                    single { AnalyticsManager(androidContext()) }
+                    single { AnalyticsManager(androidContext(), get()) }
                 }
             )
         }

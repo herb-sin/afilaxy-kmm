@@ -40,10 +40,14 @@ service cloud.firestore {
     
     // Emergency requests collection (coleção real usada pelo app)
     match /emergency_requests/{emergencyId} {
-      // list: authenticated users can query — clients must include a where() clause on their
-      // own uid. Firestore cannot enforce per-row filtering on list, so app-level queries
-      // must always filter by requesterId or helperId == request.auth.uid.
-      allow list: if isAuthenticated();
+      // list: helpers podem listar emergências ativas (active == true) para aceitar.
+      // Participantes podem listar suas próprias emergências (requesterId ou helperId).
+      // A regra resource.data.* é avaliada contra cada documento retornado, forçando
+      // o Firestore a rejeitar queries sem os filtros correspondentes.
+      allow list: if isAuthenticated()
+        && (resource.data.active == true
+            || resource.data.requesterId == request.auth.uid
+            || resource.data.helperId == request.auth.uid);
       // get: only participants, or any authenticated user for active emergencies (needed for
       // the atomic accept transaction). Active emergencies are public within the app by design
       // (helpers must read them to accept). Scope is reduced to authenticated users only.
