@@ -87,6 +87,17 @@ class FakeAuthRepository(
 
     override fun observeSessionInvalidation(): Flow<Boolean> = flowOf(false)
 
+    override suspend fun loginWithGoogleCredential(idToken: String): Result<User> {
+        return if (shouldSucceed) {
+            val user = User(uid = "test-uid", email = "google@test.com", name = "Google User",
+                fcmToken = null, isHelper = false, authProvider = "google")
+            currentUser = user
+            Result.success(user)
+        } else {
+            Result.failure(Exception("Google sign-in failed"))
+        }
+    }
+
     // Test helpers
     fun setCurrentUser(user: User?) {
         currentUser = user
