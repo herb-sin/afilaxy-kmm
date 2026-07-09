@@ -1,7 +1,5 @@
 package com.afilaxy.app.ui.screens
 
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,29 +15,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.RespiratoryRateRecord
-import androidx.health.connect.client.records.SleepSessionRecord
 import com.afilaxy.domain.model.CheckInType
 import com.afilaxy.domain.model.HealthSnapshot
 import com.afilaxy.presentation.checkin.CheckInViewModel
 import org.koin.androidx.compose.koinViewModel
 
-private val HEALTH_PERMISSIONS = setOf(
-    HealthPermission.getReadPermission(HeartRateRecord::class),
-    HealthPermission.getReadPermission(SleepSessionRecord::class),
-    HealthPermission.getReadPermission(OxygenSaturationRecord::class),
-    HealthPermission.getReadPermission(RespiratoryRateRecord::class)
-)
 
 @Composable
 fun CheckInScreen(
@@ -463,30 +447,9 @@ private fun HealthDataChip(emoji: String, label: String, textColor: Color = Colo
     }
 }
 
-/**
- * Composable separado para isolar o rememberLauncherForActivityResult do Health Connect.
- * Chamado condicionalmente em HealthCard — dentro deste composable o hook é incondicional.
- */
+// Health Connect em standby — stub vazio até CNPJ/conta organização aprovada.
 @Composable
 private fun HealthConnectPermissionButton(onGranted: () -> Unit) {
-    val context = LocalContext.current
-
-    val available = remember {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            try { HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE }
-            catch (e: Exception) { false }
-    }
-
-    // PermissionController.createRequestPermissionResultContract() é estático — não precisa de client
-    val launcher = rememberLauncherForActivityResult(
-        PermissionController.createRequestPermissionResultContract()
-    ) { _ -> onGranted() }
-
-    if (!available) return
-
-    TextButton(onClick = { launcher.launch(HEALTH_PERMISSIONS) }) {
-        Text("Ativar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-    }
 }
 
 // ── Componente de item com checkbox ──────────────────────────────────────────

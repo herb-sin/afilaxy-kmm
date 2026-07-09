@@ -187,8 +187,8 @@ dependencies {
     // WorkManager — agendamento de check-ins matinal e noturno
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // Health Connect — usado no CheckInScreen para launcher de permissão
-    implementation("androidx.health.connect:connect-client:1.1.0-rc01")
+    // Health Connect — em standby até CNPJ/conta organização disponível
+    // implementation("androidx.health.connect:connect-client:1.1.0-rc01")
 
     
     // Firebase Analytics
