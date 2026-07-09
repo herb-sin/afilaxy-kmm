@@ -35,6 +35,6 @@ actual fun platformModule() = module {
     }
 
     single<HealthRepository> {
-        AndroidHealthRepository(get())
+        AndroidHealthRepository()
     }
 }
