@@ -18,6 +18,7 @@ struct LoginView: View {
     @State private var isSendingReset = false
     @State private var currentNonce: String?
     @StateObject private var appleCoordinator = AppleSignInCoordinator()
+    @State private var appleController: ASAuthorizationController?
 
     var body: some View {
         let state = container.auth.state
@@ -148,6 +149,9 @@ struct LoginView: View {
             appleCoordinator.onSuccess = { identityToken, nonce in
                 container.auth.vm?.onAppleSignInResult(identityToken: identityToken, nonce: nonce)
             }
+            appleCoordinator.onError = { message in
+                container.auth.vm?.updateError(message: message)
+            }
         }
     }
 
@@ -161,8 +165,18 @@ struct LoginView: View {
             .first?.keyWindow?.rootViewController else { return }
 
         GIDSignIn.sharedInstance.signIn(withPresenting: rootVC) { result, error in
-            guard let result = result, error == nil else { return }
-            guard let idToken = result.user.idToken?.tokenString else { return }
+            if let error = error {
+                let msg = error.localizedDescription
+                // Conta criada com outro provider (email/senha)
+                if msg.contains("account-exists") || msg.contains("different-credential") || msg.contains("17012") {
+                    container.auth.vm?.updateError(message: "Esta conta foi criada com email e senha. Faça login com email e senha.")
+                } else if !msg.contains("canceled") && !msg.contains("cancel") {
+                    container.auth.vm?.updateError(message: "Erro ao entrar com Google. Tente novamente.")
+                }
+                return
+            }
+            guard let result = result,
+                  let idToken = result.user.idToken?.tokenString else { return }
             container.auth.vm?.onGoogleSignInResult(idToken: idToken)
         }
     }
@@ -176,9 +190,12 @@ struct LoginView: View {
         request.requestedScopes = [.fullName, .email]
         request.nonce = sha256(nonce)
 
+        // Mantém referência forte — sem isso o ARC libera o controller antes
+        // dos delegates dispararem e o sheet da Apple nunca aparece.
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = appleCoordinator
         controller.presentationContextProvider = appleCoordinator
+        appleController = controller
         controller.performRequests()
     }
 
@@ -228,6 +245,7 @@ struct LoginView: View {
 class AppleSignInCoordinator: NSObject, ObservableObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     var currentNonce: String?
     var onSuccess: ((String, String) -> Void)?
+    var onError: ((String) -> Void)?
 
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         UIApplication.shared.connectedScenes
@@ -239,12 +257,18 @@ class AppleSignInCoordinator: NSObject, ObservableObject, ASAuthorizationControl
         guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
               let identityTokenData = appleIDCredential.identityToken,
               let identityToken = String(data: identityTokenData, encoding: .utf8),
-              let nonce = currentNonce else { return }
+              let nonce = currentNonce else {
+            onError?("Não foi possível obter credenciais da Apple. Tente novamente.")
+            return
+        }
         onSuccess?(identityToken, nonce)
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        // User cancelled or error — no action needed
+        let nsError = error as NSError
+        // Código 1001 = usuário cancelou — sem mensagem de erro
+        guard nsError.code != 1001 else { return }
+        onError?("Erro ao entrar com Apple. Tente novamente.")
     }
 }
 
