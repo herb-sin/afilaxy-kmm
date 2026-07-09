@@ -1,7 +1,10 @@
 package com.afilaxy.app.ui.screens
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.OAuthProvider
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
@@ -244,6 +247,45 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Entrar com Google",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = {
+                    val activity = context as? Activity ?: return@OutlinedButton
+                    val provider = OAuthProvider.newBuilder("apple.com").apply {
+                        scopes = listOf("email", "name")
+                        addCustomParameter("locale", "pt_BR")
+                    }.build()
+                    // Android web-flow: Firebase handles OAuth+PKCE internally.
+                    // After success the user is already signed into Firebase —
+                    // only createSession() is needed; no second signInWithCredential call.
+                    FirebaseAuth.getInstance()
+                        .startActivityForSignInWithProvider(activity, provider)
+                        .addOnSuccessListener {
+                            coroutineScope.launch {
+                                authRepository.createSession()
+                                FcmHelper.requestFcmToken(authRepository)
+                                onLoginSuccess()
+                            }
+                        }
+                        .addOnFailureListener { /* User cancelled or error — no action needed */ }
+                },
+                enabled = !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Entrar com Apple",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }

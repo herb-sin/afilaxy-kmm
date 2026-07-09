@@ -98,6 +98,28 @@ class LoginViewModel(
         }
     }
 
+    fun onAppleSignInResult(identityToken: String, nonce: String) {
+        viewModelScope.coroutineScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            authRepository.loginWithAppleCredential(identityToken, nonce)
+                .onSuccess {
+                    authRepository.createSession()
+                    _state.update { it.copy(isLoading = false, isLoggedIn = true) }
+                }
+                .onFailure { exception ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message
+                                ?.replace(Regex("[\\r\\n\\t\\x00-\\x1F]"), " ")
+                                ?.take(ERROR_MESSAGE_MAX_LENGTH)
+                                ?: "Erro ao entrar com Apple"
+                        )
+                    }
+                }
+        }
+    }
+
     fun clearError() {
         _state.update { it.copy(error = null) }
     }

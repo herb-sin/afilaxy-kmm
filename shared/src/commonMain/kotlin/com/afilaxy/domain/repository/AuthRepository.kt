@@ -22,5 +22,7 @@ interface AuthRepository {
     fun observeSessionInvalidation(): Flow<Boolean>
     /** Autentica com um idToken do Google obtido pela plataforma (Android/iOS). */
     suspend fun loginWithGoogleCredential(idToken: String): Result<User>
+    /** Autentica com um identityToken da Apple obtido pela plataforma (Android/iOS). */
+    suspend fun loginWithAppleCredential(identityToken: String, nonce: String): Result<User>
 }
 

@@ -98,6 +98,17 @@ class FakeAuthRepository(
         }
     }
 
+    override suspend fun loginWithAppleCredential(identityToken: String, nonce: String): Result<User> {
+        return if (shouldSucceed) {
+            val user = User(uid = "test-uid", email = "apple@test.com", name = "Apple User",
+                fcmToken = null, isHelper = false, authProvider = "apple")
+            currentUser = user
+            Result.success(user)
+        } else {
+            Result.failure(Exception("Apple sign-in failed"))
+        }
+    }
+
     // Test helpers
     fun setCurrentUser(user: User?) {
         currentUser = user

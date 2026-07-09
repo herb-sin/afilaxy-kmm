@@ -3,6 +3,8 @@ import FirebaseMessaging
 import FirebaseAuth
 import FirebaseFirestore
 import GoogleSignIn
+import AuthenticationServices
+import CryptoKit
 
 struct LoginView: View {
     let onLoginSuccess: () -> Void
@@ -14,6 +16,8 @@ struct LoginView: View {
     @State private var resetSent = false
     @State private var resetError: String? = nil
     @State private var isSendingReset = false
+    @State private var currentNonce: String?
+    @StateObject private var appleCoordinator = AppleSignInCoordinator()
 
     var body: some View {
         let state = container.auth.state
@@ -78,6 +82,22 @@ struct LoginView: View {
                     .cornerRadius(10)
                     .disabled(state?.isLoading == true)
 
+                    Button(action: signInWithApple) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "apple.logo")
+                                .font(.system(size: 18, weight: .medium))
+                            Text("Entrar com Apple")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.label))
+                    .foregroundColor(Color(.systemBackground))
+                    .cornerRadius(10)
+                    .disabled(state?.isLoading == true)
+
                     Button { showRegister = true } label: {
                         Text("Criar Conta").foregroundColor(.red)
                     }
@@ -124,6 +144,11 @@ struct LoginView: View {
                 onLoginSuccess()
             }
         }
+        .onAppear {
+            appleCoordinator.onSuccess = { identityToken, nonce in
+                container.auth.vm?.onAppleSignInResult(identityToken: identityToken, nonce: nonce)
+            }
+        }
     }
 
     private func login() {
@@ -140,6 +165,21 @@ struct LoginView: View {
             guard let idToken = result.user.idToken?.tokenString else { return }
             container.auth.vm?.onGoogleSignInResult(idToken: idToken)
         }
+    }
+
+    private func signInWithApple() {
+        let nonce = randomNonceString()
+        currentNonce = nonce
+        appleCoordinator.currentNonce = nonce
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = sha256(nonce)
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = appleCoordinator
+        controller.presentationContextProvider = appleCoordinator
+        controller.performRequests()
     }
 
     private func sendPasswordReset() {
@@ -169,6 +209,42 @@ struct LoginView: View {
         if raw.contains("too-many-requests") { return "Muitas tentativas. Tente novamente mais tarde." }
         if raw.contains("network") || raw.contains("Network") { return "Sem conexão. Verifique sua internet." }
         return "Erro ao entrar. Tente novamente."
+    }
+
+    private func randomNonceString(length: Int = 32) -> String {
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        _ = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(randomBytes.map { byte in charset[Int(byte) % charset.count] })
+    }
+
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        return hashedData.compactMap { String(format: "%02x", $0) }.joined()
+    }
+}
+
+class AppleSignInCoordinator: NSObject, ObservableObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    var currentNonce: String?
+    var onSuccess: ((String, String) -> Void)?
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.keyWindow ?? ASPresentationAnchor()
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let identityTokenData = appleIDCredential.identityToken,
+              let identityToken = String(data: identityTokenData, encoding: .utf8),
+              let nonce = currentNonce else { return }
+        onSuccess?(identityToken, nonce)
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        // User cancelled or error — no action needed
     }
 }
 
