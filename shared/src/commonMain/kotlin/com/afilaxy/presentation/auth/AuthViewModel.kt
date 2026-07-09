@@ -98,7 +98,11 @@ class AuthViewModel(
     fun clearSessionInvalidated() {
         _state.update { it.copy(isSessionInvalidated = false) }
     }
-    
+
+    fun updateError(message: String) {
+        _state.update { it.copy(isLoading = false, error = message) }
+    }
+
     fun onGoogleSignInResult(idToken: String) {
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
