@@ -7,6 +7,7 @@ import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.util.Logger
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.GoogleAuthProvider
+import dev.gitlive.firebase.auth.OAuthProvider
 import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
@@ -262,6 +263,26 @@ class AuthRepositoryImpl(
             firestore.collection("users").document(firebaseUser.uid)
                 .set(updates, merge = true)
 
+            Result.success(mapFirebaseUser(firebaseUser))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun loginWithAppleCredential(identityToken: String, nonce: String): Result<User> {
+        return try {
+            val credential = OAuthProvider.credential("apple.com", idToken = identityToken, rawNonce = nonce)
+            val result = auth.signInWithCredential(credential)
+            val firebaseUser = result.user
+                ?: return Result.failure(Exception("Usuário não encontrado após autenticação Apple"))
+            val updates = buildMap<String, Any?> {
+                put("uid", firebaseUser.uid)
+                put("email", firebaseUser.email ?: "")
+                put("authProvider", "apple")
+                put("updatedAt", getCurrentTimeMillis())
+                firebaseUser.displayName?.let { put("name", it) }
+            }
+            firestore.collection("users").document(firebaseUser.uid).set(updates, merge = true)
             Result.success(mapFirebaseUser(firebaseUser))
         } catch (e: Exception) {
             Result.failure(e)
