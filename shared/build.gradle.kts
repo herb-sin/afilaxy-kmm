@@ -114,8 +114,8 @@ kotlin {
             implementation("com.google.android.gms:play-services-location:21.3.0")
             // Ktor engine Android
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
-            // Health Connect — leitura de dados de smartwatch
-            implementation("androidx.health.connect:connect-client:1.1.0-rc01")
+            // Health Connect — em standby até CNPJ/conta organização disponível
+            // implementation("androidx.health.connect:connect-client:1.1.0-rc01")
             // EncryptedSharedPreferences — armazenamento seguro de preferências
             implementation("androidx.security:security-crypto:1.0.0")
         }
