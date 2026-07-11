@@ -179,6 +179,11 @@ jobs:
       - name: Initialize Xcode SDKs
         run: |
           sudo xcodebuild -runFirstLaunch 2>&1 || true
+          # Inicializa o daemon CoreSimulator (necessário para xcodebuild -downloadPlatform)
+          xcrun simctl list devices 2>&1 || true
+          sleep 3
+          # Baixa runtime do simulador iOS (necessário para CompileAssetCatalogVariant thinned)
+          xcodebuild -downloadPlatform iOS 2>&1 | tail -5 || true
           echo "=== SDKs disponíveis ==="
           xcodebuild -showsdks 2>&1 | grep -i ios
           xcodebuild -showsdks 2>&1 | grep -q "iphoneos" || (echo "❌ iphoneos SDK não disponível" && exit 1)
