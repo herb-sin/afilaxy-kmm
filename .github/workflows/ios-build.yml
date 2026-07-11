@@ -179,7 +179,6 @@ jobs:
       - name: Initialize Xcode SDKs
         run: |
           sudo xcodebuild -runFirstLaunch 2>&1 || true
-          xcodebuild -downloadPlatform iOS 2>&1 || xcodebuild -downloadAllPlatforms 2>&1
           echo "=== SDKs disponíveis ==="
           xcodebuild -showsdks 2>&1 | grep -i ios
           xcodebuild -showsdks 2>&1 | grep -q "iphoneos" || (echo "❌ iphoneos SDK não disponível" && exit 1)
