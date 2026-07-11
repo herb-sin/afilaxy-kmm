@@ -328,12 +328,16 @@ class CheckInViewModelWrapper: ObservableObject {
         viewModel?.initialize(type: type, riskScore: riskScore, aqi: aqi, temperature: temperature, humidity: humidity)
     }
 
-    func submitMorning(hasInhaler: Bool, nocturnalSymptoms: Bool = false, onControllerMedication: Bool = false) {
-        viewModel?.submitMorningCheckIn(hasInhaler: hasInhaler, nocturnalSymptoms: nocturnalSymptoms, onControllerMedication: onControllerMedication)
+    func submitMorning(wellbeingA: Bool, wellbeingB: Bool, wellbeingC: Bool) {
+        viewModel?.submitMorningCheckIn(wellbeingA: wellbeingA, wellbeingB: wellbeingB, wellbeingC: wellbeingC)
     }
 
-    func submitEvening(hadCrisis: Bool, severity: String? = nil, usedRescueInhaler: Bool = false, onControllerMedication: Bool = false) {
-        viewModel?.submitEveningCheckIn(hadCrisis: hadCrisis, severity: severity, usedRescueInhaler: usedRescueInhaler, onControllerMedication: onControllerMedication)
+    func submitEvening(wellbeingA: Bool, wellbeingB: Bool, wellbeingC: Bool) {
+        viewModel?.submitEveningCheckIn(wellbeingA: wellbeingA, wellbeingB: wellbeingB, wellbeingC: wellbeingC)
+    }
+
+    func dismissCriticalCard() {
+        viewModel?.dismissCriticalCard()
     }
 
     func freeze() {
