@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,10 +48,10 @@ fun CheckInScreen(
         if (quickAnswer == true && !state.isLoading && !state.alreadyDoneToday && !state.isSubmitted) {
             when (type) {
                 CheckInType.MORNING -> viewModel.submitMorningCheckIn(
-                    hasInhaler = true, nocturnalSymptoms = false, onControllerMedication = true
+                    wellbeingA = true, wellbeingB = true, wellbeingC = true
                 )
                 CheckInType.EVENING -> viewModel.submitEveningCheckIn(
-                    hadCrisis = false, usedRescueInhaler = false, onControllerMedication = true
+                    wellbeingA = true, wellbeingB = true, wellbeingC = true
                 )
             }
         }
@@ -58,31 +59,25 @@ fun CheckInScreen(
 
     when {
         state.isLoading -> CheckInLoading()
+        state.showCriticalWellbeingCard -> CriticalWellbeingCard(
+            onDismiss = { viewModel.dismissCriticalCard(); onDone() },
+            onOpenGuide = { viewModel.dismissCriticalCard(); onDone() }
+        )
         state.alreadyDoneToday || state.isSubmitted -> CheckInDone(type, onDone)
         type == CheckInType.MORNING -> MorningCheckInContent(
-            inhalerName = state.rescueInhalerName,
             riskScore = state.riskScore,
             healthSnapshot = state.healthSnapshot,
             healthAvailable = state.healthAvailable,
             healthPermissionsGranted = state.healthPermissionsGranted,
             onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-            onSubmit = { hasInhaler, nocturnalSymptoms, onMedication ->
-                viewModel.submitMorningCheckIn(hasInhaler, nocturnalSymptoms, onMedication)
-            }
+            onSubmit = { a, b, c -> viewModel.submitMorningCheckIn(a, b, c) }
         )
         type == CheckInType.EVENING -> EveningCheckInContent(
             healthSnapshot = state.healthSnapshot,
             healthAvailable = state.healthAvailable,
             healthPermissionsGranted = state.healthPermissionsGranted,
             onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-            onSubmit = { hadCrisis, severity, usedInhaler, onMedication ->
-                viewModel.submitEveningCheckIn(
-                    hadCrisis = hadCrisis,
-                    severity = severity,
-                    usedRescueInhaler = usedInhaler,
-                    onControllerMedication = onMedication
-                )
-            }
+            onSubmit = { a, b, c -> viewModel.submitEveningCheckIn(a, b, c) }
         )
     }
 }
@@ -91,15 +86,13 @@ fun CheckInScreen(
 
 @Composable
 private fun MorningCheckInContent(
-    inhalerName: String?,
     riskScore: Int?,
     healthSnapshot: HealthSnapshot?,
     healthAvailable: Boolean,
     healthPermissionsGranted: Boolean,
     onHealthPermissionGranted: () -> Unit,
-    onSubmit: (hasInhaler: Boolean, nocturnalSymptoms: Boolean, onControllerMedication: Boolean) -> Unit
+    onSubmit: (wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean) -> Unit
 ) {
-    val inhalerDisplay = inhalerName ?: "broncodilatador de resgate"
     var nocturnalSymptoms by remember { mutableStateOf(false) }
     var hasInhaler by remember { mutableStateOf(true) }
     var onMedication by remember { mutableStateOf(true) }
@@ -117,7 +110,7 @@ private fun MorningCheckInContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("💊", fontSize = 64.sp)
+            Text("🌅", fontSize = 64.sp)
             Spacer(Modifier.height(12.dp))
             Text(
                 "Check-in Matinal",
@@ -138,7 +131,7 @@ private fun MorningCheckInContent(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        "⚠️ Risco de crise hoje: $riskScore/100",
+                        "⚠️ Qualidade do ar baixa hoje: $riskScore/100",
                         color = Color.White,
                         modifier = Modifier.padding(12.dp, 8.dp),
                         fontSize = 13.sp
@@ -165,21 +158,21 @@ private fun MorningCheckInContent(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     CheckInItem(
-                        label = "Acordei de noite com crise",
+                        label = "Dormi bem esta noite",
                         checked = nocturnalSymptoms,
                         onToggle = { nocturnalSymptoms = it },
                         activeColor = Color(0xFFFFCC02)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
-                        label = "Estou com meu $inhalerDisplay",
+                        label = "Me sinto bem esta manhã",
                         checked = hasInhaler,
                         onToggle = { hasInhaler = it },
                         activeColor = Color.White
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
-                        label = "Estou fazendo o tratamento",
+                        label = "Estou com boa energia",
                         checked = onMedication,
                         onToggle = { onMedication = it },
                         activeColor = Color.White
@@ -190,7 +183,7 @@ private fun MorningCheckInContent(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { onSubmit(hasInhaler, nocturnalSymptoms, onMedication) },
+                onClick = { onSubmit(nocturnalSymptoms, hasInhaler, onMedication) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White, contentColor = Color(0xFFE65100)
@@ -220,16 +213,13 @@ private fun EveningCheckInContent(
     healthAvailable: Boolean,
     healthPermissionsGranted: Boolean,
     onHealthPermissionGranted: () -> Unit,
-    onSubmit: (hadCrisis: Boolean, severity: String?, usedInhaler: Boolean, onControllerMedication: Boolean) -> Unit
+    onSubmit: (wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean) -> Unit
 ) {
-    var hadCrisis by remember { mutableStateOf(false) }
-    var selectedSeverity by remember { mutableStateOf<String?>(null) }
+    var hadCrisis by remember { mutableStateOf(true) }
     var usedInhaler by remember { mutableStateOf(false) }
     var onMedication by remember { mutableStateOf(true) }
 
-    LaunchedEffect(hadCrisis) { if (!hadCrisis) selectedSeverity = null }
-
-    val canSubmit = !hadCrisis || selectedSeverity != null
+    val canSubmit = true
 
     Box(
         modifier = Modifier
@@ -273,71 +263,29 @@ private fun EveningCheckInContent(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     CheckInItem(
-                        label = "Tive uma crise de asma hoje",
+                        label = "Tive um bom dia",
                         checked = hadCrisis, onToggle = { hadCrisis = it },
-                        activeColor = Color(0xFFEF5350)
+                        activeColor = Color(0xFF81C784)
                     )
-                    AnimatedVisibility(visible = hadCrisis) {
-                        Column(modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)) {
-                            Text(
-                                "Qual foi a intensidade?",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 13.sp, fontWeight = FontWeight.Medium
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("leve" to "🟡 Leve", "moderada" to "🟠 Moderada", "grave" to "🔴 Grave")
-                                    .forEach { (value, label) ->
-                                        val isSelected = selectedSeverity == value
-                                        OutlinedButton(
-                                            onClick = { selectedSeverity = value },
-                                            modifier = Modifier.weight(1f),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                containerColor = if (isSelected) Color.White.copy(0.2f) else Color.Transparent,
-                                                contentColor = Color.White
-                                            ),
-                                            border = androidx.compose.foundation.BorderStroke(
-                                                if (isSelected) 2.dp else 1.dp, Color.White
-                                            ),
-                                            shape = RoundedCornerShape(10.dp),
-                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                                        ) {
-                                            Text(
-                                                label, fontSize = 11.sp, textAlign = TextAlign.Center,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        }
-                                    }
-                            }
-                        }
-                    }
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
-                        label = "Usei minha bombinha Salbutamol hoje",
+                        label = "Pratiquei atividade física",
                         checked = usedInhaler, onToggle = { usedInhaler = it },
                         activeColor = Color(0xFFFFCC02)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
-                        label = "Estou fazendo o tratamento",
+                        label = "Me cuidei bem hoje",
                         checked = onMedication, onToggle = { onMedication = it },
                         activeColor = Color.White
                     )
                 }
             }
 
-            if (hadCrisis && selectedSeverity == null) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Selecione a intensidade da crise para continuar",
-                    color = Color(0xFFFFCC02), fontSize = 12.sp, textAlign = TextAlign.Center
-                )
-            }
-
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { onSubmit(hadCrisis, selectedSeverity, usedInhaler, onMedication) },
+                onClick = { onSubmit(hadCrisis, usedInhaler, onMedication) },
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -489,6 +437,69 @@ private fun CheckInItem(
     }
 }
 
+// ── Card de bem-estar crítico ─────────────────────────────────────────────────
+
+@Composable
+private fun CriticalWellbeingCard(onDismiss: () -> Unit, onOpenGuide: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF212121)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C))
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("⚠️", fontSize = 48.sp)
+                Text(
+                    "Percebemos um dia difícil",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    "Você registrou bem-estar muito baixo. Sabe como agir se precisar de apoio?",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Button(
+                    onClick = {
+                        uriHandler.openUri("https://afilaxy.com/guia")
+                        onOpenGuide()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text("Ver Guia de Suporte", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        "Estou bem",
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ── Estados auxiliares ────────────────────────────────────────────────────────
 
 @Composable
@@ -501,8 +512,8 @@ private fun CheckInDone(type: CheckInType, onDone: () -> Unit) {
             Text("✅", fontSize = 72.sp)
             Spacer(Modifier.height(16.dp))
             Text(
-                if (type == CheckInType.MORNING) "Obrigado!\nFique com sua bombinha sempre que sair."
-                else "Obrigado pelo registro!\nSeus dados ajudam a melhorar seu cuidado.",
+                if (type == CheckInType.MORNING) "Obrigado!\nContinue cuidando de você durante o dia."
+                else "Obrigado pelo registro!\nSeus dados ajudam a entender seu bem-estar.",
                 color = Color.White, fontSize = 18.sp,
                 textAlign = TextAlign.Center, lineHeight = 26.sp
             )

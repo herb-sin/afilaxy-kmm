@@ -62,11 +62,7 @@ fun ProfessionalsScreenNew(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
                     }
                 },
-                actions = {
-                    IconButton(onClick = onNavigateToCrmLookup) {
-                        Icon(Icons.Default.Badge, "Consultar CRM")
-                    }
-                }
+                actions = {}
             )
         }
     ) { paddingValues ->
@@ -96,16 +92,6 @@ fun ProfessionalsScreenNew(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        item {
-                            SpecialtyFilters(
-                                selectedSpecialty = selectedSpecialty,
-                                onSpecialtySelected = { specialty ->
-                                    selectedSpecialty = specialty
-                                    viewModel.filterBySpecialty(specialty)
-                                }
-                            )
-                        }
-                        
                         item {
                             StatsHeader(professionals = state.professionals)
                         }
@@ -385,16 +371,10 @@ private fun ProfessionalCardNew(
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     Text(
-                        getSpecialtyName(professional.specialty),
+                        "Profissional de Apoio",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
-                    )
-                    
-                    Text(
-                        "CRM: ${professional.crm}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -573,15 +553,3 @@ private fun EmptyState() {
     }
 }
 
-private fun getSpecialtyName(specialty: Specialty): String = when (specialty) {
-    Specialty.PNEUMOLOGIST       -> "Pneumologista"
-    Specialty.ALLERGIST          -> "Alergologista"
-    Specialty.PHYSIOTHERAPIST    -> "Fisioterapeuta"
-    Specialty.PSYCHOLOGIST       -> "Psicólogo(a)"
-    Specialty.PSYCHIATRIST       -> "Psiquiatra"
-    Specialty.OTOLARYNGOLOGIST   -> "Otorrinolaringologista"
-    Specialty.ENDOCRINOLOGIST    -> "Endocrinologista"
-    Specialty.GASTROENTEROLOGIST -> "Gastroenterologista"
-    Specialty.CARDIOLOGIST       -> "Cardiologista"
-    Specialty.CLINIC             -> "Clínico(a) Geral"
-}

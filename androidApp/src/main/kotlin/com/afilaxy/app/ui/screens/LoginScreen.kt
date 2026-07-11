@@ -73,11 +73,16 @@ fun LoginScreen(
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
-            account.idToken?.let { idToken ->
+            val idToken = account.idToken
+            if (idToken != null) {
                 viewModel.onGoogleSignInResult(idToken)
+            } else {
+                viewModel.onGoogleSignInError("ID Token nulo — web_client_id não configurado no Firebase")
             }
         } catch (e: ApiException) {
-            // Usuário cancelou ou erro transitório — não exibe mensagem de erro
+            if (e.statusCode != 12501) { // 12501 = usuário cancelou
+                viewModel.onGoogleSignInError("Google Sign-In falhou (código ${e.statusCode})")
+            }
         }
     }
     

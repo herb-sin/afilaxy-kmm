@@ -56,29 +56,16 @@ class RiskScoreEngineTest {
         precipitationMm = 0f, aqi = 210, pm25 = 40f // AQI muito ruim
     )
 
-    private fun checkInComCrise(severity: String = "moderada") = CheckInResponse(
-        id = "ci-1", userId = "user-1",
-        type = "EVENING", timestamp = System.currentTimeMillis(),
-        hadCrisisToday = true, crisisSeverity = severity,
-        usedRescueInhaler = true
-    )
-
-    private fun checkInSemCrise() = CheckInResponse(
-        id = "ci-2", userId = "user-1",
-        type = "EVENING", timestamp = System.currentTimeMillis(),
-        hadCrisisToday = false
-    )
-
-    private fun checkInSemBombinha() = CheckInResponse(
-        id = "ci-3", userId = "user-1",
+    private fun checkInBemEstar() = CheckInResponse(
+        id = "ci-ok", userId = "user-1",
         type = "MORNING", timestamp = System.currentTimeMillis(),
-        hasRescueInhaler = false
+        wellbeingA = true, wellbeingB = true, wellbeingC = true
     )
 
-    private fun checkInComBombinha() = CheckInResponse(
-        id = "ci-4", userId = "user-1",
-        type = "MORNING", timestamp = System.currentTimeMillis(),
-        hasRescueInhaler = true
+    private fun checkInMalEstar() = CheckInResponse(
+        id = "ci-bad", userId = "user-1",
+        type = "EVENING", timestamp = System.currentTimeMillis(),
+        wellbeingA = false, wellbeingB = false, wellbeingC = true
     )
 
     // ── GRUPO 1: Pacientes de Baixo Risco ────────────────────────────────────
@@ -119,8 +106,8 @@ class RiskScoreEngineTest {
     }
 
     @Test
-    fun `check-ins sem crise nao aumentam o score`() {
-        val checkIns = List(7) { checkInSemCrise() }
+    fun `check-ins com bem-estar positivo nao aumentam o score`() {
+        val checkIns = List(7) { checkInBemEstar() }
         val result = RiskScoreEngine.calculate(
             env = envBom(),
             crises30d = 0, crises7d = 0, samuCalledCount = 0,
@@ -249,47 +236,44 @@ class RiskScoreEngineTest {
     }
 
     @Test
-    fun `check-in com crise grave dispara fator e recomendacao medica`() {
-        val result = RiskScoreEngine.calculate(
-            env = envBom(),
-            crises30d = 0, crises7d = 0, samuCalledCount = 0,
-            monthOfYear = 5,
-            recentCheckIns = listOf(checkInComCrise(severity = "grave"))
-        )
-        // hadCrisisToday=true → +12; crisisSeverity="grave" → +15 = 27 → MODERATE
-        assertTrue(result.factors.any { "grave" in it.lowercase() })
-        assertTrue(result.recommendations.any { "médico" in it.lowercase() })
-        assertTrue(result.score >= 20)
-    }
-
-    @Test
-    fun `uso de bombinha 2 vezes na semana dispara recomendacao de revisao`() {
-        val checkIns = listOf(
-            CheckInResponse("c1", "u1", "EVENING", 0L, usedRescueInhaler = true),
-            CheckInResponse("c2", "u1", "EVENING", 0L, usedRescueInhaler = true)
-        )
+    fun `check-ins com bem-estar comprometido adicionam ao score`() {
+        val checkIns = List(3) { checkInMalEstar() }
         val result = RiskScoreEngine.calculate(
             env = envBom(),
             crises30d = 0, crises7d = 0, samuCalledCount = 0,
             monthOfYear = 5,
             recentCheckIns = checkIns
         )
-        assertTrue(result.factors.any { "bombinha" in it.lowercase() || "resgate" in it.lowercase() })
-        assertTrue(result.recommendations.any { "médico" in it.lowercase() || "manutenção" in it.lowercase() })
+        // 3 dias × 8 = 24 → mas cap em 25 → MODERATE
+        assertTrue(result.score >= 20)
+        assertTrue(result.factors.any { "bem-estar" in it.lowercase() })
+        assertTrue(result.recommendations.any { "apoio" in it.lowercase() || "profissional" in it.lowercase() })
     }
 
     @Test
-    fun `paciente sem bombinha de resgate disponivel recebe fator e recomendacao`() {
+    fun `1 dia de baixo bem-estar adiciona pontos mas nao dispara recomendacao`() {
         val result = RiskScoreEngine.calculate(
             env = envBom(),
             crises30d = 0, crises7d = 0, samuCalledCount = 0,
             monthOfYear = 5,
-            recentCheckIns = listOf(checkInSemBombinha())
+            recentCheckIns = listOf(checkInMalEstar())
         )
-        // hasRescueInhaler=false → +8
         assertEquals(8, result.score)
-        assertTrue(result.factors.any { "sem bombinha" in it.lowercase() || "bombinha" in it.lowercase() })
-        assertTrue(result.recommendations.any { "bombinha" in it.lowercase() || "médico" in it.lowercase() })
+        assertTrue(result.factors.any { "bem-estar" in it.lowercase() })
+        assertTrue(result.recommendations.none { "apoio" in it.lowercase() })
+    }
+
+    @Test
+    fun `check-in com apenas 1 resposta negativa nao conta como baixo bem-estar`() {
+        val checkIn = CheckInResponse("c1", "u1", "MORNING", 0L,
+            wellbeingA = false, wellbeingB = true, wellbeingC = true)
+        val result = RiskScoreEngine.calculate(
+            env = envBom(),
+            crises30d = 0, crises7d = 0, samuCalledCount = 0,
+            monthOfYear = 5,
+            recentCheckIns = listOf(checkIn)
+        )
+        assertEquals(0, result.score)
     }
 
     // ── GRUPO 4: Pacientes de Risco Muito Alto ───────────────────────────────
@@ -322,12 +306,8 @@ class RiskScoreEngineTest {
     }
 
     @Test
-    fun `paciente com check-ins de crise grave e ambiente critico e VERY_HIGH`() {
-        val checkIns = listOf(
-            checkInComCrise(severity = "grave"),
-            checkInComCrise(severity = "grave"),
-            checkInSemBombinha()
-        )
+    fun `paciente com bem-estar comprometido e ambiente critico e VERY_HIGH`() {
+        val checkIns = List(4) { checkInMalEstar() }
         val result = RiskScoreEngine.calculate(
             env = envCritico(),
             crises30d = 2, crises7d = 1, samuCalledCount = 1,
@@ -342,7 +322,7 @@ class RiskScoreEngineTest {
 
     @Test
     fun `score nunca excede 100 independente dos fatores`() {
-        val checkIns = List(7) { checkInComCrise(severity = "grave") }
+        val checkIns = List(7) { checkInMalEstar() }
         val result = RiskScoreEngine.calculate(
             env = envCritico(),
             crises30d = 30, crises7d = 10, samuCalledCount = 5,
@@ -394,19 +374,21 @@ class RiskScoreEngineTest {
     }
 
     @Test
-    fun `check-in reportedCrises cap e aplicado em 25 pontos maximo`() {
-        // 3 crises × 12 = 36 → cap em 25
-        val checkIns3 = List(3) { CheckInResponse("c$it", "u1", "EVENING", 0L, hadCrisisToday = true) }
-        val checkIns2 = List(2) { CheckInResponse("c$it", "u1", "EVENING", 0L, hadCrisisToday = true) }
+    fun `bem-estar cap e aplicado em 25 pontos maximo`() {
+        // 4 dias × 8 = 32 → cap em 25
+        val checkIns4 = List(4) { CheckInResponse("c$it", "u1", "EVENING", 0L,
+            wellbeingA = false, wellbeingB = false, wellbeingC = true) }
+        val checkIns2 = List(2) { CheckInResponse("c$it", "u1", "EVENING", 0L,
+            wellbeingA = false, wellbeingB = false, wellbeingC = true) }
 
-        val r3 = RiskScoreEngine.calculate(env = null, crises30d = 0, crises7d = 0,
-            samuCalledCount = 0, monthOfYear = 5, recentCheckIns = checkIns3)
+        val r4 = RiskScoreEngine.calculate(env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5, recentCheckIns = checkIns4)
         val r2 = RiskScoreEngine.calculate(env = null, crises30d = 0, crises7d = 0,
             samuCalledCount = 0, monthOfYear = 5, recentCheckIns = checkIns2)
 
-        // r3 deve ter 25 (cap), r2 deve ter 24
-        assertEquals(25, r3.score, "3 crises devem resultar em score 25 (cap), obtido: ${r3.score}")
-        assertEquals(24, r2.score, "2 crises devem resultar em score 24, obtido: ${r2.score}")
+        // r4 deve ter 25 (cap), r2 deve ter 16
+        assertEquals(25, r4.score, "4+ dias devem resultar em score 25 (cap), obtido: ${r4.score}")
+        assertEquals(16, r2.score, "2 dias devem resultar em score 16, obtido: ${r2.score}")
     }
 
     // ── GRUPO 6: Qualidade do Ar ──────────────────────────────────────────────

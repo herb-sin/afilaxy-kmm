@@ -376,34 +376,13 @@ private fun AgendaDeSaudeCard(
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DateRange, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                    Text("Agenda de Saúde", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("Meu Perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
                 IconButton(onClick = onEditProfile, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 }
             }
             HorizontalDivider()
-            // Dados clínicos
-            ProfileInfoCard(
-                "Tipo de Asma",
-                profile?.healthData?.conditions?.firstOrNull() ?: "Não informado",
-                Icons.Default.Favorite,
-                Modifier.fillMaxWidth()
-            )
-            // Medicação
-            val medsText = profile?.healthData?.medications
-                ?.filter { it.isNotBlank() }
-                ?.joinToString(", ")
-                ?.takeIf { it.isNotBlank() }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Medicação Atual", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    text = medsText ?: "Não informado",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (medsText != null) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
                 ProfileInfoCard(
                     "Contato Emergência",
@@ -421,8 +400,8 @@ private fun AgendaDeSaudeCard(
                     Modifier.weight(1f)
                 )
                 ProfileInfoCard(
-                    "Protocolo de Crise",
-                    "Ver passos de emergência",
+                    "Guia de Emergência",
+                    "Ver passos de apoio",
                     Icons.AutoMirrored.Filled.List,
                     Modifier.weight(1f),
                     onClick = onNavigateToHelp
@@ -554,21 +533,11 @@ private fun EditProfileSheetContent(
                 )
             }
         }
-        // Seção 2: Dados de Saúde
+        // Seção 2: Informações Adicionais
         item {
-            EditSection(icon = Icons.Default.Favorite, title = "Dados de Saúde") {
-                ProfileTextField("Tipo de Asma / Condições médicas", conditions, onConditionsChange)
-                ProfileTextField("Alergias (separadas por vírgula)", allergies, onAllergiesChange)
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    ProfileTextField("Medicação Atual (separada por vírgula)", medications, onMedicationsChange)
-                    Text(
-                        "Ex: fluticasona controle, salbutamol resgate",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-                ProfileTextField("Observações adicionais", notes, onNotesChange, singleLine = false)
+            EditSection(icon = Icons.Default.Info, title = "Informações Adicionais") {
+                ProfileTextField("Alergias conhecidas (opcional)", allergies, onAllergiesChange)
+                ProfileTextField("Observações para quem for te ajudar", notes, onNotesChange, singleLine = false)
             }
         }
         // Seção 3: Contato de Emergência

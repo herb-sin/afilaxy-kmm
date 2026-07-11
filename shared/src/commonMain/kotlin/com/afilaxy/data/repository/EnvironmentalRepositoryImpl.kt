@@ -292,96 +292,16 @@ internal object RiskScoreEngine {
             recommendations.add("Tenha o número do SAMU (192) salvo no celular")
         }
 
-        // ── Agenda de Saúde (check-ins dos últimos 7 dias) ────────────────────
+        // ── Bem-estar reportado nos check-ins dos últimos 7 dias ──────────────
         if (recentCheckIns.isNotEmpty()) {
-            // Crises reportadas nos check-ins noturnos
-            val reportedCrises = recentCheckIns.count { it.hadCrisisToday == true }
-            if (reportedCrises > 0) {
-                score += (reportedCrises * 12).coerceAtMost(25)
-                factors.add("$reportedCrises crise(s) reportada(s) na Agenda de Saúde")
+            val lowWellbeingDays = recentCheckIns.count { ci ->
+                listOfNotNull(ci.wellbeingA, ci.wellbeingB, ci.wellbeingC).count { !it } >= 2
             }
-
-            // Uso de bombinha de resgate (indica sintomas ativos)
-            val rescueUsageCount = recentCheckIns.count { it.usedRescueInhaler == true }
-            if (rescueUsageCount >= 2) {
-                score += 10
-                factors.add("Bombinha de resgate usada $rescueUsageCount vezes esta semana")
-                recommendations.add("Converse com seu médico sobre seu tratamento de manutenção")
-            }
-
-            // Crise grave reportada
-            val severeCrises = recentCheckIns.count { it.crisisSeverity == "grave" }
-            if (severeCrises > 0) {
-                score += 15
-                factors.add("Crise grave reportada recentemente")
-                recommendations.add("Procure atendimento médico para reavaliar seu tratamento")
-            }
-
-            // Sem bombinha de resgate disponível
-            val withoutInhaler = recentCheckIns.any { it.hasRescueInhaler == false }
-            if (withoutInhaler) {
-                score += 8
-                factors.add("Sem bombinha de resgate disponível")
-                recommendations.add("Providencie uma bombinha de resgate com seu médico")
-            }
-
-            // Sintomas noturnos (critério GINA: acordar de noite por asma = controle insuficiente)
-            val nocturnalCount = recentCheckIns.count { it.nocturnalSymptoms == true }
-            if (nocturnalCount > 0) {
-                score += (nocturnalCount * 10).coerceAtMost(20)
-                factors.add("$nocturnalCount noite(s) com sintomas noturnos esta semana")
-                recommendations.add("Sintomas noturnos indicam controle insuficiente — consulte seu médico")
-            }
-
-            // Não está fazendo o tratamento (baixa aderência = maior risco de crise)
-            val notOnMedication = recentCheckIns.any { it.onControllerMedication == false }
-            if (notOnMedication) {
-                score += 12
-                factors.add("Tratamento não realizado em algum dia da semana")
-                recommendations.add("Retome seu tratamento de manutenção e converse com seu médico")
-            }
-
-            // ── Dados do smartwatch ───────────────────────────────────────────
-            // SpO₂ mínimo noturno (dessaturação = comprometimento respiratório direto)
-            val minSpo2 = recentCheckIns.mapNotNull { it.minSpo2Percent }.minOrNull()
-            if (minSpo2 != null) {
-                when {
-                    minSpo2 < 90f -> {
-                        score += 25
-                        factors.add("SpO₂ noturno crítico (${minSpo2.toInt()}%) — dessaturação grave")
-                        recommendations.add("Procure atendimento médico urgente — dessaturação grave detectada no sono")
-                    }
-                    minSpo2 < 93f -> {
-                        score += 15
-                        factors.add("SpO₂ noturno baixo (${minSpo2.toInt()}%)")
-                        recommendations.add("Consulte seu médico sobre oximetria noturna")
-                    }
-                    minSpo2 < 95f -> {
-                        score += 8
-                        factors.add("SpO₂ ligeiramente reduzido (${minSpo2.toInt()}%)")
-                    }
-                }
-            }
-
-            // Sono insuficiente (< 5h agrava inflamação e reatividade brônquica)
-            val snoValues = recentCheckIns.mapNotNull { it.sleepDurationHours }
-            if (snoValues.isNotEmpty()) {
-                val avgSleep = snoValues.average().toFloat()
-                if (avgSleep < 5f) {
-                    score += 8
-                    factors.add("Sono curto (${avgSleep.toInt()}h em média esta semana)")
-                    recommendations.add("Sono insuficiente agrava reatividade brônquica — tente dormir 7-8h")
-                }
-            }
-
-            // Sono fragmentado (despertares frequentes = sintomas noturnos objetivos)
-            val interruptionValues = recentCheckIns.mapNotNull { it.sleepInterruptions?.toFloat() }
-            if (interruptionValues.isNotEmpty()) {
-                val avgInterruptions = interruptionValues.average()
-                if (avgInterruptions >= 2.0) {
-                    score += 10
-                    factors.add("Sono fragmentado (${avgInterruptions.toInt()}+ interrupções/noite)")
-                    recommendations.add("Despertares frequentes podem indicar broncoespasmo noturno — consulte seu médico")
+            if (lowWellbeingDays > 0) {
+                score += (lowWellbeingDays * 8).coerceAtMost(25)
+                factors.add("$lowWellbeingDays dia(s) com bem-estar comprometido esta semana")
+                if (lowWellbeingDays >= 3) {
+                    recommendations.add("Considere buscar apoio profissional para seu bem-estar")
                 }
             }
         }
