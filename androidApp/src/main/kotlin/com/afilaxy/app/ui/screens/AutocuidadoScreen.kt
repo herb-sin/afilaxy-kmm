@@ -56,9 +56,9 @@ fun AutocuidadoScreen(navController: NavController) {
             item {
                 when (selectedCategory) {
                     "basics"      -> AutocuidadoBasicsContent()
-                    "medications" -> AutocuidadoMedicationsContent()
-                    "triggers"    -> AutocuidadoTriggersContent()
-                    "emergency"   -> AutocuidadoEmergencyContent()
+                    "breathing"   -> AutocuidadoBreathingContent()
+                    "environment" -> AutocuidadoEnvironmentContent()
+                    "support"     -> AutocuidadoSupportContent()
                     "lifestyle"   -> AutocuidadoLifestyleContent()
                 }
             }
@@ -94,8 +94,7 @@ private fun AutocuidadoHeroCard() {
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                "Entenda sua condição, gerencie crises e viva bem com asma. " +
-                "Informação e autocuidado andam juntos.",
+                "Pequenos hábitos fazem grande diferença. Informação e autocuidado andam juntos.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -113,11 +112,11 @@ private fun AutocuidadoCategoryFilters(
     onCategorySelected: (String) -> Unit
 ) {
     val categories = listOf(
-        "basics"      to "Básico",
-        "medications" to "Medicamentos",
-        "triggers"    to "Gatilhos",
-        "emergency"   to "Emergência",
-        "lifestyle"   to "Estilo de Vida"
+        "basics"      to "Bem-Estar",
+        "breathing"   to "Respiração",
+        "environment" to "Ambiente",
+        "support"     to "Suporte",
+        "lifestyle"   to "Hábitos"
     )
     Column {
         Text(
@@ -146,137 +145,155 @@ private fun AutocuidadoCategoryFilters(
 private fun AutocuidadoBasicsContent() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         AutocuidadoInfoCard(
-            title = "O que é Asma?",
+            title = "O que é Bem-Estar?",
             icon = Icons.Default.Info,
-            content = "A asma é uma doença crônica que afeta as vias respiratórias, causando inflamação " +
-                      "e estreitamento dos brônquios. Isso dificulta a passagem do ar, causando sintomas " +
-                      "como falta de ar, chiado no peito e tosse."
+            content = "Bem-estar é o equilíbrio entre corpo e mente no dia a dia. " +
+                      "Envolve qualidade do sono, energia, humor, alimentação e como " +
+                      "você se sente ao longo da semana."
         )
         AutocuidadoInfoCard(
-            title = "Sintomas Principais",
+            title = "Sinais de Atenção",
             icon = Icons.Default.Warning,
-            content = "• Falta de ar ou dificuldade para respirar\n" +
-                      "• Chiado no peito (sibilância)\n" +
-                      "• Tosse, especialmente à noite\n" +
-                      "• Sensação de aperto no peito\n" +
-                      "• Cansaço durante atividades físicas"
+            content = "• Cansaço excessivo por vários dias seguidos\n" +
+                      "• Dificuldade para dormir ou acordar bem\n" +
+                      "• Falta de energia para atividades do dia a dia\n" +
+                      "• Mudanças bruscas de humor\n" +
+                      "• Sensação frequente de mal-estar"
         )
         AutocuidadoInfoCard(
-            title = "Tipos de Asma",
+            title = "Quando Buscar Ajuda",
+            icon = Icons.Default.Shield,
+            content = "Se você se sentir mal por mais de alguns dias, consulte um profissional de saúde. " +
+                      "O Afilaxy conecta você com pessoas próximas em momentos de urgência, " +
+                      "mas não substitui orientação profissional."
+        )
+        AutocuidadoInfoCard(
+            title = "Acompanhe seu Progresso",
             icon = Icons.Default.Category,
-            content = "• Asma alérgica: causada por alérgenos\n" +
-                      "• Asma não-alérgica: causada por irritantes\n" +
-                      "• Asma ocupacional: relacionada ao trabalho\n" +
-                      "• Asma induzida por exercício\n" +
-                      "• Asma noturna: sintomas piores à noite"
-        )
-        AutocuidadoInfoCard(
-            title = "Como prevenir crises?",
-            icon = Icons.Default.Shield,
-            content = "Evite gatilhos (poeira, fumaça, pólen), use medicação preventiva conforme " +
-                      "prescrito e mantenha acompanhamento médico regular."
+            content = "Use o check-in diário para registrar como você se sente. " +
+                      "Com o tempo, você verá padrões e entenderá melhor o que afeta seu bem-estar."
         )
     }
 }
 
 @Composable
-private fun AutocuidadoMedicationsContent() {
+private fun AutocuidadoBreathingContent() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         AutocuidadoInfoCard(
-            title = "Medicamentos de Resgate",
-            icon = Icons.Default.LocalHospital,
-            iconColor = Color(0xFFE53E3E),
-            content = "São broncodilatadores de ação rápida usados durante crises:\n\n" +
-                      "• Salbutamol (Aerolin®)\n• Fenoterol (Berotec®)\n\n" +
-                      "USO: apenas durante crises ou antes de exercícios. NÃO use diariamente!"
+            title = "Respiração Diafragmática",
+            icon = Icons.Default.SelfImprovement,
+            content = "1. Deite ou sente confortavelmente\n" +
+                      "2. Coloque uma mão no peito e outra no abdômen\n" +
+                      "3. Inspire pelo nariz por 4 segundos, expandindo o abdômen\n" +
+                      "4. Segure por 2 segundos\n" +
+                      "5. Expire lentamente pela boca por 6 segundos\n" +
+                      "6. Repita por 5 a 10 minutos"
         )
         AutocuidadoInfoCard(
-            title = "Medicamentos de Manutenção",
+            title = "Técnica 4-7-8",
+            icon = Icons.Default.Timer,
+            content = "Ótima para reduzir estresse e melhorar o sono:\n\n" +
+                      "• Inspire pelo nariz contando até 4\n" +
+                      "• Segure a respiração contando até 7\n" +
+                      "• Expire pela boca contando até 8\n\n" +
+                      "Repita 4 vezes. Pratique 2× ao dia."
+        )
+        AutocuidadoInfoCard(
+            title = "Respiração Lenta (Coerência Cardíaca)",
+            icon = Icons.Default.Favorite,
+            content = "• Inspire por 5 segundos\n" +
+                      "• Expire por 5 segundos\n" +
+                      "• Ritmo de 6 respirações por minuto\n" +
+                      "• Duração: 5 minutos\n\n" +
+                      "Reduz ansiedade e melhora a variabilidade cardíaca."
+        )
+        AutocuidadoInfoCard(
+            title = "Quando Praticar",
             icon = Icons.Default.Schedule,
-            iconColor = Color(0xFF38A169),
-            content = "São anti-inflamatórios usados diariamente para prevenir crises:\n\n" +
-                      "• Corticoides inalatórios\n• Broncodilatadores de longa duração\n" +
-                      "• Antileucotrienos\n\nUSO: todos os dias, mesmo sem sintomas!"
-        )
-        AutocuidadoInfoCard(
-            title = "Como Usar o Inalador",
-            icon = Icons.Default.PlayArrow,
-            content = "1. Retire a tampa e agite o inalador\n" +
-                      "2. Expire completamente\n" +
-                      "3. Coloque os lábios ao redor do bocal\n" +
-                      "4. Inspire profundamente e pressione\n" +
-                      "5. Segure a respiração por 10 segundos\n" +
-                      "6. Expire lentamente"
-        )
-        AutocuidadoAlertCard(
-            text = "⚠️ Medicamentos de resgate são para emergências. Se você usa mais de 2× por semana, procure seu médico!"
+            content = "• Ao acordar: ajuda a iniciar o dia com calma\n" +
+                      "• Em momentos de estresse: recupera o equilíbrio\n" +
+                      "• Antes de dormir: melhora a qualidade do sono\n" +
+                      "• Em dias de má qualidade do ar: ajuda a manter a calma"
         )
     }
 }
 
 @Composable
-private fun AutocuidadoTriggersContent() {
+private fun AutocuidadoEnvironmentContent() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         AutocuidadoInfoCard(
-            title = "Alérgenos Comuns",
-            icon = Icons.Default.Pets,
-            content = "• Ácaros da poeira\n• Pelos de animais\n• Pólen de plantas\n" +
-                      "• Fungos e mofo\n• Baratas e seus dejetos"
-        )
-        AutocuidadoInfoCard(
-            title = "Irritantes Ambientais",
+            title = "Qualidade do Ar",
             icon = Icons.Default.Air,
-            content = "• Fumaça de cigarro\n• Poluição do ar\n• Produtos de limpeza\n" +
-                      "• Perfumes e sprays\n• Tinta fresca\n• Ar frio ou seco"
+            content = "A qualidade do ar afeta como você se sente. O Afilaxy mostra o índice " +
+                      "AQI da sua região em tempo real:\n\n" +
+                      "• AQI 0–50: Boa — atividades normais\n" +
+                      "• AQI 51–100: Moderada — atenção se sensível\n" +
+                      "• AQI 101–150: Prejudicial a grupos sensíveis\n" +
+                      "• AQI 151+: Evite exposição prolongada ao ar livre"
         )
         AutocuidadoInfoCard(
-            title = "Outros Gatilhos",
+            title = "Fatores Ambientais Comuns",
+            icon = Icons.Default.Pets,
+            content = "• Poeira e ácaros: mantenha ambientes limpos e arejados\n" +
+                      "• Pelos de animais: higiene regular dos pets\n" +
+                      "• Mofo e umidade: controle entre 40–60%\n" +
+                      "• Pólen: dias ventosos podem aumentar a concentração\n" +
+                      "• Fumaça: evite ambientes com fumaça de qualquer tipo"
+        )
+        AutocuidadoInfoCard(
+            title = "Irritantes do Dia a Dia",
             icon = Icons.Default.MoreHoriz,
-            content = "• Exercícios intensos\n• Estresse emocional\n• Infecções respiratórias\n" +
-                      "• Refluxo gastroesofágico\n• Alguns medicamentos\n• Mudanças climáticas"
+            content = "• Produtos de limpeza: prefira versões sem perfume forte\n" +
+                      "• Perfumes e sprays: use com moderação\n" +
+                      "• Ar condicionado: limpe os filtros regularmente\n" +
+                      "• Ar frio e seco: hidrate-se mais nesses dias\n" +
+                      "• Tráfego intenso: evite horários de pico quando possível"
         )
         AutocuidadoInfoCard(
-            title = "Como Evitar Gatilhos",
+            title = "Dicas para a Casa",
             icon = Icons.Default.Shield,
-            content = "• Mantenha a casa limpa e arejada\n• Use capas antialérgicas\n" +
-                      "• Evite tapetes e cortinas pesadas\n• Não fume e evite fumantes\n" +
-                      "• Use máscara em locais poluídos\n• Controle a umidade (40–60%)"
+            content = "• Aspire e limpe com pano úmido regularmente\n" +
+                      "• Mantenha janelas abertas nos horários de menor poluição\n" +
+                      "• Use purificador de ar se o AQI local for frequentemente alto\n" +
+                      "• Troque a roupa de cama semanalmente\n" +
+                      "• Evite tapetes e cortinas que acumulam poeira"
         )
     }
 }
 
 @Composable
-private fun AutocuidadoEmergencyContent() {
+private fun AutocuidadoSupportContent() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         AutocuidadoInfoCard(
-            title = "Sinais de Crise Grave",
-            icon = Icons.Default.Emergency,
+            title = "Como o Afilaxy Ajuda",
+            icon = Icons.Default.People,
+            content = "Em momentos difíceis, você não precisa enfrentar sozinho:\n\n" +
+                      "• Toque em Solicitar Ajuda para alertar pessoas próximas\n" +
+                      "• Helpers voluntários próximos recebem uma notificação\n" +
+                      "• Alguém disponível pode estar do seu lado em minutos\n\n" +
+                      "O Afilaxy não substitui serviços de emergência."
+        )
+        AutocuidadoInfoCard(
+            title = "Seja um Helper",
+            icon = Icons.Default.Favorite,
+            content = "Ative o Modo Ajudante e esteja disponível para ajudar quem precisar perto de você:\n\n" +
+                      "• Receba notificações de pedidos de ajuda próximos\n" +
+                      "• Aceite apenas se puder realmente comparecer\n" +
+                      "• Aja com responsabilidade e empatia\n" +
+                      "• Você pode desativar a qualquer momento"
+        )
+        AutocuidadoInfoCard(
+            title = "Números de Emergência",
+            icon = Icons.Default.Phone,
             iconColor = Color(0xFFE53E3E),
-            content = "🚨 PROCURE AJUDA IMEDIATAMENTE:\n\n" +
-                      "• Dificuldade extrema para respirar\n" +
-                      "• Não consegue falar frases completas\n" +
-                      "• Lábios ou unhas azulados\n" +
-                      "• Medicamento de resgate não faz efeito\n" +
-                      "• Confusão mental ou sonolência"
+            content = "Sempre que houver risco à vida, ligue imediatamente:\n\n" +
+                      "• SAMU: 192\n" +
+                      "• Bombeiros: 193\n" +
+                      "• Polícia: 190\n" +
+                      "• CVV (apoio emocional): 188\n\n" +
+                      "O Afilaxy é um apoio comunitário, não um serviço de emergência."
         )
-        AutocuidadoInfoCard(
-            title = "O que Fazer na Crise",
-            icon = Icons.Default.MedicalServices,
-            content = "1. Mantenha a calma\n" +
-                      "2. Use o medicamento de resgate\n" +
-                      "3. Sente-se ereto, não se deite\n" +
-                      "4. Respire lentamente\n" +
-                      "5. Se não melhorar em 15 min, procure ajuda\n" +
-                      "6. Ligue 192 (SAMU) se necessário"
-        )
-        AutocuidadoInfoCard(
-            title = "Kit de Emergência",
-            icon = Icons.Default.LocalPharmacy,
-            content = "Sempre tenha com você:\n\n" +
-                      "• Medicamento de resgate\n• Lista de medicamentos\n" +
-                      "• Contatos de emergência\n• Plano de ação da asma\n• Documento de identidade"
-        )
-        AutocuidadoAlertCard(text = "📱 Use o Afilaxy para encontrar ajuda rápida durante uma crise!")
+        AutocuidadoAlertCard(text = "📱 Use o Afilaxy para acionar sua rede de apoio. Para emergências graves, ligue 192 (SAMU).")
     }
 }
 
@@ -284,11 +301,13 @@ private fun AutocuidadoEmergencyContent() {
 private fun AutocuidadoLifestyleContent() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         AutocuidadoInfoCard(
-            title = "Exercícios e Asma",
+            title = "Exercício e Bem-Estar",
             icon = Icons.Default.FitnessCenter,
-            content = "• Exercite-se regularmente, mas com cuidado\n• Faça aquecimento antes\n" +
-                      "• Use medicamento preventivo se prescrito\n• Prefira atividades como natação\n" +
-                      "• Evite exercícios em dias frios e secos\n• Pare se sentir sintomas"
+            content = "• Exercite-se regularmente — 30 minutos por dia faz diferença\n" +
+                      "• Faça aquecimento antes de qualquer atividade\n" +
+                      "• Prefira atividades como caminhada, natação ou yoga\n" +
+                      "• Em dias de baixa qualidade do ar, prefira atividades indoor\n" +
+                      "• Pare se sentir qualquer desconforto e descanse"
         )
         AutocuidadoInfoCard(
             title = "Alimentação Saudável",

@@ -142,24 +142,8 @@ private fun ProfessionalDetailContent(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = when (professional.specialty) {
-                        Specialty.PNEUMOLOGIST       -> "Pneumologista"
-                        Specialty.ALLERGIST          -> "Alergologista"
-                        Specialty.PHYSIOTHERAPIST    -> "Fisioterapeuta"
-                        Specialty.PSYCHOLOGIST       -> "Psicólogo(a)"
-                        Specialty.PSYCHIATRIST       -> "Psiquiatra"
-                        Specialty.OTOLARYNGOLOGIST   -> "Otorrinolaringologista"
-                        Specialty.ENDOCRINOLOGIST    -> "Endocrinologista"
-                        Specialty.GASTROENTEROLOGIST -> "Gastroenterologista"
-                        Specialty.CARDIOLOGIST       -> "Cardiologista"
-                        Specialty.CLINIC             -> "Clínico(a) Geral"
-                    },
+                    text = "Profissional de Apoio",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "CRM: ${professional.crm}",
-                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

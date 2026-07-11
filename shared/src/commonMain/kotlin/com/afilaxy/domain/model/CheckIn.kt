@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 enum class CheckInType { MORNING, EVENING }
 
 /**
- * Resposta de um check-in — gravada no Firestore para training do modelo ML.
- * Campos ambientais e clínicos são capturados automaticamente no momento da resposta.
+ * Resposta de um check-in — gravada no Firestore para análise de bem-estar.
+ * Campos de bem-estar e contexto ambiental capturados no momento da resposta.
  */
 @Serializable
 data class CheckInResponse(
@@ -16,14 +16,10 @@ data class CheckInResponse(
     val type: String,                  // CheckInType.name
     val timestamp: Long,
 
-    // ── Bombinha de resgate (check-in matinal) ─────────────────────────────
-    val hasRescueInhaler: Boolean? = null,
-    val rescueInhalerName: String? = null, // ex: "Aerolin", "Salbutamol"
-
-    // ── Crise (check-in noturno) ───────────────────────────────────────────
-    val hadCrisisToday: Boolean? = null,
-    val crisisSeverity: String? = null,    // "leve", "moderada", "grave"
-    val usedRescueInhaler: Boolean? = null,
+    // ── Bem-estar (matinal: sono/humor/energia | noturno: dia/atividade/autocuidado) ──
+    val wellbeingA: Boolean? = null,
+    val wellbeingB: Boolean? = null,
+    val wellbeingC: Boolean? = null,
 
     // ── Contexto ambiental capturado automaticamente ───────────────────────
     val riskScore: Int? = null,
@@ -34,19 +30,5 @@ data class CheckInResponse(
     // ── Contexto temporal ─────────────────────────────────────────────────
     val hourOfDay: Int? = null,
     val dayOfWeek: Int? = null,           // 1=seg, 7=dom
-    val monthOfYear: Int? = null,
-
-    // ── Campos clínicos do check-in reformulado ───────────────────────────
-    val nocturnalSymptoms: Boolean? = null,    // "Acordei de noite com crise" (matinal)
-    val onControllerMedication: Boolean? = null, // "Estou fazendo o tratamento" (matinal + noturno)
-
-    // ── Dados de saúde do smartwatch (opcionais) ─────────────────────────
-    val heartRateBpm: Int? = null,
-    val sleepDurationHours: Float? = null,
-    val sleepInterruptions: Int? = null,
-    val minSpo2Percent: Float? = null,
-
-    // ── Perfil clínico capturado automaticamente ───────────────────────────
-    val asmaType: String? = null,         // AsmaType.name
-    val asmaTypeSeverity: String? = null  // "leve", "moderada", "grave"
+    val monthOfYear: Int? = null
 )
