@@ -360,7 +360,6 @@ class ViewModelProvider {
     func getProfessionalListViewModel() -> ProfessionalListViewModel? { safeGetProfessionalListViewModel() }
     func getProfessionalDetailViewModel() -> ProfessionalDetailViewModel? { safeGetProfessionalDetailViewModel() }
     func getHomeViewModel() -> HomeViewModel? { safeGetHomeViewModel() }
-    func getMedicalProfileViewModel() -> MedicalProfileViewModel? { safeGetMedicalProfileViewModel() }
     func getCheckInViewModel() -> CheckInViewModel? { safeGetCheckInViewModel() }
 
 

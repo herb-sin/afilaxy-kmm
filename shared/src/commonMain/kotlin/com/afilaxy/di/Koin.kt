@@ -13,7 +13,6 @@ import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
-import com.afilaxy.presentation.medical.MedicalProfileViewModel
 import com.afilaxy.domain.repository.HealthRepository
 import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.risk.RiskViewModel
@@ -43,7 +42,6 @@ fun sharedModule(): Module = module {
     single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get(), get()) }
     
     // New repositories for expanded features
-    single<MedicalRepository> { MedicalRepositoryImpl(get(), get()) }
     single<EnvironmentalRepository> {
         val token = com.afilaxy.config.WaqiConfig.API_TOKEN.ifBlank { "demo" }
         EnvironmentalRepositoryImpl(get(), token, get())
@@ -69,7 +67,6 @@ fun sharedModule(): Module = module {
     
     // New ViewModels for expanded features
     factory { HomeViewModel(get(), get()) }
-    factory { MedicalProfileViewModel(get(), get()) }
     factory { RiskViewModel(get(), get()) }
     factory { CheckInViewModel(get(), get(), get<HealthRepository>()) }
     factory { UBSMapViewModel(get(), get()) }
