@@ -59,8 +59,6 @@ fun ProfileScreenNew(
     var editPhone       by remember { mutableStateOf("") }
     var editBloodType   by remember { mutableStateOf("") }
     var editAllergies   by remember { mutableStateOf("") }
-    var editMedications by remember { mutableStateOf("") }
-    var editConditions  by remember { mutableStateOf("") }
     var editNotes       by remember { mutableStateOf("") }
     var editEmergName   by remember { mutableStateOf("") }
     var editEmergPhone  by remember { mutableStateOf("") }
@@ -73,8 +71,6 @@ fun ProfileScreenNew(
             editPhone       = profile.phone.filter { it.isDigit() }.take(11)
             editBloodType   = profile.healthData?.bloodType ?: ""
             editAllergies   = profile.healthData?.allergies?.joinToString(", ") ?: ""
-            editMedications = profile.healthData?.medications?.joinToString(", ") ?: ""
-            editConditions  = profile.healthData?.conditions?.joinToString(", ") ?: ""
             editNotes       = profile.healthData?.notes ?: ""
             editEmergName   = profile.emergencyContact?.name ?: ""
             editEmergPhone  = (profile.emergencyContact?.phone ?: "").filter { it.isDigit() }.take(11)
@@ -281,8 +277,6 @@ fun ProfileScreenNew(
                 name = editName,           onNameChange = { editName = it },
                 phone = editPhone,          onPhoneChange = { editPhone = it },
                 allergies = editAllergies,  onAllergiesChange = { editAllergies = it },
-                medications = editMedications, onMedicationsChange = { editMedications = it },
-                conditions = editConditions,  onConditionsChange = { editConditions = it },
                 notes = editNotes,          onNotesChange = { editNotes = it },
                 emergName = editEmergName,  onEmergNameChange = { editEmergName = it },
                 emergPhone = editEmergPhone, onEmergPhoneChange = { editEmergPhone = it },
@@ -301,8 +295,6 @@ fun ProfileScreenNew(
                             healthData = UserHealthData(
                                 bloodType  = profile?.healthData?.bloodType ?: "",
                                 allergies  = split(editAllergies),
-                                medications = split(editMedications),
-                                conditions  = split(editConditions),
                                 notes       = editNotes
                             ),
                             emergencyContact = EmergencyContact(
@@ -470,8 +462,6 @@ private fun EditProfileSheetContent(
     name: String,        onNameChange: (String) -> Unit,
     phone: String,       onPhoneChange: (String) -> Unit,
     allergies: String,   onAllergiesChange: (String) -> Unit,
-    medications: String, onMedicationsChange: (String) -> Unit,
-    conditions: String,  onConditionsChange: (String) -> Unit,
     notes: String,       onNotesChange: (String) -> Unit,
     emergName: String,   onEmergNameChange: (String) -> Unit,
     emergPhone: String,  onEmergPhoneChange: (String) -> Unit,
