@@ -219,7 +219,7 @@ struct ProfileView: View {
                 photoUrl: profile.photoUrl,
                 healthData: UserHealthData(
                     bloodType: bloodType,
-                    allergies: split(allergies), notes: healthNotes
+                    allergies: split(allergies), medications: [], conditions: [], notes: healthNotes
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
@@ -236,7 +236,7 @@ struct ProfileView: View {
                 photoUrl: nil,
                 healthData: UserHealthData(
                     bloodType: bloodType,
-                    allergies: split(allergies), notes: healthNotes
+                    allergies: split(allergies), medications: [], conditions: [], notes: healthNotes
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
