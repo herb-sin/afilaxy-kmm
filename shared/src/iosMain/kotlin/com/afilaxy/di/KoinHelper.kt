@@ -9,7 +9,6 @@ import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
-import com.afilaxy.presentation.medical.MedicalProfileViewModel
 import com.afilaxy.presentation.risk.RiskViewModel
 
 import com.afilaxy.util.Logger
@@ -86,12 +85,6 @@ fun safeGetProfessionalDetailViewModel(): ProfessionalDetailViewModel {
 fun safeGetHomeViewModel(): HomeViewModel {
     Logger.d(TAG, "safeGetHomeViewModel")
     return getKoin().get<HomeViewModel>().also { Logger.d(TAG, "HomeViewModel OK") }
-}
-
-@Throws(Exception::class)
-fun safeGetMedicalProfileViewModel(): MedicalProfileViewModel {
-    Logger.d(TAG, "safeGetMedicalProfileViewModel")
-    return getKoin().get<MedicalProfileViewModel>().also { Logger.d(TAG, "MedicalProfileViewModel OK") }
 }
 
 @Throws(Exception::class)
