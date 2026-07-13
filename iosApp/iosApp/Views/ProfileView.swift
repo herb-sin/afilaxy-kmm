@@ -10,8 +10,6 @@ struct ProfileView: View {
     @State private var phone = ""
     @State private var bloodType = ""
     @State private var allergies = ""
-    @State private var medications = ""
-    @State private var conditions = ""
     @State private var healthNotes = ""
     @State private var emergencyName = ""
     @State private var emergencyPhone = ""
@@ -99,8 +97,7 @@ struct ProfileView: View {
         }) {
             EditProfileSheet(
                 name: $name, phone: $phone,
-                allergies: $allergies, medications: $medications,
-                conditions: $conditions, healthNotes: $healthNotes,
+                allergies: $allergies, healthNotes: $healthNotes,
                 emergencyName: $emergencyName, emergencyPhone: $emergencyPhone,
                 emergencyRelationship: $emergencyRelationship,
                 onSave: saveProfile
@@ -112,8 +109,6 @@ struct ProfileView: View {
             name = profile.name; phone = profile.phone
             bloodType = profile.healthData?.bloodType ?? ""
             allergies = profile.healthData?.allergies.joined(separator: ", ") ?? ""
-            medications = profile.healthData?.medications.joined(separator: ", ") ?? ""
-            conditions = profile.healthData?.conditions.joined(separator: ", ") ?? ""
             healthNotes = profile.healthData?.notes ?? ""
             emergencyName = profile.emergencyContact?.name ?? ""
             emergencyPhone = profile.emergencyContact?.phone ?? ""
@@ -162,21 +157,7 @@ struct ProfileView: View {
                     }
                 }
                 Divider()
-                // Dados clínicos
                 VStack(spacing: 12) {
-                    InfoGridItem(title: "Tipo de Asma", value: profile.healthData?.conditions.first ?? "Não informado", icon: "lungs.fill", accentColor: .afiPrimary)
-                    // Medicação Atual — texto literal (sem categorização por keyword)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Medicação Atual")
-                            .font(.subheadline).fontWeight(.semibold).foregroundColor(.afiPrimary)
-                        let medsText = profile.healthData?.medications
-                            .filter { !$0.isEmpty }
-                            .joined(separator: ", ")
-                        Text(medsText?.isEmpty == false ? medsText! : "Não informado")
-                            .font(.body)
-                            .foregroundColor(medsText?.isEmpty == false ? .primary : .secondary)
-                    }
-                    .padding(8).background(Color(UIColor.secondarySystemBackground)).cornerRadius(10)
                     // Contato + Protocolo lado a lado
                     HStack(spacing: 12) {
                         let contactValue: String = {
@@ -238,8 +219,7 @@ struct ProfileView: View {
                 photoUrl: profile.photoUrl,
                 healthData: UserHealthData(
                     bloodType: bloodType,
-                    allergies: split(allergies), medications: split(medications),
-                    conditions: split(conditions), notes: healthNotes
+                    allergies: split(allergies), notes: healthNotes
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
@@ -256,8 +236,7 @@ struct ProfileView: View {
                 photoUrl: nil,
                 healthData: UserHealthData(
                     bloodType: bloodType,
-                    allergies: split(allergies), medications: split(medications),
-                    conditions: split(conditions), notes: healthNotes
+                    allergies: split(allergies), notes: healthNotes
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
@@ -340,8 +319,6 @@ struct EditProfileSheet: View {
     @Binding var name: String
     @Binding var phone: String
     @Binding var allergies: String
-    @Binding var medications: String
-    @Binding var conditions: String
     @Binding var healthNotes: String
     @Binding var emergencyName: String
     @Binding var emergencyPhone: String
@@ -355,15 +332,9 @@ struct EditProfileSheet: View {
                     TextField("Nome completo", text: $name)
                     TextField("Telefone", text: $phone).keyboardType(.phonePad)
                 }
-                Section("Dados de Saúde") {
-                    TextField("Alergias (separadas por vírgula)", text: $allergies)
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Medicação Atual", text: $medications)
-                        Text("Separe por vírgula. Ex: fluticasona controle, salbutamol resgate")
-                            .font(.caption2).foregroundColor(.secondary)
-                    }
-                    TextField("Tipo de Asma / Condições médicas", text: $conditions)
-                    TextField("Observações adicionais", text: $healthNotes)
+                Section("Informações Adicionais") {
+                    TextField("Alergias conhecidas (separadas por vírgula)", text: $allergies)
+                    TextField("Observações para quem for te ajudar", text: $healthNotes)
                 }
 
                 Section("Contato de Emergência") {
