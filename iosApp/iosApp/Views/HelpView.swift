@@ -7,8 +7,8 @@ struct HelpView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
 
-                // ── Protocolo de Crise de Asma ────────────────────────────────
-                Text("Em caso de crise de asma")
+                // ── Protocolo de Emergência Respiratória ─────────────────────
+                Text("Em caso de emergência respiratória")
                     .font(.title)
                     .fontWeight(.bold)
 
@@ -21,7 +21,7 @@ struct HelpView: View {
 
                 CrisisStepCard(
                     step: 2,
-                    title: "Use o inalador de resgate",
+                    title: "Use seu kit de emergência",
                     description: "Salbutamol (Aerolin): 2 a 4 jatos. Aguarde 30 segundos entre cada jato. Repita a cada 20 min se necessário, até 3 vezes.",
                     color: .green
                 )
@@ -61,7 +61,7 @@ struct HelpView: View {
                 HelpCard(
                     icon: "exclamationmark.triangle.fill",
                     title: "Criar Emergência",
-                    description: "Toque no botão vermelho de emergência na tela inicial. O app notificará helpers próximos com inaladores disponíveis."
+                    description: "Toque no botão vermelho de emergência na tela inicial. O app notificará helpers próximos disponíveis para ajudar."
                 )
 
                 HelpCard(
@@ -91,7 +91,7 @@ struct HelpView: View {
 
                 FAQItem(
                     question: "O que fazer em uma emergência?",
-                    answer: "Toque no botão de emergência, aguarde um helper aceitar, e siga o protocolo de crise enquanto aguarda."
+                    answer: "Toque no botão de emergência, aguarde um helper aceitar, e siga o protocolo de emergência enquanto aguarda."
                 )
 
                 FAQItem(
@@ -106,7 +106,7 @@ struct HelpView: View {
 
                 FAQItem(
                     question: "O app substitui o SAMU?",
-                    answer: "Não. O Afilaxy conecta pessoas para compartilhar medicação de resgate enquanto o socorro profissional não chega. Em crises graves, ligue 192."
+                    answer: "Não. O Afilaxy conecta pessoas para ajudar umas às outras enquanto o socorro profissional não chega. Em situações graves, ligue 192."
                 )
             }
             .padding()

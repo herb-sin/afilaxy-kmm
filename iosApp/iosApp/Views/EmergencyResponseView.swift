@@ -20,7 +20,7 @@ struct EmergencyResponseView: View {
                 Label("Pedido de Socorro", systemImage: "exclamationmark.triangle.fill")
                     .foregroundColor(.red)
                     .font(.headline)
-                Text("Alguém próximo precisa de ajuda com asma. Você pode aceitar e ir ao encontro desta pessoa.")
+                Text("Alguém próximo está pedindo ajuda. Você pode aceitar e ir ao encontro desta pessoa.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
