@@ -129,7 +129,7 @@ class RiskScoreEngineTest {
         )
         assertEquals("MODERATE", result.level)
         assertTrue(result.score in 20..44, "Score esperado 20-44, obtido: ${result.score}")
-        assertTrue(result.factors.any { "crise" in it.lowercase() })
+        assertTrue(result.factors.any { "pedido" in it.lowercase() })
     }
 
     @Test
