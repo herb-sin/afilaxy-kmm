@@ -22,7 +22,7 @@ data class PatientSummary(
     val status: PatientStatus,
     val lastCrisis: String,
     val adherenceRate: Float,
-    val asmaType: AsmaType,
+    val asmaType: String = "",
     val riskLevel: RiskLevel
 )
 
