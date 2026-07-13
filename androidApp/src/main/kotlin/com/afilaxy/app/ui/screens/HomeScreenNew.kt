@@ -59,7 +59,6 @@ fun HomeScreenNew(
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToPharmacyMap: () -> Unit = {},
-    onNavigateToPortal: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
 ) {
@@ -196,8 +195,7 @@ fun HomeScreenNew(
                     latitude = riskLat,
                     longitude = riskLng,
                     crises7d = weeklyCount,
-                    crises30d = totalEmergencies,
-                    onNavigateToPortal = onNavigateToPortal
+                    crises30d = totalEmergencies
                 )
             }
         }
@@ -298,33 +296,21 @@ fun HomeScreenNew(
             },
             icon = {
                 Icon(
-                    Icons.Default.MedicalServices,
+                    Icons.Default.Favorite,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            title = { Text("Felizmente a crise passou") },
+            title = { Text("Que bom que você está bem") },
             text = {
-                Text(
-                    "A asma precisa de controle contínuo. Que tal agendar uma consulta " +
-                    "com um especialista parceiro do Afilaxy?"
-                )
+                Text("A comunidade Afilaxy estava do seu lado. Continue se cuidando!")
             },
             confirmButton = {
                 Button(onClick = {
                     showPostCrisisDialog = false
                     prefsRepo.putBoolean("post_crisis_dialog_shown", true)
-                    onNavigateToPortal()
                 }) {
-                    Text("Agendar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showPostCrisisDialog = false
-                    prefsRepo.putBoolean("post_crisis_dialog_shown", true)
-                }) {
-                    Text("Agora Não")
+                    Text("Entendido")
                 }
             }
         )
@@ -441,30 +427,29 @@ private fun HomeWelcomeCard(
         )
         0 -> Triple(
             listOf(Color(0xFF1976D2), Color(0xFF1565C0)),
-            "Essa semana você não fez nenhum pedido de socorro.",
-            "Lembre-se: Duas crises ou mais por semana indicam Asma não controlada!"
+            "Essa semana você não precisou de ajuda.",
+            "Continue assim — cuidar-se no dia a dia faz a diferença."
         )
         1 -> Triple(
             listOf(Color(0xFFF4A825), Color(0xFFE65100)),
-            "Você fez 1 pedido de socorro esta semana.",
+            "Você fez 1 pedido de ajuda esta semana.",
             "Alguém parou o que estava fazendo para te ajudar, de graça. " +
-                "Agendar uma consulta é o passo mais responsável, com a sua Saúde e com a pessoa " +
-                "que te ajudou. Ela pode precisar de você, assim como você precisou dela!"
+                "Que isso te inspire a cuidar de você e da sua comunidade."
         )
         2 -> Triple(
             listOf(Color(0xFFC62828), Color(0xFF7B1A1A)),
-            "2º pedido de socorro esta semana.",
-            "ALERTA CLÍNICO: Duas crises ou mais por semana indicam Asma não controlada! É URGENTE agendar uma consulta!"
+            "2º pedido de ajuda esta semana.",
+            "Você não está sozinho. A comunidade Afilaxy está aqui — continue se cuidando."
         )
         3 -> Triple(
             listOf(Color(0xFF4A0000), Color(0xFF1A0000)),
-            "Você já pediu socorro $weeklyCount vezes esta semana.",
-            "Você acumula $weeklyCount pedidos de ajuda. Esse quadro vai além da urgência. Por favor, busque assistência médica."
+            "Você já pediu ajuda $weeklyCount vezes esta semana.",
+            "Você não está sozinho. A comunidade Afilaxy está aqui — continue se cuidando."
         )
         else -> Triple(
             listOf(Color(0xFF6A0DAD), Color(0xFF3D0066)),
-            "Você já pediu socorro $weeklyCount vezes esta semana.",
-            "Você acumula $weeklyCount pedidos de ajuda. Esse quadro vai além da urgência. Por favor, busque assistência médica."
+            "Você já pediu ajuda $weeklyCount vezes esta semana.",
+            "Você não está sozinho. A comunidade Afilaxy está aqui — continue se cuidando."
         )
     }
 

@@ -33,7 +33,6 @@ fun RiskWidget(
     crises7d: Int = -1,
     crises30d: Int = -1,
     modifier: Modifier = Modifier,
-    onNavigateToPortal: (() -> Unit)? = null,
     viewModel: RiskViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -46,7 +45,7 @@ fun RiskWidget(
 
     when {
         state.isLoading -> RiskWidgetLoading(modifier)
-        state.riskScore != null -> RiskWidgetContent(state.riskScore!!, modifier, onNavigateToPortal)
+        state.riskScore != null -> RiskWidgetContent(state.riskScore!!, modifier)
         // Erro ou sem localização: não exibe o widget
     }
 }
@@ -74,7 +73,6 @@ private fun RiskWidgetLoading(modifier: Modifier = Modifier) {
 private fun RiskWidgetContent(
     score: RiskScore,
     modifier: Modifier = Modifier,
-    onNavigateToPortal: (() -> Unit)? = null
 ) {
     val level = score.riskLevel
     val (gradientStart, gradientEnd) = when (level) {
@@ -146,35 +144,6 @@ private fun RiskWidgetContent(
                     color = Color.White,
                     trackColor = Color.White.copy(alpha = 0.3f)
                 )
-
-                // CTA para especialistas quando risco > 50
-                if (score.score > 50 && onNavigateToPortal != null) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNavigateToPortal() },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Sua pontuação de risco está alta esta semana. Que tal agendar uma avaliação? Veja especialistas perto de você agora",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
 
                 // Detalhes expansíveis
                 if (showDetails && (score.factors.isNotEmpty() || score.recommendations.isNotEmpty())) {
