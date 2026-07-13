@@ -342,8 +342,7 @@ fun NavGraph(
                     onNavigateToCheckIn = { type -> navController.navigate(AppRoutes.checkIn(type)) },
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
-                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
-                    onNavigateToPortal = { navController.navigate(AppRoutes.PORTAL) }
+                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) }
                 )
             }
         }
