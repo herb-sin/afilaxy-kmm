@@ -59,12 +59,12 @@ class CheckInNotificationScheduler {
 
         let yesNoCrisis = UNNotificationAction(
             identifier: "CHECKIN_NO_CRISIS",
-            title: "✅ Não tive",
+            title: "✅ Bem",
             options: [.foreground]
         )
         let yesCrisis = UNNotificationAction(
             identifier: "CHECKIN_HAD_CRISIS",
-            title: "⚠️ Tive uma crise",
+            title: "⚠️ Dia difícil",
             options: [.foreground]
         )
 
@@ -81,8 +81,8 @@ class CheckInNotificationScheduler {
 
     private func scheduleMorning() {
         let content = UNMutableNotificationContent()
-        content.title = "💊 Check-in Matinal"
-        content.body = "Você está com seu broncodilatador de resgate?"
+        content.title = "☀️ Check-in Matinal"
+        content.body = "Como está seu bem-estar esta manhã?"
         content.sound = .default
         content.categoryIdentifier = categoryMorning
         content.userInfo = ["type": "checkin", "checkInType": "MORNING"]
@@ -105,8 +105,8 @@ class CheckInNotificationScheduler {
 
     private func scheduleEvening() {
         let content = UNMutableNotificationContent()
-        content.title = "📋 Check-in Noturno"
-        content.body = "Você teve alguma crise de asma hoje?"
+        content.title = "🌙 Check-in Noturno"
+        content.body = "Como foi seu dia hoje?"
         content.sound = .default
         content.categoryIdentifier = categoryEvening
         content.userInfo = ["type": "checkin", "checkInType": "EVENING"]

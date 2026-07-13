@@ -20,10 +20,10 @@ fun createCheckInNotificationChannel(context: Context) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val channel = NotificationChannel(
             CHANNEL_CHECKIN,
-            "Check-in de Saúde",
+            "Check-in de Bem-estar",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Alertas diários de risco e check-in da bombinha de resgate"
+            description = "Lembretes diários de bem-estar e alertas da comunidade"
         }
         context.getSystemService(NotificationManager::class.java)
             ?.createNotificationChannel(channel)
@@ -111,8 +111,6 @@ class MorningCheckInWorker(
     private fun showMorningNotification(inhalerName: String?) {
         createCheckInNotificationChannel(context)
 
-        val inhalerDisplay = inhalerName ?: "broncodilatador de resgate"
-
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("open_screen", "morning_checkin")
@@ -144,16 +142,15 @@ class MorningCheckInWorker(
 
         val notification = NotificationCompat.Builder(context, CHANNEL_CHECKIN)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("⚠️ Risco de crise alto hoje")
-            .setContentText("Você está com seu $inhalerDisplay?")
+            .setContentTitle("☀️ Check-in Matinal")
+            .setContentText("Como está seu bem-estar esta manhã?")
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("A qualidade do ar e o clima de hoje indicam risco elevado. " +
-                        "Você está com seu $inhalerDisplay?")
+                .bigText("A qualidade do ar hoje está baixa. Como você está se sentindo?")
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
-            .addAction(android.R.drawable.ic_menu_send, "✅ Sim", yesPending)
-            .addAction(android.R.drawable.ic_delete, "❌ Não", noPending)
+            .addAction(android.R.drawable.ic_menu_send, "✅ Bem", yesPending)
+            .addAction(android.R.drawable.ic_delete, "❌ Não muito bem", noPending)
             .setAutoCancel(true)
             .build()
 
@@ -165,7 +162,7 @@ class MorningCheckInWorker(
 // ── Worker Noturno (21:00) ─────────────────────────────────────────────────────
 
 /**
- * Pergunta à noite se o usuário teve uma crise de asma durante o dia.
+ * Dispara notificação noturna para check-in de bem-estar do dia.
  * Coleta o dado de label para o futuro modelo de ML.
  */
 class EveningCheckInWorker(
@@ -246,12 +243,12 @@ class EveningCheckInWorker(
 
         val notification = NotificationCompat.Builder(context, CHANNEL_CHECKIN)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("📋 Check-in noturno")
-            .setContentText("Você teve alguma crise de asma hoje?")
+            .setContentTitle("🌙 Check-in Noturno")
+            .setContentText("Como foi seu dia hoje?")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
-            .addAction(android.R.drawable.ic_menu_send, "✅ Não tive", noPending)
-            .addAction(android.R.drawable.ic_delete, "⚠️ Tive uma crise", yesPending)
+            .addAction(android.R.drawable.ic_menu_send, "✅ Bem", noPending)
+            .addAction(android.R.drawable.ic_delete, "⚠️ Dia difícil", yesPending)
             .setAutoCancel(true)
             .build()
 
