@@ -260,19 +260,18 @@ internal object RiskScoreEngine {
         val recommendations = mutableListOf<String>()
 
         // ── Histórico de crises (emergências registradas) ─────────────────────
-        // Clinical reference: ≥2 crises/week = uncontrolled asthma (GINA guidelines).
-        // Scoring is non-linear: 1 crisis is moderate, 2+ is severe, 5+ forces VERY_HIGH alone.
+        // ≥2 pedidos de ajuda/semana é sinal forte de descontrole — peso não-linear.
         val crises7dScore = when {
-            crises7d >= 5 -> 55   // 5+ crises: extreme — VERY_HIGH alone
-            crises7d >= 3 -> 40   // 3-4 crises: severe — HIGH alone
-            crises7d == 2 -> 28   // 2 crises: uncontrolled per guidelines
-            crises7d == 1 -> 14   // 1 crisis: moderate signal
+            crises7d >= 5 -> 55
+            crises7d >= 3 -> 40
+            crises7d == 2 -> 28
+            crises7d == 1 -> 14
             else -> 0
         }
         score += crises7dScore
         if (crises7d > 0) {
-            val label = if (crises7d >= 2) "⚠️ ${crises7d} crise(s) nos últimos 7 dias — asma não controlada"
-                        else "${crises7d} crise(s) nos últimos 7 dias"
+            val label = if (crises7d >= 2) "⚠️ ${crises7d} pedido(s) de ajuda nos últimos 7 dias — tipifica descontrole"
+                        else "${crises7d} pedido(s) de ajuda nos últimos 7 dias"
             factors.add(label)
         }
 
