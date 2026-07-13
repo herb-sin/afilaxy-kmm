@@ -1,0 +1,291 @@
+POLÍTICA DE PRIVACIDADE — AFILAXY
+Última atualização: julho de 2026
+
+================================================================================
+1. QUEM SOMOS
+================================================================================
+
+A AFILAXY, serviço prestado por Herbert Jung Sin, inscrito no CPF/MF sob o nº
+360.537.008-00, residente em São Paulo – SP, é a controladora dos dados pessoais
+tratados no âmbito desta Política, nos termos da Lei Geral de Proteção de Dados
+(Lei nº 13.709/2018 — LGPD).
+
+Esta Política aplica-se a todos os serviços da AFILAXY: aplicativo móvel Android,
+aplicativo móvel iOS e Portal de Profissionais de Saúde (web).
+
+================================================================================
+2. QUAIS DADOS COLETAMOS E PARA QUÊ
+================================================================================
+
+2.1 DADOS DE CADASTRO — dados pessoais comuns
+
+Dado                  | Finalidade
+----------------------|---------------------------------------------------
+Nome completo         | Identificação da conta e personalização
+Endereço de e-mail    | Acesso à conta e comunicações
+Foto de perfil        | Exibição para Helpers durante emergência (opcional)
+Telefone              | Contato e funcionalidades de segurança (opcional)
+
+Autenticação disponível por e-mail e senha, Google Sign-In ou Apple Sign-In.
+
+--------------------------------------------------------------------------------
+
+2.2 PERFIL MÉDICO AUTODECLARADO — dados pessoais sensíveis
+
+O Usuário pode, facultativamente, preencher seu Perfil Médico com as seguintes
+informações:
+
+Dado                        | Finalidade
+----------------------------|-----------------------------------------------
+Tipo sanguíneo              | Fator de ponderação no Índice de Bem-Estar
+Alergias conhecidas         | Fator de ponderação no Índice de Bem-Estar
+Medicações em uso           | Fator de ponderação no Índice de Bem-Estar
+Condições médicas           | Fator de ponderação no Índice de Bem-Estar
+
+ATENÇÃO: estes dados constituem dados pessoais sensíveis nos termos do art. 5º,
+II da LGPD, por se referirem à saúde do titular. Seu tratamento é realizado
+exclusivamente com base no consentimento expresso do Usuário (art. 11, I da
+LGPD), prestado no momento do preenchimento. O consentimento pode ser revogado a
+qualquer tempo, mediante exclusão do Perfil Médico nas configurações da conta.
+
+Todas as informações são autodeclaradas pelo próprio Usuário. A AFILAXY não
+verifica, valida nem atesta clinicamente nenhuma informação do Perfil Médico.
+
+--------------------------------------------------------------------------------
+
+2.3 CONTATO DE EMERGÊNCIA
+
+Nome, telefone e tipo de relacionamento do contato de emergência, informados
+voluntariamente pelo Usuário. Utilizados exclusivamente para fins de segurança na
+funcionalidade de apoio P2P.
+
+--------------------------------------------------------------------------------
+
+2.4 CHECK-INS DE BEM-ESTAR — dados comportamentais
+
+A cada check-in (matinal e noturno), são registrados:
+
+Dado                                   | Natureza              | Finalidade
+---------------------------------------|----------------------|----------------------
+wellbeingA, wellbeingB, wellbeingC     | Bem-estar subjetivo  | Acompanhamento e
+(respostas binárias)                   | autodeclarado        | cálculo do Índice
+AQI, temperatura, umidade              | Dado ambiental,      | Contextualização
+(contexto ambiental)                   | não pessoal          | do check-in
+Data, hora e período (matinal/noturno) | Dado temporal        | Registro histórico
+
+--------------------------------------------------------------------------------
+
+2.5 ÍNDICE DE BEM-ESTAR E RISCO — dado derivado
+
+O Índice (pontuação 0–100) é calculado a partir dos check-ins, do Perfil Médico
+autodeclarado, dos dados ambientais, do histórico de pedidos de ajuda e de fatores
+sazonais. Os snapshots diários são armazenados individualmente por Usuário para
+permitir acompanhamento histórico.
+
+--------------------------------------------------------------------------------
+
+2.6 GEOLOCALIZAÇÃO — durante emergências ativas
+
+Dado                       | Quando coletado                    | Compartilhado com           | Retenção
+---------------------------|------------------------------------|-----------------------------|---------------------------
+Localização precisa (GPS)  | Apenas durante pedido P2P ativo    | Somente com o Helper        | Não retida após
+                           |                                    | que aceitou o pedido        | encerramento da sessão
+Localização aproximada     | Para consulta de AQI e clima       | WAQI e OpenMeteo            | Não armazenada
+(cidade/região)            |                                    | (sem ID individual)         | individualmente
+
+A AFILAXY não realiza rastreamento contínuo da localização do Usuário fora dos
+contextos acima.
+
+--------------------------------------------------------------------------------
+
+2.7 HISTÓRICO DE PEDIDOS DE AJUDA — dado agregado
+
+A plataforma mantém contadores agregados de pedidos de ajuda realizados pelo
+Usuário (total e por período), utilizados como fator no cálculo do Índice de
+Bem-Estar e Risco.
+
+--------------------------------------------------------------------------------
+
+2.8 DADOS DE NAVEGAÇÃO E TÉCNICOS
+
+Endereço IP, versão do sistema operacional, modelo do dispositivo, token FCM
+(para notificações push), logs de acesso e sessão. Utilizados para segurança,
+diagnóstico técnico e melhoria dos serviços.
+
+================================================================================
+3. BASE LEGAL PARA O TRATAMENTO
+================================================================================
+
+Categoria de dado                    | Base legal (LGPD)
+-------------------------------------|------------------------------------------
+Dados de cadastro e navegação        | Execução de contrato (art. 7º, V) e
+                                     | legítimo interesse (art. 7º, IX)
+Perfil Médico autodeclarado          | Consentimento expresso do titular
+                                     | (art. 11, I)
+Check-ins de bem-estar               | Execução de contrato (art. 7º, V)
+Geolocalização em emergências        | Consentimento (art. 7º, I) e proteção
+                                     | da vida (art. 7º, VIII)
+Dados anonimizados para pesquisa     | Pesquisa com garantia de anonimização
+                                     | (art. 7º, IV)
+
+================================================================================
+4. COMPARTILHAMENTO DE DADOS
+================================================================================
+
+A AFILAXY NÃO COMERCIALIZA dados pessoais de seus Usuários. O compartilhamento
+ocorre exclusivamente nas seguintes situações:
+
+I — Helper voluntário: durante emergência P2P ativa, o nome e a localização
+aproximada do solicitante são exibidos ao Helper que aceitou o pedido, pelo tempo
+de duração da sessão;
+
+II — Profissional de Saúde vinculado: dados de bem-estar do Usuário são
+compartilhados com o Profissional de Saúde cadastrado no Portal, mediante
+consentimento expresso e revogável do Usuário;
+
+III — Processadores de dados (subcontratados): serviços de infraestrutura que
+tratam dados em nome da AFILAXY sob obrigações contratuais de confidencialidade
+— detalhados na seção 5;
+
+IV — Autoridades competentes: em cumprimento de ordem judicial ou determinação
+legal;
+
+V — Pesquisa e saúde pública: dados anonimizados e agregados, sem possibilidade
+de identificação individual.
+
+================================================================================
+5. PROCESSADORES TERCEIROS
+================================================================================
+
+Processador            | Finalidade                              | Dados transmitidos
+-----------------------|-----------------------------------------|----------------------
+Firebase / Google LLC  | Autenticação, banco de dados em nuvem, | Dados de conta,
+                       | notificações push (FCM)                 | check-ins, perfil,
+                       |                                         | tokens de sessão
+WAQI                   | Dados de qualidade do ar (AQI)          | Localização aproximada
+(World Air Quality     |                                         | por cidade/região
+Index)                 |                                         |
+OpenMeteo              | Dados meteorológicos                    | Localização aproximada
+                       |                                         | por cidade/região
+
+Nenhum dos processadores recebe dados do Perfil Médico autodeclarado ou dados de
+localização precisa do Usuário.
+
+================================================================================
+6. SEGURANÇA DAS INFORMAÇÕES
+================================================================================
+
+A AFILAXY adota as seguintes medidas de segurança:
+
+- Criptografia de dados em trânsito (TLS/HTTPS) e em repouso
+  (infraestrutura Firebase/GCP);
+- Senhas armazenadas com hash criptográfico não reversível;
+- Controle de acesso por perfil de usuário com regras de segurança no banco
+  de dados;
+- Acesso ao Perfil Médico restrito ao próprio Usuário e, mediante consentimento,
+  ao Profissional de Saúde vinculado;
+- Chat de emergência acessível exclusivamente pelo solicitante e pelo Helper da
+  sessão;
+- Monitoramento de acessos e logs de auditoria.
+
+O Usuário é responsável por manter suas credenciais confidenciais e por notificar
+imediatamente a AFILAXY em caso de suspeita de uso não autorizado pelo canal
+'afilaxy@gmail.com'.
+
+================================================================================
+7. RETENÇÃO DE DADOS
+================================================================================
+
+Categoria                              | Prazo de retenção
+---------------------------------------|--------------------------------------------
+Dados de cadastro e perfil             | Vigência da conta + 5 anos após encerramento
+Perfil Médico autodeclarado            | Até revogação do consentimento ou
+                                       | encerramento da conta
+Check-ins e Índice de Bem-Estar        | Pelo período de vigência da conta
+Geolocalização em tempo real           | Não retida após encerramento da sessão
+Dados de navegação e logs              | Até 6 meses
+Dados anonimizados para pesquisa       | Indefinidamente (não permitem identificação)
+
+================================================================================
+8. DADOS BIOMÉTRICOS (HEALTHKIT E HEALTH CONNECT)
+================================================================================
+
+A versão atual da plataforma NÃO COLETA dados biométricos clínicos. As
+integrações com HealthKit (iOS) e Health Connect (Android) — que permitiriam
+leitura de frequência cardíaca, SpO₂, dados de sono e taxa respiratória — estão
+DESABILITADAS. Ambas as plataformas retornam isAvailable() = false.
+
+Essas integrações poderão ser reativadas futuramente, mediante regularização da
+pessoa jurídica, obtenção de aprovação nas respectivas plataformas e comunicação
+prévia aos Usuários com atualização desta Política.
+
+================================================================================
+9. MENORES DE IDADE
+================================================================================
+
+A AFILAXY não coleta intencionalmente dados de crianças menores de 13 (treze)
+anos. Usuários entre 13 e 17 anos somente podem utilizar a plataforma mediante
+consentimento expresso de responsável legal, que passa a ser solidariamente
+responsável pelos dados fornecidos. Se tomarmos conhecimento de coleta inadvertida
+de dados de menor de 13 anos sem consentimento do responsável, procederemos à
+exclusão imediata.
+
+================================================================================
+10. NOTIFICAÇÕES PUSH
+================================================================================
+
+A AFILAXY envia notificações push para lembretes de check-in, alertas de bem-estar
+e risco, notificações de emergência (pedidos de ajuda próximos) e comunicações do
+serviço. O Usuário pode desativar as notificações nas configurações do seu
+dispositivo a qualquer momento, sem prejuízo ao uso das demais funcionalidades.
+
+================================================================================
+11. SEUS DIREITOS COMO TITULAR (LGPD — art. 18)
+================================================================================
+
+Você tem os seguintes direitos sobre seus dados pessoais, exercíveis mediante
+solicitação ao canal de atendimento indicado na seção 12:
+
+- Confirmação da existência de tratamento;
+- Acesso aos dados que mantemos sobre você;
+- Correção de dados incompletos, inexatos ou desatualizados;
+- Anonimização, bloqueio ou eliminação de dados desnecessários ou tratados
+  irregularmente;
+- Portabilidade dos dados a outro fornecedor;
+- Eliminação dos dados tratados com base em consentimento (incluindo o Perfil
+  Médico);
+- Informação sobre compartilhamento com terceiros;
+- Revogação do consentimento a qualquer tempo, sem prejuízo à licitude do
+  tratamento anterior.
+
+Responderemos às solicitações em até 15 (quinze) dias úteis.
+
+================================================================================
+12. ENCARREGADO (DPO) E CANAIS DE ATENDIMENTO
+================================================================================
+
+Encarregado pelo Tratamento de Dados (DPO): [Nome]
+
+Para exercer seus direitos, solicitar informações ou registrar reclamações:
+
+  E-mail: [e-mail oficial — ex: privacidade@afilaxy.com]
+
+  Autoridade Nacional de Proteção de Dados (ANPD): gov.br/anpd
+  Para reclamações não resolvidas diretamente com a AFILAXY.
+
+================================================================================
+13. ALTERAÇÕES NESTA POLÍTICA
+================================================================================
+
+A AFILAXY se reserva o direito de atualizar esta Política periodicamente.
+Alterações relevantes serão comunicadas com antecedência mínima de 15 (quinze)
+dias por notificação no aplicativo ou por e-mail. O uso continuado da plataforma
+após a data de vigência das alterações constitui concordância com a nova versão.
+
+================================================================================
+14. LEGISLAÇÃO APLICÁVEL
+================================================================================
+
+Esta Política é regida pela legislação brasileira, em especial pela Lei nº
+13.709/2018 (LGPD) e pelo Código de Defesa do Consumidor (Lei nº 8.078/1990).
+Controvérsias serão dirimidas no foro da Comarca de São Paulo – SP.

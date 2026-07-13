@@ -1,0 +1,357 @@
+TERMOS GERAIS E CONDIÇÕES DE USO — AFILAXY
+Última atualização: julho de 2026
+
+Este instrumento contém os termos gerais e condições de uso da plataforma AFILAXY.
+O serviço é prestado por Herbert Jung Sin, inscrito no CPF/MF sob o nº 360.537.008-00,
+residente em São Paulo – SP, doravante denominado AFILAXY ou CONTRATADO.
+
+Do outro lado, a parte qualificada conforme o cadastro eletrônico realizado na
+plataforma, doravante denominada USUÁRIO.
+
+================================================================================
+DAS DISPOSIÇÕES GERAIS E DEFINIÇÕES
+================================================================================
+
+Cláusula 1ª. Os presentes Termos Gerais e Condições de Uso (doravante "Termos de
+Uso") regem o relacionamento entre a AFILAXY, titular da propriedade intelectual
+sobre a plataforma, conteúdos e demais ativos digitais relacionados, e os USUÁRIOS
+do serviço.
+
+Parágrafo único. Os presentes Termos são complementados pela Política de
+Privacidade, devendo o USUÁRIO demonstrar concordância com ambos os documentos
+para ter acesso aos serviços da AFILAXY.
+
+Cláusula 2ª. As PARTES USUÁRIAS deverão ler atentamente os Termos de Uso e não
+poderão se escusar deles alegando ignorância sobre suas condições, inclusive quanto
+a eventuais modificações.
+
+Cláusula 3ª. Caso o USUÁRIO não concorde com quaisquer das condições aqui
+descritas, deverá cessar imediatamente o uso da plataforma, uma vez que sua
+utilização é automaticamente entendida como concordância com os presentes Termos
+de Uso.
+
+Cláusula 4ª. Para fins destes Termos de Uso, adotam-se as seguintes definições:
+
+I — Plataforma: conjunto dos aplicativos móveis (Android e iOS) e do Portal de
+Profissionais de Saúde (web) da AFILAXY;
+
+II — Usuário: pessoa física cadastrada na plataforma, que pode atuar como Paciente,
+como Helper ou como ambos;
+
+III — Helper: Usuário que, voluntariamente, aceita pedidos de ajuda de outros
+Usuários em situação de emergência próxima;
+
+IV — Profissional de Saúde: médico ou farmacêutico com registro ativo junto ao CRM
+ou CRF, cadastrado no Portal de Profissionais de Saúde da AFILAXY;
+
+V — Perfil Médico: conjunto de informações de saúde inseridas voluntariamente e
+exclusivamente pelo próprio Usuário (autodeclaração), sem verificação ou validação
+clínica pela AFILAXY;
+
+VI — Check-in: registro diário de bem-estar subjetivo realizado pelo Usuário por
+meio de três perguntas binárias, disponível nos períodos matinal e noturno;
+
+VII — Índice de Bem-Estar e Risco: pontuação de 0 a 100 calculada por algoritmo
+heurístico a partir dos check-ins recentes, do Perfil Médico autodeclarado, de
+dados ambientais e do histórico de pedidos de ajuda do Usuário. Não constitui
+diagnóstico médico.
+
+================================================================================
+DO OBJETO
+================================================================================
+
+Cláusula 5ª. O objeto do presente contrato é a utilização da AFILAXY, plataforma
+de apoio comunitário e monitoramento de bem-estar para pessoas com asma, composta
+pelos seguintes serviços:
+
+I — Rede de Apoio P2P em Emergências: em situação de necessidade, o Usuário pode
+acionar Helpers voluntários próximos (raio de até 250 metros) por meio de
+geolocalização, iniciando comunicação em tempo real via chat integrado para
+localização de inalador de resgate;
+
+II — Check-ins de Bem-Estar: notificações diárias (matinal às 07:30 e noturno às
+21:00) convidam o Usuário a registrar seu bem-estar subjetivo por meio de três
+perguntas binárias, permitindo acompanhamento longitudinal;
+
+III — Índice de Bem-Estar e Risco: pontuação informativa calculada a partir dos
+check-ins, do Perfil Médico autodeclarado, de dados de qualidade do ar (AQI),
+dados meteorológicos, histórico de pedidos de ajuda e fatores sazonais;
+
+IV — Portal de Profissionais de Saúde: interface B2B que permite ao Profissional
+de Saúde cadastrado acompanhar dados de bem-estar de Usuários vinculados, mediante
+assinatura de plano mensal;
+
+V — Comunidade: feed de conteúdo para troca de informações e experiências entre
+Usuários.
+
+Parágrafo único. A AFILAXY é uma ferramenta de apoio comunitário e monitoramento
+de bem-estar pessoal. Não somos profissionais de saúde. Não prestamos serviços
+médicos. O Índice de Bem-Estar e Risco não constitui diagnóstico médico e não
+substitui avaliação profissional. EM SITUAÇÕES DE RISCO À VIDA, ACIONE
+IMEDIATAMENTE O SAMU (192) OU O CORPO DE BOMBEIROS (193).
+
+================================================================================
+DOS PERFIS DE USUÁRIO
+================================================================================
+
+Cláusula 6ª. A plataforma opera com dois perfis distintos:
+
+I — Usuário Padrão: pessoa física cadastrada no aplicativo móvel (Android ou iOS),
+que pode atuar como Paciente e/ou como Helper voluntário para outros Usuários em
+situação de emergência;
+
+II — Profissional de Saúde: médico ou farmacêutico com registro ativo no CRM ou
+CRF, que acessa o Portal de Profissionais de Saúde mediante assinatura mensal. O
+acesso a dados de Usuários vinculados exige consentimento expresso destes.
+
+================================================================================
+DO ACESSO E CADASTRO
+================================================================================
+
+Cláusula 7ª. O cadastro na plataforma AFILAXY exige o fornecimento dos seguintes
+dados: nome completo, endereço de e-mail e senha, ou autenticação via Google
+Sign-In ou Apple Sign-In.
+
+Cláusula 8ª. Os dados de cadastro deverão ser preenchidos com informações
+completas, verdadeiras e atualizadas, sendo de exclusiva responsabilidade do
+Usuário a manutenção de sua veracidade.
+
+Cláusula 9ª. O cadastro é pessoal e intransferível. O Usuário é integralmente
+responsável por todas as atividades realizadas com o uso de suas credenciais e deve
+notificar imediatamente a AFILAXY em caso de uso não autorizado.
+
+Cláusula 10ª. A AFILAXY poderá, a qualquer momento, verificar as informações
+fornecidas e bloquear ou restringir o acesso em caso de suspeita de irregularidade,
+sem obrigação de divulgar suas políticas internas de avaliação.
+
+Cláusula 11ª. O acesso à plataforma está disponível nas seguintes formas:
+aplicativo móvel Android (Google Play Store); aplicativo móvel iOS (App Store e
+TestFlight para versão beta); e Portal de Profissionais de Saúde (navegador web).
+
+================================================================================
+DO PERFIL MÉDICO AUTODECLARADO
+================================================================================
+
+Cláusula 12ª. Após o cadastro, o Usuário pode, facultativamente, preencher seu
+Perfil Médico, informando tipo sanguíneo, alergias conhecidas, medicações em uso
+e condições médicas.
+
+§1º. O preenchimento do Perfil Médico é voluntário. Sua ausência não impede o uso
+das demais funcionalidades da plataforma.
+
+§2º. As informações do Perfil Médico são exclusivamente autodeclaradas pelo Usuário
+e não são verificadas, validadas ou atestadas clinicamente pela AFILAXY. A
+responsabilidade pela veracidade e atualização dessas informações é exclusiva do
+Usuário.
+
+§3º. As informações do Perfil Médico são utilizadas como fator de ponderação no
+cálculo do Índice de Bem-Estar e Risco e para personalização da experiência na
+plataforma. Não são utilizadas para diagnóstico ou prescrição médica.
+
+§4º. Por se tratarem de dados pessoais sensíveis nos termos da LGPD (Lei nº
+13.709/2018), as informações do Perfil Médico somente serão tratadas com base no
+consentimento expresso do Usuário, prestado no momento do preenchimento, podendo
+ser revogado a qualquer tempo.
+
+Cláusula 13ª. O Usuário pode registrar um contato de emergência (nome, telefone
+e relacionamento), utilizado exclusivamente para fins de segurança na
+funcionalidade de apoio P2P.
+
+================================================================================
+DO ÍNDICE DE BEM-ESTAR E RISCO
+================================================================================
+
+Cláusula 14ª. O Índice de Bem-Estar e Risco apresenta uma pontuação de 0 a 100,
+em quatro níveis, calculada a partir dos seguintes fatores: check-ins de bem-estar
+recentes; Perfil Médico autodeclarado, quando preenchido; índice de qualidade do
+ar (AQI) e dados meteorológicos da região do Usuário; histórico de pedidos de
+ajuda; e fatores sazonais.
+
+Cláusula 15ª. O Índice de Bem-Estar e Risco NÃO é diagnóstico médico, NÃO
+substitui avaliação profissional e NÃO deve ser utilizado como base exclusiva para
+decisões de saúde. A AFILAXY não se responsabiliza por interpretações ou decisões
+tomadas com base exclusiva nessa pontuação.
+
+Parágrafo único. O Índice não utiliza dados biométricos clínicos. As integrações
+com HealthKit (iOS) e Health Connect (Android) estão desabilitadas na versão atual
+da plataforma e poderão ser reativadas futuramente, mediante regularização e
+comunicação prévia aos Usuários.
+
+================================================================================
+DA EMERGÊNCIA P2P
+================================================================================
+
+Cláusula 16ª. A funcionalidade de apoio P2P permite ao Usuário acionar, em
+situação de necessidade, outros Usuários voluntários (Helpers) próximos para
+auxílio na localização de inalador de resgate.
+
+Cláusula 17ª. Os Helpers são voluntários que atuam por livre iniciativa, sem
+qualquer vínculo empregatício, de prestação de serviços ou de saúde com a AFILAXY.
+A AFILAXY não se responsabiliza pelas ações ou omissões dos Helpers durante os
+atendimentos.
+
+Cláusula 18ª. O acionamento da rede de apoio P2P para situações que não
+constituam necessidade real é expressamente vedado e sujeito às sanções previstas
+nestes Termos.
+
+Cláusula 19ª. A AFILAXY não é um serviço de emergência médica. Em situações de
+risco à vida, o Usuário deve acionar imediatamente o SAMU (192) ou o Corpo de
+Bombeiros (193).
+
+================================================================================
+DAS NOTIFICAÇÕES PUSH
+================================================================================
+
+Cláusula 20ª. A AFILAXY envia notificações push nas seguintes situações:
+lembretes de check-in (07:30 e 21:00); alertas relacionados ao Índice de
+Bem-Estar e Risco; notificações de pedidos de ajuda próximos (para Usuários no
+modo Helper); e comunicações da plataforma.
+
+Parágrafo único. O Usuário pode gerenciar ou desativar as notificações nas
+configurações do sistema operacional do seu dispositivo, sem prejuízo ao uso das
+demais funcionalidades.
+
+================================================================================
+DA GEOLOCALIZAÇÃO
+================================================================================
+
+Cláusula 21ª. O acesso à localização precisa do dispositivo é utilizado
+exclusivamente durante pedidos de ajuda P2P ativos, para identificação de Helpers
+no raio de até 250 metros.
+
+§1º. A localização do Usuário solicitante é compartilhada, durante a sessão ativa,
+apenas com o Helper que aceitou o pedido. Encerrada a sessão, os dados de
+localização em tempo real não são retidos.
+
+§2º. Para o cálculo do Índice de Bem-Estar e Risco, utiliza-se localização
+aproximada por cidade e região para consulta de dados ambientais junto a serviços
+de terceiros (WAQI e OpenMeteo), sem transmissão da localização exata do Usuário.
+
+§3º. A AFILAXY não realiza rastreamento contínuo da localização do Usuário fora
+dos contextos descritos nesta cláusula.
+
+================================================================================
+DOS MENORES DE IDADE
+================================================================================
+
+Cláusula 22ª. A plataforma AFILAXY é destinada a maiores de 18 (dezoito) anos.
+Reconhecendo que a asma afeta também crianças e adolescentes, Usuários entre 13
+(treze) e 17 (dezessete) anos poderão utilizar a plataforma mediante consentimento
+expresso de responsável legal, que assumirá solidariamente as obrigações
+decorrentes destes Termos.
+
+Parágrafo único. É vedado o cadastro de menores de 13 (treze) anos. A AFILAXY não
+coleta intencionalmente dados de crianças abaixo dessa faixa etária.
+
+================================================================================
+DO SIGILO DAS INFORMAÇÕES
+================================================================================
+
+Cláusula 23ª. A AFILAXY compromete-se a não divulgar dados pessoais de seus
+Usuários, salvo nas seguintes hipóteses: cumprimento de ordem judicial ou
+determinação de órgão regulatório competente; cumprimento de obrigação legal,
+incluindo a LGPD; compartilhamento com o Profissional de Saúde vinculado ao
+Usuário, mediante consentimento expresso e revogável deste; e resposta a
+reclamações de violação de direitos de terceiros.
+
+================================================================================
+DA LIMITAÇÃO DE RESPONSABILIDADE
+================================================================================
+
+Cláusula 24ª. A AFILAXY não se responsabiliza: pelas ações ou omissões dos
+Helpers voluntários durante atendimentos P2P; por decisões de saúde tomadas com
+base no Índice de Bem-Estar e Risco; pela precisão de dados ambientais fornecidos
+por serviços de terceiros; pela veracidade das informações inseridas pelo Usuário
+no Perfil Médico; por falhas no dispositivo ou sistema operacional do Usuário;
+por interrupções nos serviços de comunicação de terceiros que afetem o
+funcionamento da plataforma; e pela conduta de Profissionais de Saúde cadastrados
+no Portal no exercício de suas atividades clínicas.
+
+================================================================================
+DO USO DE DADOS ANONIMIZADOS
+================================================================================
+
+Cláusula 25ª. A AFILAXY poderá utilizar dados anonimizados e agregados para fins
+de pesquisa, geração de evidências de saúde pública e melhoria dos serviços, em
+conformidade com a LGPD. Nenhum dado que permita identificação individual será
+utilizado para essas finalidades sem consentimento específico.
+
+================================================================================
+DAS SANÇÕES
+================================================================================
+
+Cláusula 26ª. A utilização da plataforma em desacordo com estes Termos implicará
+na desativação da conta do Usuário, sem aviso prévio, podendo a AFILAXY recusar
+novo cadastramento. Os dados poderão ser preservados para uso das autoridades
+competentes conforme legislação vigente.
+
+Cláusula 27ª. São expressamente vedados ao Usuário: acionar a rede de apoio P2P
+em situações que não constituam necessidade real; inserir informações falsas no
+cadastro ou no Perfil Médico; tentar acessar dados de outros Usuários sem
+autorização; praticar engenharia reversa, descompilar ou modificar qualquer
+componente da plataforma; e utilizar a plataforma para fins comerciais não
+autorizados.
+
+Cláusula 28ª. O Usuário concorda em indenizar a AFILAXY, seus dirigentes,
+colaboradores e representantes por qualquer dano decorrente do uso indevido da
+plataforma.
+
+================================================================================
+DOS DIREITOS DO TITULAR (LGPD)
+================================================================================
+
+Cláusula 29ª. Em conformidade com a Lei nº 13.709/2018, o Usuário tem os seguintes
+direitos em relação aos seus dados pessoais, exercíveis mediante solicitação ao
+canal de atendimento indicado na Política de Privacidade:
+
+I   — Confirmação da existência de tratamento;
+II  — Acesso aos dados;
+III — Correção de dados incompletos, inexatos ou desatualizados;
+IV  — Anonimização, bloqueio ou eliminação de dados desnecessários ou tratados
+      irregularmente;
+V   — Portabilidade dos dados a outro fornecedor;
+VI  — Eliminação dos dados tratados com base em consentimento (incluindo o Perfil
+      Médico);
+VII — Informação sobre compartilhamento com terceiros;
+VIII— Revogação do consentimento a qualquer tempo, sem prejuízo à licitude do
+      tratamento anterior.
+
+================================================================================
+DAS MODIFICAÇÕES
+================================================================================
+
+Cláusula 30ª. Os presentes Termos poderão ser modificados a qualquer tempo.
+Alterações relevantes serão comunicadas com antecedência mínima de 15 (quinze)
+dias por notificação no aplicativo ou por e-mail. O Usuário que discordar das
+alterações poderá solicitar o encerramento de sua conta pelo canal
+'afilaxy@gmail.com'.
+
+================================================================================
+DA ACEITAÇÃO
+================================================================================
+
+Cláusula 31ª. Ao realizar o cadastro, o Usuário declara ter lido, compreendido e
+aceitado todas as condições estabelecidas nestes Termos de Uso e na Política de
+Privacidade.
+
+================================================================================
+DAS DISPOSIÇÕES FINAIS
+================================================================================
+
+Cláusula 32ª. As obrigações que, por sua natureza, devam persistir após o
+encerramento da conta subsistirão à rescisão, especialmente as relativas à
+propriedade intelectual, confidencialidade e indenização.
+
+Cláusula 33ª. O presente instrumento é de natureza estritamente civil, inexistindo
+qualquer vínculo empregatício entre o Usuário e a AFILAXY.
+
+Cláusula 34ª. As disposições deste contrato estão sujeitas às leis do ordenamento
+jurídico brasileiro.
+
+================================================================================
+DO FORO DE ELEIÇÃO
+================================================================================
+
+Cláusula 35ª. As partes elegem o foro da Comarca de São Paulo – SP para dirimir
+eventuais controvérsias decorrentes da interpretação e cumprimento destes Termos,
+com renúncia expressa a qualquer outro, por mais privilegiado que seja.
