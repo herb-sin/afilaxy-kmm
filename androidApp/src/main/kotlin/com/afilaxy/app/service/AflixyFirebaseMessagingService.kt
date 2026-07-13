@@ -49,7 +49,7 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
                     Log.d("FCM", "Emerg\u00eancia recebida")
                     val emergencyId = data["emergencyId"] ?: ""
                     val requesterName = data["requesterName"] ?: "Algu\u00e9m"
-                    val title = data["title"] ?: "Emerg\u00eancia de Asma"
+                    val title = data["title"] ?: "Pedido de ajuda pr\u00f3ximo"
                     val body = data["body"] ?: "$requesterName precisa de ajuda"
                     showEmergencyNotification(
                         title.sanitizeForLog(), body.sanitizeForLog(), emergencyId.sanitizeForLog()
