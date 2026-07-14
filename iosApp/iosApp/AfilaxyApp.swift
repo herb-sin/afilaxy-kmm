@@ -1,6 +1,7 @@
 import SwiftUI
 import shared
 import FirebaseCore
+import FirebaseAppCheck
 import FirebaseAuth
 import FirebaseMessaging
 import FirebaseFirestore
@@ -420,6 +421,13 @@ struct AfilaxyApp: App {
     @AppStorage("theme_preference") private var themePreference: String = "system"
 
     init() {
+        // App Check — deve ser configurado antes do FirebaseApp.configure()
+        #if DEBUG
+        AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+        #else
+        AppCheck.setAppCheckProviderFactory(AppAttestProviderFactory())
+        #endif
+
         // Initialize Firebase first
         FirebaseApp.configure()
 

@@ -11,6 +11,8 @@ import com.afilaxy.di.platformModule
 import com.afilaxy.di.sharedModule
 import com.afilaxy.util.FileLogger
 import com.google.firebase.FirebaseApp
+import com.google.firebase.appcheck.FirebaseAppCheck
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
@@ -56,6 +58,19 @@ class AflixyApplication : Application() {
                 } else {
                     LogOptimizer.d("AflixyApp", "Firebase already initialized")
                 }
+                val appCheck = FirebaseAppCheck.getInstance()
+                val isDebug = (applicationInfo.flags and
+                    android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                if (isDebug) {
+                    appCheck.installAppCheckProviderFactory(
+                        com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory.getInstance()
+                    )
+                } else {
+                    appCheck.installAppCheckProviderFactory(
+                        PlayIntegrityAppCheckProviderFactory.getInstance()
+                    )
+                }
+                LogOptimizer.d("AflixyApp", "App Check instalado (debug=$isDebug)")
             } catch (e: Exception) {
                 LogOptimizer.e("AflixyApp", "Error initializing services", e)
             }
