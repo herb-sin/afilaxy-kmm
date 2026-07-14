@@ -9,6 +9,7 @@ target 'iosApp' do
   # Firebase Auth e Messaging (sem dependências C++ pesadas)
   pod 'Firebase/Auth',      '~> 11.0'
   pod 'Firebase/Messaging', '~> 11.0'
+  pod 'Firebase/AppCheck',  '~> 11.0'
 
   # Google Sign-In
   pod 'GoogleSignIn', '~> 7.0'

@@ -193,6 +193,10 @@ dependencies {
     
     // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics-ktx")
+
+    // Firebase App Check — bloqueia acessos não autorizados ao Firestore/Auth
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
     
     // Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
