@@ -410,6 +410,16 @@ class AppContainer: ObservableObject {
     }
 }
 
+// MARK: - App Check Provider Factory (release only)
+
+#if !DEBUG
+private final class AppAttestProviderFactory: NSObject, AppCheckProviderFactory {
+    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+        AppAttestProvider(app: app)
+    }
+}
+#endif
+
 // MARK: - App Entry Point
 
 @main
