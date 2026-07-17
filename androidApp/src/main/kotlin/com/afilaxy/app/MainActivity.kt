@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
@@ -104,6 +106,15 @@ class MainActivity : ComponentActivity() {
                             }
                             auth.addAuthStateListener(listener)
                             onDispose { auth.removeAuthStateListener(listener) }
+                        }
+
+                        // Timeout: se App Check bloquear o AuthStateListener, navega para Login após 5s
+                        LaunchedEffect(Unit) {
+                            delay(5_000)
+                            if (!authResolved.value) {
+                                startDestination.value = AppRoutes.LOGIN
+                                authResolved.value = true
+                            }
                         }
 
                         if (authResolved.value) {

@@ -33,25 +33,35 @@ class AuthRepositoryImpl(
         return try {
             val result = auth.signInWithEmailAndPassword(email, password)
             val firebaseUser = result.user
-            
+
             if (firebaseUser == null) {
                 return Result.failure(Exception("Usuário não encontrado"))
             }
-            
-            // Buscar dados do perfil no Firestore
-            val userDoc = firestore
-                .collection("users")
-                .document(firebaseUser.uid)
-                .get()
-            
-            val user = User(
-                uid = firebaseUser.uid,
-                email = firebaseUser.email ?: "",
-                name = userDoc.get<String?>("name") ?: firebaseUser.displayName,
-                fcmToken = userDoc.get<String?>("fcmToken"),
-                isHelper = userDoc.get<Boolean?>("isHelper") ?: false
-            )
-            
+
+            // Buscar dados do perfil no Firestore — falha silenciosa se App Check ainda não estiver pronto
+            val user = try {
+                val userDoc = firestore
+                    .collection("users")
+                    .document(firebaseUser.uid)
+                    .get()
+                User(
+                    uid = firebaseUser.uid,
+                    email = firebaseUser.email ?: "",
+                    name = userDoc.get<String?>("name") ?: firebaseUser.displayName,
+                    fcmToken = userDoc.get<String?>("fcmToken"),
+                    isHelper = userDoc.get<Boolean?>("isHelper") ?: false
+                )
+            } catch (e: Exception) {
+                Logger.e("AuthRepository", "Firestore indisponível no login, usando dados locais: ${e.message}", e)
+                User(
+                    uid = firebaseUser.uid,
+                    email = firebaseUser.email ?: "",
+                    name = firebaseUser.displayName,
+                    fcmToken = null,
+                    isHelper = false
+                )
+            }
+
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)
@@ -251,19 +261,23 @@ class AuthRepositoryImpl(
             val firebaseUser = result.user
                 ?: return Result.failure(Exception("Usuário não encontrado após autenticação Google"))
 
-            // Cria ou atualiza o documento do usuário no Firestore sem sobrescrever dados existentes
-            val updates = buildMap<String, Any?> {
-                put("uid", firebaseUser.uid)
-                put("email", firebaseUser.email ?: "")
-                put("authProvider", "google")
-                put("updatedAt", getCurrentTimeMillis())
-                firebaseUser.displayName?.let { put("name", it) }
-                firebaseUser.photoURL?.let { put("photoUrl", it) }
+            // Cria ou atualiza o documento do usuário no Firestore — falha silenciosa se App Check ainda não estiver pronto
+            try {
+                val updates = buildMap<String, Any?> {
+                    put("uid", firebaseUser.uid)
+                    put("email", firebaseUser.email ?: "")
+                    put("authProvider", "google")
+                    put("updatedAt", getCurrentTimeMillis())
+                    firebaseUser.displayName?.let { put("name", it) }
+                    firebaseUser.photoURL?.let { put("photoUrl", it) }
+                }
+                firestore.collection("users").document(firebaseUser.uid)
+                    .set(updates, merge = true)
+            } catch (e: Exception) {
+                Logger.e("AuthRepository", "Firestore indisponível no login Google, perfil será sincronizado depois: ${e.message}", e)
             }
-            firestore.collection("users").document(firebaseUser.uid)
-                .set(updates, merge = true)
 
-            Result.success(mapFirebaseUser(firebaseUser))
+            Result.success(mapFirebaseUserLocal(firebaseUser, "google"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -275,18 +289,37 @@ class AuthRepositoryImpl(
             val result = auth.signInWithCredential(credential)
             val firebaseUser = result.user
                 ?: return Result.failure(Exception("Usuário não encontrado após autenticação Apple"))
-            val updates = buildMap<String, Any?> {
-                put("uid", firebaseUser.uid)
-                put("email", firebaseUser.email ?: "")
-                put("authProvider", "apple")
-                put("updatedAt", getCurrentTimeMillis())
-                firebaseUser.displayName?.let { put("name", it) }
+
+            // Cria ou atualiza o documento do usuário no Firestore — falha silenciosa se App Check ainda não estiver pronto
+            try {
+                val updates = buildMap<String, Any?> {
+                    put("uid", firebaseUser.uid)
+                    put("email", firebaseUser.email ?: "")
+                    put("authProvider", "apple")
+                    put("updatedAt", getCurrentTimeMillis())
+                    firebaseUser.displayName?.let { put("name", it) }
+                }
+                firestore.collection("users").document(firebaseUser.uid).set(updates, merge = true)
+            } catch (e: Exception) {
+                Logger.e("AuthRepository", "Firestore indisponível no login Apple, perfil será sincronizado depois: ${e.message}", e)
             }
-            firestore.collection("users").document(firebaseUser.uid).set(updates, merge = true)
-            Result.success(mapFirebaseUser(firebaseUser))
+
+            Result.success(mapFirebaseUserLocal(firebaseUser, "apple"))
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun mapFirebaseUserLocal(firebaseUser: dev.gitlive.firebase.auth.FirebaseUser, authProvider: String): User {
+        return User(
+            uid = firebaseUser.uid,
+            email = firebaseUser.email ?: "",
+            name = firebaseUser.displayName,
+            fcmToken = null,
+            isHelper = false,
+            photoUrl = firebaseUser.photoURL,
+            authProvider = authProvider
+        )
     }
 
     private suspend fun mapFirebaseUser(firebaseUser: dev.gitlive.firebase.auth.FirebaseUser): User {
