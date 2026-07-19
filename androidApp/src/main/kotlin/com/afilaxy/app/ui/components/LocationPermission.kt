@@ -34,7 +34,8 @@ import com.google.accompanist.permissions.shouldShowRationale
 fun RequestLocationPermission(
     onPermissionGranted: () -> Unit,
     onPermissionDenied: () -> Unit = {},
-    requiresBackground: Boolean = true
+    requiresBackground: Boolean = true,
+    skipProminentDisclosure: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -91,8 +92,8 @@ fun RequestLocationPermission(
                 showForegroundRationale = true
             }
             else -> {
-                // Google Play: exibir divulgação proeminente antes de qualquer solicitação
-                showProminentDisclosure = true
+                if (skipProminentDisclosure) launchForegroundRequest()
+                else showProminentDisclosure = true
             }
         }
     }

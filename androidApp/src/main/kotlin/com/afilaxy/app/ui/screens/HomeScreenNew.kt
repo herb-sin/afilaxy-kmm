@@ -248,8 +248,8 @@ fun HomeScreenNew(
         item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap) }
     }
 
-    // Dialog de consentimento LGPD — exibido apenas na primeira ativação.
-    // Explica que a localização aproximada fica visível para outros usuários.
+    // Dialog de consentimento LGPD + divulgação proeminente de localização (Google Play policy).
+    // Exibido apenas na primeira ativação do Modo Ajudante.
     if (showHelperConsentDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -257,14 +257,17 @@ fun HomeScreenNew(
                 helperIntended = emergencyState.isHelperMode
             },
             icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("Sua localização será visível") },
+            title = { Text("Uso da sua localização no Modo Ajudante") },
             text = {
                 Text(
-                    "Ao ativar o Modo Ajudante, sua posição aproximada (precisão \u00b1100 m) " +
-                    "ficará visível no mapa para outros usuários do Afilaxy\n\n" +
-                    "Seus dados são anonimizados: nome de exibição e localização aproximada apenas. " +
-                    "Nenhum endereço ou dado pessoal sensível é compartilhado.\n\n" +
-                    "Você pode desativar o Modo Ajudante a qualquer momento."
+                    "O Afilaxy coletará sua localização GPS para:\n\n" +
+                    "• Exibir sua posição aproximada (±100 m) no mapa para outros usuários\n" +
+                    "• Receber alertas de emergências próximas em segundo plano\n\n" +
+                    "Apenas nome de exibição e posição aproximada são compartilhados com quem precisar de ajuda. " +
+                    "Nenhum endereço exato ou dado pessoal sensível é divulgado. " +
+                    "Sua localização nunca é vendida.\n\n" +
+                    "Você pode desativar o Modo Ajudante a qualquer momento.\n\n" +
+                    "Consulte nossa Política de Privacidade em afilaxy.com/privacidade."
                 )
             },
             confirmButton = {
@@ -334,6 +337,7 @@ fun HomeScreenNew(
     // Após a permissão foreground ser concedida, verifica se background também pode ser pedido.
     if (showHelperPermission) {
         RequestLocationPermission(
+            skipProminentDisclosure = true,
             onPermissionGranted = {
                 showHelperPermission = false
                 // Verifica se ACCESS_BACKGROUND_LOCATION já foi concedida ou se o Android
