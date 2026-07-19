@@ -58,6 +58,7 @@ fun RequestLocationPermission(
         foregroundState.permissions.any { !it.status.isGranted }
 
     // Estados de UI
+    var showProminentDisclosure by remember { mutableStateOf(false) }
     var showForegroundRationale by remember { mutableStateOf(false) }
     var showBackgroundRationale by remember { mutableStateOf(false) }
     var hasLaunchedRequest by remember { mutableStateOf(false) }
@@ -65,6 +66,11 @@ fun RequestLocationPermission(
     var called by remember { mutableStateOf(false) }
 
     fun grantOnce() { if (!called) { called = true; onPermissionGranted() } }
+
+    fun launchForegroundRequest() {
+        hasLaunchedRequest = true
+        foregroundState.launchMultiplePermissionRequest()
+    }
 
     // --- Efeito inicial: decide o que fazer com foreground ---
     LaunchedEffect(Unit) {
@@ -85,8 +91,8 @@ fun RequestLocationPermission(
                 showForegroundRationale = true
             }
             else -> {
-                hasLaunchedRequest = true
-                foregroundState.launchMultiplePermissionRequest()
+                // Google Play: exibir divulgação proeminente antes de qualquer solicitação
+                showProminentDisclosure = true
             }
         }
     }
@@ -113,6 +119,46 @@ fun RequestLocationPermission(
                 grantOnce()
             }
         }
+    }
+
+    // --- Divulgação Proeminente (obrigatória pelo Google Play antes de solicitar permissão) ---
+    // Explica o quê, por quê e como os dados de localização são usados, conforme exigido pela
+    // política de Dados do Usuário do Google Play (Prominent Disclosure and Consent Requirement).
+    if (showProminentDisclosure) {
+        AlertDialog(
+            onDismissRequest = {
+                showProminentDisclosure = false
+                onPermissionDenied()
+            },
+            title = { Text("Uso da sua Localização") },
+            text = {
+                Text(
+                    "O Afilaxy coleta sua localização GPS para:\n\n" +
+                    "• Encontrar helpers (profissionais de saúde) próximos durante uma emergência\n" +
+                    "• Enviar sua posição ao helper que aceitar o chamado\n" +
+                    "• Monitorar emergências em segundo plano enquanto você está como helper disponível\n\n" +
+                    "Sua localização nunca é vendida. É compartilhada somente com o helper atribuído " +
+                    "à sua emergência e descartada ao término do atendimento.\n\n" +
+                    "Consulte nossa Política de Privacidade em afilaxy.com/privacidade para mais detalhes."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showProminentDisclosure = false
+                    launchForegroundRequest()
+                }) {
+                    Text("Entendi e quero continuar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showProminentDisclosure = false
+                    onPermissionDenied()
+                }) {
+                    Text("Agora não")
+                }
+            }
+        )
     }
 
     // --- Diálogo de rationale para FOREGROUND location ---
