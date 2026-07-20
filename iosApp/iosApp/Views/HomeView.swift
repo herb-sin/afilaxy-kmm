@@ -20,6 +20,8 @@ struct HomeView: View {
     @AppStorage("checkin_morning_done_date") private var morningDoneDate = ""
     @AppStorage("checkin_evening_done_date") private var eveningDoneDate = ""
     @State private var showHelperConsentAlert = false
+    @State private var showHelperErrorAlert = false
+    @State private var helperErrorMessage = ""
     @State private var showNps = false
     @State private var weeklyCount: Int = -1     // -1 = ainda carregando
     // Total acumulado de todas as semanas — nunca zera na virada de semana ISO.
@@ -114,6 +116,11 @@ struct HomeView: View {
                 "no mapa para outros usuários Afilaxy.\nSeu nome de exibição é compartilhado; " +
                 "nenhum endereço ou dado sensível.\nDesative o modo a qualquer momento."
             )
+        }
+        .alert("Erro ao ativar Modo Ajudante", isPresented: $showHelperErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(helperErrorMessage)
         }
         .onAppear {
             fetchWeeklyStatus()
@@ -543,8 +550,10 @@ struct HomeView: View {
                         LocationManager.shared.requestAlwaysIfNeeded()
                     }
                 } else {
-                    // Falhou ou foi cancelado — reverte o visual
+                    // Falhou ou foi cancelado — reverte o visual e informa o usuário
                     self.helperIntendedValue = false
+                    self.helperErrorMessage = "Não foi possível ativar o Modo Ajudante. Verifique sua conexão e tente novamente."
+                    self.showHelperErrorAlert = true
                 }
                 self.isTogglingHelper = false
             }

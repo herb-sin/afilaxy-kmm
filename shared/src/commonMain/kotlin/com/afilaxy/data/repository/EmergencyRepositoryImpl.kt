@@ -56,11 +56,22 @@ class EmergencyRepositoryImpl(
                 "expiresAt" to (currentTime + EMERGENCY_TIMEOUT_MS)
             )
             
-            // Criar emergência
-            val docRef = firestore.collection("emergency_requests")
-                .add(emergencyData)
-            
-            Result.success(docRef.id)
+            // Criar emergência — retry para App Check timing (mesmo padrão de activateHelper)
+            var lastException: Exception? = null
+            for (attempt in 1..3) {
+                try {
+                    val docRef = firestore.collection("emergency_requests").add(emergencyData)
+                    return Result.success(docRef.id)
+                } catch (e: Exception) {
+                    lastException = e
+                    if (e.message?.contains("PERMISSION_DENIED") == true && attempt < 3) {
+                        kotlinx.coroutines.delay(if (attempt == 1) 3_000L else 5_000L)
+                    } else {
+                        break
+                    }
+                }
+            }
+            Result.failure(lastException ?: Exception("Erro ao criar emergência"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -126,10 +137,10 @@ class EmergencyRepositoryImpl(
                 "lastUpdate" to getCurrentTimeMillis()
             )
 
-            // Retry único para App Check timing: Play Integrity pode não estar pronto
-            // imediatamente após o login, causando PERMISSION_DENIED transitório.
+            // Retry com backoff para App Check timing: Play Integrity pode levar até ~5s
+            // para emitir o primeiro token, causando PERMISSION_DENIED transitório.
             var lastError: Exception? = null
-            for (attempt in 1..2) {
+            for (attempt in 1..3) {
                 try {
                     firestore.collection("helpers")
                         .document(userId)
@@ -137,8 +148,8 @@ class EmergencyRepositoryImpl(
                     return Result.success(true)
                 } catch (e: Exception) {
                     lastError = e
-                    if (attempt == 1 && e.message?.contains("PERMISSION_DENIED") == true) {
-                        kotlinx.coroutines.delay(2_000)
+                    if (e.message?.contains("PERMISSION_DENIED") == true && attempt < 3) {
+                        kotlinx.coroutines.delay(if (attempt == 1) 3_000L else 5_000L)
                     } else {
                         break
                     }
