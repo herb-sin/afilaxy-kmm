@@ -38,6 +38,7 @@ fun CheckInScreen(
     viewModel: CheckInViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(type) {
         viewModel.initialize(type, riskScore, aqi, temperature, humidity)
@@ -57,27 +58,37 @@ fun CheckInScreen(
         }
     }
 
-    when {
-        state.isLoading -> CheckInLoading()
-        state.showCriticalWellbeingCard -> CriticalWellbeingCard(
-            onDismiss = { viewModel.dismissCriticalCard(); onDone() },
-            onOpenGuide = { viewModel.dismissCriticalCard(); onDone() }
-        )
-        state.alreadyDoneToday || state.isSubmitted -> CheckInDone(type, onDone)
-        type == CheckInType.MORNING -> MorningCheckInContent(
-            riskScore = state.riskScore,
-            healthSnapshot = state.healthSnapshot,
-            healthAvailable = state.healthAvailable,
-            healthPermissionsGranted = state.healthPermissionsGranted,
-            onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-            onSubmit = { a, b, c -> viewModel.submitMorningCheckIn(a, b, c) }
-        )
-        type == CheckInType.EVENING -> EveningCheckInContent(
-            healthSnapshot = state.healthSnapshot,
-            healthAvailable = state.healthAvailable,
-            healthPermissionsGranted = state.healthPermissionsGranted,
-            onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-            onSubmit = { a, b, c -> viewModel.submitEveningCheckIn(a, b, c) }
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbarHostState.showSnackbar(it) }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        when {
+            state.isLoading -> CheckInLoading()
+            state.showCriticalWellbeingCard -> CriticalWellbeingCard(
+                onDismiss = { viewModel.dismissCriticalCard(); onDone() },
+                onOpenGuide = { viewModel.dismissCriticalCard(); onDone() }
+            )
+            state.alreadyDoneToday || state.isSubmitted -> CheckInDone(type, onDone)
+            type == CheckInType.MORNING -> MorningCheckInContent(
+                riskScore = state.riskScore,
+                healthSnapshot = state.healthSnapshot,
+                healthAvailable = state.healthAvailable,
+                healthPermissionsGranted = state.healthPermissionsGranted,
+                onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
+                onSubmit = { a, b, c -> viewModel.submitMorningCheckIn(a, b, c) }
+            )
+            type == CheckInType.EVENING -> EveningCheckInContent(
+                healthSnapshot = state.healthSnapshot,
+                healthAvailable = state.healthAvailable,
+                healthPermissionsGranted = state.healthPermissionsGranted,
+                onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
+                onSubmit = { a, b, c -> viewModel.submitEveningCheckIn(a, b, c) }
+            )
+        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
