@@ -3,6 +3,7 @@ package com.afilaxy.presentation.auth
 import com.afilaxy.domain.model.User
 import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.validation.Validator
+import com.afilaxy.util.Logger
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
 import kotlinx.coroutines.Job
@@ -112,6 +113,7 @@ class AuthViewModel(
                     _state.update { it.copy(user = user, isAuthenticated = true, isLoading = false) }
                 }
                 .onFailure { exception ->
+                    Logger.e("AuthViewModel", "Google sign-in failed: ${exception::class.simpleName} — ${exception.message}", exception)
                     _state.update {
                         it.copy(isLoading = false, error = getErrorMessage(exception))
                     }
@@ -128,6 +130,7 @@ class AuthViewModel(
                     _state.update { it.copy(user = user, isAuthenticated = true, isLoading = false) }
                 }
                 .onFailure { exception ->
+                    Logger.e("AuthViewModel", "Apple sign-in failed: ${exception::class.simpleName} — ${exception.message}", exception)
                     _state.update { it.copy(isLoading = false, error = getErrorMessage(exception)) }
                 }
         }

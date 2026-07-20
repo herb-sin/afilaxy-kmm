@@ -166,8 +166,10 @@ struct LoginView: View {
 
         GIDSignIn.sharedInstance.signIn(withPresenting: rootVC) { result, error in
             if let error = error {
+                let nsErr = error as NSError
                 let msg = error.localizedDescription
-                // Conta criada com outro provider (email/senha)
+                FileLogger.shared.write(level: "ERROR", tag: "LoginView",
+                    message: "GIDSignIn falhou domain=\(nsErr.domain) code=\(nsErr.code) msg=\(msg)")
                 if msg.contains("account-exists") || msg.contains("different-credential") || msg.contains("17012") {
                     container.auth.vm?.updateError(message: "Esta conta foi criada com email e senha. Faça login com email e senha.")
                 } else if !msg.contains("canceled") && !msg.contains("cancel") {
@@ -176,7 +178,12 @@ struct LoginView: View {
                 return
             }
             guard let result = result,
-                  let idToken = result.user.idToken?.tokenString else { return }
+                  let idToken = result.user.idToken?.tokenString else {
+                FileLogger.shared.write(level: "ERROR", tag: "LoginView", message: "GIDSignIn: result ou idToken nulo")
+                container.auth.vm?.updateError(message: "Não foi possível obter credenciais do Google.")
+                return
+            }
+            FileLogger.shared.write(level: "INFO", tag: "LoginView", message: "GIDSignIn ok, chamando onGoogleSignInResult")
             container.auth.vm?.onGoogleSignInResult(idToken: idToken)
         }
     }
@@ -224,7 +231,8 @@ struct LoginView: View {
         if raw.contains("no user record") || raw.contains("user-not-found") { return "Usuário não encontrado." }
         if raw.contains("wrong password") || raw.contains("invalid-credential") || raw.contains("INVALID_LOGIN_CREDENTIALS") { return "E-mail ou senha incorretos." }
         if raw.contains("too-many-requests") { return "Muitas tentativas. Tente novamente mais tarde." }
-        if raw.contains("network") || raw.contains("Network") { return "Sem conexão. Verifique sua internet." }
+        if raw.contains("network") || raw.contains("Network") || raw.contains("conexão") { return "Sem conexão. Verifique sua internet." }
+        if raw.contains("disabled") || raw.contains("not allowed") || raw.contains("OPERATION_NOT_ALLOWED") { return "Login social não configurado. Contate o suporte." }
         return "Erro ao entrar. Tente novamente."
     }
 
@@ -258,15 +266,18 @@ class AppleSignInCoordinator: NSObject, ObservableObject, ASAuthorizationControl
               let identityTokenData = appleIDCredential.identityToken,
               let identityToken = String(data: identityTokenData, encoding: .utf8),
               let nonce = currentNonce else {
+            FileLogger.shared.write(level: "ERROR", tag: "AppleSignIn", message: "Credenciais Apple nulas ou nonce ausente")
             onError?("Não foi possível obter credenciais da Apple. Tente novamente.")
             return
         }
+        FileLogger.shared.write(level: "INFO", tag: "AppleSignIn", message: "Credenciais Apple obtidas, chamando onAppleSignInResult")
         onSuccess?(identityToken, nonce)
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
         let nsError = error as NSError
-        // Código 1001 = usuário cancelou — sem mensagem de erro
+        FileLogger.shared.write(level: "ERROR", tag: "AppleSignIn",
+            message: "ASAuthorizationController erro domain=\(nsError.domain) code=\(nsError.code) msg=\(error.localizedDescription)")
         guard nsError.code != 1001 else { return }
         onError?("Erro ao entrar com Apple. Tente novamente.")
     }
