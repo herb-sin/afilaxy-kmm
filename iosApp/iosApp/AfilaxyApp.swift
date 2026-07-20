@@ -1,7 +1,6 @@
 import SwiftUI
 import shared
 import FirebaseCore
-import FirebaseAppCheck
 import FirebaseAuth
 import FirebaseMessaging
 import FirebaseFirestore
@@ -410,15 +409,8 @@ class AppContainer: ObservableObject {
     }
 }
 
-// MARK: - App Check Provider Factory (release only)
-
-#if !DEBUG
-private final class AppAttestProviderFactory: NSObject, AppCheckProviderFactory {
-    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
-        AppAttestProvider(app: app)
-    }
-}
-#endif
+// App Check Provider Factory removido — App Attest bloqueia requisições Firestore no iOS
+// quando o token não pode ser obtido, mesmo em Monitoring mode. As Security Rules são a proteção principal.
 
 // MARK: - App Entry Point
 
@@ -431,13 +423,6 @@ struct AfilaxyApp: App {
     @AppStorage("theme_preference") private var themePreference: String = "system"
 
     init() {
-        // App Check — deve ser configurado antes do FirebaseApp.configure()
-        #if DEBUG
-        AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
-        #else
-        AppCheck.setAppCheckProviderFactory(AppAttestProviderFactory())
-        #endif
-
         // Initialize Firebase first
         FirebaseApp.configure()
 

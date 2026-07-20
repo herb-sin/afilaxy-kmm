@@ -6,6 +6,7 @@ import android.content.Intent
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -68,8 +69,10 @@ fun HomeScreenNew(
     val prefsRepo: PreferencesRepository = koinInject()
     val emergencyRepo: EmergencyRepository = koinInject()
     val scope = rememberCoroutineScope()
-    var isHelperPending by remember { mutableStateOf(false) }
-    var helperIntended by remember { mutableStateOf(false) }
+    var isHelperPending by rememberSaveable { mutableStateOf(false) }
+    var helperIntended by rememberSaveable { mutableStateOf(false) }
+    // Evita que LaunchedEffect(isHelperMode) resete isHelperPending na primeira composição
+    var helperSyncedOnce by rememberSaveable { mutableStateOf(false) }
     var showHelperPermission by remember { mutableStateOf(false) }
     var showHelperConsentDialog by remember { mutableStateOf(false) }
     var showNps by remember { mutableStateOf(false) }
@@ -114,9 +117,28 @@ fun HomeScreenNew(
     }
 
     // Sincroniza o estado local com o ViewModel quando a operação conclui.
+    // Na primeira composição, só sincroniza se não há operação pendente salva,
+    // evitando apagar isHelperPending=true restaurado pelo rememberSaveable.
     LaunchedEffect(emergencyState.isHelperMode) {
-        isHelperPending = false
-        helperIntended = emergencyState.isHelperMode
+        if (!helperSyncedOnce) {
+            helperSyncedOnce = true
+            if (!isHelperPending) helperIntended = emergencyState.isHelperMode
+        } else {
+            isHelperPending = false
+            helperIntended = emergencyState.isHelperMode
+        }
+    }
+
+    // Exibe o erro de ativação/desativação de helper; reseta o estado pendente para que
+    // o toggle reflita a realidade (helper NÃO ativo em caso de falha).
+    LaunchedEffect(emergencyState.error) {
+        emergencyState.error?.let { error ->
+            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+            if (isHelperPending) {
+                isHelperPending = false
+                helperIntended = emergencyState.isHelperMode
+            }
+        }
     }
 
     // Localização para o RiskWidget via FusedLocationProviderClient (mais confiável)
