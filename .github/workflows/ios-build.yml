@@ -178,10 +178,10 @@ jobs:
           xcodebuild -showsdks 2>&1 | grep -i ios
           xcodebuild -showsdks 2>&1 | grep -q "iphoneos" || (echo "❌ iphoneos SDK não disponível" && exit 1)
 
-      # Arquiva usando Automatic signing com autenticação via API key.
-      # -allowProvisioningUpdates + -authenticationKey* faz o Xcode criar/atualizar
-      # automaticamente o provisioning profile (incluindo novos entitlements como
-      # com.apple.developer.applesignin) sem precisar de um step de download separado.
+      # Arquiva usando Manual signing com certificado de distribuição já importado.
+      # -allowProvisioningUpdates com signing Manual: o Xcode baixa/recria o perfil de
+      # distribuição via App Store Connect API sem criar novos certificados — evita o
+      # erro "maximum number of certificates" que ocorre com Automatic signing.
       - name: Archive iOS App
         run: |
           API_KEY_PATH="/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
@@ -196,7 +196,6 @@ jobs:
             -authenticationKeyPath "$API_KEY_PATH" \
             -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}" \
-            CODE_SIGN_STYLE="Automatic" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             JAVA_HOME="$JAVA_HOME" \
             archive 2>&1 | tee /tmp/xcodebuild.log; \
