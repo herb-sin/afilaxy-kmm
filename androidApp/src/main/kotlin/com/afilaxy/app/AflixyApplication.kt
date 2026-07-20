@@ -14,6 +14,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.afilaxy.app.appcheck.getAppCheckProviderFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -61,6 +62,16 @@ class AflixyApplication : Application() {
                 val appCheck = FirebaseAppCheck.getInstance()
                 appCheck.installAppCheckProviderFactory(getAppCheckProviderFactory())
                 LogOptimizer.d("AflixyApp", "App Check instalado")
+                // Pre-warm: aguarda o token Play Integrity antes das primeiras writes ao
+                // Firestore. Elimina a janela de PERMISSION_DENIED por timing — sem isso,
+                // 39% das requests saem com token inválido (cf. Firebase App Check metrics).
+                try {
+                    appCheck.getAppCheckToken(false).await()
+                    LogOptimizer.d("AflixyApp", "App Check token pronto")
+                } catch (e: Exception) {
+                    // Token será obtido lazily na 1ª request — falha aqui não é crítica
+                    LogOptimizer.w("AflixyApp", "Pre-warm App Check falhou: ${e.message}")
+                }
             } catch (e: Exception) {
                 LogOptimizer.e("AflixyApp", "Error initializing services", e)
             }
