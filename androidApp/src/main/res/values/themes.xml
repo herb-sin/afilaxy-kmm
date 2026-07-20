@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Base application theme -->
-    <style name="Theme.Afilaxy" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-    </style>
+    <!-- statusBarColor e navigationBarColor removidos: deprecated no Android 15+.
+         enableEdgeToEdge() em MainActivity já gerencia as barras corretamente. -->
+    <style name="Theme.Afilaxy" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>
