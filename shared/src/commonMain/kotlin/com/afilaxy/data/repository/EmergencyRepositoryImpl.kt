@@ -15,6 +15,7 @@ import dev.gitlive.firebase.firestore.GeoPoint
 import kotlin.math.round
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -110,9 +111,10 @@ class EmergencyRepositoryImpl(
             }
 
             // Grava coordenadas obfuscadas no Firestore — sem email (PII desnecessária para o mapa)
-            val helperName = auth.currentUser?.displayName
-                ?: auth.currentUser?.email?.substringBefore("@")
-                ?: ""
+            // takeIf { isNotBlank() } evita string vazia quando GitLive retorna "" em vez de null
+            val helperName = auth.currentUser?.displayName?.takeIf { it.isNotBlank() }
+                ?: auth.currentUser?.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                ?: "Ajudante"
             val helperData = mapOf(
                 "id" to userId,
                 "name" to helperName,
@@ -123,12 +125,26 @@ class EmergencyRepositoryImpl(
                 "isActive" to true,
                 "lastUpdate" to getCurrentTimeMillis()
             )
-            
-            firestore.collection("helpers")
-                .document(userId)
-                .set(helperData)
-            
-            Result.success(true)
+
+            // Retry único para App Check timing: Play Integrity pode não estar pronto
+            // imediatamente após o login, causando PERMISSION_DENIED transitório.
+            var lastError: Exception? = null
+            for (attempt in 1..2) {
+                try {
+                    firestore.collection("helpers")
+                        .document(userId)
+                        .set(helperData)
+                    return Result.success(true)
+                } catch (e: Exception) {
+                    lastError = e
+                    if (attempt == 1 && e.message?.contains("PERMISSION_DENIED") == true) {
+                        kotlinx.coroutines.delay(2_000)
+                    } else {
+                        break
+                    }
+                }
+            }
+            Result.failure(lastError ?: Exception("Erro desconhecido ao ativar helper"))
         } catch (e: Exception) {
             Result.failure(e)
         }
