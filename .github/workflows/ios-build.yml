@@ -138,6 +138,20 @@ jobs:
           p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_P12 }}
           p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
 
+      # Injeta o perfil de distribuição App Store (base64) e extrai o UUID para uso no archive.
+      # O perfil precisa incluir Push Notifications + Sign in with Apple — deve ser criado/regenerado
+      # no Apple Developer Portal após habilitar essas capabilities no App ID.
+      - name: Inject Provisioning Profile
+        run: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}" | base64 --decode \
+            > "$HOME/Library/MobileDevice/Provisioning Profiles/afilaxy_appstore.mobileprovision"
+          PROFILE_UUID=$(security cms -D -i \
+            "$HOME/Library/MobileDevice/Provisioning Profiles/afilaxy_appstore.mobileprovision" \
+            | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
+          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "Perfil injetado: $PROFILE_UUID"
+
       # Injeta método de export e Team ID real no ExportOptions.plist
       # Mapeamento para nomes atuais do Xcode 16+
       # SECURITY: inputs do workflow_dispatch são mapeados para env vars antes de
@@ -178,25 +192,19 @@ jobs:
           xcodebuild -showsdks 2>&1 | grep -i ios
           xcodebuild -showsdks 2>&1 | grep -q "iphoneos" || (echo "❌ iphoneos SDK não disponível" && exit 1)
 
-      # Arquiva usando Manual signing com certificado de distribuição já importado.
-      # -allowProvisioningUpdates com signing Manual: o Xcode baixa/recria o perfil de
-      # distribuição via App Store Connect API sem criar novos certificados — evita o
-      # erro "maximum number of certificates" que ocorre com Automatic signing.
+      # Arquiva usando Manual signing: certificado de distribuição importado + perfil injetado.
+      # PROVISIONING_PROFILE_SPECIFIER recebe o UUID extraído do perfil injetado na etapa anterior.
+      # Não usa -allowProvisioningUpdates (não é necessário; o perfil já está em disco).
       - name: Archive iOS App
         run: |
-          API_KEY_PATH="/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
-
           xcodebuild \
             -workspace iosApp/iosApp.xcworkspace \
             -scheme iosApp \
             -configuration Release \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$API_KEY_PATH" \
-            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ env.PROFILE_UUID }}" \
             JAVA_HOME="$JAVA_HOME" \
             archive 2>&1 | tee /tmp/xcodebuild.log; \
           STATUS=${PIPESTATUS[0]}; \
