@@ -138,16 +138,6 @@ jobs:
           p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_P12 }}
           p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
 
-      # Baixa o Provisioning Profile via App Store Connect API
-      - name: Download Provisioning Profile
-        id: provisioning
-        uses: apple-actions/download-provisioning-profiles@3167792207a5b26099bc0ca22b5010a323dd2a0b # v1
-        with:
-          bundle-id: 'com.afilaxy.app'
-          issuer-id: ${{ secrets.APPLE_API_ISSUER_ID }}
-          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
-          api-private-key: ${{ secrets.APPLE_API_KEY }}
-
       # Injeta método de export e Team ID real no ExportOptions.plist
       # Mapeamento para nomes atuais do Xcode 16+
       # SECURITY: inputs do workflow_dispatch são mapeados para env vars antes de
@@ -189,19 +179,12 @@ jobs:
           xcodebuild -showsdks 2>&1 | grep -q "iphoneos" || (echo "❌ iphoneos SDK não disponível" && exit 1)
 
       # Arquiva usando Automatic signing com autenticação via API key.
-      # -allowProvisioningUpdates + -authenticationKey* permite que o Xcode:
-      #   1. Associe o certificado do keychain ao perfil correto automaticamente
-      #   2. Baixe/crie o perfil se necessário, sem poluir os targets dos Pods
+      # -allowProvisioningUpdates + -authenticationKey* faz o Xcode criar/atualizar
+      # automaticamente o provisioning profile (incluindo novos entitlements como
+      # com.apple.developer.applesignin) sem precisar de um step de download separado.
       - name: Archive iOS App
         run: |
-          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          PROFILE_UUID=$(for f in "$PROFILES_DIR"/*.mobileprovision; do
-            plist=$(security cms -D -i "$f" 2>/dev/null) || continue
-            bid=$(echo "$plist" | /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /dev/stdin 2>/dev/null || true)
-            [[ "$bid" != *"com.afilaxy.app" ]] && continue
-            echo "$plist" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null
-          done | head -1)
-          echo "Profile UUID: $PROFILE_UUID"
+          API_KEY_PATH="/tmp/apple_api_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
 
           xcodebuild \
             -workspace iosApp/iosApp.xcworkspace \
@@ -209,8 +192,12 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$API_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}" \
+            CODE_SIGN_STYLE="Automatic" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
             JAVA_HOME="$JAVA_HOME" \
             archive 2>&1 | tee /tmp/xcodebuild.log; \
           STATUS=${PIPESTATUS[0]}; \
