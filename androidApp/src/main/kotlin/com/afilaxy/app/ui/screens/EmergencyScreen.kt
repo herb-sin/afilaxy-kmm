@@ -1,5 +1,6 @@
 package com.afilaxy.app.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -7,6 +8,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,6 +30,7 @@ fun EmergencyScreen(
     viewModel: EmergencyViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
     var showLocationPermission by remember { mutableStateOf(false) }
 
     // Navegar para EmergencyRequestScreen após criar emergência
@@ -126,6 +129,11 @@ fun EmergencyScreen(
                     },
                     onPermissionDenied = {
                         showLocationPermission = false
+                        Toast.makeText(
+                            context,
+                            "Permissão de localização necessária para criar uma emergência.",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 )
             }

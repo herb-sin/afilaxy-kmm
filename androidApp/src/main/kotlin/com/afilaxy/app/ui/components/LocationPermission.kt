@@ -88,7 +88,11 @@ fun RequestLocationPermission(
             foregroundState.permissions.any { it.status.shouldShowRationale } -> {
                 showForegroundRationale = true
             }
-            isPermanentlyDenied -> {
+            isPermanentlyDenied && hasLaunchedRequest -> {
+                // Só mostra "negado permanentemente" se já lançamos uma solicitação antes.
+                // Sem esse guard, no primeiro acesso (hasLaunchedRequest=false) os flags
+                // shouldShowRationale=false + !isGranted=true disparam incorretamente
+                // este branch em vez de mostrar a divulgação proeminente.
                 showForegroundRationale = true
             }
             else -> {
