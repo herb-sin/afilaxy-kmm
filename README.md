@@ -1,4 +1,4 @@
-# 🫁 Afilaxy — Plataforma de Gestão de Asma
+# Afilaxy — Plataforma de Bem-Estar Comunitário
 
 [![Android CI](https://github.com/herb-sin/afilaxy-kmm/actions/workflows/android-build.yml/badge.svg)](https://github.com/herb-sin/afilaxy-kmm/actions)
 [![Shared Tests](https://github.com/herb-sin/afilaxy-kmm/actions/workflows/shared-tests.yml/badge.svg)](https://github.com/herb-sin/afilaxy-kmm/actions)
@@ -6,40 +6,34 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg)](https://kotlinlang.org)
 [![KMM](https://img.shields.io/badge/KMM-Ready-brightgreen.svg)](https://kotlinlang.org/docs/multiplatform.html)
-[![Version](https://img.shields.io/badge/version-2.3.0-orange.svg)](https://github.com/herb-sin/afilaxy-kmm/releases)
+[![Version](https://img.shields.io/badge/version-2.3.1-orange.svg)](https://github.com/herb-sin/afilaxy-kmm/releases)
 
-A única plataforma digital de gestão de asma em português no Brasil. O Afilaxy preenche o vazio entre as consultas médicas — onde a maioria das crises acontece — conectando pacientes a dados, especialistas e boas práticas médicas antes que a emergência aconteça.
+Somos uma plataforma de bem-estar comunitário que conecta pessoas em emergências. O Afilaxy cria uma rede P2P de localização em tempo real: quem precisa de ajuda aciona o app, e voluntários próximos são notificados e podem responder.
 
 ---
 
-## 🎯 Visão
+## Visão
 
 ### O Problema
 
-O sistema de saúde "perde" o asmático entre as consultas, gerando uma gestão **reativa** da doença. O resultado visível é a **"automedicação social"**: 18% dos pacientes já pediram ou emprestaram uma bombinha em uma emergência — um sinal de que milhões de brasileiros gerenciam sua condição sem dados ou vínculo com especialistas, onerando o sistema apenas em crises graves.
-
-- A asma afeta **20 milhões de brasileiros** e causa **2.000+ mortes anuais**
-- Internações evitáveis custam ao SUS entre **R$ 600 milhões e R$ 1 bilhão/ano**
-- O problema central não é a falta de medicação — é a **baixa adesão ao tratamento** e o **isolamento clínico**
+Emergências do dia a dia acontecem onde menos se espera — e geralmente quando estamos sozinhos. Quem precisa de ajuda não sabe quem está por perto e disposto a auxiliar. O resultado é isolamento no momento mais crítico.
 
 ### A Solução
 
-O Afilaxy transforma a urgência individual em gestão contínua:
+O Afilaxy resolve isso em quatro camadas:
 
-1. **Porta de entrada:** Localização P2P de inalador de resgate em emergências
-2. **Engajamento:** Check-ins de sintomas, registro de medicação e fatores ambientais
-3. **Prevenção:** Algoritmo que analisa o perfil do paciente e antecipa riscos de crise
-4. **Dados:** Geração de Real-World Evidence (RWE) para otimizar a gestão populacional
+1. **Emergência P2P:** Quem precisa de ajuda aciona o app e voluntários próximos (raio 250 m) são notificados em tempo real
+2. **Check-ins de bem-estar:** Acompanhamento contínuo do estado do usuário, matinal e noturno
+3. **Score de risco contextual:** Algoritmo que combina qualidade do ar, clima e perfil do usuário para antecipar situações de risco
+4. **Dados para a comunidade:** Dados agregados úteis para gestores e profissionais de saúde
 
 ### O Diferencial
 
-> "Inovação não é criar uma molécula nova, é inovar no modelo de acesso."
-
-Enquanto o mercado global vende mais medicamentos, o Afilaxy garante que o investimento público chegue ao paciente e seja usado corretamente — sendo a **única plataforma de gestão de asma em português no país**.
+A rede de voluntários transforma o comportamento informal de socorro — que já acontece espontaneamente — em infraestrutura organizada, rastreável e útil para toda a comunidade.
 
 ---
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ### Kotlin Multiplatform Mobile (KMM)
 
@@ -47,17 +41,17 @@ Enquanto o mercado global vende mais medicamentos, o Afilaxy garante que o inves
 
 ```
 shared/
-├── commonMain/          # 📦 Código compartilhado (Android + iOS)
-│   ├── domain/         # 🎯 Regras de negócio
+├── commonMain/          # Código compartilhado (Android + iOS)
+│   ├── domain/         # Regras de negócio
 │   │   ├── model/      # Emergency, CheckIn, RiskScore, HealthProfessional...
 │   │   ├── repository/ # Interfaces (EmergencyRepository, LocationRepository...)
 │   │   └── usecase/    # CreateEmergencyUseCase
-│   ├── data/           # 💾 Implementações (Firestore, GPS, Preferences)
-│   ├── presentation/   # 🎨 13 ViewModels compartilhados
+│   ├── data/           # Implementações (Firestore, GPS, Preferences)
+│   ├── presentation/   # 13 ViewModels compartilhados
 │   ├── util/           # Logger multiplataforma, TimeUtils
-│   └── di/             # 💉 Koin modules
-├── androidMain/        # 🤖 AndroidLogger, AndroidPlatform
-└── iosMain/            # 🍎 IOSLogger, IOSPlatform
+│   └── di/             # Koin modules
+├── androidMain/        # AndroidLogger, AndroidPlatform
+└── iosMain/            # IOSLogger, IOSPlatform
 ```
 
 📐 **Diagramas detalhados**: [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -79,11 +73,11 @@ shared/
 | **Detekt** | — | Análise estática Kotlin (CI obrigatório) |
 | **SwiftLint** | — | Análise estática Swift (CI obrigatório) |
 | **WorkManager** | 2.9.0 | Check-ins agendados matinal/noturno |
-| **Google Maps** | 4.3.3 | Mapa de helpers e UBS |
+| **Google Maps** | 4.3.3 | Mapa de voluntários e estabelecimentos |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Pré-requisitos
 
@@ -126,9 +120,9 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 
 ---
 
-## 📱 Estado Atual das Plataformas
+## Estado Atual das Plataformas
 
-### Android — v2.3.0 · Publicado na Google Play
+### Android — v2.3.1 · Publicado na Google Play
 
 | Feature | Status |
 |---------|--------|
@@ -136,17 +130,16 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 | Emergência P2P com geolocalização | ✅ |
 | Chat em tempo real (Firestore) | ✅ |
 | Push notifications (FCM) | ✅ |
-| Modo Apoiador (helper toggle, raio 250m) | ✅ |
-| Check-ins proativos (manhã/noite) | ✅ |
-| Score de risco de crise (AQI + clima + perfil clínico) | ✅ |
+| Modo Ajudante (voluntário, raio 250m) | ✅ |
+| Check-ins de bem-estar (manhã/noite) | ✅ |
+| Score de risco contextual (AQI + clima + perfil) | ✅ |
 | Notificações preditivas baseadas em risco | ✅ |
-| Perfil médico (medicações, exames, protocolo) | ✅ |
+| Perfil de saúde autodeclarado | ✅ |
 | Feed da comunidade (posts, likes) | ✅ |
 | Portal de profissionais de saúde | ✅ |
-| Dashboard para pneumologistas | ✅ |
 | Histórico de emergências | ✅ |
-| Mapa com geolocalização e helpers | ✅ |
-| Conteúdo educativo (autocuidado, UBS) | ✅ |
+| Mapa com geolocalização e voluntários | ✅ |
+| Conteúdo educativo | ✅ |
 | Sessão única por dispositivo (kick-out automático) | ✅ |
 | Persistência do histórico de risco diário | ✅ |
 | **Total: 25 telas** | ✅ |
@@ -159,52 +152,48 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 | Emergência P2P | ✅ |
 | Chat em tempo real | ✅ |
 | Push notifications | ✅ |
-| Modo Apoiador | ✅ |
-| Check-ins proativos | ✅ |
-| Score de risco de crise | ✅ |
-| Perfil médico | ✅ |
+| Modo Ajudante | ✅ |
+| Check-ins de bem-estar | ✅ |
+| Score de risco contextual | ✅ |
+| Perfil de saúde autodeclarado | ✅ |
 | Feed da comunidade | ✅ |
 | Portal de profissionais | ✅ |
 | Design system nativo (SwiftUI + HIG) | ✅ |
 | Layout adaptativo iPhone/iPad | ✅ |
-| GPS / CoreLocation | 🚧 Em integração |
 | **Total: 13 telas** | ✅ |
 | **Distribuição** | TestFlight (beta) |
 
 ---
 
-## 🔑 Funcionalidades
+## Funcionalidades
 
-### ✅ Implementado
+### Implementado
 
-- **Emergência P2P:** Geolocalização + chat em tempo real com apoiadores próximos (raio 250m)
-- **Score de Risco Preditivo:** Motor heurístico com escala não-linear calibrada pelas diretrizes GINA — combina AQI (WAQI), clima (OpenMeteo), perfil clínico, SAMU acionado e crises dos últimos 7 dias (janela deslizante) para gerar score 0–100 em 4 níveis (Baixo 🟢 / Moderado 🟡 / Alto 🟠 / Muito Alto 🔴). Histórico diário persistido em `risk_scores/{uid}/snapshots/{date}` para futura análise de tendência e ML
-- **Check-ins Proativos:** Diário de sintomas, uso de medicação e contexto clínico (tipo de asma, gravidade) com notificações baseadas no score de risco
-- **Perfil Médico Completo:** Tipo de asma, medicações por categoria, exames, protocolo de crise e contatos de emergência
-- **Portal de Profissionais:** Listagem de pneumologistas e alergistas com filtro por especialidade e planos de assinatura
-- **Dashboard Profissional:** Métricas de pacientes, alertas críticos e taxa de adesão
+- **Emergência P2P:** Geolocalização + chat em tempo real com voluntários próximos (raio 250m)
+- **Score de Risco Contextual:** Motor heurístico com escala não-linear — combina AQI (WAQI), clima (OpenMeteo), perfil autodeclarado e histórico de crises dos últimos 7 dias para gerar score 0–100 em 4 níveis (Baixo / Moderado / Alto / Muito Alto). Histórico diário persistido para futura análise de tendência e ML
+- **Check-ins de Bem-Estar:** Acompanhamento diário matinal e noturno com notificações baseadas no score de risco
+- **Perfil de Saúde Autodeclarado:** Medicações, alergias, condições e contatos de emergência
+- **Portal de Profissionais:** Listagem de profissionais de saúde com filtro por especialidade e planos de assinatura
 - **Feed da Comunidade:** Posts, likes e compartilhamento de experiências
 - **Portal Web:** Landing page para adesão de profissionais com planos de assinatura (React + Vite)
-- **Sessão Única por Dispositivo:** Login em um novo dispositivo encerra automaticamente a sessão anterior com alerta ao usuário — prevenção de acesso simultâneo à mesma conta
-- **Contagem de Crises (Janela Deslizante):** Contador de pedidos de socorro usa os últimos 7 dias corridos (não semana ISO), garantindo que crises de domingo não sejam ignoradas na segunda-feira
+- **Sessão Única por Dispositivo:** Login em novo dispositivo encerra automaticamente a sessão anterior
+- **Contagem de Crises (Janela Deslizante):** Contador usa os últimos 7 dias corridos para garantir que crises de fim de semana não sejam ignoradas
 - **Testes Automatizados:** Unit tests dos ViewModels e repositories (CI verde em shared + Android)
 
-### 🚧 Em Desenvolvimento
+### Em Desenvolvimento
 
-- **GPS iOS (CoreLocation):** Integração de geolocalização nativa para iOS
 - **Assinaturas (Stripe):** Planos pagos para profissionais de saúde
 
-### 🔮 Roadmap
+### Roadmap
 
-- Dashboard de RWE para gestores públicos e indústria farmacêutica
-- Integração com DataSUS
+- Dashboard de dados populacionais para gestores públicos
 - Hotspots de crises (clustering geoespacial)
-- Mapa de UBS com disponibilidade de medicação gratuita
-- Modelo ML personalizado (substituir heurística por predição supervisionada com dados dos check-ins)
+- Mapa de estabelecimentos com disponibilidade de medicação gratuita
+- Modelo ML personalizado (substituir heurística por predição supervisionada com dados reais dos check-ins)
 
 ---
 
-## ⚙️ CI/CD
+## CI/CD
 
 4 pipelines automáticos em todo `git push main`:
 
@@ -212,61 +201,48 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 |----------|--------|-----------|
 | **Shared Tests** | ubuntu | Compila e roda testes unitários KMM |
 | **Android CI** | ubuntu | Detekt + build debug Android |
-| **iOS Build & Export** | macos-15 / Xcode 16 | SwiftLint + archive + upload TestFlight |
+| **iOS Build & Export** | macos-latest | SwiftLint + archive + upload TestFlight |
 | **Secure Deploy** | ubuntu | Assina AAB + deploy interno Play Store |
 
 ---
 
-## 💰 Modelo de Negócio
+## Modelo de Negócio
 
 O modelo evolui em três estágios, do mais imediato ao mais estratégico:
 
 ### Estágio 1 — B2B · Ativo
 
-Assinaturas para profissionais de saúde interessados no público asmático:
-
-- Pneumologistas e alergistas
-- Fisioterapeutas pulmonares
-- Psicólogos e psicanalistas (pacientes asmáticos têm maior incidência de ansiedade)
-- Outros especialistas que atendem esse perfil de paciente
+Assinaturas para profissionais de saúde que atendem a comunidade de usuários da plataforma:
 
 Benefícios da assinatura:
-- ✅ Visibilidade junto a pacientes qualificados e engajados
-- ✅ Dashboard com dados de adesão e crises dos pacientes que vincularam o profissional no app
+- ✅ Visibilidade junto a usuários engajados
 - ✅ Canal para publicação de conteúdo educativo
-- ✅ Apoio a uma iniciativa de saúde pública
+- ✅ Apoio a uma iniciativa de impacto comunitário
 
-**Plano:**
-- **Profissional da Saúde** (R$ 199/mês): Perfil listado com informações de especialidade, área de atuação, contato, completude do perfil, conteúdo publicado, atividade na plataforma e analytics do próprio perfil.
-
-> ⚠️ **Nota regulatória:** A plataforma não exibe avaliações públicas de profissionais de saúde por pacientes, em conformidade com as resoluções do CFM, COFFITO e CFP que vedam essa prática. O critério de destaque é exclusivamente objetivo e não comercial.
-
----
+**Plano Profissional da Saúde** (R$ 199/mês): Perfil listado com informações de especialidade, área de atuação, contato e analytics do próprio perfil.
 
 ### Estágio 2 — B2B2G · Em estruturação
 
-Com a base de dados consolidada, parcerias com clínicas e operadoras de saúde para uso dos dados populacionais na previsão de demanda por medicamentos e internações, reduzindo custos operacionais e qualificando o atendimento.
-
----
+Com a base de dados consolidada, parcerias com clínicas e operadoras de saúde para uso dos dados populacionais na previsão de demanda e alocação de recursos.
 
 ### Estágio 3 — B2G · Visão de longo prazo
 
-O Governo passa a ser cliente dos dados agregados para identificar municípios e bairros com maior incidência de asma, alocando recursos — UBS, medicamentos, campanhas — com muito maior assertividade. O objetivo é transformar o comportamento informal de socorro em dado clínico inteligente que retroalimenta o SUS.
+Dados agregados para gestores públicos identificarem regiões com maior concentração de emergências comunitárias, alocando recursos com maior assertividade.
 
 ---
 
-## 🏆 Trajetória
+## Trajetória
 
 | Programa | Resultado |
 |----------|-----------|
 | **Ideiaz** | Participante |
 | **InovAtiva Brasil** | Graduado |
 | **Parque Tecnológico de Santos** | Empresa apoiada |
-| **InovAtiva Impacto 2026** | Candidato (mentorias regulatórias, tecnológicas e de mercado) |
+| **InovAtiva Impacto 2026** | Candidato |
 
 ---
 
-## 🤝 Contribuindo
+## Contribuindo
 
 Contribuições são bem-vindas! Veja [CONTRIBUTING.md](CONTRIBUTING.md) para detalhes.
 
@@ -285,22 +261,13 @@ Contribuições são bem-vindas! Veja [CONTRIBUTING.md](CONTRIBUTING.md) para de
 
 ---
 
-## 📄 Licença
+## Licença
 
-MIT License - veja [LICENSE](LICENSE) para detalhes.
-
----
-
-## 🌟 Como Apoiar
-
-- **Profissionais de Saúde:** Ajude a curar conteúdo educativo e valide o algoritmo de risco
-- **Desenvolvedores:** Contribua com código
-- **Gestores Públicos:** Use nossos dados para melhorar a governança da asma no SUS
-- **Pacientes:** Compartilhe sua experiência e ajude a treinar o modelo
+MIT License — veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-## 🙏 Agradecimentos
+## Agradecimentos
 
 - [GitLive Firebase KMM](https://github.com/GitLiveApp/firebase-kotlin-sdk)
 - [Koin](https://insert-koin.io/)
@@ -311,4 +278,4 @@ MIT License - veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-**Desenvolvido com ❤️ para democratizar o acesso à saúde respiratória no Brasil** 🇧🇷
+**Desenvolvido com ❤️ para conectar pessoas quando mais precisam** 🇧🇷
