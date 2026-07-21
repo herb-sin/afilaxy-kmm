@@ -157,12 +157,7 @@ jobs:
           export PROFILE_PATH
 
           # Python decodifica base64 sem depender de flags BSD vs GNU
-          python3 -c "
-import base64, os
-decoded = base64.b64decode(os.environ['PROFILE_B64'])
-with open(os.environ['PROFILE_PATH'], 'wb') as f:
-    f.write(decoded)
-"
+          python3 -c "import base64,os; open(os.environ['PROFILE_PATH'],'wb').write(base64.b64decode(os.environ['PROFILE_B64']))"
           echo "Tamanho do perfil decodificado: $(wc -c < "$PROFILE_PATH") bytes"
 
           # Extrai UUID do XML embutido no binário (evita security cms -D)
