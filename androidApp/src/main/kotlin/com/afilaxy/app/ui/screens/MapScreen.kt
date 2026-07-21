@@ -254,7 +254,7 @@ fun MapErrorFallback(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = "Verifique se a API key do Google Maps está configurada corretamente no arquivo local.properties",
+                    text = "O mapa não pôde ser carregado. Verifique sua conexão com a internet e tente novamente.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     textAlign = TextAlign.Center
