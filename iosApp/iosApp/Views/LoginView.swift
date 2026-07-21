@@ -186,8 +186,9 @@ struct LoginView: View {
                 container.auth.vm?.updateError(message: "Não foi possível obter credenciais do Google.")
                 return
             }
+            let accessToken = result.user.accessToken.tokenString
             FileLogger.shared.write(level: "INFO", tag: "LoginView", message: "GIDSignIn ok, chamando onGoogleSignInResult")
-            container.auth.vm?.onGoogleSignInResult(idToken: idToken)
+            container.auth.vm?.onGoogleSignInResult(idToken: idToken, accessToken: accessToken)
         }
     }
 
