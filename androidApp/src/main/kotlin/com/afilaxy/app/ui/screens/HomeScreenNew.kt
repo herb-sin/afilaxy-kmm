@@ -78,6 +78,7 @@ fun HomeScreenNew(
     var showHelperConsentDialog by remember { mutableStateOf(false) }
     var showNps by remember { mutableStateOf(false) }
     var showPostCrisisDialog by remember { mutableStateOf(false) }
+    val today = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) }
 
     // NPS: exibe uma vez, 7 dias após a primeira emergência
     LaunchedEffect(Unit) {
@@ -226,8 +227,8 @@ fun HomeScreenNew(
         // Check-in card — exibido apenas se houver navegação e dentro da janela horária
         if (onNavigateToCheckIn != null) {
             val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-            val morningDone = prefsRepo.getBoolean("checkin_morning_done_${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())}", false)
-            val eveningDone = prefsRepo.getBoolean("checkin_evening_done_${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())}", false)
+            val morningDone = prefsRepo.getBoolean("checkin_morning_done_$today", false)
+            val eveningDone = prefsRepo.getBoolean("checkin_evening_done_$today", false)
             if (hour < 14 && !morningDone) {
                 item { HomeCheckInCard(type = "MORNING", onNavigate = { onNavigateToCheckIn("MORNING") }) }
             } else if (hour >= 18 && !eveningDone) {

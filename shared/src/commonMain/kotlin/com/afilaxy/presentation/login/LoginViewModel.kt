@@ -85,7 +85,6 @@ class LoginViewModel(
                     _state.update { it.copy(isLoading = false, isLoggedIn = true) }
                 }
                 .onFailure { exception ->
-                    println("GoogleSignIn_ERROR: ${exception::class.simpleName}: ${exception.message}")
                     _state.update {
                         it.copy(
                             isLoading = false,
@@ -122,7 +121,6 @@ class LoginViewModel(
     }
 
     fun onGoogleSignInError(message: String) {
-        println("GoogleSignIn_ERROR: onGoogleSignInError chamado: $message")
         _state.update { it.copy(isLoading = false, error = message) }
     }
 
