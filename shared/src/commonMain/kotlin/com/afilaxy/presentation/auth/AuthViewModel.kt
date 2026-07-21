@@ -104,7 +104,7 @@ class AuthViewModel(
         _state.update { it.copy(isLoading = false, error = message) }
     }
 
-    fun onGoogleSignInResult(idToken: String, accessToken: String) {
+    fun onGoogleSignInResult(idToken: String, accessToken: String?) {
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             authRepository.loginWithGoogleCredential(idToken, accessToken)
