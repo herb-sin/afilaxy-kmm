@@ -372,11 +372,12 @@ class ViewModelProvider {
             let chatRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? ChatRepository
             let authRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? AuthRepository
             let emergencyRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? EmergencyRepository
-            guard let cr = chatRepo, let ar = authRepo, let er = emergencyRepo else {
+            let reviewRepo = try KoinHelperKt.getKoin().get(qualifier: nil, parameters: nil) as? ReviewRepository
+            guard let cr = chatRepo, let ar = authRepo, let er = emergencyRepo, let rr = reviewRepo else {
                 FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: cast repos falhou")
                 return nil
             }
-            return ChatViewModel(emergencyId: emergencyId, chatRepository: cr, authRepository: ar, emergencyRepository: er)
+            return ChatViewModel(emergencyId: emergencyId, chatRepository: cr, authRepository: ar, emergencyRepository: er, reviewRepository: rr)
         } catch {
             FileLogger.shared.write(level: "ERROR", tag: "ViewModelProvider", message: "getChatViewModel: \(error.localizedDescription)")
             return nil
