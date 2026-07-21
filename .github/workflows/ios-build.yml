@@ -159,11 +159,25 @@ jobs:
           # Python decodifica base64 sem depender de flags BSD vs GNU
           python3 -c "import base64,os; open(os.environ['PROFILE_PATH'],'wb').write(base64.b64decode(os.environ['PROFILE_B64']))"
           echo "Tamanho do perfil decodificado: $(wc -c < "$PROFILE_PATH") bytes"
+          echo "PROFILE_B64 length: ${#PROFILE_B64}"
+          file "$PROFILE_PATH"
 
-          # Extrai UUID do XML embutido no binário (evita security cms -D)
-          PROFILE_UUID=$(strings "$PROFILE_PATH" | grep -E '^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$' | head -1)
+          # Extrai UUID via Python regex no binário bruto (não depende de security cms -D)
+          PROFILE_UUID=$(python3 -c "
+import re, os
+data = open(os.environ['PROFILE_PATH'], 'rb').read()
+m = re.search(rb'<key>UUID</key>\s*<string>([^<]+)</string>', data)
+print(m.group(1).decode() if m else '')
+")
+          # Fallback: security cms -D via stdin
           if [[ -z "$PROFILE_UUID" ]]; then
-            echo "❌ UUID não encontrado no perfil"
+            echo "Python regex falhou — tentando security cms -D"
+            PROFILE_UUID=$(security cms -D < "$PROFILE_PATH" 2>/dev/null \
+              | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin 2>/dev/null || true)
+          fi
+          if [[ -z "$PROFILE_UUID" ]]; then
+            echo "❌ UUID não encontrado — dump dos primeiros 64 bytes:"
+            xxd "$PROFILE_PATH" | head -4
             exit 1
           fi
           echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
