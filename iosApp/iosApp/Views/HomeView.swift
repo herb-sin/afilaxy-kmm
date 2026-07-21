@@ -66,7 +66,7 @@ struct HomeView: View {
 
                 // Helper Mode Toggle
                 helperModeCard
-                    .onChange(of: container.emergency.state?.isHelperMode) { _, newValue in
+                    .onChange(of: container.emergency.state?.isHelperMode) { newValue in
                         guard !isTogglingHelper else { return }
                         helperIntendedValue = newValue == true
                     }
