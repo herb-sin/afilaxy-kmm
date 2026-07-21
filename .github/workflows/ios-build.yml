@@ -163,12 +163,7 @@ jobs:
           file "$PROFILE_PATH"
 
           # Extrai UUID via Python regex no binário bruto (não depende de security cms -D)
-          PROFILE_UUID=$(python3 -c "
-import re, os
-data = open(os.environ['PROFILE_PATH'], 'rb').read()
-m = re.search(rb'<key>UUID</key>\s*<string>([^<]+)</string>', data)
-print(m.group(1).decode() if m else '')
-")
+          PROFILE_UUID=$(python3 -c "import re,os; data=open(os.environ['PROFILE_PATH'],'rb').read(); m=re.search(rb'<key>UUID</key>\s*<string>([^<]+)</string>',data); print(m.group(1).decode() if m else '')")
           # Fallback: security cms -D via stdin
           if [[ -z "$PROFILE_UUID" ]]; then
             echo "Python regex falhou — tentando security cms -D"
