@@ -338,7 +338,19 @@ fun NavGraph(
                 HomeScreenNew(
                     weeklyCount = weeklyCountState.value,
                     totalEmergencies = totalEmergenciesState.value,
-                    onNavigateToEmergency = { navController.navigate(AppRoutes.EMERGENCY) },
+                    onNavigateToEmergency = {
+                        val state = emergencyViewModel?.state?.value
+                        val eid = state?.emergencyId
+                        if (state?.hasActiveEmergency == true
+                            && state.emergencyStatus == "matched"
+                            && eid != null
+                        ) {
+                            // Emergência já aceita: vai direto ao chat sem passar pelo EmergencyScreen
+                            navController.navigate(AppRoutes.chat(eid)) { launchSingleTop = true }
+                        } else {
+                            navController.navigate(AppRoutes.EMERGENCY)
+                        }
+                    },
                     onNavigateToCheckIn = { type -> navController.navigate(AppRoutes.checkIn(type)) },
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },

@@ -336,14 +336,13 @@ struct HomeView: View {
             title: isActive ? "Emergência Ativa" : "🆘 Solicitar Ajuda",
             isActive: isActive
         ) {
-            if isActive {
-                // Requester clicou em "Emergência Ativa" — abre EmergencyView com countdown.
-                // NÃO usa AfilaxyOpenEmergency pois esse canal sempre abre EmergencyResponseView
-                // (tela do helper), o que causava o loop de self-match dismiss quando o próprio
-                // usuário era o requester.
-                navigationPath.append(AppRoute.emergency)
+            if isActive,
+               (state?.emergencyStatus as? String) == "matched",
+               let eid = state?.emergencyId as? String {
+                // Emergência já aceita — vai direto ao chat sem passar pelo EmergencyView
+                navigationPath.append(AppRoute.chat(eid))
             } else {
-                // Abre a tela de criação de emergência
+                // Abre EmergencyView (criação ou countdown enquanto status == "waiting")
                 navigationPath.append(AppRoute.emergency)
             }
         }
