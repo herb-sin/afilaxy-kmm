@@ -16,10 +16,8 @@ class FileLogger {
     }()
 
     private init() {
-        #if DEBUG
         setupLogFile()
         cleanOldLogs()
-        #endif
     }
 
     private func setupLogFile() {
@@ -38,7 +36,6 @@ class FileLogger {
     }
 
     func write(level: String, tag: String, message: String) {
-        #if DEBUG
         queue.async { [weak self] in
             guard let self, let url = self.logFileURL else { return }
 
@@ -55,7 +52,6 @@ class FileLogger {
                 try? handle.close()
             }
         }
-        #endif
     }
 
     private func rotateLogFile() {
