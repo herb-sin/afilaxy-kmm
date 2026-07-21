@@ -142,15 +142,24 @@ jobs:
       # O perfil precisa incluir Push Notifications + Sign in with Apple — deve ser criado/regenerado
       # no Apple Developer Portal após habilitar essas capabilities no App ID.
       - name: Inject Provisioning Profile
+        env:
+          PROFILE_B64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
         run: |
+          if [[ -z "$PROFILE_B64" ]]; then
+            echo "❌ Secret IOS_PROVISION_PROFILE_BASE64 não configurado."
+            echo "   Crie um perfil App Store no Apple Developer Portal para com.afilaxy.app"
+            echo "   (incluindo Push Notifications + Sign in with Apple) e adicione o"
+            echo "   conteúdo base64 como secret IOS_PROVISION_PROFILE_BASE64 no repositório."
+            exit 1
+          fi
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}" | base64 --decode \
+          echo "$PROFILE_B64" | base64 --decode \
             > "$HOME/Library/MobileDevice/Provisioning Profiles/afilaxy_appstore.mobileprovision"
           PROFILE_UUID=$(security cms -D -i \
             "$HOME/Library/MobileDevice/Provisioning Profiles/afilaxy_appstore.mobileprovision" \
             | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
           echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
-          echo "Perfil injetado: $PROFILE_UUID"
+          echo "✅ Perfil injetado: $PROFILE_UUID"
 
       # Injeta método de export e Team ID real no ExportOptions.plist
       # Mapeamento para nomes atuais do Xcode 16+
