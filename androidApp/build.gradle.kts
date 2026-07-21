@@ -12,7 +12,7 @@ android {
     defaultConfig {
         applicationId = "com.afilaxy.app"
         minSdk = 23
-        targetSdk = 35
+        targetSdk = 36
 
         // Leitura única do local.properties para todo o defaultConfig
         val properties = org.jetbrains.kotlin.konan.properties.Properties()
