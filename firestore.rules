@@ -85,15 +85,20 @@ service cloud.firestore {
         && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.specialty, 2, 50)
         && request.resource.data.subscriptionStatus in ['active', 'inactive', 'trial'];
-      allow update: if isOwner(professionalId);
+      // subscriptionStatus must not change via client — only Stripe webhook (Cloud Function) updates it.
+      allow update: if isOwner(professionalId)
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
       allow delete: if isOwner(professionalId);
     }
 
     // Health professionals collection (usado pelo app KMM)
     match /health_professionals/{professionalId} {
       allow read: if isAuthenticated();
-      // Writes apenas via Cloud Functions (Stripe webhook) ou pelo próprio profissional
-      allow create, update: if isAuthenticated() && isOwner(professionalId);
+      allow create: if isAuthenticated() && isOwner(professionalId);
+      // subscriptionStatus must not change via client — only Stripe webhook (Cloud Function) updates it.
+      allow update: if isAuthenticated() && isOwner(professionalId)
+        && (!('subscriptionStatus' in request.resource.data)
+            || request.resource.data.subscriptionStatus == resource.data.subscriptionStatus);
       allow delete: if false;
     }
     

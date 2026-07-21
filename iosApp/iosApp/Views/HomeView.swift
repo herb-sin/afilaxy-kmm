@@ -604,17 +604,17 @@ struct HomeView: View {
 // MARK: - Supporting Views
 
 struct PendingEmergencyRow: View {
-    let emergency: Any // Placeholder type
+    let emergency: (id: String, name: String)
     let onAccept: () -> Void
     let onDismiss: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(.afiError)
-            
+
             VStack(alignment: .leading, spacing: 2) {
-                Text("Pessoa precisa de ajuda") // Fallback since emergency.name doesn't exist
+                Text(emergency.name.isEmpty ? "Pessoa precisa de ajuda" : emergency.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.afiOnErrorContainer)
