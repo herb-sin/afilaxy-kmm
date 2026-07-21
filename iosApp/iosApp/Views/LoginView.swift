@@ -19,6 +19,7 @@ struct LoginView: View {
     @State private var currentNonce: String?
     @StateObject private var appleCoordinator = AppleSignInCoordinator()
     @State private var appleController: ASAuthorizationController?
+    @State private var showLogs = false
 
     var body: some View {
         let state = container.auth.state
@@ -28,6 +29,7 @@ struct LoginView: View {
                 Text("Afilaxy")
                     .font(.system(size: 48, weight: .bold))
                     .foregroundColor(.red)
+                    .onTapGesture(count: 5) { showLogs = true }
                 Text("Sistema de Emergência")
                     .font(.subheadline)
                     .foregroundColor(.gray)
@@ -133,6 +135,7 @@ struct LoginView: View {
                 NavigationStack { RegisterView() }
             }
         }
+        .sheet(isPresented: $showLogs) { LogViewerSheet() }
         .onReceive(container.auth.$state) { s in
             if s?.isAuthenticated == true {
                 // Salva FCM token no login — garante que o token está associado ao uid atual
@@ -280,6 +283,46 @@ class AppleSignInCoordinator: NSObject, ObservableObject, ASAuthorizationControl
             message: "ASAuthorizationController erro domain=\(nsError.domain) code=\(nsError.code) msg=\(error.localizedDescription)")
         guard nsError.code != 1001 else { return }
         onError?("Erro ao entrar com Apple. Tente novamente.")
+    }
+}
+
+struct LogViewerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var logContent = ""
+
+    var body: some View {
+        NavigationStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    Text(logContent)
+                        .font(.system(size: 11, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .id("content")
+                }
+                .onAppear { proxy.scrollTo("content", anchor: .bottom) }
+            }
+            .navigationTitle("Logs de diagnóstico")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Fechar") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ShareLink(item: logContent) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .disabled(logContent.isEmpty)
+                }
+            }
+        }
+        .onAppear { loadLogs() }
+    }
+
+    private func loadLogs() {
+        let urls = FileLogger.shared.getAllLogFileURLs()
+        let combined = urls.compactMap { try? String(contentsOf: $0, encoding: .utf8) }.joined(separator: "\n--- arquivo anterior ---\n")
+        logContent = combined.isEmpty ? "(nenhum log disponível)" : combined
     }
 }
 
