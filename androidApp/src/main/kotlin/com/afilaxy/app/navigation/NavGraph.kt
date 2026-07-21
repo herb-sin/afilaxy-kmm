@@ -13,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.afilaxy.util.FileLogger
+import com.afilaxy.util.last7DayUtcKeys
+import com.afilaxy.util.sumRollingDays
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,13 +31,11 @@ import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import java.util.Calendar
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 
 
-private const val ISO_MIN_DAYS_IN_FIRST_WEEK = 4 // ISO 8601: semana tem mínimo 4 dias
 
 @Composable
 fun NavGraph(
@@ -112,17 +112,7 @@ fun NavGraph(
             weeklyCountState.value = 0
             return@DisposableEffect onDispose {}
         }
-        // Compute the last 7 date keys (YYYY-MM-DD UTC) for rolling-7-day window.
-        // UTC matches the Cloud Function's dateKey = new Date(ts).toISOString().slice(0,10)
-        // SimpleDateFormat is safe here: constructed on main thread, list fully evaluated before listener fires.
-        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
-            timeZone = java.util.TimeZone.getTimeZone("UTC")
-        }
-        val last7Days = (0 until 7).map { daysAgo ->
-            val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-            cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
-            sdf.format(cal.time)
-        }
+        val last7Days = last7DayUtcKeys()
 
         val listener = FirebaseFirestore.getInstance()
             .collection("user_stats")
@@ -130,28 +120,17 @@ fun NavGraph(
             .addSnapshotListener { doc, error ->
                 if (error != null) { weeklyCountState.value = 0; return@addSnapshotListener }
 
-                // Rolling 7-day sum from dailyCount (new field added by Cloud Function)
-                // Falls back to weeklyCount (ISO week) for older records without dailyCount
                 @Suppress("UNCHECKED_CAST")
                 val dailyMap = doc?.get("dailyCount") as? Map<String, Any>
-                val rolling7d = if (dailyMap != null) {
-                    last7Days.sumOf { dateKey ->
-                        when (val v = dailyMap[dateKey]) {
-                            is Long   -> v.toInt()
-                            is Double -> v.toInt()
-                            is Number -> v.toInt()
-                            else      -> 0
-                        }
-                    }
-                } else {
-                    // Fallback: ISO week (legacy records without dailyCount) — use UTC to match Cloud Function
-                    val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
-                        minimalDaysInFirstWeek = ISO_MIN_DAYS_IN_FIRST_WEEK
-                        firstDayOfWeek = Calendar.MONDAY
-                    }
-                    val weekKey = "%d-W%02d".format(cal.weekYear, cal.get(Calendar.WEEK_OF_YEAR))
+                val rolling7d = sumRollingDays(dailyMap, last7Days) ?: run {
+                    // Fallback: ISO week (legacy records without dailyCount)
                     @Suppress("UNCHECKED_CAST")
                     val weekMap = doc?.get("weeklyCount") as? Map<String, Any>
+                    val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+                        minimalDaysInFirstWeek = 4
+                        firstDayOfWeek = java.util.Calendar.MONDAY
+                    }
+                    val weekKey = "%d-W%02d".format(cal.weekYear, cal.get(java.util.Calendar.WEEK_OF_YEAR))
                     when (val v = weekMap?.get(weekKey)) {
                         is Long -> v.toInt(); is Double -> v.toInt()
                         is Number -> v.toInt(); else -> 0

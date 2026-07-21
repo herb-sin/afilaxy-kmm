@@ -13,6 +13,8 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
+import com.afilaxy.util.last7DayUtcKeys
+import com.afilaxy.util.sumRollingDays
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -169,17 +171,23 @@ class EnvironmentalRepositoryImpl(
                 val weeklyMap = try { userStatsDoc?.get<Any?>("weeklyCount") as? Map<String, Any> }
                     catch (e: Exception) { null }
                 crises30d = total.coerceAtMost(50)
-                // Use current ISO week key (UTC) matching Cloud Function format
-                val nowDate = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-                val dayOfYear = nowDate.date.dayOfYear
-                val weekdayNum = nowDate.date.dayOfWeek.ordinal + 1  // 1=Mon, 7=Sun
-                val isoWeek = (dayOfYear - weekdayNum + 10) / 7
-                val currentWeekKey = "${nowDate.year}-W${isoWeek.toString().padStart(2, '0')}"
-                crises7d = weeklyMap?.get(currentWeekKey)?.let { v ->
-                    when (v) { is Long -> v.toInt(); is Double -> v.toInt(); is Number -> v.toInt(); else -> 0 }
-                } ?: weeklyMap?.values?.maxOfOrNull { v ->
-                    when (v) { is Long -> v.toInt(); is Double -> v.toInt(); is Number -> v.toInt(); else -> 0 }
-                } ?: 0
+                @Suppress("UNCHECKED_CAST")
+                val dailyMap = try { userStatsDoc?.get<Any?>("dailyCount") as? Map<String, Any> }
+                    catch (e: Exception) { null }
+                val rolling = sumRollingDays(dailyMap, last7DayUtcKeys())
+                crises7d = rolling ?: run {
+                    // Fallback: ISO week (legacy records without dailyCount)
+                    val nowDate = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+                    val dayOfYear = nowDate.date.dayOfYear
+                    val weekdayNum = nowDate.date.dayOfWeek.ordinal + 1
+                    val isoWeek = (dayOfYear - weekdayNum + 10) / 7
+                    val currentWeekKey = "${nowDate.year}-W${isoWeek.toString().padStart(2, '0')}"
+                    weeklyMap?.get(currentWeekKey)?.let { v ->
+                        when (v) { is Long -> v.toInt(); is Double -> v.toInt(); is Number -> v.toInt(); else -> 0 }
+                    } ?: weeklyMap?.values?.maxOfOrNull { v ->
+                        when (v) { is Long -> v.toInt(); is Double -> v.toInt(); is Number -> v.toInt(); else -> 0 }
+                    } ?: 0
+                }
             }
 
             // samuCalled: last 12 months to bound the scan as the dataset grows
