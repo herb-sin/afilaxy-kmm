@@ -40,8 +40,8 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.app.ui.components.RiskWidget
-import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
+import com.afilaxy.domain.repository.ReviewRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.app.BuildConfig
@@ -68,7 +68,7 @@ fun HomeScreenNew(
     val emergencyState by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
     val prefsRepo: PreferencesRepository = koinInject()
-    val emergencyRepo: EmergencyRepository = koinInject()
+    val reviewRepo: ReviewRepository = koinInject()
     val scope = rememberCoroutineScope()
     var isHelperPending by rememberSaveable { mutableStateOf(false) }
     var helperIntended by rememberSaveable { mutableStateOf(false) }
@@ -349,7 +349,7 @@ fun HomeScreenNew(
             onSubmit = { score ->
                 showNps = false
                 prefsRepo.putBoolean("nps_shown", true)
-                scope.launch { emergencyRepo.submitNps(score) }
+                scope.launch { reviewRepo.submitNps(score) }
             },
             onDismiss = {
                 showNps = false

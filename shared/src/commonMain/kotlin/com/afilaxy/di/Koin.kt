@@ -36,6 +36,7 @@ fun sharedModule(): Module = module {
     single<AuthRepository> { AuthRepositoryImpl(get(), get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get()) }
     single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get()) }
+    single<ReviewRepository> { ReviewRepositoryImpl(get(), get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
     single<NotificationRepository> { NotificationRepositoryImpl(get(), get()) }
@@ -57,7 +58,7 @@ fun sharedModule(): Module = module {
     // ViewModels
     single { AuthViewModel(get()) }
     factory { LoginViewModel(get()) }
-    factory { (emergencyId: String) -> ChatViewModel(emergencyId, get(), get(), get()) }
+    factory { (emergencyId: String) -> ChatViewModel(emergencyId, get(), get(), get(), get()) }
     single { EmergencyViewModel(get(), get(), get()) }
     factory { ProfileViewModel(get(), get()) }
     factory { HistoryViewModel(get(), get()) }

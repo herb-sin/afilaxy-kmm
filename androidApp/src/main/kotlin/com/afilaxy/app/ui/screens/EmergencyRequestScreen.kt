@@ -20,8 +20,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.afilaxy.app.R
-import com.afilaxy.domain.repository.EmergencyRepository
 import com.afilaxy.domain.repository.PreferencesRepository
+import com.afilaxy.domain.repository.ReviewRepository
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
 import kotlinx.coroutines.delay
@@ -42,7 +42,7 @@ fun EmergencyRequestScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    val emergencyRepo: EmergencyRepository = koinInject()
+    val reviewRepo: ReviewRepository = koinInject()
     val prefs: PreferencesRepository = koinInject()
     val scope = rememberCoroutineScope()
 
@@ -57,7 +57,7 @@ fun EmergencyRequestScreen(
     var selectedSeverity by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedSeverity) {
         val sev = selectedSeverity ?: return@LaunchedEffect
-        scope.launch { emergencyRepo.updateSeverity(emergencyId, sev) }
+        scope.launch { reviewRepo.updateSeverity(emergencyId, sev) }
     }
 
     var secondsLeft by remember { mutableStateOf(180) }

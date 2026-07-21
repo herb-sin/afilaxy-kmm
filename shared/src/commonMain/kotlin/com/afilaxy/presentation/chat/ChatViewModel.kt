@@ -5,6 +5,7 @@ import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.ChatRepository
 import com.afilaxy.domain.repository.EmergencyRepository
+import com.afilaxy.domain.repository.ReviewRepository
 import com.rickclephas.kmm.viewmodel.KMMViewModel
 import com.rickclephas.kmm.viewmodel.coroutineScope
 import kotlinx.coroutines.delay
@@ -23,7 +24,8 @@ class ChatViewModel(
     private val emergencyId: String,
     private val chatRepository: ChatRepository,
     private val authRepository: AuthRepository,
-    private val emergencyRepository: EmergencyRepository
+    private val emergencyRepository: EmergencyRepository,
+    private val reviewRepository: ReviewRepository
 ) : KMMViewModel() {
 
     private val _state = MutableStateFlow(ChatState(
@@ -51,7 +53,7 @@ class ChatViewModel(
     private fun loadParticipants() {
         viewModelScope.coroutineScope.launch {
             repeat(5) { attempt ->
-                emergencyRepository.getEmergencyParticipants(emergencyId)
+                reviewRepository.getEmergencyParticipants(emergencyId)
                     .onSuccess { (requesterId, helperId) ->
                         val currentUserId = _state.value.currentUserId
                         val isRequester = currentUserId == requesterId
@@ -125,14 +127,14 @@ class ChatViewModel(
 
     fun onSamuCalled() {
         viewModelScope.coroutineScope.launch {
-            emergencyRepository.updateSamuCalled(emergencyId)
+            reviewRepository.updateSamuCalled(emergencyId)
         }
     }
 
     fun submitReview(rating: Int, comment: String?) {
         val reviewedId = _state.value.reviewedId ?: return
         viewModelScope.coroutineScope.launch {
-            emergencyRepository.submitReview(emergencyId, reviewedId, rating, comment)
+            reviewRepository.submitReview(emergencyId, reviewedId, rating, comment)
         }
     }
 
