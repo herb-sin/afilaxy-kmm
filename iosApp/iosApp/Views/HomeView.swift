@@ -275,7 +275,11 @@ struct HomeView: View {
         statsListener?.remove()
         weeklyCount = -1
 
-        // Compute last-7-day date keys in UTC to match Cloud Function's dailyCount format
+        // Compute last-7-day date keys in UTC to match Cloud Function's dailyCount format.
+        // Must use UTC calendar for date arithmetic — Calendar.current uses local timezone
+        // and could produce the wrong date key at midnight in timezones behind UTC.
+        var utcCal = Calendar(identifier: .gregorian)
+        utcCal.timeZone = TimeZone(identifier: "UTC")!
         let sdf: DateFormatter = {
             let f = DateFormatter()
             f.dateFormat = "yyyy-MM-dd"
@@ -284,7 +288,7 @@ struct HomeView: View {
             return f
         }()
         let last7Days: [String] = (0..<7).map { daysAgo in
-            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+            let date = utcCal.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
             return sdf.string(from: date)
         }
         FileLogger.shared.write(level: "DEBUG", tag: "HomeView",
