@@ -354,25 +354,39 @@ class EmergencyRepositoryImpl(
             val userId = auth.currentUser?.uid
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
 
-            val doc = firestore.collection("emergency_requests").document(emergencyId).get()
-            if (!doc.exists) return Result.failure(IllegalStateException("Emergência não encontrada"))
+            val emergencyRef = firestore.collection("emergency_requests").document(emergencyId)
+            var capturedHelperId: String? = null
 
-            val requesterId = doc.get<String?>("requesterId")
-            val helperId = doc.get<String?>("helperId")
-            if (requesterId != userId && helperId != userId) {
-                return Result.failure(IllegalStateException("Não autorizado"))
+            // Transação atômica — elimina race condition de resolução simultânea
+            // onde dois participantes poderiam resolver ao mesmo tempo passando na
+            // verificação de autorização e gerando estado inconsistente.
+            kotlinx.coroutines.withTimeout(10_000) {
+                firestore.runTransaction {
+                    val doc = get(emergencyRef)
+                    if (!doc.exists) throw IllegalStateException("Emergência não encontrada")
+
+                    val requesterId = doc.get<String?>("requesterId")
+                    val helperId = doc.get<String?>("helperId")
+                    capturedHelperId = helperId
+                    if (requesterId != userId && helperId != userId) {
+                        throw IllegalStateException("Não autorizado")
+                    }
+
+                    if (status == EmergencyStatus.RESOLVED) {
+                        update(emergencyRef,
+                            "status" to status.dbValue,
+                            "active" to false,
+                            "resolvedAt" to getCurrentTimeMillis()
+                        )
+                    } else {
+                        update(emergencyRef, "status" to status.dbValue)
+                    }
+                }
             }
 
-            val updates = if (status == EmergencyStatus.RESOLVED) {
-                mapOf("status" to status.dbValue, "active" to false, "resolvedAt" to getCurrentTimeMillis())
-            } else {
-                mapOf("status" to status.dbValue)
-            }
-
-            firestore.collection("emergency_requests").document(emergencyId).update(updates)
-
-            // Post system message for parity with iOS resolve path — both parties see closure in chat
+            // Mensagem de sistema pós-encerramento — fora da transação (best-effort)
             if (status == EmergencyStatus.RESOLVED) {
+                val helperId = capturedHelperId
                 @OptIn(ExperimentalUuidApi::class)
                 val msgId = Uuid.random().toString()
                 val resolverName = try {
@@ -391,7 +405,6 @@ class EmergencyRepositoryImpl(
                             "senderId" to userId,
                             "senderName" to resolverName,
                             "message" to "✅ $resolverName encerrou a emergência.",
-                            // Client-side Long to match ChatRepositoryImpl sort path (avoids ts=0 pending state)
                             "timestamp" to getCurrentTimeMillis().toDouble(),
                             "isFromHelper" to (userId == helperId)
                         ))
@@ -401,6 +414,8 @@ class EmergencyRepositoryImpl(
             }
 
             Result.success(Unit)
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            Result.failure(Exception("Tempo esgotado ao atualizar emergência. Tente novamente."))
         } catch (e: Exception) {
             Result.failure(e)
         }

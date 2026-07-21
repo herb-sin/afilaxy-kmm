@@ -28,13 +28,19 @@ class HomeViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val location = locationRepository.getCurrentLocation()
-                if (location != null) {
-                    emergencyRepository.createEmergency(location.latitude, location.longitude)
-                        .onFailure { e ->
-                            _state.update { it.copy(isLoading = false, error = e.message) }
-                            return@launch
-                        }
+                if (location == null) {
+                    _state.update { it.copy(isLoading = false, error = "Não foi possível obter localização") }
+                    return@launch
                 }
+                if (location.latitude !in -90.0..90.0 || location.longitude !in -180.0..180.0) {
+                    _state.update { it.copy(isLoading = false, error = "Localização inválida") }
+                    return@launch
+                }
+                emergencyRepository.createEmergency(location.latitude, location.longitude)
+                    .onFailure { e ->
+                        _state.update { it.copy(isLoading = false, error = e.message) }
+                        return@launch
+                    }
                 _state.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, error = e.message) }
