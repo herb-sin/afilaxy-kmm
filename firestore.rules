@@ -170,7 +170,11 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated()
         && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated()
+      // userId não pode ser alterado — previne transferência de registro entre usuários
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated()
         && resource.data.userId == request.auth.uid;
     }
 
@@ -180,7 +184,10 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated()
         && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated()
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated()
         && resource.data.userId == request.auth.uid;
     }
 
@@ -190,7 +197,10 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated()
         && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated()
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated()
         && resource.data.userId == request.auth.uid;
     }
 

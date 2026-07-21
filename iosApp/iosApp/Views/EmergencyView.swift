@@ -15,6 +15,7 @@ struct EmergencyView: View {
     @State private var lastEmergencyId: String? = nil
     @State private var selectedSeverity: String? = nil
     @State private var showCancelAlert = false
+    @State private var showLocationDeniedAlert = false
 
     var body: some View {
         guard let state = container.emergency.state else {
@@ -68,7 +69,12 @@ struct EmergencyView: View {
             Task {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 await MainActor.run {
-                    FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "calling onCreateEmergency after permission wait")
+                    guard locationManager.hasPermission else {
+                        FileLogger.shared.write(level: "WARN", tag: "EmergencyView", message: "permission denied after wait — aborting emergency creation")
+                        showLocationDeniedAlert = true
+                        return
+                    }
+                    FileLogger.shared.write(level: "INFO", tag: "EmergencyView", message: "permission granted — calling onCreateEmergency after wait")
                     container.emergency.vm?.onCreateEmergency()
                 }
             }
@@ -259,6 +265,16 @@ struct EmergencyView: View {
                     }
                 }
             }
+        }
+        .alert("Localização necessária", isPresented: $showLocationDeniedAlert) {
+            Button("OK", role: .cancel) {}
+            Button("Configurações") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        } message: {
+            Text("Para solicitar ajuda, permita o acesso à localização em Ajustes > Privacidade > Serviços de Localização.")
         }
         .alert("Voltar cancela a emergência?", isPresented: $showCancelAlert) {
             Button("Ficar no countdown", role: .cancel) {}
