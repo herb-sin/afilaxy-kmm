@@ -153,10 +153,10 @@ jobs:
             exit 1
           fi
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "$PROFILE_B64" | base64 --decode \
-            > "$HOME/Library/MobileDevice/Provisioning Profiles/afilaxy_appstore.mobileprovision"
-          PROFILE_UUID=$(security cms -D -i \
-            "$HOME/Library/MobileDevice/Provisioning Profiles/afilaxy_appstore.mobileprovision" \
+          PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/afilaxy_appstore.mobileprovision"
+          printf '%s' "$PROFILE_B64" | openssl base64 -d -out "$PROFILE_PATH"
+          echo "Tamanho do perfil decodificado: $(wc -c < "$PROFILE_PATH") bytes"
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" \
             | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
           echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
           echo "✅ Perfil injetado: $PROFILE_UUID"
