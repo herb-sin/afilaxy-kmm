@@ -75,7 +75,7 @@ fun LoginScreen(
             val account = task.getResult(ApiException::class.java)
             val idToken = account.idToken
             if (idToken != null) {
-                viewModel.onGoogleSignInResult(idToken)
+                viewModel.onGoogleSignInResult(idToken, null)
             } else {
                 viewModel.onGoogleSignInError("ID Token nulo — web_client_id não configurado no Firebase")
             }

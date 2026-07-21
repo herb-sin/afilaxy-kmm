@@ -254,7 +254,7 @@ class AuthRepositoryImpl(
      * Mapeia FirebaseUser + documento Firestore para o modelo User do domínio.
      * Método centralizado para evitar duplicação em login, getCurrentUser e observeAuthState.
      */
-    override suspend fun loginWithGoogleCredential(idToken: String, accessToken: String): Result<User> {
+    override suspend fun loginWithGoogleCredential(idToken: String, accessToken: String?): Result<User> {
         return try {
             val credential = GoogleAuthProvider.credential(idToken, accessToken)
             val result = auth.signInWithCredential(credential)

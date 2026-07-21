@@ -87,7 +87,7 @@ class FakeAuthRepository(
 
     override fun observeSessionInvalidation(): Flow<Boolean> = flowOf(false)
 
-    override suspend fun loginWithGoogleCredential(idToken: String): Result<User> {
+    override suspend fun loginWithGoogleCredential(idToken: String, accessToken: String?): Result<User> {
         return if (shouldSucceed) {
             val user = User(uid = "test-uid", email = "google@test.com", name = "Google User",
                 fcmToken = null, isHelper = false, authProvider = "google")
