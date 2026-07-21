@@ -66,6 +66,10 @@ struct HomeView: View {
 
                 // Helper Mode Toggle
                 helperModeCard
+                    .onChange(of: container.emergency.state?.isHelperMode) { _, newValue in
+                        guard !isTogglingHelper else { return }
+                        helperIntendedValue = newValue == true
+                    }
 
                 // Pending Emergencies (if any)
                 if !container.pendingIncomingEmergencies.isEmpty {
@@ -126,6 +130,7 @@ struct HomeView: View {
             fetchWeeklyStatus()
             checkNps()
             fetchLocationForRisk()
+            helperIntendedValue = container.emergency.state?.isHelperMode == true
         }
         .onDisappear { statsListener?.remove() }
         .sheet(isPresented: $showNps) {
@@ -349,9 +354,7 @@ struct HomeView: View {
         let isHelperMode = state?.isHelperMode == true
 
         let helperBinding = Binding<Bool>(
-            get: {
-                isTogglingHelper ? helperIntendedValue : isHelperMode
-            },
+            get: { helperIntendedValue },
             set: { newValue in
                 guard !isTogglingHelper else { return }
                 helperIntendedValue = newValue
