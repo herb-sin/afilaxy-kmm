@@ -200,10 +200,10 @@ fun MapScreen(
                 }
             }
 
-            // Timeout: se o mapa não carregar em 8s, exibe o fallback de erro
+            // Timeout: se o mapa não carregar em 20s, exibe o fallback de erro
             LaunchedEffect(mapLoaded) {
                 if (!mapLoaded) {
-                    kotlinx.coroutines.delay(8_000)
+                    kotlinx.coroutines.delay(20_000)
                     if (!mapLoaded) mapLoadError = true
                 }
             }
