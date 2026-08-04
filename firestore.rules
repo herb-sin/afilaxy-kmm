@@ -41,13 +41,13 @@ service cloud.firestore {
     
     // Emergency requests collection (coleção real usada pelo app)
     match /emergency_requests/{emergencyId} {
-      // list: helpers podem listar emergências ativas (active == true) para aceitar.
-      // Participantes podem listar suas próprias emergências (requesterId ou helperId).
-      // A regra resource.data.* é avaliada contra cada documento retornado, forçando
-      // o Firestore a rejeitar queries sem os filtros correspondentes.
+      // list — regras separadas para evitar ambiguidade de OR com resource.data.*,
+      // que causava PERMISSION_DENIED mesmo com query correta.
+      // Helpers listam emergências ativas (query deve filtrar active==true).
+      allow list: if isAuthenticated() && resource.data.active == true;
+      // Participantes listam histórico próprio (query deve filtrar requesterId ou helperId).
       allow list: if isAuthenticated()
-        && (resource.data.active == true
-            || resource.data.requesterId == request.auth.uid
+        && (resource.data.requesterId == request.auth.uid
             || resource.data.helperId == request.auth.uid);
       // get: only participants, or any authenticated user for active emergencies (needed for
       // the atomic accept transaction). Active emergencies are public within the app by design
