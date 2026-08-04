@@ -261,7 +261,7 @@ fun HomeScreenNew(
             .padding(end = 8.dp, top = 8.dp)
     ) {
         Icon(
-            Icons.AutoMirrored.Filled.ExitToApp,
+            Icons.Filled.ExitToApp,
             contentDescription = "Sair da conta",
             tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
         )
