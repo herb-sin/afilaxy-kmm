@@ -316,7 +316,7 @@ class EmergencyRepositoryImpl(
         val result = functions.httpsCallable("getNearbyHelpers").invoke(
             mapOf("latitude" to latitude, "longitude" to longitude, "radiusKm" to radiusKm)
         )
-        val data = result.data as? Map<String, Any?> ?: return emptyList()
+        val data = result.data<Any>() as? Map<*, *> ?: return emptyList()
         val list = data["helpers"] as? List<*> ?: return emptyList()
         return list.mapNotNull { item ->
             val h = item as? Map<*, *> ?: return@mapNotNull null
