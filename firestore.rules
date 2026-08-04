@@ -212,7 +212,7 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow create: if isAuthenticated()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.keys().hasAll(['userId', 'type', 'timestamp'])
+        && request.resource.data.keys().hasOnly(['userId', 'type', 'timestamp', 'data'])
         && request.resource.data.type is string
         && request.resource.data.timestamp is number;
       allow read, update, delete: if false;

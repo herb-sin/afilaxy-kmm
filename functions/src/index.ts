@@ -309,7 +309,7 @@ export const onEmergencyCreated = onDocumentCreated(
                     const helperLocation: [number, number] = [helper.latitude, helper.longitude];
                     const distanceInKm = geofireCommon.distanceBetween(helperLocation, center);
 
-                    console.log(`Helper ${helper.email || doc.id}: ${distanceInKm.toFixed(2)}km`);
+                    console.log(`Helper ${doc.id}: ${distanceInKm.toFixed(2)}km`);
 
                     // Exclui o próprio requester — um dispositivo nunca deve receber
                     // sua própria emergência, mesmo que estivesse registrado como helper.
@@ -517,6 +517,11 @@ export const onChatMessage = onDocumentCreated(
             }
 
             const emergencyData = emergencyDoc.data();
+
+            if (!emergencyData?.active) {
+                console.log('Emergência já encerrada — notificação de chat suprimida');
+                return;
+            }
 
             let recipientId: string;
             if (message.senderId === emergencyData?.requesterId) {
