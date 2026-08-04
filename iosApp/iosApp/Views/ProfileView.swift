@@ -150,7 +150,7 @@ struct ProfileView: View {
                 // Cabeçalho
                 HStack {
                     Image(systemName: "calendar.badge.clock").foregroundColor(.afiPrimary)
-                    Text("Agenda de Saúde").font(.headline).fontWeight(.semibold)
+                    Text("Meu Perfil").font(.headline).fontWeight(.semibold)
                     Spacer()
                     Button { showEditSheet = true } label: {
                         Image(systemName: "pencil.circle").font(.title3).foregroundColor(.afiPrimary)

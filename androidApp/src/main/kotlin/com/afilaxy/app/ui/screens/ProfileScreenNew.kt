@@ -43,13 +43,11 @@ import java.util.Locale
 fun ProfileScreenNew(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
-    onLogout: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val profile = state.profile
     var showEditSheet by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
     val historyViewModel: HistoryViewModel = koinViewModel()
     val historyState by historyViewModel.state.collectAsState()
     val recentHistory = historyState.filteredHistory.take(3)
@@ -217,54 +215,6 @@ fun ProfileScreenNew(
             ThemePreferenceCard()
         }
 
-        // ── Sair da Conta ──────────────────────────────────────────────────────────────────────
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                onClick = { showLogoutDialog = true }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Text(
-                        "Sair da Conta",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-    }
-
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Sair da Conta", fontWeight = FontWeight.Bold) },
-            text = { Text("Tem certeza que deseja sair? Você precisará fazer login novamente.") },
-            confirmButton = {
-                Button(
-                    onClick = { showLogoutDialog = false; onLogout() },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Sair") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
-            }
-        )
     }
 
     // ── Edit Bottom Sheet ────────────────────────────────────────────────────────

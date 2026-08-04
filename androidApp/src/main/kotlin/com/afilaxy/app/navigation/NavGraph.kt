@@ -333,7 +333,15 @@ fun NavGraph(
                     onNavigateToCheckIn = { type -> navController.navigate(AppRoutes.checkIn(type)) },
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
-                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) }
+                    onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
+                    onLogout = {
+                        scope.launch {
+                            authRepository.logout()
+                            navController.navigate(AppRoutes.LOGIN) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -375,15 +383,7 @@ fun NavGraph(
             AfilaxyAppScaffoldSimple(navController = navController) {
                 ProfileScreenNew(
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
-                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
-                    onLogout = {
-                        scope.launch {
-                            authRepository.logout()
-                            navController.navigate(AppRoutes.LOGIN) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
-                    }
+                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) }
                 )
             }
         }

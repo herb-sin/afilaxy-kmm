@@ -61,6 +61,7 @@ fun HomeScreenNew(
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToPharmacyMap: () -> Unit = {},
+    onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
 ) {
@@ -78,6 +79,7 @@ fun HomeScreenNew(
     var showHelperConsentDialog by remember { mutableStateOf(false) }
     var showNps by remember { mutableStateOf(false) }
     var showPostCrisisDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
     val today = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) }
 
     // NPS: exibe uma vez, 7 dias após a primeira emergência
@@ -171,6 +173,7 @@ fun HomeScreenNew(
         } catch (_: Exception) { /* Sem permissão — RiskWidget não exibido */ }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -249,6 +252,21 @@ fun HomeScreenNew(
         // Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
         item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap) }
     }
+
+    // Ícone de logout — topo direito, padronizado com iOS
+    IconButton(
+        onClick = { showLogoutDialog = true },
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .padding(end = 8.dp, top = 8.dp)
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.ExitToApp,
+            contentDescription = "Sair da conta",
+            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+        )
+    }
+    } // Box
 
     // Dialog de consentimento LGPD + divulgação proeminente de localização (Google Play policy).
     // Exibido apenas na primeira ativação do Modo Ajudante.
@@ -406,6 +424,23 @@ fun HomeScreenNew(
                 }) {
                     Text("Agora não")
                 }
+            }
+        )
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Sair da Conta", fontWeight = FontWeight.Bold) },
+            text = { Text("Deseja realmente sair? Você precisará fazer login novamente.") },
+            confirmButton = {
+                Button(
+                    onClick = { showLogoutDialog = false; onLogout() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Sair") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
             }
         )
     }
