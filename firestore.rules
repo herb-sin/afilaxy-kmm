@@ -62,12 +62,15 @@ service cloud.firestore {
         && request.resource.data.active == true;
       allow update: if isAuthenticated()
         && (
-          // Requester ou helper já atribuído podem actualizar livremente
-          request.auth.uid == resource.data.requesterId
-          || request.auth.uid == resource.data.helperId
-          // Helper a aceitar: status atual é waiting e ativo.
-          // Restringe os campos permitidos para evitar que o helper altere
-          // dados do requester (nome, coordenadas) na mesma operação.
+          // Requester: cancel (active+status), severity, samuCalled/At, resolvedAt
+          (request.auth.uid == resource.data.requesterId
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'active', 'severity', 'samuCalled', 'samuCalledAt', 'resolvedAt']))
+          // Helper atribuído: encerrar (status+active+resolvedAt)
+          || (request.auth.uid == resource.data.helperId
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'active', 'resolvedAt']))
+          // Helper a aceitar: status waiting → matched, campos restritos
           || (resource.data.status == 'waiting'
               && resource.data.active == true
               && request.resource.data.helperId == request.auth.uid
