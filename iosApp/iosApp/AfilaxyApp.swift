@@ -410,15 +410,14 @@ class AppContainer: ObservableObject {
     }
 }
 
-// App Check com DeviceCheck (mais confiável que App Attest — não requer enclave seguro).
-// Requer: DeviceCheck capability ativada em Xcode > Signing & Capabilities.
-// Firebase Console deve permanecer em Monitoring mode para não bloquear requests sem token.
-private class DeviceCheckProviderFactory: NSObject, AppCheckProviderFactory {
+// App Check com App Attest — provider registrado no Firebase Console.
+// Simulador usa AppCheckDebugProvider (App Attest não está disponível no simulador).
+private class AppAttestProviderFactory: NSObject, AppCheckProviderFactory {
     func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
         #if targetEnvironment(simulator)
         return AppCheckDebugProvider(app: app)
         #else
-        return DeviceCheckProvider(app: app)
+        return AppAttestProvider(app: app)
         #endif
     }
 }
@@ -435,7 +434,7 @@ struct AfilaxyApp: App {
 
     init() {
         // App Check deve ser configurado ANTES de FirebaseApp.configure()
-        AppCheck.setAppCheckProviderFactory(DeviceCheckProviderFactory())
+        AppCheck.setAppCheckProviderFactory(AppAttestProviderFactory())
 
         // Initialize Firebase first
         FirebaseApp.configure()
