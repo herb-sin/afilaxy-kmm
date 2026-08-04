@@ -955,6 +955,70 @@ export const validateCrm = onCall(async (request) => {
     }
 });
 
+// ============================================
+// NEARBY HELPERS — Mitigação R1 de segurança
+// Substitui a leitura direta do cliente na coleção 'helpers'.
+// O Admin SDK bypassa regras Firestore, permitindo fechar
+// o allow read público na coleção helpers.
+// ============================================
+export const getNearbyHelpers = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    const lat = Number(request.data.latitude);
+    const lon = Number(request.data.longitude);
+    // Limita a 10 km para evitar enumeração de grandes áreas
+    const radiusKm = Math.min(Number(request.data.radiusKm) || 0.5, 10.0);
+
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        throw new HttpsError('invalid-argument', 'Coordenadas inválidas');
+    }
+
+    const callerUid = request.auth.uid;
+    const center: [number, number] = [lat, lon];
+    const radiusInM = radiusKm * 1000;
+
+    const bounds = geofireCommon.geohashQueryBounds(center, radiusInM);
+    const boundPromises = bounds.map((b: [string, string]) =>
+        admin.firestore()
+            .collection('helpers')
+            .where('isActive', '==', true)
+            .where('geohash', '>=', b[0])
+            .where('geohash', '<=', b[1])
+            .get()
+    );
+
+    const snapshots = await Promise.all(boundPromises);
+    const seen = new Set<string>();
+    const helpers: any[] = [];
+
+    for (const snap of snapshots) {
+        for (const doc of snap.docs) {
+            if (seen.has(doc.id)) continue;
+            seen.add(doc.id);
+            if (doc.id === callerUid) continue; // nunca retorna o próprio caller
+
+            const data = doc.data();
+            if (data.latitude == null || data.longitude == null) continue;
+
+            const helperLoc: [number, number] = [data.latitude, data.longitude];
+            const dist = geofireCommon.distanceBetween(helperLoc, center);
+            if (dist > radiusKm) continue;
+
+            helpers.push({
+                id: doc.id,
+                name: data.name ?? 'Helper',
+                latitude: data.latitude,
+                longitude: data.longitude,
+                distance: dist,
+            });
+        }
+    }
+
+    return { helpers: helpers.sort((a, b) => a.distance - b.distance) };
+});
+
 /**
  * Trigger quando um helper é ativado ou atualiza sua localização
  * Calcula e salva o geohash automaticamente na coleção 'helpers'

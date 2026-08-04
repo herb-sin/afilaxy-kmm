@@ -12,16 +12,19 @@ import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.GeoPoint
+import dev.gitlive.firebase.functions.FirebaseFunctions
 import kotlin.math.round
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 class EmergencyRepositoryImpl(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val functions: FirebaseFunctions
 ) : EmergencyRepository {
 
     override suspend fun createEmergency(emergency: Emergency): Result<String> {
@@ -306,44 +309,36 @@ class EmergencyRepositoryImpl(
         }
     }
 
+    // Chama a Cloud Function getNearbyHelpers (Admin SDK — bypassa regras Firestore).
+    // Isso permite que a regra `allow read` da coleção helpers fique fechada para clientes.
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun callNearbyHelpers(latitude: Double, longitude: Double, radiusKm: Double): List<Helper> {
+        val result = functions.httpsCallable("getNearbyHelpers").invoke(
+            mapOf("latitude" to latitude, "longitude" to longitude, "radiusKm" to radiusKm)
+        )
+        val data = result.data as? Map<String, Any?> ?: return emptyList()
+        val list = data["helpers"] as? List<*> ?: return emptyList()
+        return list.mapNotNull { item ->
+            val h = item as? Map<*, *> ?: return@mapNotNull null
+            val id = h["id"] as? String ?: return@mapNotNull null
+            val lat = (h["latitude"] as? Number)?.toDouble() ?: return@mapNotNull null
+            val lon = (h["longitude"] as? Number)?.toDouble() ?: return@mapNotNull null
+            Helper(
+                id = id,
+                name = h["name"] as? String ?: "Helper",
+                email = "",
+                latitude = lat,
+                longitude = lon,
+                isActive = true,
+                lastUpdate = 0L,
+                distance = (h["distance"] as? Number)?.toDouble() ?: 0.0
+            )
+        }
+    }
+
     override suspend fun findNearbyHelpers(location: Location, radiusKm: Double): Result<List<Helper>> {
         return try {
-            val latitude = location.latitude
-            val longitude = location.longitude
-            val currentUserId = auth.currentUser?.uid
-
-            // Pré-filtro por bounding box de latitude para reduzir leituras do Firestore
-            val deltaLat = radiusKm / 111.0
-            val minLat = latitude - deltaLat
-            val maxLat = latitude + deltaLat
-
-            val snapshot = firestore.collection("helpers")
-                .where { ("isActive" equalTo true) and ("latitude" greaterThanOrEqualTo minLat) and ("latitude" lessThanOrEqualTo maxLat) }
-                .get()
-
-            val helpers = snapshot.documents.mapNotNull { doc ->
-                val id = doc.get<String?>("id") ?: return@mapNotNull null
-                // Exclui o próprio usuário dos helpers visíveis
-                if (id == currentUserId) return@mapNotNull null
-                val geoPoint = doc.get<GeoPoint?>("location") ?: return@mapNotNull null
-                val distance = haversineDistance(
-                    latitude, longitude,
-                    geoPoint.latitude, geoPoint.longitude
-                )
-                if (distance > radiusKm) return@mapNotNull null
-                Helper(
-                    id = id,
-                    name = doc.get("name") ?: "Helper",
-                    email = "", // email não gravado — campo vazio por design (LGPD)
-                    latitude = geoPoint.latitude,
-                    longitude = geoPoint.longitude,
-                    isActive = doc.get("isActive") ?: false,
-                    lastUpdate = 0L, // não usado no mapa; evita crash Timestamp vs Long
-                    distance = distance
-                )
-            }
-
-            Result.success(helpers.sortedBy { it.distance })
+            Result.success(callNearbyHelpers(location.latitude, location.longitude, radiusKm))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -512,45 +507,21 @@ class EmergencyRepositoryImpl(
         } catch (e: Exception) { null }
     }
 
+    // Substitui o snapshot em tempo real por polling a cada 15s via Cloud Function.
+    // Erros de rede não emitem lista vazia — mantém a última emissão no mapa.
     override fun observeNearbyHelpers(
         latitude: Double,
         longitude: Double,
         radiusKm: Double
-    ): Flow<List<Helper>> {
-        val currentUserId = auth.currentUser?.uid
-        val deltaLat = radiusKm / 111.0
-        val minLat = latitude - deltaLat
-        val maxLat = latitude + deltaLat
-        return firestore.collection("helpers")
-            .where {
-                ("isActive" equalTo true) and
-                ("latitude" greaterThanOrEqualTo minLat) and
-                ("latitude" lessThanOrEqualTo maxLat)
+    ): Flow<List<Helper>> = flow {
+        while (true) {
+            try {
+                emit(callNearbyHelpers(latitude, longitude, radiusKm))
+            } catch (_: Exception) {
+                // Falha silenciosa: mantém a emissão anterior no mapa
             }
-            .snapshots
-            .map { snapshot ->
-                snapshot.documents.mapNotNull { doc ->
-                    val id = doc.get<String?>("id") ?: return@mapNotNull null
-                    // Exclui o próprio usuário do resultado
-                    if (id == currentUserId) return@mapNotNull null
-                    val geoPoint = doc.get<GeoPoint?>("location") ?: return@mapNotNull null
-                    val distance = haversineDistance(
-                        latitude, longitude,
-                        geoPoint.latitude, geoPoint.longitude
-                    )
-                    if (distance > radiusKm) return@mapNotNull null
-                    Helper(
-                        id = id,
-                        name = doc.get("name") ?: "Helper",
-                        email = "", // email não gravado por design (LGPD)
-                        latitude = geoPoint.latitude,
-                        longitude = geoPoint.longitude,
-                        isActive = true,
-                        lastUpdate = 0L, // não usado no mapa; evita crash Timestamp vs Long
-                        distance = distance
-                    )
-                }.sortedBy { it.distance }
-            }
+            delay(15_000)
+        }
     }
 
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> {

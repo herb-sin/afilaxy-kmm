@@ -20,6 +20,7 @@ import com.afilaxy.presentation.ubs.UBSMapViewModel
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
+import dev.gitlive.firebase.functions.functions
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
@@ -31,11 +32,12 @@ fun sharedModule(): Module = module {
     // Firebase
     single { Firebase.auth }
     single { Firebase.firestore }
-    
+    single { Firebase.functions }
+
     // Repositories
     single<AuthRepository> { AuthRepositoryImpl(get(), get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get()) }
-    single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get()) }
+    single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get(), get()) }
     single<ReviewRepository> { ReviewRepositoryImpl(get(), get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }

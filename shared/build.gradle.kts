@@ -86,6 +86,7 @@ kotlin {
                 // Firebase KMM
                 implementation("dev.gitlive:firebase-auth:2.1.0")
                 implementation("dev.gitlive:firebase-firestore:2.1.0")
+                implementation("dev.gitlive:firebase-functions:2.1.0")
 
                 // Settings
                 implementation("com.russhwolf:multiplatform-settings:1.1.1")

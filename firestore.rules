@@ -27,9 +27,10 @@ service cloud.firestore {
       allow delete: if false;
     }
     
-    // Public helper profiles (name only) for nearby search
+    // Helper profiles — leitura direta fechada (R1).
+    // Busca por proximidade é feita via Cloud Function getNearbyHelpers (Admin SDK).
     match /helpers/{helperId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(helperId);
       allow create, update: if isOwner(helperId)
         && request.resource.data.keys().hasOnly(['id','name','location','latitude','longitude','geohash','isActive','lastUpdate'])
         && request.resource.data.latitude is number
