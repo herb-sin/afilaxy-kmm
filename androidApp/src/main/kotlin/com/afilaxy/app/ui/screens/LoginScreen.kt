@@ -1,17 +1,21 @@
 package com.afilaxy.app.ui.screens
 
 import android.app.Activity
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.OAuthProvider
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,19 +25,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.afilaxy.app.R
 import com.afilaxy.app.security.InputSanitizer
 import com.afilaxy.app.util.FcmHelper
 import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.presentation.login.LoginViewModel
+import com.afilaxy.util.FileLogger
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.OAuthProvider
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -58,6 +68,10 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var resetEmailSent by remember { mutableStateOf(false) }
     var resetError by remember { mutableStateOf<String?>(null) }
+
+    // 5 taps no logo → abre viewer de logs de diagnóstico (oculto de usuários)
+    var logoTapCount by remember { mutableStateOf(0) }
+    var showLogViewer by remember { mutableStateOf(false) }
 
     val googleSignInClient = remember {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -102,14 +116,28 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo
+            // Logo — 5 taps abrem o viewer de logs de diagnóstico
             Image(
                 painter = painterResource(R.drawable.afilaxy_logo),
                 contentDescription = "Afilaxy Logo",
                 modifier = Modifier
                     .height(120.dp)
                     .fillMaxWidth()
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        logoTapCount++
+                        if (logoTapCount >= 5) {
+                            showLogViewer = true
+                            logoTapCount = 0
+                        }
+                    }
             )
+
+            if (showLogViewer) {
+                LogViewerSheet(onDismiss = { showLogViewer = false })
+            }
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -355,6 +383,73 @@ fun LoginScreen(
                     textAlign = TextAlign.Center
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LogViewerSheet(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var logContent by remember { mutableStateOf("Carregando...") }
+
+    LaunchedEffect(Unit) {
+        val files = FileLogger.getAllLogs()
+        logContent = if (files.isEmpty()) {
+            "(nenhum log disponível)"
+        } else {
+            files.joinToString("\n--- arquivo anterior ---\n") { it.readText() }
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Logs de diagnóstico",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = {
+                    val uris = FileLogger.getAllLogs().mapNotNull { file ->
+                        runCatching {
+                            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                        }.getOrNull()
+                    }
+                    if (uris.isNotEmpty()) {
+                        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                            type = "text/plain"
+                            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                            putExtra(Intent.EXTRA_SUBJECT, "Afilaxy Logs")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Exportar logs Afilaxy"))
+                    }
+                }) {
+                    Icon(Icons.Default.Share, contentDescription = "Compartilhar logs")
+                }
+            }
+            HorizontalDivider()
+            Text(
+                text = logContent,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            )
+            Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
         }
     }
 }

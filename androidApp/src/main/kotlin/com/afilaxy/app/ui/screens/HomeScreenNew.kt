@@ -185,28 +185,6 @@ fun HomeScreenNew(
                 weeklyCount = weeklyCount,
                 totalEmergencies = totalEmergencies,
                 // Botões de log visíveis apenas em builds de debug — ocultos em produção
-                onExportLogs = if (BuildConfig.DEBUG) ({
-                    val logFiles = FileLogger.getAllLogs()
-                    if (logFiles.isEmpty()) return@HomeWelcomeCard
-                    val uris = logFiles.mapNotNull { file ->
-                        try {
-                            FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                file
-                            )
-                        } catch (_: Exception) { null }
-                    }
-                    if (uris.isEmpty()) return@HomeWelcomeCard
-                    val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                        type = "text/plain"
-                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-                        putExtra(Intent.EXTRA_SUBJECT, "Afilaxy Logs")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    context.startActivity(Intent.createChooser(shareIntent, "Exportar logs Afilaxy"))
-                }) else null,
-                onClearLogs = if (BuildConfig.DEBUG) ({ FileLogger.clearLogs() }) else null
             )
         }
 
@@ -443,8 +421,6 @@ private fun HomeWelcomeCard(
     weeklyCount: Int,
     // Total acumulado de todas as semanas — nunca zera na virada de semana.
     totalEmergencies: Int = -1,
-    onExportLogs: (() -> Unit)? = null,
-    onClearLogs: (() -> Unit)? = null
 ) {
     // Cor do gradiente e mensagens dependem da contagem semanal
     val (gradientColors, headline, body) = when (weeklyCount) {
@@ -549,61 +525,6 @@ private fun HomeWelcomeCard(
                 }
             }
 
-        }
-        // Botões de log (dev) — discretos no canto superior direito
-        if (onExportLogs != null || onClearLogs != null) {
-            var showClearDialog by remember { mutableStateOf(false) }
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(0.dp)
-            ) {
-                if (onClearLogs != null) {
-                    IconButton(
-                        onClick = { showClearDialog = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Limpar Logs",
-                            tint = Color.White.copy(alpha = 0.45f),
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-                if (onExportLogs != null) {
-                    IconButton(
-                        onClick = onExportLogs,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Share,
-                            contentDescription = "Exportar Logs",
-                            tint = Color.White.copy(alpha = 0.55f),
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            }
-
-            if (showClearDialog) {
-                AlertDialog(
-                    onDismissRequest = { showClearDialog = false },
-                    title = { Text("Limpar logs?") },
-                    text = { Text("Todos os arquivos de log serão apagados.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showClearDialog = false
-                            onClearLogs?.invoke()
-                        }) { Text("Limpar") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showClearDialog = false }) { Text("Cancelar") }
-                    }
-                )
-            }
         }
     }
 }
