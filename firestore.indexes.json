@@ -5,16 +5,24 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "active", "order": "ASCENDING" },
-        { "fieldPath": "latitude", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
+        { "fieldPath": "latitude", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "emergency_requests",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "active", "order": "ASCENDING" },
-        { "fieldPath": "latitude", "order": "ASCENDING" }
+        { "fieldPath": "requesterId", "order": "ASCENDING" },
+        { "fieldPath": "samuCalled", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "helpers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "geohash", "order": "ASCENDING" }
       ]
     },
     {
