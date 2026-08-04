@@ -465,13 +465,15 @@ class EmergencyRepositoryImpl(
     override fun observeNearbyEmergencies(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Emergency>> {
         val deltaLat = radiusKm / 111.0
         val currentUserId = auth.currentUser?.uid
+        // Timestamp capturado antes do Flow — emergências anteriores à sessão são filtradas
+        // client-side para evitar range em dois campos (latitude + timestamp) que exigiria
+        // índice composto adicional e causava PERMISSION_DENIED em alguns ambientes Firestore.
         val sessionStartMs = getCurrentTimeMillis()
         return firestore.collection("emergency_requests")
             .where {
                 ("active" equalTo true) and
                 ("latitude" greaterThanOrEqualTo latitude - deltaLat) and
-                ("latitude" lessThanOrEqualTo latitude + deltaLat) and
-                ("timestamp" greaterThanOrEqualTo sessionStartMs)
+                ("latitude" lessThanOrEqualTo latitude + deltaLat)
             }
             .snapshots
             .map { snapshot ->
@@ -480,17 +482,19 @@ class EmergencyRepositoryImpl(
                     if (requesterId == currentUserId) return@mapNotNull null
                     val lat = doc.get<Double?>("latitude") ?: return@mapNotNull null
                     val lon = doc.get<Double?>("longitude") ?: return@mapNotNull null
+                    val ts = doc.get<Long?>("timestamp") ?: 0L
+                    if (ts < sessionStartMs) return@mapNotNull null // emergências pré-sessão ignoradas
                     val distance = haversineDistance(latitude, longitude, lat, lon)
                     if (distance > radiusKm) return@mapNotNull null
                     Emergency(
                         id = doc.id,
                         userId = requesterId,
                         userName = doc.get("requesterName") ?: "",
-                        location = Location(lat, lon, "", doc.get("timestamp") ?: 0L),
+                        location = Location(lat, lon, "", ts),
                         status = EmergencyStatus.fromDb(doc.get("status") ?: "waiting"),
                         assignedHelperId = doc.get("helperId"),
-                        timestamp = doc.get("timestamp") ?: 0L,
-                        severity = doc.get("severity") // null se o paciente não selecionou
+                        timestamp = ts,
+                        severity = doc.get("severity")
                     )
                 }
             }
