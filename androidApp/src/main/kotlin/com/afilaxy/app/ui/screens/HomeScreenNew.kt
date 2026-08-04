@@ -253,17 +253,23 @@ fun HomeScreenNew(
         item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap) }
     }
 
-    // Ícone de logout — topo direito, padronizado com iOS
-    IconButton(
+    // Ícone de logout — topo direito, padronizado com iOS.
+    // FilledIconButton com fundo surface garante contraste sobre o card vermelho.
+    FilledIconButton(
         onClick = { showLogoutDialog = true },
         modifier = Modifier
             .align(Alignment.TopEnd)
-            .padding(end = 8.dp, top = 8.dp)
+            .padding(end = 12.dp, top = 12.dp)
+            .size(40.dp),
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.error
+        )
     ) {
         Icon(
             Icons.Filled.ExitToApp,
             contentDescription = "Sair da conta",
-            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+            modifier = Modifier.size(20.dp)
         )
     }
     } // Box
