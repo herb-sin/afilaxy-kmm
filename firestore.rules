@@ -22,7 +22,8 @@ service cloud.firestore {
         && isValidString(request.resource.data.name, 2, 100)
         && isValidString(request.resource.data.email, 5, 100);
       allow update: if isOwner(userId)
-        && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role);
+        && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
+        && (!('isHealthProfessional' in request.resource.data) || request.resource.data.isHealthProfessional == resource.data.isHealthProfessional);
       // Account deletion must go through a Cloud Function (cascade cleanup of emergencies, FCM tokens etc.)
       allow delete: if false;
     }
