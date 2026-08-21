@@ -28,6 +28,7 @@ struct HomeView: View {
     // Exibido no pill do WeeklyStatusCard para que o usuário veja seu histórico real.
     @State private var totalEmergencies: Int = -1
     @State private var showPharmacyMap = false
+    @State private var showReportExport = false
     @State private var statsListener: ListenerRegistration? = nil
     // Localização para o RiskWidget — nil enquanto não obtida ou sem permissão
     @State private var riskLocation: CLLocationCoordinate2D? = nil
@@ -145,6 +146,9 @@ struct HomeView: View {
                     showNps = false
                 }
             )
+        }
+        .sheet(isPresented: $showReportExport) {
+            HealthReportExportView()
         }
         .sheet(isPresented: $showPharmacyMap) {
             NavigationStack {
@@ -467,6 +471,15 @@ struct HomeView: View {
                         color: .afiWarning
                     ) {
                         navigationPath.append(AppRoute.help)
+                    }
+
+                    SupportLinkRow(
+                        title: "Relatório de Saúde",
+                        subtitle: "Compartilhar com seu médico",
+                        icon: "doc.text.fill",
+                        color: .afiPrimary
+                    ) {
+                        showReportExport = true
                     }
 
                     SupportLinkRow(
