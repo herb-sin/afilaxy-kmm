@@ -22,7 +22,7 @@ enum Tab: String, CaseIterable {
     var title: String {
         switch self {
         case .home: return "Home"
-        case .map: return "Mapa"
+        case .map: return "UPAs"
         case .profile: return "Perfil"
         case .portal: return "Portal"
         }
@@ -31,7 +31,7 @@ enum Tab: String, CaseIterable {
     var systemImage: String {
         switch self {
         case .home: return "house.fill"
-        case .map: return "location.fill"
+        case .map: return "staroflife.fill"
         case .profile: return "person.fill"
         case .portal: return "stethoscope"
         }

@@ -28,28 +28,36 @@ actual class LocationRepositoryImpl(
     @SuppressLint("MissingPermission")
     actual override suspend fun getCurrentLocation(): Location? {
         return try {
-            if (!hasLocationPermission()) {
-                return null
+            if (!hasLocationPermission()) return null
+
+            // Tenta localização em cache primeiro — retorna imediatamente
+            val last = fusedLocationClient.lastLocation.await()
+            if (last != null) {
+                return Location(
+                    latitude = last.latitude,
+                    longitude = last.longitude,
+                    address = "",
+                    timestamp = System.currentTimeMillis(),
+                    accuracy = last.accuracy
+                )
             }
-            
+
+            // Fallback: solicita localização com precisão balanceada (usa rede/WiFi, mais rápido que GPS puro)
             val cancellationToken = CancellationTokenSource()
-            
             val location = fusedLocationClient.getCurrentLocation(
-                Priority.PRIORITY_HIGH_ACCURACY,
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
                 cancellationToken.token
             ).await()
-            
+
             if (location != null) {
                 Location(
                     latitude = location.latitude,
                     longitude = location.longitude,
-                    address = "", // Geocoding pode ser adicionado depois
+                    address = "",
                     timestamp = System.currentTimeMillis(),
                     accuracy = location.accuracy
                 )
-            } else {
-                null
-            }
+            } else null
         } catch (e: Exception) {
             null
         }

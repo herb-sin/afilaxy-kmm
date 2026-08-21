@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Person
@@ -86,8 +87,8 @@ private enum class NavigationTab(
     ),
     MAP(
         route = AppRoutes.MAP,
-        label = "Mapa",
-        icon = Icons.Default.LocationOn
+        label = "UPAs",
+        icon = Icons.Default.LocalHospital
     ),
     PROFILE(
         route = AppRoutes.PROFILE,

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -14,52 +15,55 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.afilaxy.domain.repository.LocationRepository
-import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import org.koin.compose.koinInject
-import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
     navController: NavController,
-    pharmacyMode: Boolean = false,
-    emergencyViewModel: EmergencyViewModel = koinViewModel()
+    pharmacyMode: Boolean = false
 ) {
     val locationRepository: LocationRepository = koinInject()
-    val emergencyState = emergencyViewModel.state.collectAsState().value
 
-    // São Paulo como fallback — substituído pela localização real via LaunchedEffect
     val saoPaulo = LatLng(-23.5505, -46.6333)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(saoPaulo, 15f)
     }
 
-    // Localização real do dispositivo
     var userLocation by remember { mutableStateOf<LatLng?>(null) }
     var mapLoadError by remember { mutableStateOf(false) }
     var mapLoaded by remember { mutableStateOf(false) }
     var pharmacies by remember { mutableStateOf<List<PharmacyPlace>>(emptyList()) }
     var isLoadingPharmacies by remember { mutableStateOf(false) }
+    var upas by remember { mutableStateOf<List<UpaPlace>>(emptyList()) }
+    var isLoadingUpas by remember { mutableStateOf(false) }
 
-    // Busca a localização real e inicia observer de helpers próximos ao abrir
     LaunchedEffect(Unit) {
         val loc = locationRepository.getCurrentLocation()
         if (loc != null) {
             val realLatLng = LatLng(loc.latitude, loc.longitude)
             userLocation = realLatLng
-            cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(realLatLng, 15f)
-            )
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(realLatLng, 14f))
+
             if (pharmacyMode) {
                 isLoadingPharmacies = true
                 try {
-                    val query = "[out:json];node[\"amenity\"=\"pharmacy\"](around:5000,${loc.latitude},${loc.longitude});out 20;"
+                    val lat = loc.latitude
+                    val lon = loc.longitude
+                    val query = """
+                        [out:json];
+                        (
+                          node["amenity"="pharmacy"](around:5000,$lat,$lon);
+                          way["amenity"="pharmacy"](around:5000,$lat,$lon);
+                        );
+                        out center 20;
+                    """.trimIndent()
                     val encoded = android.net.Uri.encode(query)
                     val url = "https://overpass-api.de/api/interpreter?data=$encoded"
                     val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -70,11 +74,15 @@ fun MapScreen(
                     for (i in 0 until elements.length()) {
                         val el = elements.getJSONObject(i)
                         val tags = el.optJSONObject("tags")
+                        val elLat = if (el.has("lat")) el.getDouble("lat")
+                                    else el.optJSONObject("center")?.getDouble("lat") ?: continue
+                        val elLon = if (el.has("lon")) el.getDouble("lon")
+                                    else el.optJSONObject("center")?.getDouble("lon") ?: continue
                         result.add(PharmacyPlace(
-                            name = tags?.optString("name") ?: "Farmácia",
-                            lat = el.getDouble("lat"),
-                            lon = el.getDouble("lon"),
-                            phone = tags?.optString("phone") ?: ""
+                            name = tags?.optString("name")?.ifBlank { null } ?: "Farmácia",
+                            lat = elLat,
+                            lon = elLon,
+                            phone = tags?.optString("phone") ?: tags?.optString("contact:phone") ?: ""
                         ))
                     }
                     pharmacies = result
@@ -83,7 +91,43 @@ fun MapScreen(
                     isLoadingPharmacies = false
                 }
             } else {
-                emergencyViewModel.startObservingNearbyHelpers(loc.latitude, loc.longitude)
+                isLoadingUpas = true
+                try {
+                    val lat = loc.latitude
+                    val lon = loc.longitude
+                    val query = """
+                        [out:json];
+                        (
+                          node["amenity"="hospital"]["emergency"="yes"](around:10000,$lat,$lon);
+                          way["amenity"="hospital"]["emergency"="yes"](around:10000,$lat,$lon);
+                          node["amenity"="clinic"]["emergency"="yes"](around:10000,$lat,$lon);
+                          way["amenity"="clinic"]["emergency"="yes"](around:10000,$lat,$lon);
+                        );
+                        out center 20;
+                    """.trimIndent()
+                    val encoded = android.net.Uri.encode(query)
+                    val url = "https://overpass-api.de/api/interpreter?data=$encoded"
+                    val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        java.net.URL(url).readText()
+                    }
+                    val elements = org.json.JSONObject(response).getJSONArray("elements")
+                    val result = mutableListOf<UpaPlace>()
+                    for (i in 0 until elements.length()) {
+                        val el = elements.getJSONObject(i)
+                        val tags = el.optJSONObject("tags")
+                        val elLat = if (el.has("lat")) el.getDouble("lat")
+                                    else el.optJSONObject("center")?.getDouble("lat") ?: continue
+                        val elLon = if (el.has("lon")) el.getDouble("lon")
+                                    else el.optJSONObject("center")?.getDouble("lon") ?: continue
+                        val name = tags?.optString("name")?.ifBlank { null } ?: "UPA"
+                        val phone = tags?.optString("phone") ?: tags?.optString("contact:phone") ?: ""
+                        result.add(UpaPlace(name = name, lat = elLat, lon = elLon, phone = phone))
+                    }
+                    upas = result
+                } catch (_: Exception) {
+                } finally {
+                    isLoadingUpas = false
+                }
             }
         }
     }
@@ -104,7 +148,23 @@ fun MapScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                    } else { Text("Mapa") }
+                    } else {
+                        Column {
+                            Text("UPAs próximas")
+                            if (isLoadingUpas) {
+                                Text("Buscando...", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else if (upas.isNotEmpty()) {
+                                Text("${upas.size} encontradas no raio de 10 km",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else if (!isLoadingUpas) {
+                                Text("Nenhuma UPA encontrada no raio de 10 km",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -112,18 +172,17 @@ fun MapScreen(
                     }
                 },
                 actions = {
-                    if (!pharmacyMode) {
-                        val count = emergencyState.nearbyHelpers.size
-                        if (count > 0) {
-                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
-                                Text("$count")
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Icon(Icons.Default.LocationOn,
-                                contentDescription = "$count ajudantes próximos",
-                                tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(8.dp))
+                    if (!pharmacyMode && upas.isNotEmpty()) {
+                        Badge(containerColor = MaterialTheme.colorScheme.error) {
+                            Text("${upas.size}")
                         }
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            Icons.Default.LocalHospital,
+                            contentDescription = "${upas.size} UPAs próximas",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.width(8.dp))
                     }
                 }
             )
@@ -140,15 +199,12 @@ fun MapScreen(
                 }
             )
         } else {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding)
-            ) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
                     onMapLoaded = { mapLoaded = true }
                 ) {
-                    // Marker do próprio usuário
                     val markerPos = userLocation ?: saoPaulo
                     Marker(
                         state = MarkerState(position = markerPos),
@@ -156,12 +212,10 @@ fun MapScreen(
                         snippet = if (userLocation != null)
                             "${String.format(Locale.ROOT, "%.5f", markerPos.latitude)}, " +
                                 "${String.format(Locale.ROOT, "%.5f", markerPos.longitude)}"
-                        else
-                            "São Paulo, SP"
+                        else "São Paulo, SP"
                     )
 
                     if (pharmacyMode) {
-                        // Markers de farmácias
                         pharmacies.forEach { p ->
                             Marker(
                                 state = MarkerState(position = LatLng(p.lat, p.lon)),
@@ -171,25 +225,17 @@ fun MapScreen(
                             )
                         }
                     } else {
-                        // Markers de helpers próximos
-                        emergencyState.nearbyHelpers.forEach { helper ->
+                        upas.forEach { u ->
                             Marker(
-                                state = MarkerState(
-                                    position = LatLng(helper.latitude, helper.longitude)
-                                ),
-                                title = if (helper.name.isNotBlank()) helper.name else "Ajudante próximo",
-                                snippet = if (helper.distance > 0)
-                                    "${"%.1f".format(helper.distance)} km de distância"
-                                else "Localização aproximada",
-                                icon = BitmapDescriptorFactory.defaultMarker(
-                                    BitmapDescriptorFactory.HUE_AZURE
-                                )
+                                state = MarkerState(position = LatLng(u.lat, u.lon)),
+                                title = u.name,
+                                snippet = u.phone.ifBlank { "Toque para ver detalhes" },
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
                             )
                         }
                     }
                 }
 
-                // Loading overlay — some após 8s sem onMapLoaded → mapLoadError
                 if (!mapLoaded) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -200,7 +246,6 @@ fun MapScreen(
                 }
             }
 
-            // Timeout: se o mapa não carregar em 20s, exibe o fallback de erro
             LaunchedEffect(mapLoaded) {
                 if (!mapLoaded) {
                     kotlinx.coroutines.delay(20_000)
@@ -241,27 +286,27 @@ fun MapErrorFallback(
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = "Erro ao carregar o mapa",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     textAlign = TextAlign.Center
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
                     text = "O mapa não pôde ser carregado. Verifique sua conexão com a internet e tente novamente.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     textAlign = TextAlign.Center
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Button(
                     onClick = onRetry,
                     colors = ButtonDefaults.buttonColors(
@@ -272,42 +317,35 @@ fun MapErrorFallback(
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
-        // Location info card as fallback
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = "Localização",
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    
                     Spacer(modifier = Modifier.width(8.dp))
-                    
                     Text(
                         text = "Localização Atual",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
                     text = "Latitude: ${String.format(Locale.ROOT, "%.6f", latitude)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 Text(
                     text = "Longitude: ${String.format(Locale.ROOT, "%.6f", longitude)}",
                     style = MaterialTheme.typography.bodyMedium,
@@ -319,6 +357,13 @@ fun MapErrorFallback(
 }
 
 data class PharmacyPlace(
+    val name: String,
+    val lat: Double,
+    val lon: Double,
+    val phone: String
+)
+
+data class UpaPlace(
     val name: String,
     val lat: Double,
     val lon: Double,

@@ -26,10 +26,9 @@ struct AirQualityData {
 // MARK: - MapView
 
 struct MapView: View {
-    /// Quando true, busca farmácias 24h via MKLocalSearch em vez de exibir helpers.
+    /// Quando true, busca farmácias via Overpass API em vez de exibir UPAs.
     var pharmacyMode: Bool = false
 
-    @EnvironmentObject var container: AppContainer
     @StateObject private var locationManager = LocationManager.shared
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -23.5505, longitude: -46.6333),
@@ -45,6 +44,11 @@ struct MapView: View {
     @State private var pharmacySearchDone = false
     @State private var pharmacySearching = false
 
+    // UPA mode state
+    @State private var upas: [UpaItem] = []
+    @State private var upaSearchDone = false
+    @State private var upaSearching = false
+
     var body: some View {
         ZStack {
             Map(coordinateRegion: $region,
@@ -53,7 +57,7 @@ struct MapView: View {
                 annotationItems: allPins) { pin in
                 MapAnnotation(coordinate: pin.coordinate) {
                     switch pin.kind {
-                    case .helper(let h): HelperAnnotationView(helper: h)
+                    case .upa(let u):      UpaAnnotationView(upa: u)
                     case .pharmacy(let p): PharmacyAnnotationView(pharmacy: p)
                     }
                 }
@@ -87,8 +91,31 @@ struct MapView: View {
                         .padding(.top, 8)
                         Spacer()
                     } else {
-                        // Air quality card — top-right
+                        // UPA count pill — top-left
+                        HStack(spacing: 6) {
+                            Image(systemName: "staroflife.fill")
+                                .font(.caption.bold())
+                                .foregroundColor(.red)
+                            if upaSearching {
+                                ProgressView().scaleEffect(0.7)
+                                Text("Buscando...").font(.caption)
+                            } else {
+                                Text(upas.isEmpty
+                                     ? "Nenhuma UPA encontrada"
+                                     : "\(upas.count) UPAs em 10 km")
+                                    .font(.caption.bold())
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(.ultraThinMaterial, in: RoundedCornerShape20())
+                        .shadow(color: .black.opacity(0.12), radius: 6, x: 0, y: 3)
+                        .padding(.leading, 16)
+                        .padding(.top, 8)
+
                         Spacer()
+
+                        // Air quality card — top-right (mantido para contexto respiratório)
                         AirQualityCard(
                             data: airQuality,
                             isLoading: isFetchingAir,
@@ -101,7 +128,7 @@ struct MapView: View {
                 Spacer()
             }
         }
-        .navigationTitle(pharmacyMode ? "Farmácias 24h" : "Mapa")
+        .navigationTitle(pharmacyMode ? "Farmácias 24h" : "UPAs próximas")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { updateLocationIfNeeded() }
         .onReceive(LocationManager.shared.$currentLocation) { location in
@@ -109,9 +136,12 @@ struct MapView: View {
             region.center = location.coordinate
             if pharmacyMode {
                 searchPharmacies(near: location.coordinate)
-            } else if airQuality == nil && !isFetchingAir {
-                fetchAirQuality(lat: location.coordinate.latitude,
-                                lon: location.coordinate.longitude)
+            } else {
+                searchUpas(near: location.coordinate)
+                if airQuality == nil && !isFetchingAir {
+                    fetchAirQuality(lat: location.coordinate.latitude,
+                                    lon: location.coordinate.longitude)
+                }
             }
         }
     }
@@ -119,26 +149,13 @@ struct MapView: View {
     // MARK: - Combined annotation pins
 
     private var allPins: [MapPin] {
-        let helperPins: [MapPin] = {
-            guard !pharmacyMode, let state = container.emergency.state else { return [] }
-            let helpers = state.nearbyHelpers as [shared.Helper]
-            return helpers.compactMap { helper -> MapPin? in
-                let lat = helper.latitude
-                let lon = helper.longitude
-                guard lat != 0 || lon != 0 else { return nil }
-                let h = MapHelper(
-                    id: helper.id,
-                    name: helper.name.isEmpty ? "Ajudante" : helper.name,
-                    coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                    distance: helper.distance
-                )
-                return MapPin(id: "h_\(helper.id)", coordinate: h.coordinate, kind: .helper(h))
-            }
-        }()
+        let upaPins = upas.map { u in
+            MapPin(id: "u_\(u.id)", coordinate: u.coordinate, kind: .upa(u))
+        }
         let pharmacyPins = pharmacies.map { p in
             MapPin(id: "p_\(p.id)", coordinate: p.coordinate, kind: .pharmacy(p))
         }
-        return helperPins + pharmacyPins
+        return upaPins + pharmacyPins
     }
 
     // MARK: - Location init
@@ -152,7 +169,7 @@ struct MapView: View {
             if pharmacyMode {
                 searchPharmacies(near: current.coordinate)
             } else {
-                container.emergency.startObservingNearbyHelpers(latitude: lat, longitude: lon)
+                searchUpas(near: current.coordinate)
                 if airQuality == nil { fetchAirQuality(lat: lat, lon: lon) }
             }
         }
@@ -163,32 +180,111 @@ struct MapView: View {
         }
     }
 
-    // MARK: - Pharmacy search (MKLocalSearch — sem API key)
+    // MARK: - UPA search (Overpass API — OpenStreetMap)
+
+    private func searchUpas(near center: CLLocationCoordinate2D) {
+        guard !pharmacyMode, !upaSearchDone else { return }
+        upaSearchDone = true
+        upaSearching = true
+        let lat = center.latitude
+        let lon = center.longitude
+        let query = """
+            [out:json];
+            (
+              node["amenity"="hospital"]["emergency"="yes"](around:10000,\(lat),\(lon));
+              way["amenity"="hospital"]["emergency"="yes"](around:10000,\(lat),\(lon));
+              node["amenity"="clinic"]["emergency"="yes"](around:10000,\(lat),\(lon));
+              way["amenity"="clinic"]["emergency"="yes"](around:10000,\(lat),\(lon));
+            );
+            out center 20;
+            """
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://overpass-api.de/api/interpreter?data=\(encoded)")
+        else { upaSearching = false; return }
+
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            defer { DispatchQueue.main.async { upaSearching = false } }
+            guard let data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let elements = json["elements"] as? [[String: Any]]
+            else { return }
+
+            let result: [UpaItem] = elements.compactMap { el in
+                let tags = el["tags"] as? [String: Any]
+                let elLat: Double
+                let elLon: Double
+                if let lat = el["lat"] as? Double, let lon = el["lon"] as? Double {
+                    elLat = lat; elLon = lon
+                } else if let center = el["center"] as? [String: Any],
+                          let lat = center["lat"] as? Double,
+                          let lon = center["lon"] as? Double {
+                    elLat = lat; elLon = lon
+                } else { return nil }
+
+                let name = (tags?["name"] as? String)?.isEmpty == false
+                    ? tags!["name"] as! String : "UPA"
+                let phone = tags?["phone"] as? String
+                    ?? tags?["contact:phone"] as? String ?? ""
+                return UpaItem(
+                    id: UUID().uuidString,
+                    name: name,
+                    coordinate: CLLocationCoordinate2D(latitude: elLat, longitude: elLon),
+                    phone: phone
+                )
+            }
+            DispatchQueue.main.async { upas = result }
+        }.resume()
+    }
+
+    // MARK: - Pharmacy search (Overpass API — OpenStreetMap, mesma fonte do Android)
 
     private func searchPharmacies(near center: CLLocationCoordinate2D) {
         guard pharmacyMode, !pharmacySearchDone else { return }
         pharmacySearchDone = true
         pharmacySearching = true
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = "farmácia 24 horas"
-        request.region = MKCoordinateRegion(
-            center: center,
-            latitudinalMeters: 5000,
-            longitudinalMeters: 5000
-        )
-        MKLocalSearch(request: request).start { response, _ in
-            DispatchQueue.main.async {
-                pharmacySearching = false
-                pharmacies = (response?.mapItems ?? []).prefix(20).map { item in
-                    PharmacyItem(
-                        id: UUID().uuidString,
-                        name: item.name ?? "Farmácia",
-                        coordinate: item.placemark.coordinate,
-                        phone: item.phoneNumber ?? ""
-                    )
-                }
+        let lat = center.latitude
+        let lon = center.longitude
+        let query = """
+            [out:json];
+            (
+              node["amenity"="pharmacy"](around:5000,\(lat),\(lon));
+              way["amenity"="pharmacy"](around:5000,\(lat),\(lon));
+            );
+            out center 20;
+            """
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://overpass-api.de/api/interpreter?data=\(encoded)")
+        else { pharmacySearching = false; return }
+
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            defer { DispatchQueue.main.async { pharmacySearching = false } }
+            guard let data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let elements = json["elements"] as? [[String: Any]]
+            else { return }
+
+            let result: [PharmacyItem] = elements.compactMap { el in
+                let tags = el["tags"] as? [String: Any]
+                let elLat: Double
+                let elLon: Double
+                if let lat = el["lat"] as? Double, let lon = el["lon"] as? Double {
+                    elLat = lat; elLon = lon
+                } else if let center = el["center"] as? [String: Any],
+                          let lat = center["lat"] as? Double,
+                          let lon = center["lon"] as? Double {
+                    elLat = lat; elLon = lon
+                } else { return nil }
+                let name = (tags?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Farmácia"
+                let phone = tags?["phone"] as? String ?? tags?["contact:phone"] as? String ?? ""
+                return PharmacyItem(
+                    id: UUID().uuidString,
+                    name: name,
+                    coordinate: CLLocationCoordinate2D(latitude: elLat, longitude: elLon),
+                    phone: phone
+                )
             }
-        }
+            DispatchQueue.main.async { pharmacies = result }
+        }.resume()
     }
 
     // MARK: - Air Quality fetch (Open-Meteo, sem chave de API)
@@ -313,21 +409,49 @@ struct MetricCell: View {
     }
 }
 
-// MARK: - Helper Annotation
+// MARK: - UPA Annotation
 
-struct HelperAnnotationView: View {
-    let helper: MapHelper
+struct UpaAnnotationView: View {
+    let upa: UpaItem
+    @State private var showCallout = false
+
     var body: some View {
         VStack(spacing: 4) {
             Circle()
-                .fill(Color.afiprimary)
-                .frame(width: 24, height: 24)
-                .overlay { Image(systemName: "heart.fill").font(.caption2).foregroundColor(.white) }
+                .fill(Color.red)
+                .frame(width: 32, height: 32)
+                .overlay { Image(systemName: "staroflife.fill").font(.caption.bold()).foregroundColor(.white) }
                 .overlay { Circle().stroke(Color.white, lineWidth: 2) }
-            Text(String(format: "%.0fm", helper.distance * 1000))
-                .font(.caption2).fontWeight(.medium).foregroundColor(.white)
-                .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(Color.black.opacity(0.7)).clipShape(Capsule())
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3)) { showCallout.toggle() }
+                }
+
+            if showCallout {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(upa.name)
+                        .font(.caption.bold()).lineLimit(2).multilineTextAlignment(.leading)
+                    if !upa.phone.isEmpty {
+                        Button {
+                            let digits = upa.phone.filter { $0.isNumber || $0 == "+" }
+                            if let url = URL(string: "tel://\(digits)") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "phone.fill").font(.caption2)
+                                Text(upa.phone).font(.caption2)
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                .frame(maxWidth: 180)
+                .transition(.scale.combined(with: .opacity))
+            }
         }
     }
 }
@@ -381,11 +505,11 @@ struct PharmacyAnnotationView: View {
 
 // MARK: - Data Models
 
-struct MapHelper: Identifiable {
+struct UpaItem: Identifiable {
     let id: String
     let name: String
     let coordinate: CLLocationCoordinate2D
-    let distance: Double
+    let phone: String
 }
 
 struct PharmacyItem: Identifiable {
@@ -397,7 +521,7 @@ struct PharmacyItem: Identifiable {
 
 struct MapPin: Identifiable {
     enum Kind {
-        case helper(MapHelper)
+        case upa(UpaItem)
         case pharmacy(PharmacyItem)
     }
     let id: String
