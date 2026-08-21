@@ -221,8 +221,7 @@ struct MapView: View {
                     elLat = lat; elLon = lon
                 } else { return nil }
 
-                let name = (tags?["name"] as? String)?.isEmpty == false
-                    ? tags!["name"] as! String : "UPA"
+                let name = (tags?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "UPA"
                 let phone = tags?["phone"] as? String
                     ?? tags?["contact:phone"] as? String ?? ""
                 return UpaItem(
