@@ -23,6 +23,7 @@ object AppRoutes {
     const val MAP = "map"
     const val MAP_PHARMACY = "map_pharmacy"
     const val HELP = "help"
+    const val HEALTH_REPORT = "health_report"
 
     const val NAVIGATION = "navigation/{lat}/{lng}/{name}"
 

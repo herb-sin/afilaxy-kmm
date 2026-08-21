@@ -61,6 +61,7 @@ fun HomeScreenNew(
     onNavigateToAutocuidado: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToPharmacyMap: () -> Unit = {},
+    onNavigateToHealthReport: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
@@ -250,7 +251,7 @@ fun HomeScreenNew(
 
 
         // Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
-        item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap) }
+        item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap, onNavigateToHealthReport = onNavigateToHealthReport) }
     }
 
     // Ícone de logout — topo direito, padronizado com iOS.
@@ -794,7 +795,7 @@ private fun openWhatsAppGroup(context: android.content.Context) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPharmacyMap: () -> Unit) {
+private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPharmacyMap: () -> Unit, onNavigateToHealthReport: () -> Unit) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -824,6 +825,14 @@ private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPh
                 icon = Icons.AutoMirrored.Filled.List,
                 color = Color(0xFFF4A825),
                 onClick = onNavigateToHelp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeSupportLinkRow(
+                title = "Relatório de Saúde",
+                subtitle = "Compartilhar com seu médico",
+                icon = Icons.Default.Description,
+                color = Color(0xFF00628F),
+                onClick = onNavigateToHealthReport
             )
             Spacer(modifier = Modifier.height(8.dp))
             HomeSupportLinkRow(

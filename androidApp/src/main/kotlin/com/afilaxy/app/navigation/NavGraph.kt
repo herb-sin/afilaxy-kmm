@@ -334,6 +334,7 @@ fun NavGraph(
                     onNavigateToAutocuidado = { navController.navigate(AppRoutes.AUTOCUIDADO) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
+                    onNavigateToHealthReport = { navController.navigate(AppRoutes.HEALTH_REPORT) },
                     onLogout = {
                         scope.launch {
                             authRepository.logout()
@@ -354,6 +355,10 @@ fun NavGraph(
 
         composable(AppRoutes.MAP_PHARMACY) {
             MapScreen(navController = navController, pharmacyMode = true)
+        }
+
+        composable(AppRoutes.HEALTH_REPORT) {
+            HealthReportExportScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(
