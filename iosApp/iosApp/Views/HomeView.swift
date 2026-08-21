@@ -495,7 +495,11 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Helper Methods
+}
+
+// MARK: - Helper Actions
+
+extension HomeView {
 
     /// Obtém localização para alimentar o RiskWidget.
     /// Reutiliza o LocationManager já presente — não solicita nova permissão.
