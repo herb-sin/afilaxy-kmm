@@ -20,6 +20,10 @@ struct LoginView: View {
     @StateObject private var appleCoordinator = AppleSignInCoordinator()
     @State private var appleController: ASAuthorizationController?
     @State private var showLogs = false
+    // Distingue "usuário acabou de logar" de "sessão já existente restaurada ao abrir o
+    // app" — ambos disparam container.auth.$state com isAuthenticated=true, mas só o
+    // primeiro deve contar como login para o tour de boas-vindas (ver onLoginSuccess).
+    @State private var loginAttempted = false
 
     var body: some View {
         let state = container.auth.state
@@ -145,7 +149,15 @@ struct LoginView: View {
                     Firestore.firestore().collection("users").document(uid)
                         .setData(["fcmToken": token], merge: true)
                 }
-                onLoginSuccess()
+                // loginAttempted só é true se o usuário tocou em Entrar/Google/Apple nesta
+                // tela — sem essa checagem, uma sessão já existente sendo restaurada ao
+                // abrir o app (LoginView aparece por uma fração de segundo antes do auto
+                // redirect) também disparava onLoginSuccess(), reexibindo o tour de
+                // boas-vindas toda vez que o app era reaberto, mesmo sem logout.
+                if loginAttempted {
+                    loginAttempted = false
+                    onLoginSuccess()
+                }
             }
         }
         .onAppear {
@@ -159,10 +171,12 @@ struct LoginView: View {
     }
 
     private func login() {
+        loginAttempted = true
         container.auth.vm?.onLogin(email: email, password: password)
     }
 
     private func signInWithGoogle() {
+        loginAttempted = true
         guard let rootVC = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first?.keyWindow?.rootViewController else { return }
@@ -193,6 +207,7 @@ struct LoginView: View {
     }
 
     private func signInWithApple() {
+        loginAttempted = true
         let nonce = randomNonceString()
         currentNonce = nonce
         appleCoordinator.currentNonce = nonce

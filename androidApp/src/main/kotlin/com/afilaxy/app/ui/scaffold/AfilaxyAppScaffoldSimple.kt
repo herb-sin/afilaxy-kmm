@@ -85,15 +85,15 @@ private enum class NavigationTab(
         label = "Home",
         icon = Icons.Default.Home
     ),
-    MAP(
-        route = AppRoutes.MAP,
-        label = "UPAs",
-        icon = Icons.Default.LocalHospital
-    ),
     PROFILE(
         route = AppRoutes.PROFILE,
         label = "Perfil",
         icon = Icons.Default.Person
+    ),
+    MAP(
+        route = AppRoutes.MAP,
+        label = "UPAs",
+        icon = Icons.Default.LocalHospital
     ),
     PORTAL(
         route = AppRoutes.PORTAL,

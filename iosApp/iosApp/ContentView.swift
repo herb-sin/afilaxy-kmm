@@ -86,18 +86,6 @@ struct ContentView: View {
                 }
                 .tag(Tab.home)
                 
-                // MARK: - Map Tab
-                NavigationStack(path: $mapNavigationPath) {
-                    MapView()
-                        .navigationDestination(for: AppRoute.self) { route in
-                            destinationView(for: route)
-                        }
-                }
-                .tabItem {
-                    Label(Tab.map.title, systemImage: Tab.map.systemImage)
-                }
-                .tag(Tab.map)
-                
                 // MARK: - Profile Tab
                 NavigationStack(path: $profileNavigationPath) {
                     ProfileView()
@@ -109,7 +97,19 @@ struct ContentView: View {
                     Label(Tab.profile.title, systemImage: Tab.profile.systemImage)
                 }
                 .tag(Tab.profile)
-                
+
+                // MARK: - Map Tab
+                NavigationStack(path: $mapNavigationPath) {
+                    MapView()
+                        .navigationDestination(for: AppRoute.self) { route in
+                            destinationView(for: route)
+                        }
+                }
+                .tabItem {
+                    Label(Tab.map.title, systemImage: Tab.map.systemImage)
+                }
+                .tag(Tab.map)
+
                 // MARK: - Portal Tab
                 NavigationStack(path: $portalNavigationPath) {
                     PortalView()
@@ -223,9 +223,13 @@ struct ContentView: View {
                 isLoggedIn = true
             })
             .onReceive(container.auth.$state) { authState in
-                // Auto-navega ao entrar (auth detectado via polling StateFlow)
+                // Auto-navega ao entrar (auth detectado via polling StateFlow) — cobre o caso
+                // de uma sessão já existente sendo restaurada ao abrir o app (LoginView
+                // aparece por uma fração de segundo antes deste listener redirecionar).
+                // NÃO seta PostLoginTourFlag aqui: isso é justamente uma sessão restaurada,
+                // não um login novo — o tour só deve disparar via onLoginSuccess acima
+                // (chamado pelo próprio LoginView só quando loginAttempted é true).
                 if authState?.isAuthenticated == true {
-                    PostLoginTourFlag.pending = true
                     isLoggedIn = true
                 }
             }
