@@ -97,7 +97,7 @@ private enum class NavigationTab(
     ),
     PORTAL(
         route = AppRoutes.PORTAL,
-        label = "Portal",
+        label = "Apoio",
         icon = Icons.Default.MedicalServices
     )
 }

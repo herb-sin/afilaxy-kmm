@@ -195,18 +195,19 @@ fun EmergencyRequestScreen(
 
                     // ── Seletor de gravidade ──────────────────────────┅
                     Text(
-                        text = "Como você está se sentindo?",
+                        text = "Qual a gravidade?",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        SeverityChip("🟡", "Leve", "leve", selectedSeverity) { selectedSeverity = it }
-                        SeverityChip("🟠", "Moderada", "moderada", selectedSeverity) { selectedSeverity = it }
-                        SeverityChip("🔴", "Grave", "grave", selectedSeverity) { selectedSeverity = it }
+                        SeverityChip("🟡", "Leve", "leve", selectedSeverity, Modifier.weight(1f)) { selectedSeverity = it }
+                        SeverityChip("🟠", "Moderada", "moderada", selectedSeverity, Modifier.weight(1f)) { selectedSeverity = it }
+                        SeverityChip("🔴", "Grave", "grave", selectedSeverity, Modifier.weight(1f)) { selectedSeverity = it }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -268,11 +269,13 @@ private fun SeverityChip(
     label: String,
     value: String,
     selected: String?,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
     onSelect: (String) -> Unit
 ) {
     val isSelected = selected == value
     Surface(
         onClick = { onSelect(value) },
+        modifier = modifier,
         shape = RoundedCornerShape(20.dp),
         color = if (isSelected)
             MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.2f)
@@ -287,17 +290,20 @@ private fun SeverityChip(
         )
     ) {
         Row(
-            modifier = androidx.compose.ui.Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = emoji, style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = androidx.compose.ui.Modifier.width(4.dp))
+            Text(text = emoji, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = androidx.compose.ui.Modifier.width(6.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1
             )
         }
     }

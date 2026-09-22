@@ -85,14 +85,6 @@ class HealthProfessionalRepositoryImpl(
         }
     }
     
-    override suspend fun updateSubscription(id: String, plan: SubscriptionPlan, expiryDate: Long) {
-        auth.currentUser ?: error("User not authenticated")
-        collection.document(id).update(
-            "subscriptionPlan" to plan.name,
-            "subscriptionExpiry" to expiryDate
-        )
-    }
-    
     private fun mapDocToHealthProfessional(doc: dev.gitlive.firebase.firestore.DocumentSnapshot): HealthProfessional {
         val planStr = doc.get<String?>("subscriptionPlan") ?: "NONE"
         val plan = try { SubscriptionPlan.valueOf(planStr) } catch (e: Exception) { SubscriptionPlan.NONE }

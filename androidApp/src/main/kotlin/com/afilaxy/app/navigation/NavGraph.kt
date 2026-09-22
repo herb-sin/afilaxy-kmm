@@ -28,7 +28,6 @@ import com.afilaxy.domain.repository.AuthRepository
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
-import com.afilaxy.presentation.profile.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import org.koin.androidx.compose.koinViewModel
@@ -254,6 +253,7 @@ fun NavGraph(
         composable(AppRoutes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
+                    com.afilaxy.app.ui.onboarding.PostLoginTour.pending = true
                     scope.launch {
                         val isVerified = authRepository.isEmailVerified()
                         if (!isVerified) {
@@ -275,6 +275,7 @@ fun NavGraph(
         composable(AppRoutes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = {
+                    com.afilaxy.app.ui.onboarding.PostLoginTour.pending = true
                     navController.navigate(AppRoutes.EMAIL_VERIFICATION) {
                         popUpTo(AppRoutes.REGISTER) { inclusive = true }
                     }
@@ -393,21 +394,12 @@ fun NavGraph(
             }
         }
         
-        // Tab Portal - Role-based routing
+        // Tab Portal
         composable(AppRoutes.PORTAL) {
             AfilaxyAppScaffoldSimple(navController = navController) {
-                val profileViewModel: ProfileViewModel = koinViewModel()
-                val profileState by profileViewModel.state.collectAsState()
-                
-                if (profileState.profile?.isHealthProfessional == true) {
-                    PortalScreen()
-                } else {
-                    ProfessionalsScreenNew(
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToDetail = { id -> navController.navigate(AppRoutes.professionalDetail(id)) },
-                        onNavigateToCrmLookup = { navController.navigate(AppRoutes.CRM_LOOKUP) }
-                    )
-                }
+                PortalScreen(
+                    onNavigateToCrmLookup = { navController.navigate(AppRoutes.CRM_LOOKUP) }
+                )
             }
         }
         
@@ -517,14 +509,6 @@ fun NavGraph(
             AutocuidadoScreen(navController = navController)
         }
 
-        composable(AppRoutes.PROFESSIONALS) {
-            ProfessionalsScreenNew(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToDetail = { id -> navController.navigate(AppRoutes.professionalDetail(id)) },
-                onNavigateToCrmLookup = { navController.navigate(AppRoutes.CRM_LOOKUP) }
-            )
-        }
-        
         composable(AppRoutes.EDUCATION) {
             EducationScreenNew(
                 onNavigateBack = { navController.popBackStack() }
@@ -534,18 +518,6 @@ fun NavGraph(
         composable(AppRoutes.CRM_LOOKUP) {
             CrmLookupScreen(onNavigateBack = { navController.popBackStack() })
         }
-
-        composable(
-            route = AppRoutes.PROFESSIONAL_DETAIL,
-            arguments = listOf(navArgument("professionalId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val professionalId = backStackEntry.arguments?.getString("professionalId") ?: ""
-            ProfessionalDetailScreen(
-                professionalId = professionalId,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
 
         composable(AppRoutes.HELP) {
             HelpScreen(navController = navController)

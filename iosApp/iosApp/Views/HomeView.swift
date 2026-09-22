@@ -32,6 +32,23 @@ struct HomeView: View {
     @State private var statsListener: ListenerRegistration? = nil
     // Localização para o RiskWidget — nil enquanto não obtida ou sem permissão
     @State private var riskLocation: CLLocationCoordinate2D? = nil
+    @StateObject private var coachState = HomeCoachMarkState(targets: [
+        CoachMarkTarget(
+            id: "emergency",
+            title: "Em crise de Asma, clique em 'Solicitar Ajuda'",
+            description: "Avisamos pessoas próximas que podem ajudar. Em risco de vida, ligue também para o SAMU (192)."
+        ),
+        CoachMarkTarget(
+            id: "checkin",
+            title: "Registre como você está",
+            description: "Dois check-ins por dia, de manhã e à noite, alimentam o motor de risco do Afilaxy para te ajudar a prever crises."
+        ),
+        CoachMarkTarget(
+            id: "helper",
+            title: "Quer ajudar?",
+            description: "Ative o 'Modo Ajudante' para receber alerta de pessoas com crise de Asma perto de você. Você escolhe quando ativar e desativar."
+        ),
+    ])
     #if DEBUG
     @State private var showLogShareSheet = false
     @State private var logShareItems: [URL] = []
@@ -49,6 +66,7 @@ struct HomeView: View {
         // NOTA: ContentView já envolve HomeView em NavigationStack(path: $homeNavigationPath).
         // Não usar NavigationView nem NavigationStack aqui — aninhamento triplica os
         // níveis de navegação e oculta os itens de toolbar desta view na barra errada.
+        ScrollViewReader { scrollProxy in
         ScrollView {
             LazyVStack(spacing: 20) {
                 // Hero Section
@@ -61,12 +79,15 @@ struct HomeView: View {
 
                 // Check-in Card — matinal (até 14h) ou noturno (a partir das 18h)
                 checkInCard
+                    .coachMarkTarget("checkin", state: coachState)
 
                 // Emergency Button
                 emergencyButton
+                    .coachMarkTarget("emergency", state: coachState)
 
                 // Helper Mode Toggle
                 helperModeCard
+                    .coachMarkTarget("helper", state: coachState)
                     .onChange(of: container.emergency.state?.isHelperMode) { newValue in
                         guard !isTogglingHelper else { return }
                         helperIntendedValue = newValue == true
@@ -85,6 +106,15 @@ struct HomeView: View {
             }
             .padding()
         }
+        .coordinateSpace(name: "homeCoachMarkSpace")
+        .onPreferenceChange(CoachMarkBoundsPreferenceKey.self) { newBounds in
+            for (id, rect) in newBounds { coachState.reportBounds(id: id, rect: rect) }
+        }
+        .onChange(of: coachState.pendingScrollID) { id in
+            guard let id else { return }
+            withAnimation { scrollProxy.scrollTo(id, anchor: .center) }
+        }
+        .overlay(HomeCoachMarkOverlay(state: coachState))
         .background(Color.afiBackground)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -132,6 +162,12 @@ struct HomeView: View {
             checkNps()
             fetchLocationForRisk()
             helperIntendedValue = container.emergency.state?.isHelperMode == true
+            // Dispara sempre que o usuário acabou de concluir login/cadastro nesta sessão
+            // (PostLoginTourFlag.pending não é persistido — ver documentação da classe).
+            if PostLoginTourFlag.pending {
+                PostLoginTourFlag.pending = false
+                coachState.start()
+            }
         }
         .onDisappear { statsListener?.remove() }
         .sheet(isPresented: $showNps) {
@@ -168,6 +204,7 @@ struct HomeView: View {
             }
         }
         #endif
+        } // end ScrollViewReader
     }
     
     // MARK: - Hero Section

@@ -329,12 +329,17 @@ class AppContainer: ObservableObject {
             .store(in: &cancellables)
     }
 
+    // Lê emergency_pings (projeção sem PII, mantida pela Cloud Function
+    // onEmergencyRequestWrite) em vez de emergency_requests — que não é mais listável
+    // por quem não participa (ver firestore.rules). Por isso não há requesterName aqui;
+    // o nome real chega via notificação push (AfilaxyIncomingEmergency) ou só depois
+    // que o helper aceita.
     func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 0.25) {
         emergencyListener?.remove()
         let deltaLat = radiusKm / 111.0
         let startTime = Date()
         emergencyListener = Firestore.firestore()
-            .collection("emergency_requests")
+            .collection("emergency_pings")
             .whereField("active", isEqualTo: true)
             .whereField("latitude", isGreaterThanOrEqualTo: lat - deltaLat)
             .whereField("latitude", isLessThanOrEqualTo: lat + deltaLat)
@@ -380,7 +385,10 @@ class AppContainer: ObservableObject {
                     } else { return }
                     if docDate < startTime { return }
                     self.notifiedEmergencyIds.insert(docId)
-                    let name = data["requesterName"] as? String ?? "Alguém"
+                    // emergency_pings não tem requesterName (sem PII) — o nome real chega
+                    // via notificação push, que dedupe por notifiedEmergencyIds e substitui
+                    // este "Alguém" caso chegue depois.
+                    let name = "Alguém"
                     FileLogger.shared.write(level: "INFO", tag: "AppContainer", message: "incoming emergency from \(name)")
                     self.pendingIncomingEmergencies.append((id: docId, name: name))
                 }
@@ -438,6 +446,10 @@ struct AfilaxyApp: App {
 
         // Initialize Firebase first
         FirebaseApp.configure()
+
+        // Aplica o consentimento de analytics salvo (ou o padrão) assim que o SDK inicializa —
+        // sem isso o Firebase Analytics coletaria dados antes do usuário decidir na ConsentView.
+        AnalyticsManager.applyConsent()
 
         // Configure Google Sign-In with the client ID from GoogleService-Info.plist.
         // GIDSignIn v7+ crashes if signIn(withPresenting:) is called without this.

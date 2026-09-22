@@ -961,26 +961,75 @@ export const validateCrm = onCall(async (request) => {
 });
 
 // ============================================
+// RATE LIMITING — defesa em profundidade contra enumeração via script
+// Um documento por (ação, uid) em 'rate_limits' (fechada a clients pelo
+// "default deny" do firestore.rules — só o Admin SDK acessa). Combina:
+//   - intervalo mínimo entre chamadas (barra loop automatizado rápido)
+//   - teto de chamadas por 24h (barra abuso "devagar", ainda que espaçado)
+// Uso legítimo real de getNearbyHelpers é 1 chamada por emergência criada
+// (ver EmergencyViewModel.findNearbyHelpers) — um evento raro, não repetido.
+// ============================================
+const RATE_LIMIT_MIN_INTERVAL_MS = 5_000;
+const RATE_LIMIT_MAX_PER_WINDOW = 20;
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+async function enforceRateLimit(uid: string, action: string): Promise<void> {
+    const ref = admin.firestore().collection('rate_limits').doc(`${action}_${uid}`);
+    const now = Date.now();
+    await admin.firestore().runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        const data = snap.data();
+        const lastCallAt: number = data?.lastCallAt ?? 0;
+        let windowStart: number = data?.windowStart ?? 0;
+        let count: number = data?.count ?? 0;
+
+        if (now - lastCallAt < RATE_LIMIT_MIN_INTERVAL_MS) {
+            throw new HttpsError('resource-exhausted', 'Muitas chamadas em sequência. Aguarde alguns segundos.');
+        }
+
+        if (now - windowStart > RATE_LIMIT_WINDOW_MS) {
+            windowStart = now;
+            count = 0;
+        }
+
+        if (count >= RATE_LIMIT_MAX_PER_WINDOW) {
+            throw new HttpsError('resource-exhausted', 'Limite diário de chamadas atingido.');
+        }
+
+        tx.set(ref, { lastCallAt: now, windowStart, count: count + 1 });
+    });
+}
+
+// ============================================
 // NEARBY HELPERS — Mitigação R1 de segurança
 // Substitui a leitura direta do cliente na coleção 'helpers'.
 // O Admin SDK bypassa regras Firestore, permitindo fechar
 // o allow read público na coleção helpers.
+//
+// Achado #4 da auditoria (2026-09): o único uso legítimo restante é
+// EmergencyViewModel.findNearbyHelpers(radiusKm = 0.25), chamado uma vez
+// ao criar uma emergência. O recurso de "mapa" com raio de 5km/10km era
+// código morto (sem consumidor em nenhuma UI) e foi removido do app —
+// por isso o raio abaixo é travado em 250m, ignorando qualquer valor
+// vindo do cliente, e a chamada passa por rate limiting.
 // ============================================
 export const getNearbyHelpers = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
+    const callerUid = request.auth.uid;
+    await enforceRateLimit(callerUid, 'getNearbyHelpers');
+
     const lat = Number(request.data.latitude);
     const lon = Number(request.data.longitude);
-    // Limita a 10 km para evitar enumeração de grandes áreas
-    const radiusKm = Math.min(Number(request.data.radiusKm) || 0.5, 10.0);
+    // Raio fixo em 250m — ver comentário acima. Não aceita mais radiusKm do cliente.
+    const radiusKm = 0.25;
 
     if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
         throw new HttpsError('invalid-argument', 'Coordenadas inválidas');
     }
 
-    const callerUid = request.auth.uid;
     const center: [number, number] = [lat, lon];
     const radiusInM = radiusKm * 1000;
 
@@ -1029,6 +1078,57 @@ export const getNearbyHelpers = onCall(async (request) => {
  * Calcula e salva o geohash automaticamente na coleção 'helpers'
  * Isso permite queries eficientes por proximidade em onEmergencyCreated
  */
+// ============================================
+// EMERGENCY_PINGS — Mitigação de segurança (achado #2 da auditoria)
+// Espelha em emergency_requests apenas os campos não identificáveis (sem
+// requesterName, sem GPS exato) para uma coleção que qualquer usuário
+// autenticado pode listar/ler com segurança. emergency_requests em si passa
+// a ser list/get apenas para participantes (requesterId/helperId).
+// ============================================
+export const onEmergencyRequestWrite = onDocumentWritten(
+    'emergency_requests/{emergencyId}',
+    async (event) => {
+        const change = event.data;
+        if (!change) return;
+
+        const emergencyId = event.params.emergencyId;
+        const pingRef = admin.firestore().collection('emergency_pings').doc(emergencyId);
+
+        // emergency_requests nunca é deletado via regras (allow delete: if false),
+        // mas mantemos o espelho consistente caso isso mude ou ocorra via console.
+        if (!change.after.exists) {
+            await pingRef.delete().catch(() => {});
+            return;
+        }
+
+        const after = change.after.data()!;
+
+        if (after.latitude == null || after.longitude == null) {
+            console.error(`emergency_requests/${emergencyId} sem coordenadas válidas — ping não espelhado`);
+            return;
+        }
+
+        // Arredonda a ~0.001° (~111m) — mesma obfuscação já usada em activateHelper()
+        // no app. Suficiente para a query de proximidade; não localiza um endereço.
+        const roundedLat = Math.round(after.latitude * 1000) / 1000;
+        const roundedLon = Math.round(after.longitude * 1000) / 1000;
+
+        try {
+            await pingRef.set({
+                active: after.active === true,
+                status: after.status ?? 'waiting',
+                requesterId: after.requesterId ?? null,
+                helperId: after.helperId ?? null,
+                latitude: roundedLat,
+                longitude: roundedLon,
+                timestamp: after.timestamp ?? null,
+            });
+        } catch (error) {
+            console.error(`Erro ao espelhar emergency_pings/${emergencyId}:`, error);
+        }
+    }
+);
+
 export const onHelperWrite = onDocumentWritten(
     'helpers/{helperId}',
     async (event) => {

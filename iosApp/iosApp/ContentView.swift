@@ -3,13 +3,12 @@ import shared
 
 // MARK: - App Routes
 enum AppRoute: Hashable {
-    case home, emergency, history, profile, professionals, map, portal
+    case home, emergency, history, profile, map, portal
     case notifications, settings, about, terms, privacy, help
     case autocuidado, education
     case checkIn(String)          // "MORNING" ou "EVENING"
     case emergencyResponse(String)
     case chat(String)
-    case professionalDetail(String)
 }
 
 // MARK: - Tab Selection
@@ -24,7 +23,7 @@ enum Tab: String, CaseIterable {
         case .home: return "Home"
         case .map: return "UPAs"
         case .profile: return "Perfil"
-        case .portal: return "Portal"
+        case .portal: return "Apoio"
         }
     }
     
@@ -220,11 +219,13 @@ struct ContentView: View {
         } else {
             // ── Login ─────────────────────────────────────────────────────
             LoginView(onLoginSuccess: {
+                PostLoginTourFlag.pending = true
                 isLoggedIn = true
             })
             .onReceive(container.auth.$state) { authState in
                 // Auto-navega ao entrar (auth detectado via polling StateFlow)
                 if authState?.isAuthenticated == true {
+                    PostLoginTourFlag.pending = true
                     isLoggedIn = true
                 }
             }
@@ -247,10 +248,6 @@ struct ContentView: View {
             HistoryView()
         case .profile:
             ProfileView()
-        case .professionals:
-            ProfessionalListView()
-        case .professionalDetail(let id):
-            ProfessionalDetailView(professionalId: id)
         case .notifications:
             NotificationsView()
         case .settings:

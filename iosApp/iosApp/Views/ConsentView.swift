@@ -50,6 +50,11 @@ struct ConsentView: View {
                     isToggleable: true,
                     badge: nil
                 )
+                // Assinatura de um parâmetro — compatível com o deployment target iOS 16
+                // (a variante de dois parâmetros do onChange exige iOS 17+).
+                .onChange(of: analyticsConsent) { _ in
+                    AnalyticsManager.applyConsent()
+                }
 
                 // ── Ação ──────────────────────────────────────────────────────
                 VStack(spacing: 12) {

@@ -124,22 +124,28 @@ final class LocationManagerBridge {
         Firestore.firestore().collection("helpers").document(uid).delete()
     }
 
-    /// Aceita emergência via iOS SDK nativo (evita crash Kotlin/Native em thread não-main)
+    /// Aceita emergência via iOS SDK nativo (evita crash Kotlin/Native em thread não-main).
+    ///
+    /// A checagem de elegibilidade lê emergency_pings (projeção sem PII, legível por
+    /// qualquer autenticado) em vez de emergency_requests — quem está aceitando ainda não
+    /// é participante, e emergency_requests só permite list/get a participantes (ver
+    /// firestore.rules). A escrita, abaixo, continua no documento real.
     func acceptEmergency(emergencyId: String, completion: @escaping (Bool, String?) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion(false, "Usuário não autenticado")
             return
         }
         let db = Firestore.firestore()
-        let ref = db.collection("emergency_requests").document(emergencyId)
+        let mainRef = db.collection("emergency_requests").document(emergencyId)
+        let pingRef = db.collection("emergency_pings").document(emergencyId)
         db.runTransaction({ transaction, errorPointer in
-            let doc: DocumentSnapshot
-            do { doc = try transaction.getDocument(ref) }
+            let pingDoc: DocumentSnapshot
+            do { pingDoc = try transaction.getDocument(pingRef) }
             catch let e as NSError { errorPointer?.pointee = e; return nil }
-            guard doc.exists,
-                  let active = doc.data()?["active"] as? Bool, active,
-                  let status = doc.data()?["status"] as? String, status == "waiting",
-                  doc.data()?["helperId"] == nil else {
+            guard pingDoc.exists,
+                  let active = pingDoc.data()?["active"] as? Bool, active,
+                  let status = pingDoc.data()?["status"] as? String, status == "waiting",
+                  pingDoc.data()?["helperId"] == nil else {
                 let e = NSError(domain: "Afilaxy", code: 409,
                     userInfo: [NSLocalizedDescriptionKey: "Emergência não disponível"])
                 errorPointer?.pointee = e
@@ -149,7 +155,7 @@ final class LocationManagerBridge {
                 "status": "matched",
                 "helperId": uid,
                 "matchedAt": FieldValue.serverTimestamp()
-            ], forDocument: ref)
+            ], forDocument: mainRef)
             return nil
         }) { _, error in
             DispatchQueue.main.async {

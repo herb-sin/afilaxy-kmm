@@ -32,9 +32,15 @@ fun EmergencyScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showLocationPermission by remember { mutableStateOf(false) }
+    // Guarda local (não no ViewModel) — evita disparar onNavigateToRequest mais de uma vez
+    // durante recomposições desta MESMA visita à tela. Ao contrário do antigo guard no
+    // ViewModel (Set persistente, só limpo no logout), este reseta sempre que o usuário
+    // reentra na tela — corrige o bug onde voltar da tela de detalhes e tocar em
+    // "Emergência Ativa" de novo caía numa tela em branco (o auto-redirect ficava travado
+    // para sempre para aquele emergencyId, mesmo a emergência continuando ativa).
+    val navigatedIds = remember { mutableSetOf<String>() }
 
     // Navegar para EmergencyRequestScreen após criar emergência
-    // navigatedToRequestId é persistido no ViewModel para sobreviver a recomposições
     LaunchedEffect(Unit) {
         // Desbloqueio defensivo: reseta isLoading se estava travado de um accept anterior
         viewModel.resetStuckLoading()
@@ -47,8 +53,8 @@ fun EmergencyScreen(
             "hasActive=${state.hasActiveEmergency} isRequester=${state.isRequester} isLoading=${state.isLoading} emergencyId=$id"
         )
         if (id != null && state.hasActiveEmergency && state.isRequester
-            && !viewModel.wasNavigatedToRequest(id)) {
-            viewModel.markNavigatedToRequest(id)
+            && id !in navigatedIds) {
+            navigatedIds.add(id)
             onNavigateToRequest(id)
         }
     }

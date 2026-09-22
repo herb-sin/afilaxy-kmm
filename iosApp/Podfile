@@ -11,6 +11,9 @@ target 'iosApp' do
   pod 'Firebase/Messaging', '~> 11.0'
   pod 'Firebase/AppCheck',  '~> 11.0'
   pod 'Firebase/Functions', '~> 11.0'
+  # Analytics — necessário para cumprir a cláusula 2.3 do contrato de parceria
+  # institucional (relatório mensal de acessos/navegação na área 'Apoio').
+  pod 'Firebase/Analytics', '~> 11.0'
 
   # Google Sign-In
   pod 'GoogleSignIn', '~> 7.0'

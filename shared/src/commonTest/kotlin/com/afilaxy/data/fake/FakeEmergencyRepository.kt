@@ -112,10 +112,6 @@ class FakeEmergencyRepository(
 
     override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? = null
 
-    override fun observeNearbyHelpers(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Helper>> {
-        return MutableStateFlow(emptyList())
-    }
-
     // Test helpers
     fun setShouldSucceed(value: Boolean) { shouldSucceed = value }
     fun setActiveEmergencyId(id: String?) { activeEmergencyId = id }

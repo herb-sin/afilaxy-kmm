@@ -135,9 +135,13 @@ struct EmergencyResponseView: View {
 
     /// Observa o documento da emergência. Se ficar inativa (cancelada, expirada ou já aceita
     /// por outro helper), marca como indisponível e dispensa a view automaticamente.
+    ///
+    /// Lê emergency_pings (projeção sem PII) em vez de emergency_requests — nesta tela o
+    /// usuário ainda não é participante, e só precisa de active/status/helperId, que a
+    /// projeção já tem (ver firestore.rules e a Cloud Function onEmergencyRequestWrite).
     private func startAvailabilityObserver() {
         availabilityListener = Firestore.firestore()
-            .collection("emergency_requests")
+            .collection("emergency_pings")
             .document(emergencyId)
             .addSnapshotListener { snapshot, _ in
                 guard let data = snapshot?.data() else { return }
@@ -157,9 +161,10 @@ struct EmergencyResponseView: View {
             }
     }
 
+    // Também lê emergency_pings — mesmo motivo de startAvailabilityObserver acima.
     private func startStatusObserver() {
         statusListener = Firestore.firestore()
-            .collection("emergency_requests")
+            .collection("emergency_pings")
             .document(emergencyId)
             .addSnapshotListener { snapshot, _ in
                 guard let data = snapshot?.data(),

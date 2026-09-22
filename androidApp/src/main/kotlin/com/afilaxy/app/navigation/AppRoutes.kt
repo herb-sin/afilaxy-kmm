@@ -16,9 +16,7 @@ object AppRoutes {
     const val ABOUT = "about"
 
     const val AUTOCUIDADO = "autocuidado"
-    const val PROFESSIONALS = "professionals"
-    const val PROFESSIONAL_DETAIL = "professional_detail/{professionalId}"
-    const val PORTAL = "portal"  // NOVO - Tab role-based
+    const val PORTAL = "portal"
     const val CRM_LOOKUP = "crm_lookup"
     const val MAP = "map"
     const val MAP_PHARMACY = "map_pharmacy"
@@ -34,7 +32,6 @@ object AppRoutes {
 
     fun checkIn(type: String) = "check_in/$type"
 
-    fun professionalDetail(id: String) = "professional_detail/$id"
     fun emergencyResponse(emergencyId: String) = "emergency_response/$emergencyId"
     fun chat(emergencyId: String) = "chat/$emergencyId"
 

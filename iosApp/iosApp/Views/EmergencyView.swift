@@ -172,7 +172,7 @@ struct EmergencyView: View {
                     if state.currentEmergency?.assignedHelperId == nil && !chatNavigated {
                         if let eid = container.emergency.state?.emergencyId as? String, !eid.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Como você está se sentindo?")
+                                Text("Qual a gravidade?")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 HStack(spacing: 8) {
@@ -382,12 +382,15 @@ private struct SeverityChipView: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 4) {
-                Text(emoji).font(.caption)
-                Text(label).font(.caption).fontWeight(isSelected ? .bold : .regular)
+            HStack(spacing: 6) {
+                Text(emoji).font(.title3)
+                Text(label).font(.subheadline).fontWeight(isSelected ? .bold : .regular)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(isSelected ? Color.red.opacity(0.18) : Color(.systemGray6))

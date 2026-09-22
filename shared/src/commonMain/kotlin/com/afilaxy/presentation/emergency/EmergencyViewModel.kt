@@ -147,11 +147,6 @@ class EmergencyViewModel(
         }
     }
     
-    // Evita re-navegação para EmergencyRequestScreen após já ter navegado
-    private val _navigatedEmergencyIds = mutableSetOf<String>()
-    fun markNavigatedToRequest(emergencyId: String) { _navigatedEmergencyIds.add(emergencyId) }
-    fun wasNavigatedToRequest(emergencyId: String) = emergencyId in _navigatedEmergencyIds
-
     /** Limpa apenas o estado local — sem I/O. Seguro para chamar do iOS. */
     fun onClearEmergencyState() {
         _state.update {
@@ -186,10 +181,6 @@ class EmergencyViewModel(
         incomingEmergenciesObserverJob?.cancel()
         incomingEmergenciesObserverJob = null
         emergencyObserverStarted = false
-
-        helpersObserverJob?.cancel()
-        helpersObserverJob = null
-        helpersObserverStarted = false
     }
 
     fun onCancelEmergency() {
@@ -272,19 +263,15 @@ class EmergencyViewModel(
             _state.update { EmergencyState() }
             // Limpa sets de sessão — evita dados da conta anterior vazarem para a próxima
             _notifiedEmergencyIds.clear()
-            _navigatedEmergencyIds.clear()
             statusObserverJob?.cancel()
             statusObserverJob = null
             statusObservedId = null
             incomingEmergenciesObserverJob?.cancel()
             incomingEmergenciesObserverJob = null
             emergencyObserverStarted = false
-            helpersObserverJob?.cancel()
-            helpersObserverJob = null
-            helpersObserverStarted = false
         }
     }
-    
+
     fun onAcceptEmergency(emergencyId: String) {
         viewModelScope.coroutineScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -382,32 +369,6 @@ class EmergencyViewModel(
                 }
             } finally {
                 emergencyObserverStarted = false
-            }
-        }
-    }
-
-    private var helpersObserverStarted = false
-    private var helpersObserverJob: Job? = null
-
-    /** Inicia o observer em tempo real de helpers próximos.
-     *  Chamado pelo MapScreen (Android) e MapView (iOS) ao abrir o mapa.
-     *  Idempotente: chamadas repetidas são ignoradas. */
-    fun startObservingNearbyHelpers(latitude: Double, longitude: Double) {
-        if (helpersObserverStarted) return
-        helpersObserverStarted = true
-        helpersObserverJob?.cancel()
-        helpersObserverJob = viewModelScope.coroutineScope.launch {
-            try {
-                emergencyRepository.observeNearbyHelpers(latitude, longitude, 5.0)
-                    .collect { helpers ->
-                        _state.update { it.copy(nearbyHelpers = helpers) }
-                    }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                com.afilaxy.util.Logger.e("EmergencyViewModel", "startObservingNearbyHelpers failed: ${e.message}")
-            } finally {
-                helpersObserverStarted = false
             }
         }
     }

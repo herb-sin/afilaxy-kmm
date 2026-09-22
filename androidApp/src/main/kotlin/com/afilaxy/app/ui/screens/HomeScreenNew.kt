@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -40,6 +41,13 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import com.afilaxy.app.ui.components.RequestLocationPermission
 import com.afilaxy.app.ui.components.RiskWidget
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import com.afilaxy.app.ui.onboarding.CoachMarkTarget
+import com.afilaxy.app.ui.onboarding.HomeCoachMarkOverlay
+import com.afilaxy.app.ui.onboarding.PostLoginTour
+import com.afilaxy.app.ui.onboarding.rememberHomeCoachMarkState
 import com.afilaxy.domain.repository.PreferencesRepository
 import com.afilaxy.domain.repository.ReviewRepository
 import com.afilaxy.presentation.auth.AuthViewModel
@@ -174,11 +182,78 @@ fun HomeScreenNew(
         } catch (_: Exception) { /* Sem permissão — RiskWidget não exibido */ }
     }
 
+    // Tour de boas-vindas — índices calculados na mesma ordem/condições dos itens da
+    // LazyColumn abaixo, para que o overlay saiba a qual item rolar em cada passo.
+    val hasRiskWidget = riskLat != 0.0 && riskLng != 0.0
+    val checkInHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val checkInMorningDone = prefsRepo.getBoolean("checkin_morning_done_$today", false)
+    val checkInEveningDone = prefsRepo.getBoolean("checkin_evening_done_$today", false)
+    val checkInType: String? = if (onNavigateToCheckIn != null) {
+        if (checkInHour < 14 && !checkInMorningDone) "MORNING"
+        else if (checkInHour >= 18 && !checkInEveningDone) "EVENING"
+        else null
+    } else null
+
+    var nextItemIndex = 1 // 0 = HomeWelcomeCard
+    if (hasRiskWidget) nextItemIndex++
+    val checkInItemIndex = checkInType?.let { val i = nextItemIndex; nextItemIndex++; i }
+    val emergencyItemIndex = nextItemIndex.also { nextItemIndex++ }
+    val helperItemIndex = nextItemIndex.also { nextItemIndex++ }
+
+    val coachState = rememberHomeCoachMarkState(
+        listOfNotNull(
+            CoachMarkTarget(
+                lazyListIndex = emergencyItemIndex,
+                title = "Em crise de Asma, clique em 'Solicitar Ajuda'",
+                description = "Avisamos pessoas próximas que podem ajudar. Em risco de vida, " +
+                    "ligue também para o SAMU (192)."
+            ),
+            checkInItemIndex?.let {
+                CoachMarkTarget(
+                    lazyListIndex = it,
+                    title = "Registre como você está",
+                    description = "Dois check-ins por dia, de manhã e à noite, alimentam o " +
+                        "motor de risco do Afilaxy para te ajudar a prever crises."
+                )
+            },
+            CoachMarkTarget(
+                lazyListIndex = helperItemIndex,
+                title = "Quer ajudar?",
+                description = "Ative o 'Modo Ajudante' para receber alerta de pessoas com crise " +
+                    "de Asma perto de você. Você escolhe quando ativar e desativar."
+            ),
+        )
+    )
+    val coachListState = rememberLazyListState()
+    var coachListBounds by remember { mutableStateOf<Rect?>(null) }
+
+    // Dispara sempre que o usuário acabou de concluir login/cadastro nesta sessão
+    // (PostLoginTour.pending não é persistido — ver documentação da classe).
+    LaunchedEffect(Unit) {
+        if (PostLoginTour.pending) {
+            PostLoginTour.pending = false
+            coachState.start()
+        }
+    }
+    LaunchedEffect(coachState.isActive, coachState.currentStep) {
+        if (coachState.isActive) {
+            coachState.targets.getOrNull(coachState.currentStep)?.let { target ->
+                coachListState.animateScrollToItem(target.lazyListIndex)
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
+        state = coachListState,
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            // Posição do próprio LazyColumn na tela — não muda com o scroll, capturada uma
+            // vez e combinada com layoutInfo (offset por item) pelo HomeCoachMarkOverlay para
+            // localizar o alvo em tempo real, sem depender de um callback preso a um frame
+            // específico da animação de scroll (ver documentação em HomeCoachMarks.kt).
+            .onGloballyPositioned { coachListBounds = it.boundsInRoot() },
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -207,14 +282,10 @@ fun HomeScreenNew(
         }
 
         // Check-in card — exibido apenas se houver navegação e dentro da janela horária
-        if (onNavigateToCheckIn != null) {
-            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-            val morningDone = prefsRepo.getBoolean("checkin_morning_done_$today", false)
-            val eveningDone = prefsRepo.getBoolean("checkin_evening_done_$today", false)
-            if (hour < 14 && !morningDone) {
-                item { HomeCheckInCard(type = "MORNING", onNavigate = { onNavigateToCheckIn("MORNING") }) }
-            } else if (hour >= 18 && !eveningDone) {
-                item { HomeCheckInCard(type = "EVENING", onNavigate = { onNavigateToCheckIn("EVENING") }) }
+        // (checkInType já calculado acima, em sincronia com o índice usado pelo tour).
+        if (checkInType != null && checkInItemIndex != null) {
+            item {
+                HomeCheckInCard(type = checkInType, onNavigate = { onNavigateToCheckIn?.invoke(checkInType) })
             }
         }
 
@@ -273,6 +344,13 @@ fun HomeScreenNew(
             modifier = Modifier.size(20.dp)
         )
     }
+
+    // Tour de boas-vindas — sempre por cima de tudo nesta tela.
+    HomeCoachMarkOverlay(
+        state = coachState,
+        listState = coachListState,
+        listBoundsInRoot = coachListBounds
+    )
     } // Box
 
     // Dialog de consentimento LGPD + divulgação proeminente de localização (Google Play policy).
@@ -620,7 +698,10 @@ private fun HomeEmergencyButton(
                              else MaterialTheme.colorScheme.error
         ),
         shape = RoundedCornerShape(16.dp),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+        // Sem elevação: a sombra padrão do Material (mais forte embaixo/à direita) fazia o
+        // recorte do tour de boas-vindas (HomeCoachMarkOverlay) parecer descentralizado — a
+        // sombra vazava para fora dos limites reais do botão dentro da área clara do spotlight.
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

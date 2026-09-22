@@ -40,23 +40,18 @@ service cloud.firestore {
       allow delete: if isOwner(helperId);
     }
     
-    // Emergency requests collection (coleção real usada pelo app)
+    // Emergency requests collection (coleção real usada pelo app).
+    // Contém dado sensível (nome do solicitante + GPS exato) — list/get restritos a
+    // participantes. Quem ainda não é participante (ex.: helper decidindo se aceita)
+    // usa a projeção pública sem PII em /emergency_pings, mantida pela Cloud Function
+    // onEmergencyRequestWrite. Ver /emergency_pings abaixo.
     match /emergency_requests/{emergencyId} {
-      // list — regras separadas para evitar ambiguidade de OR com resource.data.*,
-      // que causava PERMISSION_DENIED mesmo com query correta.
-      // Helpers listam emergências ativas (query deve filtrar active==true).
-      allow list: if isAuthenticated() && resource.data.active == true;
-      // Participantes listam histórico próprio (query deve filtrar requesterId ou helperId).
       allow list: if isAuthenticated()
         && (resource.data.requesterId == request.auth.uid
             || resource.data.helperId == request.auth.uid);
-      // get: only participants, or any authenticated user for active emergencies (needed for
-      // the atomic accept transaction). Active emergencies are public within the app by design
-      // (helpers must read them to accept). Scope is reduced to authenticated users only.
       allow get: if isAuthenticated()
         && (request.auth.uid == resource.data.requesterId
-            || request.auth.uid == resource.data.helperId
-            || resource.data.active == true);
+            || request.auth.uid == resource.data.helperId);
       allow create: if isAuthenticated()
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.latitude is number
@@ -82,28 +77,28 @@ service cloud.firestore {
         );
       allow delete: if false;
     }
-    
-    // Professionals collection (legacy)
-    match /professionals/{professionalId} {
+
+    // Projeção pública (sem PII) de emergency_requests — mantida pela Cloud Function
+    // onEmergencyRequestWrite (Admin SDK). Contém só o necessário para: (1) detectar
+    // emergências ativas próximas antes de aceitar, e (2) a checagem inicial da
+    // transação de aceite — nunca o nome do solicitante nem o GPS exato (arredondado
+    // a ~111m, mesma técnica já usada em activateHelper()).
+    match /emergency_pings/{emergencyId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(professionalId)
-        && isValidString(request.resource.data.name, 2, 100)
-        && isValidString(request.resource.data.specialty, 2, 50)
-        && request.resource.data.subscriptionStatus in ['active', 'inactive', 'trial'];
-      // subscriptionStatus must not change via client — only Stripe webhook (Cloud Function) updates it.
-      allow update: if isOwner(professionalId)
-        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
-      allow delete: if isOwner(professionalId);
+      allow write: if false; // só a Cloud Function (Admin SDK) escreve aqui
     }
 
     // Health professionals collection (usado pelo app KMM)
+    // Somente leitura para o cliente. O documento é criado pela Function createCheckoutSession
+    // e plano, validade, verificação, nota e campos do Stripe só mudam via Admin SDK
+    // (webhook do Stripe, cron de expiração, scripts administrativos).
     match /health_professionals/{professionalId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(professionalId);
-      // subscriptionStatus must not change via client — only Stripe webhook (Cloud Function) updates it.
+      allow create: if false;
+      // O dono pode editar apenas campos de perfil de contato — lista permitida (nunca lista de bloqueio).
       allow update: if isAuthenticated() && isOwner(professionalId)
-        && (!('subscriptionStatus' in request.resource.data)
-            || request.resource.data.subscriptionStatus == resource.data.subscriptionStatus);
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['bio', 'phone', 'whatsapp', 'clinicAddress', 'profilePhoto']);
       allow delete: if false;
     }
     

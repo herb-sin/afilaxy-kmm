@@ -16,9 +16,7 @@ import dev.gitlive.firebase.functions.FirebaseFunctions
 import kotlin.math.round
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 class EmergencyRepositoryImpl(
@@ -197,20 +195,26 @@ class EmergencyRepositoryImpl(
             // ou problema de rede pode travara indefinidamente sem retornar sucesso nem falha.
             kotlinx.coroutines.withTimeout(10_000) {
                 firestore.runTransaction {
+                    // A checagem de elegibilidade lê emergency_pings (projeção sem PII, legível
+                    // por qualquer autenticado) em vez de emergency_requests — quem está
+                    // aceitando ainda não é participante, e emergency_requests só permite
+                    // list/get a participantes (ver firestore.rules). A escrita, abaixo,
+                    // continua no documento real.
                     val emergencyRef = firestore.collection("emergency_requests").document(emergencyId)
-                    val emergencyDoc = get(emergencyRef)
+                    val pingRef = firestore.collection("emergency_pings").document(emergencyId)
+                    val pingDoc = get(pingRef)
 
-                    if (!emergencyDoc.exists) throw Exception("Emergência não encontrada")
+                    if (!pingDoc.exists) throw Exception("Emergência não encontrada")
 
-                    val isActive = emergencyDoc.get<Boolean>("active") ?: false
-                    val currentHelperId = emergencyDoc.get<String?>("helperId")
-                    val currentStatus = emergencyDoc.get<String>("status") ?: ""
+                    val isActive = pingDoc.get<Boolean>("active") ?: false
+                    val currentHelperId = pingDoc.get<String?>("helperId")
+                    val currentStatus = pingDoc.get<String>("status") ?: ""
 
                     if (!isActive) throw Exception("Emergência não está ativa")
                     if (currentHelperId != null || currentStatus != "waiting") throw Exception("Emergência já foi aceita")
 
                     // Guard anti auto-match: impede que o requester aceite sua própria emergência
-                    val requesterId = emergencyDoc.get<String?>("requesterId")
+                    val requesterId = pingDoc.get<String?>("requesterId")
                     if (requesterId == userId) throw Exception("Não é possível aceitar sua própria emergência")
 
                     update(
@@ -469,7 +473,11 @@ class EmergencyRepositoryImpl(
         // client-side para evitar range em dois campos (latitude + timestamp) que exigiria
         // índice composto adicional e causava PERMISSION_DENIED em alguns ambientes Firestore.
         val sessionStartMs = getCurrentTimeMillis()
-        return firestore.collection("emergency_requests")
+        // Lê emergency_pings (projeção sem PII, mantida pela Cloud Function
+        // onEmergencyRequestWrite) em vez de emergency_requests — que não é mais listável
+        // por quem não participa (ver firestore.rules). Por isso não há requesterName aqui;
+        // o nome real só chega via notificação push ou depois que o helper aceita.
+        return firestore.collection("emergency_pings")
             .where {
                 ("active" equalTo true) and
                 ("latitude" greaterThanOrEqualTo latitude - deltaLat) and
@@ -489,12 +497,12 @@ class EmergencyRepositoryImpl(
                     Emergency(
                         id = doc.id,
                         userId = requesterId,
-                        userName = doc.get("requesterName") ?: "",
+                        userName = "",
                         location = Location(lat, lon, "", ts),
                         status = EmergencyStatus.fromDb(doc.get("status") ?: "waiting"),
                         assignedHelperId = doc.get("helperId"),
                         timestamp = ts,
-                        severity = doc.get("severity")
+                        severity = null
                     )
                 }
             }
@@ -509,23 +517,6 @@ class EmergencyRepositoryImpl(
             doc.get<Long?>("expiresAt")
                 ?: doc.get<Double?>("expiresAt")?.toLong()
         } catch (e: Exception) { null }
-    }
-
-    // Substitui o snapshot em tempo real por polling a cada 15s via Cloud Function.
-    // Erros de rede não emitem lista vazia — mantém a última emissão no mapa.
-    override fun observeNearbyHelpers(
-        latitude: Double,
-        longitude: Double,
-        radiusKm: Double
-    ): Flow<List<Helper>> = flow {
-        while (true) {
-            try {
-                emit(callNearbyHelpers(latitude, longitude, radiusKm))
-            } catch (_: Exception) {
-                // Falha silenciosa: mantém a emissão anterior no mapa
-            }
-            delay(15_000)
-        }
     }
 
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> {
