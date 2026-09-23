@@ -13,6 +13,11 @@ struct EmergencyResponseView: View {
     @State private var availabilityListener: ListenerRegistration? = nil
     @State private var chatNavigated = false
     @State private var isUnavailable = false  // emergência cancelada/expirada/já aceita
+    // Countdown — faltava por completo nesta tela (só existia na tela do solicitante,
+    // EmergencyView.swift); o helper aceitando não tinha nenhuma noção de quanto tempo
+    // restava até a oferta expirar.
+    @State private var secondsLeft: Int = 180
+    @State private var countdownTimer: Timer? = nil
 
     var body: some View {
         List {
@@ -23,6 +28,12 @@ struct EmergencyResponseView: View {
                 Text("Alguém próximo está pedindo ajuda. Você pode aceitar e ir ao encontro desta pessoa.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                if !isUnavailable && !accepted {
+                    Text(String(format: "Expira em %d:%02d", secondsLeft / 60, secondsLeft % 60))
+                        .font(.headline)
+                        .foregroundColor(secondsLeft <= 30 ? .red : .orange)
+                        .monospacedDigit()
+                }
             }
 
             // Triagem passiva: a pergunta aparece antes dos botões para que o helper
@@ -130,6 +141,33 @@ struct EmergencyResponseView: View {
             statusListener = nil
             availabilityListener?.remove()
             availabilityListener = nil
+            countdownTimer?.invalidate()
+            countdownTimer = nil
+        }
+    }
+
+    /// Inicia o countdown a partir do expiresAt real (espelhado em emergency_pings pela Cloud
+    /// Function onEmergencyRequestWrite). Sem esse campo ainda mirrorado, cai no fallback de
+    /// 3 minutos a partir de agora — mesmo padrão do EmergencyResponseScreen.kt (Android) e do
+    /// EmergencyView.swift (tela do solicitante).
+    private func startCountdown(expiresAtMs: Int64?) {
+        guard countdownTimer == nil else { return }
+        let expiry: Date
+        if let ms = expiresAtMs, ms > 0 {
+            expiry = Date(timeIntervalSince1970: Double(ms) / 1000)
+        } else {
+            expiry = Date().addingTimeInterval(180)
+        }
+        secondsLeft = max(0, Int(expiry.timeIntervalSinceNow))
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            let remaining = max(0, Int(expiry.timeIntervalSinceNow))
+            DispatchQueue.main.async {
+                secondsLeft = remaining
+                if remaining == 0 {
+                    countdownTimer?.invalidate()
+                    countdownTimer = nil
+                }
+            }
         }
     }
 
@@ -149,7 +187,9 @@ struct EmergencyResponseView: View {
                 let status = data["status"] as? String ?? "waiting"
                 let alreadyMatched = (data["helperId"] as? String) != nil && !accepted
                 let unavailable = !active || status == "cancelled" || (alreadyMatched && !accepted)
+                let expiresAtMs = data["expiresAt"] as? Int64 ?? (data["expiresAt"] as? NSNumber)?.int64Value
                 DispatchQueue.main.async {
+                    startCountdown(expiresAtMs: expiresAtMs)
                     if unavailable && !chatNavigated {
                         isUnavailable = true
                         errorMessage = nil
