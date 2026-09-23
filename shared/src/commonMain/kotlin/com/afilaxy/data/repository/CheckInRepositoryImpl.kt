@@ -30,6 +30,7 @@ class CheckInRepositoryImpl(
                 "wellbeingA" to response.wellbeingA,
                 "wellbeingB" to response.wellbeingB,
                 "wellbeingC" to response.wellbeingC,
+                "rescueInhalerUses" to response.rescueInhalerUses,
                 "riskScore" to response.riskScore,
                 "aqi" to response.aqi,
                 "temperature" to response.temperature,
@@ -74,7 +75,8 @@ class CheckInRepositoryImpl(
                     timestamp = doc.get<Long>("timestamp") ?: 0L,
                     wellbeingA = doc.get("wellbeingA"),
                     wellbeingB = doc.get("wellbeingB"),
-                    wellbeingC = doc.get("wellbeingC")
+                    wellbeingC = doc.get("wellbeingC"),
+                    rescueInhalerUses = doc.get("rescueInhalerUses")
                 )
             )
         } catch (e: Exception) {
@@ -104,7 +106,8 @@ class CheckInRepositoryImpl(
                         timestamp = doc.get<Long>("timestamp") ?: 0L,
                         wellbeingA = doc.get("wellbeingA"),
                         wellbeingB = doc.get("wellbeingB"),
-                        wellbeingC = doc.get("wellbeingC")
+                        wellbeingC = doc.get("wellbeingC"),
+                        rescueInhalerUses = doc.get("rescueInhalerUses")
                     )
                 } catch (e: Exception) { null }
             }

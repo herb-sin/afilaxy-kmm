@@ -144,7 +144,12 @@ class CheckInViewModel(
         }
     }
 
-    fun submitEveningCheckIn(wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean) {
+    fun submitEveningCheckIn(
+        wellbeingA: Boolean,
+        wellbeingB: Boolean,
+        wellbeingC: Boolean,
+        rescueInhalerUses: Int
+    ) {
         val userId = authRepository.getCurrentUserId() ?: return
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
@@ -158,6 +163,7 @@ class CheckInViewModel(
                 wellbeingA = wellbeingA,
                 wellbeingB = wellbeingB,
                 wellbeingC = wellbeingC,
+                rescueInhalerUses = rescueInhalerUses,
                 riskScore = _state.value.riskScore,
                 aqi = _state.value.aqi,
                 temperature = _state.value.temperature,

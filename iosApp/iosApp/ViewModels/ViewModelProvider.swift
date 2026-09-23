@@ -326,8 +326,8 @@ class CheckInViewModelWrapper: ObservableObject {
         viewModel?.submitMorningCheckIn(wellbeingA: wellbeingA, wellbeingB: wellbeingB, wellbeingC: wellbeingC)
     }
 
-    func submitEvening(wellbeingA: Bool, wellbeingB: Bool, wellbeingC: Bool) {
-        viewModel?.submitEveningCheckIn(wellbeingA: wellbeingA, wellbeingB: wellbeingB, wellbeingC: wellbeingC)
+    func submitEvening(wellbeingA: Bool, wellbeingB: Bool, wellbeingC: Bool, rescueInhalerUses: Int32) {
+        viewModel?.submitEveningCheckIn(wellbeingA: wellbeingA, wellbeingB: wellbeingB, wellbeingC: wellbeingC, rescueInhalerUses: rescueInhalerUses)
     }
 
     func dismissCriticalCard() {

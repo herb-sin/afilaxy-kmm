@@ -56,8 +56,8 @@ struct CheckInView: View {
                 )
             } else {
                 EveningCheckInContent(
-                    onSubmit: { a, b, c in
-                        wrapper.submitEvening(wellbeingA: a, wellbeingB: b, wellbeingC: c)
+                    onSubmit: { a, b, c, rescue in
+                        wrapper.submitEvening(wellbeingA: a, wellbeingB: b, wellbeingC: c, rescueInhalerUses: Int32(rescue))
                     }
                 )
             }
@@ -78,7 +78,7 @@ struct CheckInView: View {
                     if type == .morning {
                         wrapper.submitMorning(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer)
                     } else {
-                        wrapper.submitEvening(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer)
+                        wrapper.submitEvening(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, rescueInhalerUses: 0)
                     }
                 }
             }
@@ -182,11 +182,12 @@ private struct MorningCheckInContent: View {
 // MARK: - Evening Check-in
 
 private struct EveningCheckInContent: View {
-    let onSubmit: (Bool, Bool, Bool) -> Void
+    let onSubmit: (Bool, Bool, Bool, Int) -> Void
 
     @State private var wellbeingA = true  // "Tive um bom dia"
     @State private var wellbeingB = false // "Pratiquei atividade física"
     @State private var wellbeingC = true  // "Me cuidei bem hoje"
+    @State private var rescueInhalerUses = 0
 
     var body: some View {
         ZStack {
@@ -228,9 +229,13 @@ private struct EveningCheckInContent: View {
                     .background(Color.white.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
 
+                    Spacer().frame(height: 12)
+
+                    RescueInhalerUsesCard(value: $rescueInhalerUses)
+
                     Spacer().frame(height: 24)
 
-                    Button(action: { onSubmit(wellbeingA, wellbeingB, wellbeingC) }) {
+                    Button(action: { onSubmit(wellbeingA, wellbeingB, wellbeingC, rescueInhalerUses) }) {
                         Text("Confirmar")
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)
@@ -325,6 +330,51 @@ private struct CheckInToggleRow: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .onTapGesture { isOn.toggle() }
+    }
+}
+
+// MARK: - Rescue inhaler uses (só no check-in noturno)
+// Alimenta o motor de risco (RiskScoreEngine, shared) como aproximação do critério
+// da GINA de uso de resgate >2x/semana.
+
+private struct RescueInhalerUsesCard: View {
+    @Binding var value: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text("💊").font(.title3)
+                Text("Quantas vezes usou a bombinha de resgate hoje?")
+                    .foregroundColor(.white)
+                    .font(.subheadline.weight(.medium))
+            }
+            Text("Isso ajuda a acompanhar se o uso está dentro do esperado.")
+                .foregroundColor(.white.opacity(0.6))
+                .font(.caption2)
+
+            HStack(spacing: 8) {
+                ForEach([0, 1, 2, 3], id: \.self) { option in
+                    let selected = value == option
+                    let label = option == 3 ? "3+" : "\(option)"
+                    Button(action: { value = option }) {
+                        Text(label)
+                            .fontWeight(.bold)
+                            .foregroundColor(selected ? Color(red: 0.1, green: 0.14, blue: 0.49) : .white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(selected ? Color.white : Color.white.opacity(0.12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: selected ? 0 : 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 

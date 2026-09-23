@@ -52,7 +52,8 @@ fun CheckInScreen(
                     wellbeingA = true, wellbeingB = true, wellbeingC = true
                 )
                 CheckInType.EVENING -> viewModel.submitEveningCheckIn(
-                    wellbeingA = true, wellbeingB = true, wellbeingC = true
+                    wellbeingA = true, wellbeingB = true, wellbeingC = true,
+                    rescueInhalerUses = 0
                 )
             }
         }
@@ -83,7 +84,7 @@ fun CheckInScreen(
                 healthAvailable = state.healthAvailable,
                 healthPermissionsGranted = state.healthPermissionsGranted,
                 onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-                onSubmit = { a, b, c -> viewModel.submitEveningCheckIn(a, b, c) }
+                onSubmit = { a, b, c, rescue -> viewModel.submitEveningCheckIn(a, b, c, rescue) }
             )
         }
         SnackbarHost(
@@ -224,11 +225,12 @@ private fun EveningCheckInContent(
     healthAvailable: Boolean,
     healthPermissionsGranted: Boolean,
     onHealthPermissionGranted: () -> Unit,
-    onSubmit: (wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean) -> Unit
+    onSubmit: (wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean, rescueInhalerUses: Int) -> Unit
 ) {
     var hadCrisis by remember { mutableStateOf(true) }
     var usedInhaler by remember { mutableStateOf(false) }
     var onMedication by remember { mutableStateOf(true) }
+    var rescueInhalerUses by remember { mutableStateOf(0) }
 
     val canSubmit = true
 
@@ -293,10 +295,17 @@ private fun EveningCheckInContent(
                 }
             }
 
+            Spacer(Modifier.height(12.dp))
+
+            RescueInhalerUsesCard(
+                value = rescueInhalerUses,
+                onChange = { rescueInhalerUses = it }
+            )
+
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { onSubmit(hadCrisis, usedInhaler, onMedication) },
+                onClick = { onSubmit(hadCrisis, usedInhaler, onMedication, rescueInhalerUses) },
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -317,6 +326,66 @@ private fun EveningCheckInContent(
                 "Seus dados ajudam a melhorar seu cuidado.",
                 color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, textAlign = TextAlign.Center
             )
+        }
+    }
+}
+
+// ── Contador de uso da bombinha de resgate (só no check-in noturno) ──────────
+// Alimenta o motor de risco (ver EnvironmentalRepositoryImpl.RiskScoreEngine) como
+// aproximação do critério da GINA de uso de resgate >2x/semana.
+
+@Composable
+private fun RescueInhalerUsesCard(
+    value: Int,
+    onChange: (Int) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("💊", fontSize = 18.sp)
+                Text(
+                    "Quantas vezes usou a bombinha de resgate hoje?",
+                    color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium
+                )
+            }
+            Text(
+                "Isso ajuda a acompanhar se o uso está dentro do esperado.",
+                color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(0, 1, 2, 3).forEach { option ->
+                    val selected = value == option
+                    val label = if (option == 3) "3+" else option.toString()
+                    Surface(
+                        onClick = { onChange(option) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selected) Color.White else Color.White.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = if (selected) 0.dp else 1.dp,
+                            color = Color.White.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label,
+                                color = if (selected) Color(0xFF1A237E) else Color.White,
+                                fontWeight = FontWeight.Bold, fontSize = 15.sp
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

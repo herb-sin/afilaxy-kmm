@@ -313,6 +313,27 @@ internal object RiskScoreEngine {
             }
         }
 
+        // ── Uso do inalador de resgate (autorrelato, check-in noturno) ────────
+        // GINA: uso de resgate >2x/semana é um dos critérios clássicos de asma não
+        // controlada. Soma o autorrelato dos últimos 7 dias — mesma janela de crises7d —
+        // para não penalizar um pico isolado num único dia.
+        if (recentCheckIns.isNotEmpty()) {
+            val rescueUses7d = recentCheckIns.sumOf { it.rescueInhalerUses ?: 0 }
+            val rescueScore = when {
+                rescueUses7d >= 7 -> 35
+                rescueUses7d >= 3 -> 22
+                rescueUses7d == 2 -> 10
+                else -> 0
+            }
+            score += rescueScore
+            if (rescueUses7d > 2) {
+                factors.add("⚠️ Bombinha de resgate usada $rescueUses7d vez(es) nos últimos 7 dias — acima do recomendado pela GINA (até 2x/semana)")
+                recommendations.add("Fale com seu médico sobre ajustar seu tratamento de manutenção")
+            } else if (rescueUses7d > 0) {
+                factors.add("Bombinha de resgate usada $rescueUses7d vez(es) nos últimos 7 dias")
+            }
+        }
+
         // ── Qualidade do ar ────────────────────────────────────────────────────
         val aqi = env?.aqi
         if (aqi != null) {

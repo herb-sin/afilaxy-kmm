@@ -21,6 +21,11 @@ data class CheckInResponse(
     val wellbeingB: Boolean? = null,
     val wellbeingC: Boolean? = null,
 
+    // Autorrelato — quantas vezes usou a bombinha de resgate no dia (só no check-in noturno,
+    // que olha para o dia inteiro já vivido). Usado pelo motor de risco para aproximar o
+    // critério da GINA de uso de resgate >2x/semana. Null = pergunta não respondida/não exibida.
+    val rescueInhalerUses: Int? = null,
+
     // ── Contexto ambiental capturado automaticamente ───────────────────────
     val riskScore: Int? = null,
     val aqi: Int? = null,
