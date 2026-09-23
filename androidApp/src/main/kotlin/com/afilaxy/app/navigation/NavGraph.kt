@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,7 +46,7 @@ fun NavGraph(
     val prefs: PreferencesRepository = koinInject()
     val authRepository: AuthRepository = koinInject()
     val authViewModel: AuthViewModel = koinViewModel()
-    val authState by authViewModel.state.collectAsState()
+    val authState by authViewModel.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     // Session invalidation: AuthViewModel detects it, NavGraph reacts by showing alert + redirect
@@ -228,7 +228,7 @@ fun NavGraph(
     // Guard 1: não navega se já estiver em emergency_response ou chat.
     // Guard 2: não navega se o emergencyId já foi para o chat nesta sessão
     //          (notificação FCM tardia de uma emergência já resolvida).
-    val incomingEmergencies = emergencyViewModel?.state?.collectAsState()?.value?.incomingEmergencies ?: emptyList()
+    val incomingEmergencies = emergencyViewModel?.state?.collectAsStateWithLifecycle()?.value?.incomingEmergencies ?: emptyList()
     LaunchedEffect(incomingEmergencies) {
         val incoming = incomingEmergencies.firstOrNull() ?: return@LaunchedEffect
         if (navController.currentDestination == null) return@LaunchedEffect
@@ -369,7 +369,7 @@ fun NavGraph(
             val typeStr = backStackEntry.arguments?.getString("type") ?: "MORNING"
             val checkInType = if (typeStr == "EVENING") CheckInType.EVENING else CheckInType.MORNING
             val riskViewModel: com.afilaxy.presentation.risk.RiskViewModel = org.koin.androidx.compose.koinViewModel()
-            val riskState by riskViewModel.state.collectAsState()
+            val riskState by riskViewModel.state.collectAsStateWithLifecycle()
             CheckInScreen(
                 type = checkInType,
                 riskScore = riskState.riskScore?.score,
