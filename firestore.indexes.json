@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "emergency_requests",
+      "collectionGroup": "emergency_pings",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "active", "order": "ASCENDING" },

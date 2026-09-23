@@ -1122,6 +1122,9 @@ export const onEmergencyRequestWrite = onDocumentWritten(
                 latitude: roundedLat,
                 longitude: roundedLon,
                 timestamp: after.timestamp ?? null,
+                // Não é PII — necessário para o countdown em EmergencyResponseScreen, que lê
+                // esta projeção antes do helper aceitar (e virar participante de emergency_requests).
+                expiresAt: after.expiresAt ?? null,
             });
         } catch (error) {
             console.error(`Erro ao espelhar emergency_pings/${emergencyId}:`, error);

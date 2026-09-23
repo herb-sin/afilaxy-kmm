@@ -508,9 +508,13 @@ class EmergencyRepositoryImpl(
             }
     }
 
+    // Lê emergency_pings pelo mesmo motivo de observeEmergencyStatus logo abaixo: chamado por
+    // EmergencyResponseScreen assim que a tela abre, antes do helper aceitar e virar
+    // participante de emergency_requests — ler de lá direto dava PERMISSION_DENIED (silencioso
+    // aqui, por causa do try/catch, mas forçava o fallback de 3min estimados em vez do valor real).
     override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? {
         return try {
-            val doc = firestore.collection("emergency_requests").document(emergencyId).get()
+            val doc = firestore.collection("emergency_pings").document(emergencyId).get()
             // O Firestore KMM às vezes serializa campos numéricos como Double em vez de Long.
             // Tenta Long primeiro; fallback para Double.toLong() para garantir que o countdown
             // da EmergencyResponseScreen (Android) receba um valor não-nulo e inicie corretamente.
@@ -519,8 +523,15 @@ class EmergencyRepositoryImpl(
         } catch (e: Exception) { null }
     }
 
+    // Lê emergency_pings (projeção sem PII) em vez de emergency_requests — este observer é
+    // ligado assim que EmergencyResponseScreen abre, ou seja, ANTES do usuário aceitar e virar
+    // participante (helperId). emergency_requests só permite get/listen a participantes (ver
+    // firestore.rules), então ligar direto nele aqui derruba com PERMISSION_DENIED — foi
+    // exatamente esse crash que motivou a migração. emergency_pings tem 'status' espelhado
+    // pela Cloud Function onEmergencyRequestWrite a cada escrita real, incluindo o
+    // status="matched" do aceite, então o comportamento observado não muda.
     override fun observeEmergencyStatus(emergencyId: String): Flow<String?> {
-        return firestore.collection("emergency_requests")
+        return firestore.collection("emergency_pings")
             .document(emergencyId)
             .snapshots
             .map { snapshot ->

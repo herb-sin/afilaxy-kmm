@@ -80,10 +80,20 @@ class EmergencyViewModel(
         statusObservedId = emergencyId
         statusObserverJob?.cancel()
         statusObserverJob = viewModelScope.coroutineScope.launch {
-            emergencyRepository.observeEmergencyStatus(emergencyId)
-                .collect { status ->
-                    _state.update { it.copy(emergencyStatus = status) }
-                }
+            try {
+                emergencyRepository.observeEmergencyStatus(emergencyId)
+                    .collect { status ->
+                        _state.update { it.copy(emergencyStatus = status) }
+                    }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // deixa o job cancelar normalmente
+            } catch (e: Exception) {
+                // Rede de segurança: sem isso, um erro do Firestore aqui (ex.: regra negada)
+                // propaga sem tratamento e derruba o app inteiro (era exatamente esse o bug
+                // corrigido ao mover a leitura para emergency_pings — ver EmergencyRepositoryImpl).
+                com.afilaxy.util.Logger.e("EmergencyViewModel", "observeEmergencyStatus failed emergencyId=$emergencyId", e)
+                statusObservedId = null
+            }
         }
     }
     
