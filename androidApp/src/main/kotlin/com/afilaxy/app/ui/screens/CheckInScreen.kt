@@ -105,9 +105,11 @@ private fun MorningCheckInContent(
     onHealthPermissionGranted: () -> Unit,
     onSubmit: (wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean) -> Unit
 ) {
-    var nocturnalSymptoms by remember { mutableStateOf(false) }
-    var hasInhaler by remember { mutableStateOf(true) }
-    var onMedication by remember { mutableStateOf(true) }
+    // Nomes genéricos (batem com o domínio compartilhado CheckInResponse e com o iOS) —
+    // o significado real de cada campo é o rótulo exibido ao lado, comentado abaixo.
+    var wellbeingA by remember { mutableStateOf(true) }  // "Dormi bem esta noite" — era false por engano
+    var wellbeingB by remember { mutableStateOf(true) }  // "Me sinto bem esta manhã"
+    var wellbeingC by remember { mutableStateOf(true) }  // "Estou com boa energia"
 
     Box(
         modifier = Modifier
@@ -171,22 +173,22 @@ private fun MorningCheckInContent(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     CheckInItem(
                         label = "Dormi bem esta noite",
-                        checked = nocturnalSymptoms,
-                        onToggle = { nocturnalSymptoms = it },
+                        checked = wellbeingA,
+                        onToggle = { wellbeingA = it },
                         activeColor = Color(0xFFFFCC02)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
                         label = "Me sinto bem esta manhã",
-                        checked = hasInhaler,
-                        onToggle = { hasInhaler = it },
+                        checked = wellbeingB,
+                        onToggle = { wellbeingB = it },
                         activeColor = Color.White
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
                         label = "Estou com boa energia",
-                        checked = onMedication,
-                        onToggle = { onMedication = it },
+                        checked = wellbeingC,
+                        onToggle = { wellbeingC = it },
                         activeColor = Color.White
                     )
                 }
@@ -195,7 +197,7 @@ private fun MorningCheckInContent(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { onSubmit(nocturnalSymptoms, hasInhaler, onMedication) },
+                onClick = { onSubmit(wellbeingA, wellbeingB, wellbeingC) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White, contentColor = Color(0xFFE65100)
@@ -227,9 +229,11 @@ private fun EveningCheckInContent(
     onHealthPermissionGranted: () -> Unit,
     onSubmit: (wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean, rescueInhalerUses: Int) -> Unit
 ) {
-    var hadCrisis by remember { mutableStateOf(true) }
-    var usedInhaler by remember { mutableStateOf(false) }
-    var onMedication by remember { mutableStateOf(true) }
+    // Nomes genéricos (batem com o domínio compartilhado CheckInResponse e com o iOS) —
+    // o significado real de cada campo é o rótulo exibido ao lado, comentado abaixo.
+    var wellbeingA by remember { mutableStateOf(true) }   // "Tive um bom dia"
+    var wellbeingB by remember { mutableStateOf(false) }  // "Pratiquei atividade física"
+    var wellbeingC by remember { mutableStateOf(true) }   // "Me cuidei bem hoje"
     var rescueInhalerUses by remember { mutableStateOf(0) }
 
     val canSubmit = true
@@ -277,19 +281,19 @@ private fun EveningCheckInContent(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     CheckInItem(
                         label = "Tive um bom dia",
-                        checked = hadCrisis, onToggle = { hadCrisis = it },
+                        checked = wellbeingA, onToggle = { wellbeingA = it },
                         activeColor = Color(0xFF81C784)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
                         label = "Pratiquei atividade física",
-                        checked = usedInhaler, onToggle = { usedInhaler = it },
+                        checked = wellbeingB, onToggle = { wellbeingB = it },
                         activeColor = Color(0xFFFFCC02)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
                         label = "Me cuidei bem hoje",
-                        checked = onMedication, onToggle = { onMedication = it },
+                        checked = wellbeingC, onToggle = { wellbeingC = it },
                         activeColor = Color.White
                     )
                 }
@@ -305,7 +309,7 @@ private fun EveningCheckInContent(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { onSubmit(hadCrisis, usedInhaler, onMedication, rescueInhalerUses) },
+                onClick = { onSubmit(wellbeingA, wellbeingB, wellbeingC, rescueInhalerUses) },
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(

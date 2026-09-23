@@ -124,10 +124,21 @@ export const stripeWebhook = onRequest(async (req, res) => {
                 .update({
                     subscriptionPlan: 'PARTNER',
                     subscriptionExpiry: expiryDate,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+            // stripeCustomerId/stripeSubscriptionId ficam numa coleção separada, sem regra de
+            // leitura pública (cai no default-deny do firestore.rules) — health_professionals
+            // é lido por qualquer usuário autenticado, e esses identificadores de billing não
+            // precisam estar ali (achado de auditoria de segurança).
+            await admin.firestore()
+                .collection('health_professionals_billing')
+                .doc(professionalId)
+                .set({
                     stripeCustomerId: session.customer,
                     stripeSubscriptionId: session.subscription,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
+                }, { merge: true });
 
             console.log(`✅ PARTNER ativado para ${professionalId}, expira em ${new Date(expiryDate).toISOString()}`);
             res.json({ received: true });
@@ -142,22 +153,23 @@ export const stripeWebhook = onRequest(async (req, res) => {
         const customerId = subscription.customer;
 
         try {
-            // Buscar profissional pelo stripeCustomerId
+            // Buscar profissional pelo stripeCustomerId — agora em health_professionals_billing
+            // (ver comentário em checkout.session.completed acima)
             const snapshot = await admin.firestore()
-                .collection('health_professionals')
+                .collection('health_professionals_billing')
                 .where('stripeCustomerId', '==', customerId)
                 .limit(1)
                 .get();
 
             if (!snapshot.empty) {
-                const doc = snapshot.docs[0];
-                await doc.ref.update({
+                const professionalId = snapshot.docs[0].id;
+                await admin.firestore().collection('health_professionals').doc(professionalId).update({
                     subscriptionPlan: 'NONE',
                     subscriptionExpiry: 0,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ Subscription cancelled for ${doc.id}`);
+                console.log(`✅ Subscription cancelled for ${professionalId}`);
             }
 
             res.json({ received: true });
@@ -180,16 +192,17 @@ export const stripeWebhook = onRequest(async (req, res) => {
         const currentPeriodEnd = subscription.current_period_end * 1000; // Unix → ms
         try {
             const snapshot = await admin.firestore()
-                .collection('health_professionals')
+                .collection('health_professionals_billing')
                 .where('stripeCustomerId', '==', customerId)
                 .limit(1)
                 .get();
             if (!snapshot.empty) {
-                await snapshot.docs[0].ref.update({
+                const professionalId = snapshot.docs[0].id;
+                await admin.firestore().collection('health_professionals').doc(professionalId).update({
                     subscriptionExpiry: currentPeriodEnd,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
-                console.log(`🔄 Expiry sincronizado para ${snapshot.docs[0].id}: ${new Date(currentPeriodEnd).toISOString()}`);
+                console.log(`🔄 Expiry sincronizado para ${professionalId}: ${new Date(currentPeriodEnd).toISOString()}`);
             }
             res.json({ received: true });
         } catch (error) {
@@ -711,6 +724,10 @@ export const scheduleEmergencyExpiry = onDocumentCreated(
         if (!snap) return;
         const emergencyId = event.params.emergencyId;
         const data = snap.data();
+        // Fallback de 3min — deve bater com EMERGENCY_TIMEOUT_MS em
+        // shared/src/commonMain/kotlin/com/afilaxy/domain/model/EmergencyConstants.kt.
+        // Só é usado se o documento (recém-criado) ainda não tiver expiresAt por algum motivo;
+        // no fluxo normal o valor real já vem do client.
         const expiresAt: number = data.expiresAt || (Date.now() + 180000);
         const delaySec = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
 
@@ -1024,6 +1041,9 @@ export const getNearbyHelpers = onCall(async (request) => {
     const lat = Number(request.data.latitude);
     const lon = Number(request.data.longitude);
     // Raio fixo em 250m — ver comentário acima. Não aceita mais radiusKm do cliente.
+    // Deve bater com HELPER_RADIUS_KM em shared/.../EmergencyViewModel.kt e com o default em
+    // AfilaxyApp.swift (iOS) — sem constante compartilhada entre as 3 linguagens, mantido
+    // manualmente em sincronia.
     const radiusKm = 0.25;
 
     if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {

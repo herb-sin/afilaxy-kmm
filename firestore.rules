@@ -90,8 +90,8 @@ service cloud.firestore {
 
     // Health professionals collection (usado pelo app KMM)
     // Somente leitura para o cliente. O documento é criado pela Function createCheckoutSession
-    // e plano, validade, verificação, nota e campos do Stripe só mudam via Admin SDK
-    // (webhook do Stripe, cron de expiração, scripts administrativos).
+    // e plano, validade e verificação só mudam via Admin SDK (webhook do Stripe, cron de
+    // expiração, scripts administrativos).
     match /health_professionals/{professionalId} {
       allow read: if isAuthenticated();
       allow create: if false;
@@ -101,7 +101,15 @@ service cloud.firestore {
              .hasOnly(['bio', 'phone', 'whatsapp', 'clinicAddress', 'profilePhoto']);
       allow delete: if false;
     }
-    
+
+    // Identificadores de billing do Stripe (stripeCustomerId/stripeSubscriptionId) — separados
+    // de health_professionals (que qualquer autenticado lê) porque não precisam estar públicos.
+    // Só a Cloud Function (Admin SDK) acessa; já cairia no default-deny do fim do arquivo, mas
+    // fica explícito aqui como documentação (achado de auditoria de segurança).
+    match /health_professionals_billing/{professionalId} {
+      allow read, write: if false;
+    }
+
     // UBS (Health Centers) - read-only for users
     match /ubs/{ubsId} {
       allow read: if isAuthenticated();

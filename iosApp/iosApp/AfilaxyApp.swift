@@ -181,8 +181,6 @@ class AppContainer: ObservableObject {
     private(set) var _emergency: EmergencyViewModelWrapper?
     private(set) var _history: HistoryViewModelWrapper?
     private(set) var _profile: ProfileViewModelWrapper?
-    private(set) var _professionals: ProfessionalListViewModelWrapper?
-    private(set) var _professionalDetail: ProfessionalDetailViewModelWrapper?
     private(set) var _loginViewModel: LoginViewModel?
     private(set) var _risk: RiskViewModelWrapper?
 
@@ -194,8 +192,6 @@ class AppContainer: ObservableObject {
     var emergency: EmergencyViewModelWrapper { _emergency ?? EmergencyViewModelWrapper.empty() }
     var history: HistoryViewModelWrapper { _history ?? HistoryViewModelWrapper.empty() }
     var profile: ProfileViewModelWrapper { _profile ?? ProfileViewModelWrapper.empty() }
-    var professionals: ProfessionalListViewModelWrapper { _professionals ?? ProfessionalListViewModelWrapper.empty() }
-    var professionalDetail: ProfessionalDetailViewModelWrapper { _professionalDetail ?? ProfessionalDetailViewModelWrapper.empty() }
     var loginViewModel: LoginViewModel? { _loginViewModel }
     var risk: RiskViewModelWrapper { _risk ?? RiskViewModelWrapper.empty() }
 
@@ -221,14 +217,6 @@ class AppContainer: ObservableObject {
         if let vm = ViewModelProvider.shared.getProfileViewModel() {
             _profile = ProfileViewModelWrapper(vm)
         } else { failed.append("ProfileViewModel") }
-
-        if let vm = ViewModelProvider.shared.getProfessionalListViewModel() {
-            _professionals = ProfessionalListViewModelWrapper(vm)
-        } else { failed.append("ProfessionalListViewModel") }
-
-        if let vm = ViewModelProvider.shared.getProfessionalDetailViewModel() {
-            _professionalDetail = ProfessionalDetailViewModelWrapper(vm)
-        } else { failed.append("ProfessionalDetailViewModel") }
 
         _loginViewModel = ViewModelProvider.shared.getLoginViewModel()
 
@@ -281,8 +269,6 @@ class AppContainer: ObservableObject {
         _auth?.signOutSwift()
         _history?.freeze()
         _profile?.freeze()
-        _professionals?.freeze()
-        _professionalDetail?.freeze()
         _risk?.freeze()
         // 4. Cancela notificações de check-in pendentes — evita lembretes sem usuário autenticado
         CheckInNotificationScheduler.shared.cancelAll()
@@ -334,6 +320,10 @@ class AppContainer: ObservableObject {
     // por quem não participa (ver firestore.rules). Por isso não há requesterName aqui;
     // o nome real chega via notificação push (AfilaxyIncomingEmergency) ou só depois
     // que o helper aceita.
+    // radiusKm deve bater com HELPER_RADIUS_KM em
+    // shared/src/commonMain/kotlin/com/afilaxy/presentation/emergency/EmergencyViewModel.kt
+    // (e com o mesmo valor em functions/src/index.ts) — não há como compartilhar a constante
+    // entre Kotlin/Swift/TypeScript, então isso precisa ser mantido em sincronia manualmente.
     func startObservingNearbyEmergencies(lat: Double, lon: Double, radiusKm: Double = 0.25) {
         emergencyListener?.remove()
         let deltaLat = radiusKm / 111.0

@@ -509,12 +509,6 @@ fun NavGraph(
             AutocuidadoScreen(navController = navController)
         }
 
-        composable(AppRoutes.EDUCATION) {
-            EducationScreenNew(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
         composable(AppRoutes.CRM_LOOKUP) {
             CrmLookupScreen(onNavigateBack = { navController.popBackStack() })
         }

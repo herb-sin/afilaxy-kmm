@@ -43,14 +43,6 @@ func safeGetHistoryViewModel() -> HistoryViewModel? {
     koinGet({ try KoinHelperKt.safeGetHistoryViewModel() }, tag: "HistoryViewModel")
 }
 
-func safeGetProfessionalListViewModel() -> ProfessionalListViewModel? {
-    koinGet({ try KoinHelperKt.safeGetProfessionalListViewModel() }, tag: "ProfessionalListViewModel")
-}
-
-func safeGetProfessionalDetailViewModel() -> ProfessionalDetailViewModel? {
-    koinGet({ try KoinHelperKt.safeGetProfessionalDetailViewModel() }, tag: "ProfessionalDetailViewModel")
-}
-
 func safeGetHomeViewModel() -> HomeViewModel? {
     koinGet({ try KoinHelperKt.safeGetHomeViewModel() }, tag: "HomeViewModel")
 }

@@ -5,8 +5,6 @@ import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
-import com.afilaxy.presentation.professional.ProfessionalListViewModel
-import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.presentation.risk.RiskViewModel
@@ -67,18 +65,6 @@ fun safeGetProfileViewModel(): ProfileViewModel {
 fun safeGetHistoryViewModel(): HistoryViewModel {
     Logger.d(TAG, "safeGetHistoryViewModel")
     return getKoin().get<HistoryViewModel>().also { Logger.d(TAG, "HistoryViewModel OK") }
-}
-
-@Throws(Exception::class)
-fun safeGetProfessionalListViewModel(): ProfessionalListViewModel {
-    Logger.d(TAG, "safeGetProfessionalListViewModel")
-    return getKoin().get<ProfessionalListViewModel>().also { Logger.d(TAG, "ProfessionalListViewModel OK") }
-}
-
-@Throws(Exception::class)
-fun safeGetProfessionalDetailViewModel(): ProfessionalDetailViewModel {
-    Logger.d(TAG, "safeGetProfessionalDetailViewModel")
-    return getKoin().get<ProfessionalDetailViewModel>().also { Logger.d(TAG, "ProfessionalDetailViewModel OK") }
 }
 
 @Throws(Exception::class)

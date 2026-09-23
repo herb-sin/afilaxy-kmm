@@ -180,91 +180,6 @@ class ProfileViewModelWrapper: ObservableObject {
     }
 }
 
-// MARK: - ProfessionalListViewModelWrapper
-class ProfessionalListViewModelWrapper: ObservableObject {
-    private let viewModel: ProfessionalListViewModel?
-    @Published var state: ProfessionalListState?
-    private var observer: StateFlowObserver<ProfessionalListState>?
-    private var cancellable: AnyCancellable?
-    private var authHandle: AuthStateDidChangeListenerHandle?
-
-    init(_ viewModel: ProfessionalListViewModel) {
-        self.viewModel = viewModel
-        let obs = StateFlowObserver<ProfessionalListState>(viewModel.state)
-        self.observer = obs
-        self.state = obs.value
-        self.cancellable = obs.$value
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] newState in self?.state = newState }
-
-        // Mesmo padrão do ProfileViewModelWrapper: ProfessionalListViewModel.init
-        // dispara loadProfessionals() antes do Firebase Auth restaurar currentUser
-        // → "Missing or insufficient permissions". Listener garante retry no momento certo.
-        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            guard user != nil, self?.state?.professionals.isEmpty == true else { return }
-            FileLogger.shared.write(level: "INFO", tag: "ProfessionalListViewModelWrapper",
-                message: "authStateDidChange: user disponível, recarregando profissionais")
-            self?.viewModel?.loadProfessionals(specialty: nil)
-        }
-    }
-
-    deinit {
-        if let handle = authHandle {
-            Auth.auth().removeStateDidChangeListener(handle)
-        }
-    }
-
-    static func empty() -> ProfessionalListViewModelWrapper { ProfessionalListViewModelWrapper() }
-    private init() { self.viewModel = nil }
-
-    var vm: ProfessionalListViewModel? { viewModel }
-
-    /// Força um recarregamento da lista — chamado pelo .onAppear da ProfessionalListView
-    /// para garantir que o Firebase Auth já está pronto (o init() do ViewModel dispara
-    /// antes do auth restaurar a sessão, resultando em lista vazia).
-    func loadProfessionals() {
-        viewModel?.loadProfessionals(specialty: nil)
-    }
-
-    func freeze() {
-        cancellable?.cancel()
-        cancellable = nil
-        observer = nil
-        if let handle = authHandle {
-            Auth.auth().removeStateDidChangeListener(handle)
-            authHandle = nil
-        }
-    }
-}
-
-// MARK: - ProfessionalDetailViewModelWrapper
-class ProfessionalDetailViewModelWrapper: ObservableObject {
-    private let viewModel: ProfessionalDetailViewModel?
-    @Published var state: ProfessionalDetailState?
-    private var observer: StateFlowObserver<ProfessionalDetailState>?
-    private var cancellable: AnyCancellable?
-
-    init(_ viewModel: ProfessionalDetailViewModel) {
-        self.viewModel = viewModel
-        let obs = StateFlowObserver<ProfessionalDetailState>(viewModel.state)
-        self.observer = obs
-        self.state = obs.value
-        self.cancellable = obs.$value
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] newState in self?.state = newState }
-    }
-
-    static func empty() -> ProfessionalDetailViewModelWrapper { ProfessionalDetailViewModelWrapper() }
-    private init() { self.viewModel = nil }
-
-    var vm: ProfessionalDetailViewModel? { viewModel }
-    func freeze() {
-        cancellable?.cancel()
-        cancellable = nil
-        observer = nil
-    }
-}
-
 // MARK: - RiskViewModelWrapper
 class RiskViewModelWrapper: ObservableObject {
     private let viewModel: RiskViewModel?
@@ -351,8 +266,6 @@ class ViewModelProvider {
     func getEmergencyViewModel() -> EmergencyViewModel? { safeGetEmergencyViewModel() }
     func getProfileViewModel() -> ProfileViewModel? { safeGetProfileViewModel() }
     func getHistoryViewModel() -> HistoryViewModel? { safeGetHistoryViewModel() }
-    func getProfessionalListViewModel() -> ProfessionalListViewModel? { safeGetProfessionalListViewModel() }
-    func getProfessionalDetailViewModel() -> ProfessionalDetailViewModel? { safeGetProfessionalDetailViewModel() }
     func getHomeViewModel() -> HomeViewModel? { safeGetHomeViewModel() }
     func getCheckInViewModel() -> CheckInViewModel? { safeGetCheckInViewModel() }
 

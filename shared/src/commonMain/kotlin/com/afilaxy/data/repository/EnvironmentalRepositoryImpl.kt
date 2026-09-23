@@ -18,6 +18,7 @@ import com.afilaxy.util.sumRollingDays
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.math.round
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -102,11 +103,18 @@ class EnvironmentalRepositoryImpl(
         longitude: Double
     ): Result<EnvironmentalData> {
         return try {
+            // LGPD/Política de Privacidade: só "localização aproximada" é prometida a
+            // processadores terceiros (WAQI, OpenMeteo) — arredonda para 0.001° ≈ 111m,
+            // mesma técnica já usada em EmergencyRepositoryImpl para o Modo Ajudante.
+            // Precisão de metros não faz diferença nenhuma para clima/qualidade do ar.
+            val roundedLat = round(latitude * 1000) / 1000.0
+            val roundedLon = round(longitude * 1000) / 1000.0
+
             // Busca clima (OpenMeteo — sem chave, gratuito)
             val meteo = try {
                 httpClient.get("https://api.open-meteo.com/v1/forecast") {
-                    parameter("latitude", latitude)
-                    parameter("longitude", longitude)
+                    parameter("latitude", roundedLat)
+                    parameter("longitude", roundedLon)
                     parameter("current", "temperature_2m,relative_humidity_2m,wind_speed_10m,uv_index,precipitation")
                     parameter("timezone", "auto")
                 }.body<OpenMeteoResponse>()
@@ -114,7 +122,7 @@ class EnvironmentalRepositoryImpl(
 
             // Busca qualidade do ar (WAQI)
             val waqi = try {
-                httpClient.get("https://api.waqi.info/feed/geo:$latitude;$longitude/") {
+                httpClient.get("https://api.waqi.info/feed/geo:$roundedLat;$roundedLon/") {
                     parameter("token", waqiToken)
                 }.body<WaqiResponse>()
             } catch (e: Exception) { null }
@@ -124,8 +132,8 @@ class EnvironmentalRepositoryImpl(
 
             Result.success(
                 EnvironmentalData(
-                    latitude = latitude,
-                    longitude = longitude,
+                    latitude = roundedLat,
+                    longitude = roundedLon,
                     temperatureCelsius = current?.temperature ?: 0f,
                     humidity = current?.humidity ?: 0f,
                     windSpeedKmh = current?.windSpeed ?: 0f,

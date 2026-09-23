@@ -9,8 +9,6 @@ import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.presentation.history.HistoryViewModel
 import com.afilaxy.presentation.login.LoginViewModel
 import com.afilaxy.presentation.professional.CrmLookupViewModel
-import com.afilaxy.presentation.professional.ProfessionalDetailViewModel
-import com.afilaxy.presentation.professional.ProfessionalListViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.domain.repository.HealthRepository
@@ -42,8 +40,7 @@ fun sharedModule(): Module = module {
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
     single<NotificationRepository> { NotificationRepositoryImpl(get(), get()) }
-    single<HealthProfessionalRepository> { HealthProfessionalRepositoryImpl(get(), get()) }
-    
+
     // New repositories for expanded features
     single<EnvironmentalRepository> {
         val token = com.afilaxy.config.WaqiConfig.API_TOKEN.ifBlank { "demo" }
@@ -64,8 +61,6 @@ fun sharedModule(): Module = module {
     single { EmergencyViewModel(get(), get(), get()) }
     factory { ProfileViewModel(get(), get()) }
     factory { HistoryViewModel(get(), get()) }
-    factory { ProfessionalListViewModel(get()) }
-    factory { ProfessionalDetailViewModel(get()) }
     factory { CrmLookupViewModel() }
     
     // New ViewModels for expanded features

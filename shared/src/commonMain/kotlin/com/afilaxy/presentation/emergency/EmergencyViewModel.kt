@@ -396,7 +396,7 @@ class EmergencyViewModel(
                     longitude = longitude,
                     timestamp = com.afilaxy.domain.model.getCurrentTimeMillis()
                 ),
-                radiusKm = 0.25 // ~250m — resposta a pé em ~3 min
+                radiusKm = HELPER_RADIUS_KM // ~250m — resposta a pé em ~3 min
             )
                 .onSuccess { helpers ->
                     _state.update { it.copy(nearbyHelpers = helpers) }
