@@ -48,7 +48,7 @@ fun PortalScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Parceira Institucional", fontWeight = FontWeight.Bold) }
+                title = { Text("Apoiadores", fontWeight = FontWeight.Bold) }
             )
         }
     ) { paddingValues ->
@@ -60,21 +60,19 @@ fun PortalScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_cellula_mater),
-                contentDescription = "Cellula Mater — parceira institucional",
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .size(96.dp)
-                    .clickable {
-                        analytics.logEvent("partner_link_clicked", mapOf("partner" to "cellula_mater"))
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CELLULA_MATER_URL)))
-                    }
-            )
-
-            // Espaço reservado para futuras parceiras (logos adicionais entrarão aqui) —
-            // separa visualmente a área institucional das ações abaixo.
-            Spacer(modifier = Modifier.height(96.dp))
+            // Logo da Cellula Mater oculto a pedido — código mantido para reativação rápida
+            // quando fizer sentido voltar a exibir (contrato/logo ainda não finalizados).
+            // Image(
+            //     painter = painterResource(id = R.drawable.logo_cellula_mater),
+            //     contentDescription = "Cellula Mater — parceira institucional",
+            //     modifier = Modifier
+            //         .align(Alignment.CenterHorizontally)
+            //         .size(96.dp)
+            //         .clickable {
+            //             analytics.logEvent("partner_link_clicked", mapOf("partner" to "cellula_mater"))
+            //             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CELLULA_MATER_URL)))
+            //         }
+            // )
 
             PortalActionCard(
                 icon = Icons.Default.PersonAdd,

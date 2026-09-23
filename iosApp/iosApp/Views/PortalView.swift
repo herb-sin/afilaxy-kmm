@@ -8,20 +8,19 @@ struct PortalView: View {
         // ContentView already wraps this in a NavigationStack — no NavigationView needed here.
         ScrollView {
             VStack(spacing: 16) {
-                Image("logo-cellula-mater")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 96, height: 96)
-                    .onTapGesture {
-                        AnalyticsManager.logEvent("partner_link_clicked", params: ["partner": "cellula_mater"])
-                        if let url = URL(string: "https://cellulamater.com.br/") {
-                            openURL(url)
-                        }
-                    }
-
-                // Espaço reservado para futuras parceiras (logos adicionais entrarão aqui) —
-                // separa visualmente a área institucional das ações abaixo.
-                Spacer(minLength: 96)
+                // Logo da Cellula Mater oculto a pedido — código mantido para reativação
+                // rápida quando fizer sentido voltar a exibir (contrato/logo ainda não
+                // finalizados). Ver também PortalScreen.kt (Android).
+                // Image("logo-cellula-mater")
+                //     .resizable()
+                //     .scaledToFit()
+                //     .frame(width: 96, height: 96)
+                //     .onTapGesture {
+                //         AnalyticsManager.logEvent("partner_link_clicked", params: ["partner": "cellula_mater"])
+                //         if let url = URL(string: "https://cellulamater.com.br/") {
+                //             openURL(url)
+                //         }
+                //     }
 
                 PortalActionCard(
                     icon: "person.badge.plus",
@@ -47,7 +46,7 @@ struct PortalView: View {
             .padding(.top, 16)
             .padding(.bottom, 100)
         }
-        .navigationTitle("Parceira Institucional")
+        .navigationTitle("Apoiadores")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             // Cláusula 2.3 do contrato de parceria — mesma métrica registrada no Android
