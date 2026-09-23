@@ -142,10 +142,16 @@ final class LocationManagerBridge {
             let pingDoc: DocumentSnapshot
             do { pingDoc = try transaction.getDocument(pingRef) }
             catch let e as NSError { errorPointer?.pointee = e; return nil }
+            // IMPORTANTE: usar "as? String" em vez de comparar direto com nil.
+            // A Cloud Function onEmergencyRequestWrite sempre escreve o campo helperId em
+            // emergency_pings, mesmo vazio (helperId: after.helperId ?? null) — e o SDK do
+            // Firestore no iOS devolve esse null como NSNull, não como o nil do Swift.
+            // "pingDoc.data()?["helperId"] == nil" nunca era true por causa disso, fazendo
+            // TODA emergência (mesmo a primeira tentativa de aceite) cair no guard abaixo.
             guard pingDoc.exists,
                   let active = pingDoc.data()?["active"] as? Bool, active,
                   let status = pingDoc.data()?["status"] as? String, status == "waiting",
-                  pingDoc.data()?["helperId"] == nil else {
+                  (pingDoc.data()?["helperId"] as? String) == nil else {
                 let e = NSError(domain: "Afilaxy", code: 409,
                     userInfo: [NSLocalizedDescriptionKey: "Emergência não disponível"])
                 errorPointer?.pointee = e
