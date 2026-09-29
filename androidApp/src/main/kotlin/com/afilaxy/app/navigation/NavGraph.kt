@@ -294,6 +294,10 @@ fun NavGraph(
                 },
                 onLogout = {
                     scope.launch {
+                        // Cancela observers/emergência ANTES do signOut — evita listener do
+                        // Firestore sobreviver ao logout e vazar estado para o próximo usuário
+                        // (mesma race que o iOS resolve em freezeSwift() antes do signOutSwift()).
+                        emergencyViewModel?.onLogout()
                         authRepository.logout()
                         navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
                     }
@@ -338,6 +342,10 @@ fun NavGraph(
                     onNavigateToHealthReport = { navController.navigate(AppRoutes.HEALTH_REPORT) },
                     onLogout = {
                         scope.launch {
+                            // Cancela observers/emergência ANTES do signOut — evita listener do
+                            // Firestore sobreviver ao logout e vazar estado para o próximo usuário
+                            // (mesma race que o iOS resolve em freezeSwift() antes do signOutSwift()).
+                            emergencyViewModel?.onLogout()
                             authRepository.logout()
                             navController.navigate(AppRoutes.LOGIN) {
                                 popUpTo(0) { inclusive = true }
@@ -347,7 +355,7 @@ fun NavGraph(
                 )
             }
         }
-        
+
         composable(AppRoutes.MAP) {
             AfilaxyAppScaffoldSimple(navController = navController) {
                 MapScreen(navController = navController)

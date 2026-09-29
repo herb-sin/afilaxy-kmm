@@ -10,6 +10,7 @@ import dev.gitlive.firebase.auth.GoogleAuthProvider
 import dev.gitlive.firebase.auth.OAuthProvider
 import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flowOf
@@ -118,7 +119,11 @@ class AuthRepositoryImpl(
         // Clear sessionId in Firestore so the stale token doesn't confuse future sessions
         if (uid != null) {
             try {
-                firestore.collection("users").document(uid).update(mapOf("sessionId" to ""))
+                // Timeout defensivo: best-effort, não pode travar o sign-out se a rede
+                // estiver degradada (ex.: stream do Firestore caiu — visto em testes no emulador).
+                withTimeoutOrNull(3_000) {
+                    firestore.collection("users").document(uid).update(mapOf("sessionId" to ""))
+                }
             } catch (e: Exception) {
                 Logger.e("AuthRepository", "Falha ao limpar sessionId no logout: ${e.message}", e)
             }
