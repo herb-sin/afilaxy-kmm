@@ -32,7 +32,7 @@ android {
             "VERSION_CODE deve estar entre 1 e 2100000000, recebido: $rawVersionCodeStr"
         }
         versionCode = rawVersionCodeLong.toInt()
-        versionName = "2.3.1"
+        versionName = "2.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
