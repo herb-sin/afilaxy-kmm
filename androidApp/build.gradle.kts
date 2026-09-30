@@ -150,6 +150,7 @@ dependencies {
     
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
     
     // Koin — atualizado 2025-03 (era 3.5.0)
