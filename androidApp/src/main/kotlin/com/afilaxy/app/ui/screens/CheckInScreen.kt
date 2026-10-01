@@ -49,11 +49,11 @@ fun CheckInScreen(
         if (quickAnswer == true && !state.isLoading && !state.alreadyDoneToday && !state.isSubmitted) {
             when (type) {
                 CheckInType.MORNING -> viewModel.submitMorningCheckIn(
-                    wellbeingA = true, wellbeingB = true, wellbeingC = true,
+                    morningMoodGood = true, morningEnergyGood = true,
                     nighttimeAwakening = true
                 )
                 CheckInType.EVENING -> viewModel.submitEveningCheckIn(
-                    wellbeingA = true, wellbeingB = true, wellbeingC = true,
+                    hadGoodDay = true, physicalActivityDone = true, selfCareGood = true,
                     rescueInhalerUses = 0,
                     daytimeBreathingEase = true, activityAsPlanned = true
                 )
@@ -79,15 +79,15 @@ fun CheckInScreen(
                 healthAvailable = state.healthAvailable,
                 healthPermissionsGranted = state.healthPermissionsGranted,
                 onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-                onSubmit = { a, b, c, awakening -> viewModel.submitMorningCheckIn(a, b, c, awakening) }
+                onSubmit = { mood, energy, awakening -> viewModel.submitMorningCheckIn(mood, energy, awakening) }
             )
             type == CheckInType.EVENING -> EveningCheckInContent(
                 healthSnapshot = state.healthSnapshot,
                 healthAvailable = state.healthAvailable,
                 healthPermissionsGranted = state.healthPermissionsGranted,
                 onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-                onSubmit = { a, b, c, rescue, breathing, activity ->
-                    viewModel.submitEveningCheckIn(a, b, c, rescue, breathing, activity)
+                onSubmit = { goodDay, activityDone, selfCare, rescue, breathing, activity ->
+                    viewModel.submitEveningCheckIn(goodDay, activityDone, selfCare, rescue, breathing, activity)
                 }
             )
         }
@@ -107,13 +107,10 @@ private fun MorningCheckInContent(
     healthAvailable: Boolean,
     healthPermissionsGranted: Boolean,
     onHealthPermissionGranted: () -> Unit,
-    onSubmit: (wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean, nighttimeAwakening: Boolean) -> Unit
+    onSubmit: (morningMoodGood: Boolean, morningEnergyGood: Boolean, nighttimeAwakening: Boolean) -> Unit
 ) {
-    // Nomes genéricos (batem com o domínio compartilhado CheckInResponse e com o iOS) —
-    // o significado real de cada campo é o rótulo exibido ao lado, comentado abaixo.
-    var wellbeingA by remember { mutableStateOf(true) }  // "Dormi bem esta noite" — era false por engano
-    var wellbeingB by remember { mutableStateOf(true) }  // "Me sinto bem esta manhã"
-    var wellbeingC by remember { mutableStateOf(true) }  // "Estou com boa energia"
+    var morningMoodGood by remember { mutableStateOf(true) }    // "Me sinto bem esta manhã"
+    var morningEnergyGood by remember { mutableStateOf(true) }  // "Estou com boa energia"
     var nighttimeAwakening by remember { mutableStateOf(true) }  // "Meu sono foi tranquilo, sem interrupções?"
 
     Box(
@@ -177,23 +174,16 @@ private fun MorningCheckInContent(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     CheckInItem(
-                        label = "Dormi bem esta noite",
-                        checked = wellbeingA,
-                        onToggle = { wellbeingA = it },
-                        activeColor = Color(0xFFFFCC02)
-                    )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    CheckInItem(
                         label = "Me sinto bem esta manhã",
-                        checked = wellbeingB,
-                        onToggle = { wellbeingB = it },
+                        checked = morningMoodGood,
+                        onToggle = { morningMoodGood = it },
                         activeColor = Color.White
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
                         label = "Estou com boa energia",
-                        checked = wellbeingC,
-                        onToggle = { wellbeingC = it },
+                        checked = morningEnergyGood,
+                        onToggle = { morningEnergyGood = it },
                         activeColor = Color.White
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
@@ -209,7 +199,7 @@ private fun MorningCheckInContent(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { onSubmit(wellbeingA, wellbeingB, wellbeingC, nighttimeAwakening) },
+                onClick = { onSubmit(morningMoodGood, morningEnergyGood, nighttimeAwakening) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White, contentColor = Color(0xFFE65100)
@@ -240,15 +230,13 @@ private fun EveningCheckInContent(
     healthPermissionsGranted: Boolean,
     onHealthPermissionGranted: () -> Unit,
     onSubmit: (
-        wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean, rescueInhalerUses: Int,
+        hadGoodDay: Boolean, physicalActivityDone: Boolean, selfCareGood: Boolean, rescueInhalerUses: Int,
         daytimeBreathingEase: Boolean, activityAsPlanned: Boolean
     ) -> Unit
 ) {
-    // Nomes genéricos (batem com o domínio compartilhado CheckInResponse e com o iOS) —
-    // o significado real de cada campo é o rótulo exibido ao lado, comentado abaixo.
-    var wellbeingA by remember { mutableStateOf(true) }   // "Tive um bom dia"
-    var wellbeingB by remember { mutableStateOf(false) }  // "Pratiquei atividade física"
-    var wellbeingC by remember { mutableStateOf(true) }   // "Me cuidei bem hoje"
+    var hadGoodDay by remember { mutableStateOf(true) }           // "Tive um bom dia"
+    var physicalActivityDone by remember { mutableStateOf(false) } // "Pratiquei atividade física"
+    var selfCareGood by remember { mutableStateOf(true) }          // "Me cuidei bem hoje"
     var rescueInhalerUses by remember { mutableStateOf(0) }
     var daytimeBreathingEase by remember { mutableStateOf(true) }  // "Respirei com facilidade ao longo do dia?"
     var activityAsPlanned by remember { mutableStateOf(true) }     // "Consegui fazer tudo que tinha planejado hoje?"
@@ -298,19 +286,19 @@ private fun EveningCheckInContent(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     CheckInItem(
                         label = "Tive um bom dia",
-                        checked = wellbeingA, onToggle = { wellbeingA = it },
+                        checked = hadGoodDay, onToggle = { hadGoodDay = it },
                         activeColor = Color(0xFF81C784)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
                         label = "Pratiquei atividade física",
-                        checked = wellbeingB, onToggle = { wellbeingB = it },
+                        checked = physicalActivityDone, onToggle = { physicalActivityDone = it },
                         activeColor = Color(0xFFFFCC02)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
                         label = "Me cuidei bem hoje",
-                        checked = wellbeingC, onToggle = { wellbeingC = it },
+                        checked = selfCareGood, onToggle = { selfCareGood = it },
                         activeColor = Color.White
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
@@ -340,7 +328,7 @@ private fun EveningCheckInContent(
             Button(
                 onClick = {
                     onSubmit(
-                        wellbeingA, wellbeingB, wellbeingC, rescueInhalerUses,
+                        hadGoodDay, physicalActivityDone, selfCareGood, rescueInhalerUses,
                         daytimeBreathingEase, activityAsPlanned
                     )
                 },

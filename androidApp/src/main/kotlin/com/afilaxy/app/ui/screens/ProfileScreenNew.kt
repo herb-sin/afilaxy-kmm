@@ -176,16 +176,18 @@ fun ProfileScreenNew(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
-                        Surface(
-                            color = Color.White.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Text(
-                                text = if (profile?.isHealthProfessional == true) "Profissional de Saúde" else "Paciente Verificado",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                            )
+                        if (profile?.isHealthProfessional == true) {
+                            Surface(
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = "Profissional de Saúde",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                                )
+                            }
                         }
                         if (!profile?.email.isNullOrBlank()) {
                             Text(
@@ -546,18 +548,6 @@ private fun EditProfileSheetContent(
                 )
             }
         }
-        // Seção 2: Alergias
-        item {
-            EditSection(icon = Icons.Default.ErrorOutline, title = "Alergias") {
-                ProfileTextField("Alergias conhecidas (opcional)", allergies, onAllergiesChange)
-                Text(
-                    "Visível apenas para você no seu perfil pessoal.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-            }
-        }
         // Seção 2b: Comorbidades (autodeclaradas, sem verificação clínica — alimenta o motor de risco)
         item {
             EditSection(icon = Icons.Default.HealthAndSafety, title = "Comorbidades (opcional)") {
@@ -585,14 +575,23 @@ private fun EditProfileSheetContent(
                 }
             }
         }
-        // Seção 2b-2: Alergias Específicas (autodeclaradas, sem verificação clínica —
-        // alimenta o motor de risco num bucket próprio, separado do das comorbidades)
+        // Seção 2b-2: Alergias (toggles específicos autodeclarados alimentam o motor de
+        // risco num bucket próprio, separado do das comorbidades; o campo de texto livre
+        // ao final é só registro pessoal, não pontua)
         item {
-            EditSection(icon = Icons.Default.Sick, title = "Alergias Específicas (opcional)") {
+            EditSection(icon = Icons.Default.Sick, title = "Alergias (opcional)") {
                 ProfileInfoBox("Marque as que se aplicam. Usado só para calcular seu nível de risco com mais precisão, nunca compartilhado.")
                 ProfileSwitchRow("Alergia alimentar confirmada", hasFoodAllergy, onHasFoodAllergyChange)
                 ProfileSwitchRow("Alergia a anti-inflamatórios (AINEs/aspirina)", hasNsaidAllergy, onHasNsaidAllergyChange)
                 ProfileSwitchRow("Alergia a ácaros, pólen, mofo ou pelos de animais", hasInhalantAllergy, onHasInhalantAllergyChange)
+                HorizontalDivider()
+                ProfileTextField("Outras alergias (opcional)", allergies, onAllergiesChange)
+                Text(
+                    "Visível apenas para você no seu perfil pessoal.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
                 HorizontalDivider()
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

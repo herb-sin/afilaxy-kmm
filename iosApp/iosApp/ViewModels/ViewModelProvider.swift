@@ -213,9 +213,9 @@ class RiskViewModelWrapper: ObservableObject {
 
 // MARK: - CheckInViewModelWrapper
 struct EveningCheckInAnswers {
-    let wellbeingA: Bool
-    let wellbeingB: Bool
-    let wellbeingC: Bool
+    let hadGoodDay: Bool
+    let physicalActivityDone: Bool
+    let selfCareGood: Bool
     let rescueInhalerUses: Int32
     let daytimeBreathingEase: Bool
     let activityAsPlanned: Bool
@@ -246,17 +246,17 @@ class CheckInViewModelWrapper: ObservableObject {
         viewModel?.initialize(type: type, riskScore: riskScore, aqi: aqi, temperature: temperature, humidity: humidity)
     }
 
-    func submitMorning(wellbeingA: Bool, wellbeingB: Bool, wellbeingC: Bool, nighttimeAwakening: Bool) {
+    func submitMorning(morningMoodGood: Bool, morningEnergyGood: Bool, nighttimeAwakening: Bool) {
         viewModel?.submitMorningCheckIn(
-            wellbeingA: wellbeingA, wellbeingB: wellbeingB, wellbeingC: wellbeingC,
+            morningMoodGood: morningMoodGood, morningEnergyGood: morningEnergyGood,
             nighttimeAwakening: nighttimeAwakening
         )
     }
 
     func submitEvening(_ answers: EveningCheckInAnswers) {
         viewModel?.submitEveningCheckIn(
-            wellbeingA: answers.wellbeingA, wellbeingB: answers.wellbeingB, wellbeingC: answers.wellbeingC,
-            rescueInhalerUses: answers.rescueInhalerUses,
+            hadGoodDay: answers.hadGoodDay, physicalActivityDone: answers.physicalActivityDone,
+            selfCareGood: answers.selfCareGood, rescueInhalerUses: answers.rescueInhalerUses,
             daytimeBreathingEase: answers.daytimeBreathingEase, activityAsPlanned: answers.activityAsPlanned
         )
     }

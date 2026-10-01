@@ -332,13 +332,28 @@ internal object RiskScoreEngine {
         }
 
         // ── Bem-estar reportado nos check-ins dos últimos 7 dias ──────────────
+        // Matinal (humor/energia) e noturno (dia/atividade/autocuidado) são temas
+        // diferentes — contados e relatados em separado, mas somados sob o mesmo teto
+        // de 25 pontos de antes, pra não mudar o peso desse fator no score geral.
+        // nighttimeAwakening (bucket próprio acima) já cobre o sono matinal — não repetido aqui.
         if (recentCheckIns.isNotEmpty()) {
-            val lowWellbeingDays = recentCheckIns.count { ci ->
-                listOfNotNull(ci.wellbeingA, ci.wellbeingB, ci.wellbeingC).count { !it } >= 2
+            val lowMorningDays = recentCheckIns.count { ci ->
+                ci.type == "MORNING" &&
+                    listOfNotNull(ci.morningMoodGood, ci.morningEnergyGood).count { !it } >= 2
             }
+            val lowEveningDays = recentCheckIns.count { ci ->
+                ci.type == "EVENING" &&
+                    listOfNotNull(ci.hadGoodDay, ci.physicalActivityDone, ci.selfCareGood).count { !it } >= 2
+            }
+            val lowWellbeingDays = lowMorningDays + lowEveningDays
             if (lowWellbeingDays > 0) {
                 score += (lowWellbeingDays * 8).coerceAtMost(25)
-                factors.add("$lowWellbeingDays dia(s) com bem-estar comprometido esta semana")
+                if (lowMorningDays > 0) {
+                    factors.add("$lowMorningDays manhã(s) com humor/energia comprometidos esta semana")
+                }
+                if (lowEveningDays > 0) {
+                    factors.add("$lowEveningDays noite(s) com bem-estar comprometido esta semana")
+                }
                 if (lowWellbeingDays >= 3) {
                     recommendations.add("Considere buscar apoio profissional para seu bem-estar")
                 }

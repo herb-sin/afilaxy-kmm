@@ -59,13 +59,13 @@ class RiskScoreEngineTest {
     private fun checkInBemEstar() = CheckInResponse(
         id = "ci-ok", userId = "user-1",
         type = "MORNING", timestamp = System.currentTimeMillis(),
-        wellbeingA = true, wellbeingB = true, wellbeingC = true
+        morningMoodGood = true, morningEnergyGood = true
     )
 
     private fun checkInMalEstar() = CheckInResponse(
         id = "ci-bad", userId = "user-1",
         type = "EVENING", timestamp = System.currentTimeMillis(),
-        wellbeingA = false, wellbeingB = false, wellbeingC = true
+        hadGoodDay = false, physicalActivityDone = false, selfCareGood = true
     )
 
     private fun checkInNighttimeAwakening() = CheckInResponse(
@@ -282,9 +282,11 @@ class RiskScoreEngineTest {
     }
 
     @Test
-    fun `check-in com apenas 1 resposta negativa nao conta como baixo bem-estar`() {
+    fun `check-in matinal com apenas 1 resposta negativa nao conta como baixo bem-estar`() {
+        // Matinal só tem 2 sinais (morningMoodGood, morningEnergyGood) — precisa das
+        // duas negativas pra contar; nighttimeAwakening já pontua em bucket próprio.
         val checkIn = CheckInResponse("c1", "u1", "MORNING", 0L,
-            wellbeingA = false, wellbeingB = true, wellbeingC = true)
+            morningMoodGood = false, morningEnergyGood = true)
         val result = RiskScoreEngine.calculate(
             env = envBom(),
             crises30d = 0, crises7d = 0, samuCalledCount = 0,
@@ -292,6 +294,21 @@ class RiskScoreEngineTest {
             recentCheckIns = listOf(checkIn)
         )
         assertEquals(0, result.score)
+    }
+
+    @Test
+    fun `hadGoodDay noturno conta normalmente pro bucket de bem-estar`() {
+        // Noturno: hadGoodDay/physicalActivityDone/selfCareGood seguem independentes
+        // entre si — 2 negativas de 3 já dispara o bucket.
+        val checkIn = CheckInResponse("c1", "u1", "EVENING", 0L,
+            hadGoodDay = false, physicalActivityDone = false, selfCareGood = true)
+        val result = RiskScoreEngine.calculate(
+            env = envBom(),
+            crises30d = 0, crises7d = 0, samuCalledCount = 0,
+            monthOfYear = 5,
+            recentCheckIns = listOf(checkIn)
+        )
+        assertEquals(8, result.score)
     }
 
     // ── GRUPO 4: Pacientes de Risco Muito Alto ───────────────────────────────
@@ -395,9 +412,9 @@ class RiskScoreEngineTest {
     fun `bem-estar cap e aplicado em 25 pontos maximo`() {
         // 4 dias × 8 = 32 → cap em 25
         val checkIns4 = List(4) { CheckInResponse("c$it", "u1", "EVENING", 0L,
-            wellbeingA = false, wellbeingB = false, wellbeingC = true) }
+            hadGoodDay = false, physicalActivityDone = false, selfCareGood = true) }
         val checkIns2 = List(2) { CheckInResponse("c$it", "u1", "EVENING", 0L,
-            wellbeingA = false, wellbeingB = false, wellbeingC = true) }
+            hadGoodDay = false, physicalActivityDone = false, selfCareGood = true) }
 
         val r4 = RiskScoreEngine.calculate(env = null, crises30d = 0, crises7d = 0,
             samuCalledCount = 0, monthOfYear = 5, recentCheckIns = checkIns4)

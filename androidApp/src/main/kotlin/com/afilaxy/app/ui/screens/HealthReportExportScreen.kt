@@ -365,10 +365,13 @@ private suspend fun generateAndShare(context: Context, doctor: CrmResult): Boole
 
     val checkIns = checkInDocs.documents.map { doc ->
         WellbeingCheckInAndroid(
-            type       = doc.getString("type") ?: "",
-            wellbeingA = doc.getBoolean("wellbeingA") ?: false,
-            wellbeingB = doc.getBoolean("wellbeingB") ?: false,
-            wellbeingC = doc.getBoolean("wellbeingC") ?: false
+            type                 = doc.getString("type") ?: "",
+            nighttimeAwakening   = doc.getBoolean("nighttimeAwakening") ?: false,
+            morningMoodGood      = doc.getBoolean("morningMoodGood") ?: false,
+            morningEnergyGood    = doc.getBoolean("morningEnergyGood") ?: false,
+            hadGoodDay           = doc.getBoolean("hadGoodDay") ?: false,
+            physicalActivityDone = doc.getBoolean("physicalActivityDone") ?: false,
+            selfCareGood         = doc.getBoolean("selfCareGood") ?: false
         )
     }
 
@@ -409,10 +412,19 @@ private fun emergency30d(statsDoc: DocumentSnapshot?): Int {
 
 private data class WellbeingCheckInAndroid(
     val type: String,
-    val wellbeingA: Boolean,
-    val wellbeingB: Boolean,
-    val wellbeingC: Boolean
-)
+    val nighttimeAwakening: Boolean,
+    val morningMoodGood: Boolean,
+    val morningEnergyGood: Boolean,
+    val hadGoodDay: Boolean,
+    val physicalActivityDone: Boolean,
+    val selfCareGood: Boolean
+) {
+    fun isCritical(): Boolean = if (type == "MORNING") {
+        !nighttimeAwakening && !morningMoodGood && !morningEnergyGood
+    } else {
+        !hadGoodDay && !physicalActivityDone && !selfCareGood
+    }
+}
 
 private data class WellbeingReportAndroid(
     val patientName: String,
@@ -506,7 +518,7 @@ private object WellbeingPDFAndroid {
     private fun summary(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
         val total = r.checkIns.size
         val adherence = total * 100 / 60
-        val critical = r.checkIns.count { !it.wellbeingA && !it.wellbeingB && !it.wellbeingC }
+        val critical = r.checkIns.count { it.isCritical() }
         return plainRows(c, listOf(
             "Check-ins realizados (30 dias)"        to "$total de 60 possíveis",
             "Taxa de adesão ao monitoramento"       to "$adherence%",
@@ -519,9 +531,9 @@ private object WellbeingPDFAndroid {
         val m = r.checkIns.filter { it.type == "MORNING" }
         return barRows(c, listOf(
             "Registros de manhã: ${m.size}"  to null,
-            "\"Dormi bem esta noite\""        to pct(m) { it.wellbeingA },
-            "\"Me sinto bem esta manhã\""    to pct(m) { it.wellbeingB },
-            "\"Estou com boa energia\""      to pct(m) { it.wellbeingC }
+            "\"Meu sono foi tranquilo, sem interrupções\"" to pct(m) { it.nighttimeAwakening },
+            "\"Me sinto bem esta manhã\""    to pct(m) { it.morningMoodGood },
+            "\"Estou com boa energia\""      to pct(m) { it.morningEnergyGood }
         ), sectionHeader(c, "2. CHECK-IN MATINAL", y, MORNING), MORNING)
     }
 
@@ -529,14 +541,14 @@ private object WellbeingPDFAndroid {
         val e = r.checkIns.filter { it.type == "EVENING" }
         return barRows(c, listOf(
             "Registros noturnos: ${e.size}"    to null,
-            "\"Tive um bom dia\""              to pct(e) { it.wellbeingA },
-            "\"Pratiquei atividade física\""   to pct(e) { it.wellbeingB },
-            "\"Me cuidei bem hoje\""          to pct(e) { it.wellbeingC }
+            "\"Tive um bom dia\""              to pct(e) { it.hadGoodDay },
+            "\"Pratiquei atividade física\""   to pct(e) { it.physicalActivityDone },
+            "\"Me cuidei bem hoje\""          to pct(e) { it.selfCareGood }
         ), sectionHeader(c, "3. CHECK-IN NOTURNO", y, EVENING), EVENING)
     }
 
     private fun criticalSection(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
-        val critical = r.checkIns.count { !it.wellbeingA && !it.wellbeingB && !it.wellbeingC }
+        val critical = r.checkIns.count { it.isCritical() }
         return plainRows(c, listOf(
             "Pedidos de ajuda emergencial (período)" to "${r.emergencyCount30d}",
             "Dias com bem-estar mínimo registrado"   to "$critical"
