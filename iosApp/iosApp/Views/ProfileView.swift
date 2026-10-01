@@ -67,12 +67,8 @@ struct ProfileView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
                                 
-                                HStack(spacing: 8) {
-                                    if profile.isHealthProfessional {
-                                        StatusBadge(text: "Profissional de Saúde", status: .success)
-                                    } else {
-                                        StatusBadge(text: "Paciente Verificado", status: .info)
-                                    }
+                                if profile.isHealthProfessional {
+                                    StatusBadge(text: "Profissional de Saúde", status: .success)
                                 }
                                 
                                 Text(profile.email)
@@ -403,13 +399,6 @@ struct EditProfileSheet: View {
                         FloatingLabelField(label: "Telefone", text: $phone, keyboardType: .phonePad)
                     }
 
-                    EditProfileSection(icon: "exclamationmark.circle.fill", title: "Alergias") {
-                        FloatingLabelField(label: "Alergias conhecidas (opcional)", text: $allergies)
-                        Text("Visível apenas para você no seu perfil pessoal.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
                     EditProfileSection(icon: "cross.case.fill", title: "Comorbidades (opcional)") {
                         ProfileInfoBox("Marque as que se aplicam. Usado só para calcular seu nível de risco com mais precisão, nunca compartilhado.")
                         Toggle("Refluxo / DRGE", isOn: $hasGerd)
@@ -425,11 +414,16 @@ struct EditProfileSheet: View {
                         }
                     }
 
-                    EditProfileSection(icon: "bandage.fill", title: "Alergias Específicas (opcional)") {
+                    EditProfileSection(icon: "bandage.fill", title: "Alergias (opcional)") {
                         ProfileInfoBox("Marque as que se aplicam. Usado só para calcular seu nível de risco com mais precisão, nunca compartilhado.")
                         Toggle("Alergia alimentar confirmada", isOn: $hasFoodAllergy)
                         Toggle("Alergia a anti-inflamatórios (AINEs/aspirina)", isOn: $hasNsaidAllergy)
                         Toggle("Alergia a ácaros, pólen, mofo ou pelos de animais", isOn: $hasInhalantAllergy)
+                        Divider()
+                        FloatingLabelField(label: "Outras alergias (opcional)", text: $allergies)
+                        Text("Visível apenas para você no seu perfil pessoal.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                         Divider()
                         HStack(spacing: 6) {
                             Image(systemName: "lock.fill").font(.caption2).foregroundColor(.secondary)

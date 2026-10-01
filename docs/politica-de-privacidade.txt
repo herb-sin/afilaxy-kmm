@@ -67,8 +67,9 @@ A cada check-in (matinal e noturno), são registrados:
 
 Dado                                   | Natureza              | Finalidade
 ---------------------------------------|----------------------|----------------------
-wellbeingA, wellbeingB, wellbeingC     | Bem-estar subjetivo  | Acompanhamento e
-(respostas binárias)                   | autodeclarado        | cálculo do Índice
+morningMoodGood, morningEnergyGood,     | Bem-estar subjetivo  | Acompanhamento e
+hadGoodDay, physicalActivityDone,      | autodeclarado        | cálculo do Índice
+selfCareGood (respostas binárias)      |                      |
 AQI, temperatura, umidade              | Dado ambiental,      | Contextualização
 (contexto ambiental)                   | não pessoal          | do check-in
 Data, hora e período (matinal/noturno) | Dado temporal        | Registro histórico
@@ -264,11 +265,11 @@ Responderemos às solicitações em até 15 (quinze) dias úteis.
 12. ENCARREGADO (DPO) E CANAIS DE ATENDIMENTO
 ================================================================================
 
-Encarregado pelo Tratamento de Dados (DPO): [Nome]
+Encarregado pelo Tratamento de Dados (DPO): Herbert Jung Sin
 
 Para exercer seus direitos, solicitar informações ou registrar reclamações:
 
-  E-mail: [e-mail oficial — ex: privacidade@afilaxy.com]
+  E-mail: afilaxy@gmail.com
 
   Autoridade Nacional de Proteção de Dados (ANPD): gov.br/anpd
   Para reclamações não resolvidas diretamente com a AFILAXY.

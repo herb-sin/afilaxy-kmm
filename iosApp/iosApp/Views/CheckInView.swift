@@ -50,15 +50,16 @@ struct CheckInView: View {
             } else if type == .morning {
                 MorningCheckInContent(
                     riskScore: wrapper.state?.riskScore?.int32Value,
-                    onSubmit: { a, b, c, awakening in
-                        wrapper.submitMorning(wellbeingA: a, wellbeingB: b, wellbeingC: c, nighttimeAwakening: awakening)
+                    onSubmit: { mood, energy, awakening in
+                        wrapper.submitMorning(morningMoodGood: mood, morningEnergyGood: energy, nighttimeAwakening: awakening)
                     }
                 )
             } else {
                 EveningCheckInContent(
-                    onSubmit: { a, b, c, rescue, breathing, activity in
+                    onSubmit: { goodDay, activityDone, selfCare, rescue, breathing, activity in
                         wrapper.submitEvening(EveningCheckInAnswers(
-                            wellbeingA: a, wellbeingB: b, wellbeingC: c, rescueInhalerUses: Int32(rescue),
+                            hadGoodDay: goodDay, physicalActivityDone: activityDone, selfCareGood: selfCare,
+                            rescueInhalerUses: Int32(rescue),
                             daytimeBreathingEase: breathing, activityAsPlanned: activity
                         ))
                     }
@@ -79,10 +80,10 @@ struct CheckInView: View {
                wrapper.state?.isSubmitted != true {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     if type == .morning {
-                        wrapper.submitMorning(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, nighttimeAwakening: answer)
+                        wrapper.submitMorning(morningMoodGood: answer, morningEnergyGood: answer, nighttimeAwakening: answer)
                     } else {
                         wrapper.submitEvening(EveningCheckInAnswers(
-                            wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, rescueInhalerUses: 0,
+                            hadGoodDay: answer, physicalActivityDone: answer, selfCareGood: answer, rescueInhalerUses: 0,
                             daytimeBreathingEase: answer, activityAsPlanned: answer
                         ))
                     }
@@ -97,11 +98,10 @@ struct CheckInView: View {
 
 private struct MorningCheckInContent: View {
     let riskScore: Int32?
-    let onSubmit: (Bool, Bool, Bool, Bool) -> Void
+    let onSubmit: (Bool, Bool, Bool) -> Void
 
-    @State private var wellbeingA = true  // "Dormi bem esta noite"
-    @State private var wellbeingB = true  // "Me sinto bem esta manhã"
-    @State private var wellbeingC = true  // "Estou com boa energia"
+    @State private var morningMoodGood = true    // "Me sinto bem esta manhã"
+    @State private var morningEnergyGood = true  // "Estou com boa energia"
     @State private var nighttimeAwakening = true  // "Meu sono foi tranquilo, sem interrupções?"
 
     var body: some View {
@@ -147,11 +147,9 @@ private struct MorningCheckInContent: View {
                     Spacer().frame(height: 20)
 
                     VStack(spacing: 0) {
-                        CheckInToggleRow(label: "Dormi bem esta noite", isOn: $wellbeingA)
+                        CheckInToggleRow(label: "Me sinto bem esta manhã", isOn: $morningMoodGood)
                         Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Me sinto bem esta manhã", isOn: $wellbeingB)
-                        Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Estou com boa energia", isOn: $wellbeingC)
+                        CheckInToggleRow(label: "Estou com boa energia", isOn: $morningEnergyGood)
                         Divider().background(Color.white.opacity(0.2))
                         CheckInToggleRow(label: "Meu sono foi tranquilo, sem interrupções", isOn: $nighttimeAwakening)
                     }
@@ -161,7 +159,7 @@ private struct MorningCheckInContent: View {
 
                     Spacer().frame(height: 24)
 
-                    Button(action: { onSubmit(wellbeingA, wellbeingB, wellbeingC, nighttimeAwakening) }) {
+                    Button(action: { onSubmit(morningMoodGood, morningEnergyGood, nighttimeAwakening) }) {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                             Text("Confirmar")
@@ -193,9 +191,9 @@ private struct MorningCheckInContent: View {
 private struct EveningCheckInContent: View {
     let onSubmit: (Bool, Bool, Bool, Int, Bool, Bool) -> Void
 
-    @State private var wellbeingA = true  // "Tive um bom dia"
-    @State private var wellbeingB = false // "Pratiquei atividade física"
-    @State private var wellbeingC = true  // "Me cuidei bem hoje"
+    @State private var hadGoodDay = true           // "Tive um bom dia"
+    @State private var physicalActivityDone = false // "Pratiquei atividade física"
+    @State private var selfCareGood = true          // "Me cuidei bem hoje"
     @State private var rescueInhalerUses = 0
     @State private var daytimeBreathingEase = true  // "Respirei com facilidade ao longo do dia?"
     @State private var activityAsPlanned = true     // "Consegui fazer tudo que tinha planejado hoje?"
@@ -230,11 +228,11 @@ private struct EveningCheckInContent: View {
                     Spacer().frame(height: 20)
 
                     VStack(spacing: 0) {
-                        CheckInToggleRow(label: "Tive um bom dia", isOn: $wellbeingA)
+                        CheckInToggleRow(label: "Tive um bom dia", isOn: $hadGoodDay)
                         Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Pratiquei atividade física", isOn: $wellbeingB)
+                        CheckInToggleRow(label: "Pratiquei atividade física", isOn: $physicalActivityDone)
                         Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Me cuidei bem hoje", isOn: $wellbeingC)
+                        CheckInToggleRow(label: "Me cuidei bem hoje", isOn: $selfCareGood)
                         Divider().background(Color.white.opacity(0.2))
                         CheckInToggleRow(label: "Respirei com facilidade ao longo do dia", isOn: $daytimeBreathingEase)
                         Divider().background(Color.white.opacity(0.2))
@@ -251,7 +249,7 @@ private struct EveningCheckInContent: View {
                     Spacer().frame(height: 24)
 
                     Button(action: {
-                        onSubmit(wellbeingA, wellbeingB, wellbeingC, rescueInhalerUses, daytimeBreathingEase, activityAsPlanned)
+                        onSubmit(hadGoodDay, physicalActivityDone, selfCareGood, rescueInhalerUses, daytimeBreathingEase, activityAsPlanned)
                     }) {
                         Text("Confirmar")
                             .fontWeight(.bold)

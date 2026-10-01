@@ -123,7 +123,7 @@ fun PrivacyScreen(navController: NavController) {
             item {
                 PrivacySection(
                     title = "10. Contato",
-                    content = "Para exercer seus direitos ou dúvidas:\n• Email: privacidade@afilaxy.com\n• Resposta em até 15 dias úteis"
+                    content = "Para exercer seus direitos ou dúvidas:\n• Email: afilaxy@gmail.com\n• Resposta em até 15 dias úteis"
                 )
             }
             

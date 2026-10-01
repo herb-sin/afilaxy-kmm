@@ -371,15 +371,27 @@ struct WellbeingReportData {
 
 struct WellbeingCheckIn {
     let type: String
-    let wellbeingA: Bool
-    let wellbeingB: Bool
-    let wellbeingC: Bool
+    let nighttimeAwakening: Bool
+    let morningMoodGood: Bool
+    let morningEnergyGood: Bool
+    let hadGoodDay: Bool
+    let physicalActivityDone: Bool
+    let selfCareGood: Bool
 
     init(doc: QueryDocumentSnapshot) {
-        type      = doc["type"]      as? String ?? ""
-        wellbeingA = doc["wellbeingA"] as? Bool ?? false
-        wellbeingB = doc["wellbeingB"] as? Bool ?? false
-        wellbeingC = doc["wellbeingC"] as? Bool ?? false
+        type = doc["type"] as? String ?? ""
+        nighttimeAwakening = doc["nighttimeAwakening"] as? Bool ?? false
+        morningMoodGood = doc["morningMoodGood"] as? Bool ?? false
+        morningEnergyGood = doc["morningEnergyGood"] as? Bool ?? false
+        hadGoodDay = doc["hadGoodDay"] as? Bool ?? false
+        physicalActivityDone = doc["physicalActivityDone"] as? Bool ?? false
+        selfCareGood = doc["selfCareGood"] as? Bool ?? false
+    }
+
+    var isCritical: Bool {
+        type == "MORNING"
+            ? !nighttimeAwakening && !morningMoodGood && !morningEnergyGood
+            : !hadGoodDay && !physicalActivityDone && !selfCareGood
     }
 }
 
@@ -471,7 +483,7 @@ enum WellbeingPDFGenerator {
         let total = report.checkIns.count
         let possible = 60
         let adherence = possible > 0 ? Int(Double(total) / Double(possible) * 100) : 0
-        let critical = report.checkIns.filter { !$0.wellbeingA && !$0.wellbeingB && !$0.wellbeingC }.count
+        let critical = report.checkIns.filter { $0.isCritical }.count
         var y = drawSectionHeader("1. RESUMO EXECUTIVO", y: y, color: primaryColor)
         return drawPlainRows([
             ("Check-ins realizados (30 dias)", "\(total) de \(possible) possíveis"),
@@ -486,9 +498,9 @@ enum WellbeingPDFGenerator {
         var y = drawSectionHeader("2. CHECK-IN MATINAL", y: y, color: morningColor)
         return drawBarRows([
             ("Registros de manhã: \(morning.count)", nil),
-            ("\"Dormi bem esta noite\"",      pct(morning, \.wellbeingA)),
-            ("\"Me sinto bem esta manhã\"",   pct(morning, \.wellbeingB)),
-            ("\"Estou com boa energia\"",     pct(morning, \.wellbeingC))
+            ("\"Meu sono foi tranquilo, sem interrupções\"", pct(morning, \.nighttimeAwakening)),
+            ("\"Me sinto bem esta manhã\"",   pct(morning, \.morningMoodGood)),
+            ("\"Estou com boa energia\"",     pct(morning, \.morningEnergyGood))
         ], y: y, barColor: morningColor)
     }
 
@@ -497,14 +509,14 @@ enum WellbeingPDFGenerator {
         var y = drawSectionHeader("3. CHECK-IN NOTURNO", y: y, color: eveningColor)
         return drawBarRows([
             ("Registros noturnos: \(evening.count)", nil),
-            ("\"Tive um bom dia\"",           pct(evening, \.wellbeingA)),
-            ("\"Pratiquei atividade física\"", pct(evening, \.wellbeingB)),
-            ("\"Me cuidei bem hoje\"",        pct(evening, \.wellbeingC))
+            ("\"Tive um bom dia\"",           pct(evening, \.hadGoodDay)),
+            ("\"Pratiquei atividade física\"", pct(evening, \.physicalActivityDone)),
+            ("\"Me cuidei bem hoje\"",        pct(evening, \.selfCareGood))
         ], y: y, barColor: eveningColor)
     }
 
     private static func drawCriticalSection(report: WellbeingReportData, y: CGFloat) -> CGFloat {
-        let critical = report.checkIns.filter { !$0.wellbeingA && !$0.wellbeingB && !$0.wellbeingC }.count
+        let critical = report.checkIns.filter { $0.isCritical }.count
         var y = drawSectionHeader("4. EVENTOS CRÍTICOS", y: y, color: criticalColor)
         return drawPlainRows([
             ("Pedidos de ajuda emergencial (período)", "\(report.emergencyCount30d)"),
