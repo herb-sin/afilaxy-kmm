@@ -6,6 +6,7 @@ import shared
 struct SettingsView: View {
     @EnvironmentObject var container: AppContainer
     @State private var showLogoutAlert = false
+    @State private var showExportData = false
     @State private var notificationsEnabled = true
     @State private var helperModeAutoActivate = false
     @State private var emergencyRadius = 5.0
@@ -65,7 +66,7 @@ struct SettingsView: View {
                             title: "Exportar Dados",
                             subtitle: "Baixar seus dados pessoais",
                             icon: "square.and.arrow.up.fill",
-                            action: { /* Export data */ }
+                            action: { showExportData = true }
                         )
                     }
                 }
@@ -158,6 +159,9 @@ struct SettingsView: View {
             }
         } message: {
             Text("Deseja realmente sair da sua conta?")
+        }
+        .sheet(isPresented: $showExportData) {
+            ExportDataView()
         }
     }
     

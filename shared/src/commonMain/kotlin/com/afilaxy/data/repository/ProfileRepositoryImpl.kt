@@ -26,13 +26,26 @@ class ProfileRepositoryImpl(
             val allergies: List<String> = doc.get("healthData.allergies") ?: emptyList()
             val medications: List<String> = doc.get("healthData.medications") ?: emptyList()
             val conditions: List<String> = doc.get("healthData.conditions") ?: emptyList()
+            val hasGerd: Boolean = doc.get("healthData.hasGerd") ?: false
+            val hasSleepApnea: Boolean = doc.get("healthData.hasSleepApnea") ?: false
+            val hasRhinitis: Boolean = doc.get("healthData.hasRhinitis") ?: false
+            val hasObesity: Boolean = doc.get("healthData.hasObesity") ?: false
+            val hasFoodAllergy: Boolean = doc.get("healthData.hasFoodAllergy") ?: false
+            val hasNsaidAllergy: Boolean = doc.get("healthData.hasNsaidAllergy") ?: false
+            val hasInhalantAllergy: Boolean = doc.get("healthData.hasInhalantAllergy") ?: false
+            val hasWheelchair: Boolean = doc.get("healthData.hasWheelchair") ?: false
+            val hasLowVision: Boolean = doc.get("healthData.hasLowVision") ?: false
+            val hasSpecialCondition: Boolean = doc.get("healthData.hasSpecialCondition") ?: false
 
             val contactName: String? = doc.get("emergencyContact.name")
             val contactPhone: String? = doc.get("emergencyContact.phone")
             val contactRel: String? = doc.get("emergencyContact.relationship")
 
             val hasHealth = bloodType.isNotEmpty() || notes.isNotEmpty() ||
-                allergies.isNotEmpty() || medications.isNotEmpty() || conditions.isNotEmpty()
+                allergies.isNotEmpty() || medications.isNotEmpty() || conditions.isNotEmpty() ||
+                hasGerd || hasSleepApnea || hasRhinitis || hasObesity ||
+                hasFoodAllergy || hasNsaidAllergy || hasInhalantAllergy ||
+                hasWheelchair || hasLowVision || hasSpecialCondition
             val hasContact = contactName != null || contactPhone != null
 
             Result.success(UserProfile(
@@ -40,7 +53,13 @@ class ProfileRepositoryImpl(
                 name = name, email = email, phone = phone, photoUrl = photoUrl,
                 healthData = if (hasHealth) UserHealthData(
                     bloodType = bloodType, allergies = allergies,
-                    medications = medications, conditions = conditions, notes = notes
+                    medications = medications, conditions = conditions, notes = notes,
+                    hasGerd = hasGerd, hasSleepApnea = hasSleepApnea, hasRhinitis = hasRhinitis,
+                    hasObesity = hasObesity,
+                    hasFoodAllergy = hasFoodAllergy, hasNsaidAllergy = hasNsaidAllergy,
+                    hasInhalantAllergy = hasInhalantAllergy,
+                    hasWheelchair = hasWheelchair, hasLowVision = hasLowVision,
+                    hasSpecialCondition = hasSpecialCondition
                 ) else null,
                 emergencyContact = if (hasContact) EmergencyContact(
                     name = contactName ?: "",
@@ -61,7 +80,17 @@ class ProfileRepositoryImpl(
                     "allergies" to it.allergies,
                     "medications" to it.medications,
                     "conditions" to it.conditions,
-                    "notes" to it.notes
+                    "notes" to it.notes,
+                    "hasGerd" to it.hasGerd,
+                    "hasSleepApnea" to it.hasSleepApnea,
+                    "hasRhinitis" to it.hasRhinitis,
+                    "hasObesity" to it.hasObesity,
+                    "hasFoodAllergy" to it.hasFoodAllergy,
+                    "hasNsaidAllergy" to it.hasNsaidAllergy,
+                    "hasInhalantAllergy" to it.hasInhalantAllergy,
+                    "hasWheelchair" to it.hasWheelchair,
+                    "hasLowVision" to it.hasLowVision,
+                    "hasSpecialCondition" to it.hasSpecialCondition
                 )
             } ?: emptyMap()
 
@@ -98,7 +127,17 @@ class ProfileRepositoryImpl(
                     "allergies" to healthData.allergies,
                     "medications" to healthData.medications,
                     "conditions" to healthData.conditions,
-                    "notes" to healthData.notes
+                    "notes" to healthData.notes,
+                    "hasGerd" to healthData.hasGerd,
+                    "hasSleepApnea" to healthData.hasSleepApnea,
+                    "hasRhinitis" to healthData.hasRhinitis,
+                    "hasObesity" to healthData.hasObesity,
+                    "hasFoodAllergy" to healthData.hasFoodAllergy,
+                    "hasNsaidAllergy" to healthData.hasNsaidAllergy,
+                    "hasInhalantAllergy" to healthData.hasInhalantAllergy,
+                    "hasWheelchair" to healthData.hasWheelchair,
+                    "hasLowVision" to healthData.hasLowVision,
+                    "hasSpecialCondition" to healthData.hasSpecialCondition
                 )
             )
             firestore.collection("users").document(userId).set(data, merge = true)

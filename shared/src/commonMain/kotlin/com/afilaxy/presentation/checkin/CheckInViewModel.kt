@@ -112,7 +112,12 @@ class CheckInViewModel(
         _state.update { it.copy(showCriticalWellbeingCard = false) }
     }
 
-    fun submitMorningCheckIn(wellbeingA: Boolean, wellbeingB: Boolean, wellbeingC: Boolean) {
+    fun submitMorningCheckIn(
+        wellbeingA: Boolean,
+        wellbeingB: Boolean,
+        wellbeingC: Boolean,
+        nighttimeAwakening: Boolean
+    ) {
         val userId = authRepository.getCurrentUserId() ?: return
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
@@ -126,6 +131,7 @@ class CheckInViewModel(
                 wellbeingA = wellbeingA,
                 wellbeingB = wellbeingB,
                 wellbeingC = wellbeingC,
+                nighttimeAwakening = nighttimeAwakening,
                 riskScore = _state.value.riskScore,
                 aqi = _state.value.aqi,
                 temperature = _state.value.temperature,
@@ -148,7 +154,9 @@ class CheckInViewModel(
         wellbeingA: Boolean,
         wellbeingB: Boolean,
         wellbeingC: Boolean,
-        rescueInhalerUses: Int
+        rescueInhalerUses: Int,
+        daytimeBreathingEase: Boolean,
+        activityAsPlanned: Boolean
     ) {
         val userId = authRepository.getCurrentUserId() ?: return
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
@@ -164,6 +172,8 @@ class CheckInViewModel(
                 wellbeingB = wellbeingB,
                 wellbeingC = wellbeingC,
                 rescueInhalerUses = rescueInhalerUses,
+                daytimeBreathingEase = daytimeBreathingEase,
+                activityAsPlanned = activityAsPlanned,
                 riskScore = _state.value.riskScore,
                 aqi = _state.value.aqi,
                 temperature = _state.value.temperature,

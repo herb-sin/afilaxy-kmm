@@ -50,14 +50,17 @@ struct CheckInView: View {
             } else if type == .morning {
                 MorningCheckInContent(
                     riskScore: wrapper.state?.riskScore?.int32Value,
-                    onSubmit: { a, b, c in
-                        wrapper.submitMorning(wellbeingA: a, wellbeingB: b, wellbeingC: c)
+                    onSubmit: { a, b, c, awakening in
+                        wrapper.submitMorning(wellbeingA: a, wellbeingB: b, wellbeingC: c, nighttimeAwakening: awakening)
                     }
                 )
             } else {
                 EveningCheckInContent(
-                    onSubmit: { a, b, c, rescue in
-                        wrapper.submitEvening(wellbeingA: a, wellbeingB: b, wellbeingC: c, rescueInhalerUses: Int32(rescue))
+                    onSubmit: { a, b, c, rescue, breathing, activity in
+                        wrapper.submitEvening(
+                            wellbeingA: a, wellbeingB: b, wellbeingC: c, rescueInhalerUses: Int32(rescue),
+                            daytimeBreathingEase: breathing, activityAsPlanned: activity
+                        )
                     }
                 )
             }
@@ -76,9 +79,12 @@ struct CheckInView: View {
                wrapper.state?.isSubmitted != true {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     if type == .morning {
-                        wrapper.submitMorning(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer)
+                        wrapper.submitMorning(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, nighttimeAwakening: answer)
                     } else {
-                        wrapper.submitEvening(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, rescueInhalerUses: 0)
+                        wrapper.submitEvening(
+                            wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, rescueInhalerUses: 0,
+                            daytimeBreathingEase: answer, activityAsPlanned: answer
+                        )
                     }
                 }
             }
@@ -91,11 +97,12 @@ struct CheckInView: View {
 
 private struct MorningCheckInContent: View {
     let riskScore: Int32?
-    let onSubmit: (Bool, Bool, Bool) -> Void
+    let onSubmit: (Bool, Bool, Bool, Bool) -> Void
 
     @State private var wellbeingA = true  // "Dormi bem esta noite"
     @State private var wellbeingB = true  // "Me sinto bem esta manhã"
     @State private var wellbeingC = true  // "Estou com boa energia"
+    @State private var nighttimeAwakening = true  // "Meu sono foi tranquilo, sem interrupções?"
 
     var body: some View {
         ZStack {
@@ -145,6 +152,8 @@ private struct MorningCheckInContent: View {
                         CheckInToggleRow(label: "Me sinto bem esta manhã", isOn: $wellbeingB)
                         Divider().background(Color.white.opacity(0.2))
                         CheckInToggleRow(label: "Estou com boa energia", isOn: $wellbeingC)
+                        Divider().background(Color.white.opacity(0.2))
+                        CheckInToggleRow(label: "Meu sono foi tranquilo, sem interrupções", isOn: $nighttimeAwakening)
                     }
                     .padding(16)
                     .background(Color.white.opacity(0.15))
@@ -152,7 +161,7 @@ private struct MorningCheckInContent: View {
 
                     Spacer().frame(height: 24)
 
-                    Button(action: { onSubmit(wellbeingA, wellbeingB, wellbeingC) }) {
+                    Button(action: { onSubmit(wellbeingA, wellbeingB, wellbeingC, nighttimeAwakening) }) {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                             Text("Confirmar")
@@ -182,12 +191,14 @@ private struct MorningCheckInContent: View {
 // MARK: - Evening Check-in
 
 private struct EveningCheckInContent: View {
-    let onSubmit: (Bool, Bool, Bool, Int) -> Void
+    let onSubmit: (Bool, Bool, Bool, Int, Bool, Bool) -> Void
 
     @State private var wellbeingA = true  // "Tive um bom dia"
     @State private var wellbeingB = false // "Pratiquei atividade física"
     @State private var wellbeingC = true  // "Me cuidei bem hoje"
     @State private var rescueInhalerUses = 0
+    @State private var daytimeBreathingEase = true  // "Respirei com facilidade ao longo do dia?"
+    @State private var activityAsPlanned = true     // "Consegui fazer tudo que tinha planejado hoje?"
 
     var body: some View {
         ZStack {
@@ -224,6 +235,10 @@ private struct EveningCheckInContent: View {
                         CheckInToggleRow(label: "Pratiquei atividade física", isOn: $wellbeingB)
                         Divider().background(Color.white.opacity(0.2))
                         CheckInToggleRow(label: "Me cuidei bem hoje", isOn: $wellbeingC)
+                        Divider().background(Color.white.opacity(0.2))
+                        CheckInToggleRow(label: "Respirei com facilidade ao longo do dia", isOn: $daytimeBreathingEase)
+                        Divider().background(Color.white.opacity(0.2))
+                        CheckInToggleRow(label: "Consegui fazer tudo que tinha planejado hoje", isOn: $activityAsPlanned)
                     }
                     .padding(16)
                     .background(Color.white.opacity(0.12))
@@ -235,7 +250,9 @@ private struct EveningCheckInContent: View {
 
                     Spacer().frame(height: 24)
 
-                    Button(action: { onSubmit(wellbeingA, wellbeingB, wellbeingC, rescueInhalerUses) }) {
+                    Button(action: {
+                        onSubmit(wellbeingA, wellbeingB, wellbeingC, rescueInhalerUses, daytimeBreathingEase, activityAsPlanned)
+                    }) {
                         Text("Confirmar")
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)

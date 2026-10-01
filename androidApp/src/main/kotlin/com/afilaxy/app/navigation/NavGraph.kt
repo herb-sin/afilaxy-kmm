@@ -370,6 +370,10 @@ fun NavGraph(
             HealthReportExportScreen(onNavigateBack = { navController.popBackStack() })
         }
 
+        composable(AppRoutes.EXPORT_DATA) {
+            ExportDataScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
         composable(
             route = AppRoutes.CHECK_IN,
             arguments = listOf(navArgument("type") { type = NavType.StringType })

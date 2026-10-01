@@ -26,6 +26,13 @@ data class CheckInResponse(
     // critério da GINA de uso de resgate >2x/semana. Null = pergunta não respondida/não exibida.
     val rescueInhalerUses: Int? = null,
 
+    // ── Sinais adicionais de bem-estar, usados pelo motor de risco para aproximar outros
+    // critérios do Controle da GINA (despertar noturno, sintomas diurnos, limitação de
+    // atividades). Perguntas genéricas de bem-estar na UI — nunca mencionam asma/sintomas.
+    val nighttimeAwakening: Boolean? = null,   // matinal: "Meu sono foi tranquilo, sem interrupções?"
+    val daytimeBreathingEase: Boolean? = null, // noturno: "Respirei com facilidade ao longo do dia?"
+    val activityAsPlanned: Boolean? = null,    // noturno: "Consegui fazer tudo que tinha planejado hoje?"
+
     // ── Contexto ambiental capturado automaticamente ───────────────────────
     val riskScore: Int? = null,
     val aqi: Int? = null,

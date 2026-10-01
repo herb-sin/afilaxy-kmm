@@ -68,6 +68,24 @@ class RiskScoreEngineTest {
         wellbeingA = false, wellbeingB = false, wellbeingC = true
     )
 
+    private fun checkInNighttimeAwakening() = CheckInResponse(
+        id = "ci-awake", userId = "user-1",
+        type = "MORNING", timestamp = System.currentTimeMillis(),
+        nighttimeAwakening = false
+    )
+
+    private fun checkInBreathingDifficulty() = CheckInResponse(
+        id = "ci-breath", userId = "user-1",
+        type = "EVENING", timestamp = System.currentTimeMillis(),
+        daytimeBreathingEase = false
+    )
+
+    private fun checkInActivityLimited() = CheckInResponse(
+        id = "ci-activity", userId = "user-1",
+        type = "EVENING", timestamp = System.currentTimeMillis(),
+        activityAsPlanned = false
+    )
+
     // ── GRUPO 1: Pacientes de Baixo Risco ────────────────────────────────────
 
     @Test
@@ -490,5 +508,207 @@ class RiskScoreEngineTest {
         )
         assertTrue(high.factors.size > low.factors.size,
             "Paciente de alto risco deve ter mais fatores. low=${low.factors.size}, high=${high.factors.size}")
+    }
+
+    // ── GRUPO 8: Novos fatores inspirados no Controle da GINA ────────────────
+    // (despertar noturno, dificuldade respiratória diurna, limitação de atividades —
+    // junto com o uso de resgate já existente, cobrem as 4 perguntas do Controle da GINA.
+    // Nenhum veredito clínico é computado ou exibido — só pontos somados ao score único.)
+
+    @Test
+    fun `4 ou mais dias de despertar noturno adicionam 25 pontos`() {
+        val checkIns = List(4) { checkInNighttimeAwakening() }
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            recentCheckIns = checkIns
+        )
+        assertEquals(25, result.score)
+        assertTrue(result.factors.any { "sono interrompido" in it.lowercase() })
+    }
+
+    @Test
+    fun `1 dia de despertar noturno adiciona 6 pontos`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            recentCheckIns = listOf(checkInNighttimeAwakening())
+        )
+        assertEquals(6, result.score)
+    }
+
+    @Test
+    fun `3 ou mais dias de dificuldade respiratoria diurna geram alerta`() {
+        val checkIns = List(3) { checkInBreathingDifficulty() }
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            recentCheckIns = checkIns
+        )
+        assertEquals(18, result.score)
+        assertTrue(result.factors.any { "⚠️" in it && "dificuldade respiratória" in it.lowercase() })
+    }
+
+    @Test
+    fun `1 dia de dificuldade respiratoria diurna nao gera alerta`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            recentCheckIns = listOf(checkInBreathingDifficulty())
+        )
+        assertEquals(4, result.score)
+        assertTrue(result.factors.any { "dificuldade respiratória" in it.lowercase() })
+        assertFalse(result.factors.any { "⚠️" in it })
+    }
+
+    @Test
+    fun `3 ou mais dias de atividades nao realizadas conforme planejado geram recomendacao`() {
+        val checkIns = List(3) { checkInActivityLimited() }
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            recentCheckIns = checkIns
+        )
+        assertEquals(12, result.score)
+        assertTrue(result.recommendations.any { "impacto no seu dia a dia" in it.lowercase() })
+    }
+
+    @Test
+    fun `campos novos de check-in nulos nao alteram o score do heuristico existente`() {
+        // Retrocompatibilidade: fixtures antigas (sem os 3 novos campos, que ficam
+        // null por default) continuam gerando o mesmo score de antes — nighttimeAwakening,
+        // daytimeBreathingEase e activityAsPlanned só contam quando explicitamente false.
+        val checkInsAntigos = List(3) { checkInMalEstar() }
+        val result = RiskScoreEngine.calculate(
+            env = envBom(), crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            recentCheckIns = checkInsAntigos
+        )
+        assertEquals(24, result.score, "Deve ser idêntico ao comportamento pré-existente (3 dias × 8 pts)")
+    }
+
+    @Test
+    fun `todos os novos fatores combinados ainda respeitam o cap de 100`() {
+        val checkIns = List(7) {
+            CheckInResponse(
+                id = "c$it", userId = "u1", type = "EVENING", timestamp = 0L,
+                nighttimeAwakening = false, daytimeBreathingEase = false, activityAsPlanned = false
+            )
+        }
+        val result = RiskScoreEngine.calculate(
+            env = envCritico(), crises30d = 20, crises7d = 10, samuCalledCount = 5,
+            monthOfYear = 8, recentCheckIns = checkIns
+        )
+        assertEquals(100, result.score)
+    }
+
+    // ── GRUPO 9: Comorbidades autodeclaradas (Perfil Médico) ─────────────────
+    // GINA lista DRGE, apneia do sono, rinite alérgica e obesidade como fatores
+    // de risco para exacerbação. Peso modesto e fixo por item (autodeclarado,
+    // sem verificação clínica), nunca exibido como diagnóstico — só soma ao
+    // score único já existente.
+
+    @Test
+    fun `nenhuma comorbidade marcada nao adiciona pontos`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5
+        )
+        assertEquals(0, result.score)
+        assertFalse(result.factors.any { "comorbidade" in it.lowercase() })
+    }
+
+    @Test
+    fun `1 comorbidade marcada adiciona 6 pontos`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            hasRhinitis = true
+        )
+        assertEquals(6, result.score)
+        assertTrue(result.factors.any { "1 comorbidade" in it.lowercase() })
+    }
+
+    @Test
+    fun `4 comorbidades marcadas respeitam o cap de 20 pontos`() {
+        // 4 × 6 = 24 → cap em 20
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            hasGerd = true, hasSleepApnea = true, hasRhinitis = true, hasObesity = true
+        )
+        assertEquals(20, result.score)
+        assertTrue(result.factors.any { "4 comorbidade" in it.lowercase() })
+    }
+
+    @Test
+    fun `comorbidades somam independentemente de outros fatores`() {
+        val result = RiskScoreEngine.calculate(
+            env = envBom(), crises30d = 0, crises7d = 1,
+            samuCalledCount = 0, monthOfYear = 5,
+            hasGerd = true
+        )
+        // crises7d=1 → +14; 1 comorbidade → +6 = 20
+        assertEquals(20, result.score)
+    }
+
+    // ── GRUPO 10: Alergias específicas autodeclaradas (Perfil Médico) ────────
+    // GINA cita alergia alimentar confirmada e sensibilidade a AINEs/aspirina
+    // como fatores de risco para crises quase-fatais/fatais; alergia a
+    // inalantes como fator de risco de exacerbação por exposição a alérgeno.
+    // Bucket separado do das comorbidades, com cap próprio — não deve diluir
+    // nem ser diluído pelo peso já calibrado delas.
+
+    @Test
+    fun `nenhuma alergia especifica marcada nao adiciona pontos`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5
+        )
+        assertEquals(0, result.score)
+        assertFalse(result.factors.any { "alergia" in it.lowercase() })
+    }
+
+    @Test
+    fun `alergia alimentar sozinha adiciona 7 pontos`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            hasFoodAllergy = true
+        )
+        assertEquals(7, result.score)
+        assertTrue(result.factors.any { "alergia" in it.lowercase() })
+    }
+
+    @Test
+    fun `alergia a inalantes sozinha adiciona 4 pontos`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            hasInhalantAllergy = true
+        )
+        assertEquals(4, result.score)
+    }
+
+    @Test
+    fun `as 3 alergias especificas respeitam o cap de 15 pontos`() {
+        // 7 + 7 + 4 = 18 → cap em 15
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            hasFoodAllergy = true, hasNsaidAllergy = true, hasInhalantAllergy = true
+        )
+        assertEquals(15, result.score)
+    }
+
+    @Test
+    fun `alergias especificas somam independentemente das comorbidades`() {
+        val result = RiskScoreEngine.calculate(
+            env = null, crises30d = 0, crises7d = 0,
+            samuCalledCount = 0, monthOfYear = 5,
+            hasGerd = true, hasFoodAllergy = true
+        )
+        // comorbidade: +6; alergia: +7 = 13
+        assertEquals(13, result.score)
     }
 }

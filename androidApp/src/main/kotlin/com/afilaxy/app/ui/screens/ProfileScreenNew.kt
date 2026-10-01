@@ -1,6 +1,7 @@
 package com.afilaxy.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -61,6 +62,16 @@ fun ProfileScreenNew(
     var editEmergName   by remember { mutableStateOf("") }
     var editEmergPhone  by remember { mutableStateOf("") }
     var editEmergRel    by remember { mutableStateOf("") }
+    var editHasGerd       by remember { mutableStateOf(false) }
+    var editHasSleepApnea by remember { mutableStateOf(false) }
+    var editHasRhinitis   by remember { mutableStateOf(false) }
+    var editHasObesity    by remember { mutableStateOf(false) }
+    var editHasFoodAllergy     by remember { mutableStateOf(false) }
+    var editHasNsaidAllergy    by remember { mutableStateOf(false) }
+    var editHasInhalantAllergy by remember { mutableStateOf(false) }
+    var editHasWheelchair       by remember { mutableStateOf(false) }
+    var editHasLowVision        by remember { mutableStateOf(false) }
+    var editHasSpecialCondition by remember { mutableStateOf(false) }
 
     // Preenche campos quando o perfil chega pela primeira vez
     LaunchedEffect(profile) {
@@ -73,6 +84,16 @@ fun ProfileScreenNew(
             editEmergName   = profile.emergencyContact?.name ?: ""
             editEmergPhone  = (profile.emergencyContact?.phone ?: "").filter { it.isDigit() }.take(11)
             editEmergRel    = profile.emergencyContact?.relationship ?: ""
+            editHasGerd       = profile.healthData?.hasGerd ?: false
+            editHasSleepApnea = profile.healthData?.hasSleepApnea ?: false
+            editHasRhinitis   = profile.healthData?.hasRhinitis ?: false
+            editHasObesity    = profile.healthData?.hasObesity ?: false
+            editHasFoodAllergy     = profile.healthData?.hasFoodAllergy ?: false
+            editHasNsaidAllergy    = profile.healthData?.hasNsaidAllergy ?: false
+            editHasInhalantAllergy = profile.healthData?.hasInhalantAllergy ?: false
+            editHasWheelchair       = profile.healthData?.hasWheelchair ?: false
+            editHasLowVision        = profile.healthData?.hasLowVision ?: false
+            editHasSpecialCondition = profile.healthData?.hasSpecialCondition ?: false
         }
     }
 
@@ -111,20 +132,40 @@ fun ProfileScreenNew(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Avatar
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(40.dp)
-                        )
+                    // Avatar + botão de câmera (visual apenas — upload de foto ainda não implementado)
+                    val context = LocalContext.current
+                    Box(modifier = Modifier.size(80.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                android.widget.Toast.makeText(context, "Upload de foto em breve", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Alterar foto do perfil",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
 
                     // Nome + Badge + Email
@@ -231,6 +272,16 @@ fun ProfileScreenNew(
                 emergName = editEmergName,  onEmergNameChange = { editEmergName = it },
                 emergPhone = editEmergPhone, onEmergPhoneChange = { editEmergPhone = it },
                 emergRel = editEmergRel,    onEmergRelChange = { editEmergRel = it },
+                hasGerd = editHasGerd,             onHasGerdChange = { editHasGerd = it },
+                hasSleepApnea = editHasSleepApnea, onHasSleepApneaChange = { editHasSleepApnea = it },
+                hasRhinitis = editHasRhinitis,     onHasRhinitisChange = { editHasRhinitis = it },
+                hasObesity = editHasObesity,       onHasObesityChange = { editHasObesity = it },
+                hasFoodAllergy = editHasFoodAllergy,         onHasFoodAllergyChange = { editHasFoodAllergy = it },
+                hasNsaidAllergy = editHasNsaidAllergy,       onHasNsaidAllergyChange = { editHasNsaidAllergy = it },
+                hasInhalantAllergy = editHasInhalantAllergy, onHasInhalantAllergyChange = { editHasInhalantAllergy = it },
+                hasWheelchair = editHasWheelchair,             onHasWheelchairChange = { editHasWheelchair = it },
+                hasLowVision = editHasLowVision,               onHasLowVisionChange = { editHasLowVision = it },
+                hasSpecialCondition = editHasSpecialCondition, onHasSpecialConditionChange = { editHasSpecialCondition = it },
                 isSaving = state.isSaving,
                 onSave = {
                     val current = profile ?: return@EditProfileSheetContent
@@ -243,9 +294,21 @@ fun ProfileScreenNew(
                             name = safeName,
                             phone = editPhone,
                             healthData = UserHealthData(
-                                bloodType  = profile?.healthData?.bloodType ?: "",
-                                allergies  = split(editAllergies),
-                                notes       = editNotes
+                                bloodType     = current.healthData?.bloodType ?: "",
+                                allergies     = split(editAllergies),
+                                medications   = current.healthData?.medications ?: emptyList(),
+                                conditions    = current.healthData?.conditions ?: emptyList(),
+                                notes         = editNotes,
+                                hasGerd       = editHasGerd,
+                                hasSleepApnea = editHasSleepApnea,
+                                hasRhinitis   = editHasRhinitis,
+                                hasObesity    = editHasObesity,
+                                hasFoodAllergy     = editHasFoodAllergy,
+                                hasNsaidAllergy    = editHasNsaidAllergy,
+                                hasInhalantAllergy = editHasInhalantAllergy,
+                                hasWheelchair = editHasWheelchair,
+                                hasLowVision  = editHasLowVision,
+                                hasSpecialCondition = editHasSpecialCondition
                             ),
                             emergencyContact = EmergencyContact(
                                 name         = editEmergName,
@@ -416,6 +479,16 @@ private fun EditProfileSheetContent(
     emergName: String,   onEmergNameChange: (String) -> Unit,
     emergPhone: String,  onEmergPhoneChange: (String) -> Unit,
     emergRel: String,    onEmergRelChange: (String) -> Unit,
+    hasGerd: Boolean,         onHasGerdChange: (Boolean) -> Unit,
+    hasSleepApnea: Boolean,   onHasSleepApneaChange: (Boolean) -> Unit,
+    hasRhinitis: Boolean,     onHasRhinitisChange: (Boolean) -> Unit,
+    hasObesity: Boolean,      onHasObesityChange: (Boolean) -> Unit,
+    hasFoodAllergy: Boolean,     onHasFoodAllergyChange: (Boolean) -> Unit,
+    hasNsaidAllergy: Boolean,    onHasNsaidAllergyChange: (Boolean) -> Unit,
+    hasInhalantAllergy: Boolean, onHasInhalantAllergyChange: (Boolean) -> Unit,
+    hasWheelchair: Boolean,       onHasWheelchairChange: (Boolean) -> Unit,
+    hasLowVision: Boolean,        onHasLowVisionChange: (Boolean) -> Unit,
+    hasSpecialCondition: Boolean, onHasSpecialConditionChange: (Boolean) -> Unit,
     isSaving: Boolean,
     onSave: () -> Unit,
     onCancel: () -> Unit
@@ -473,11 +546,96 @@ private fun EditProfileSheetContent(
                 )
             }
         }
-        // Seção 2: Informações Adicionais
+        // Seção 2: Alergias
         item {
-            EditSection(icon = Icons.Default.Info, title = "Informações Adicionais") {
+            EditSection(icon = Icons.Default.ErrorOutline, title = "Alergias") {
                 ProfileTextField("Alergias conhecidas (opcional)", allergies, onAllergiesChange)
-                ProfileTextField("Observações para quem for te ajudar", notes, onNotesChange, singleLine = false)
+                Text(
+                    "Visível apenas para você no seu perfil pessoal.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+        }
+        // Seção 2b: Comorbidades (autodeclaradas, sem verificação clínica — alimenta o motor de risco)
+        item {
+            EditSection(icon = Icons.Default.HealthAndSafety, title = "Comorbidades (opcional)") {
+                ProfileInfoBox("Marque as que se aplicam. Usado só para calcular seu nível de risco com mais precisão, nunca compartilhado.")
+                ProfileSwitchRow("Refluxo / DRGE", hasGerd, onHasGerdChange)
+                ProfileSwitchRow("Apneia do sono", hasSleepApnea, onHasSleepApneaChange)
+                ProfileSwitchRow("Rinite alérgica", hasRhinitis, onHasRhinitisChange)
+                ProfileSwitchRow("Obesidade", hasObesity, onHasObesityChange)
+                HorizontalDivider()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Lock, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        "Dados sensíveis protegidos conforme a LGPD",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        // Seção 2b-2: Alergias Específicas (autodeclaradas, sem verificação clínica —
+        // alimenta o motor de risco num bucket próprio, separado do das comorbidades)
+        item {
+            EditSection(icon = Icons.Default.Sick, title = "Alergias Específicas (opcional)") {
+                ProfileInfoBox("Marque as que se aplicam. Usado só para calcular seu nível de risco com mais precisão, nunca compartilhado.")
+                ProfileSwitchRow("Alergia alimentar confirmada", hasFoodAllergy, onHasFoodAllergyChange)
+                ProfileSwitchRow("Alergia a anti-inflamatórios (AINEs/aspirina)", hasNsaidAllergy, onHasNsaidAllergyChange)
+                ProfileSwitchRow("Alergia a ácaros, pólen, mofo ou pelos de animais", hasInhalantAllergy, onHasInhalantAllergyChange)
+                HorizontalDivider()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Lock, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        "Dados sensíveis protegidos conforme a LGPD",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        // Seção 2c: Informações para quem for te ajudar — só visível ao Helper numa
+        // emergência ativa; não alimenta o motor de risco (propósito diferente das comorbidades).
+        item {
+            EditSection(icon = Icons.Default.Help, title = "Informações para quem for te ajudar") {
+                ProfileInfoBox("Mostradas só para quem aceitar seu pedido de ajuda numa emergência.")
+                ProfileSwitchRow(
+                    label = "Uso cadeira de rodas",
+                    checked = hasWheelchair,
+                    onCheckedChange = onHasWheelchairChange,
+                    icon = Icons.Default.Accessible
+                )
+                ProfileSwitchRow(
+                    label = "Baixa visão ou cegueira",
+                    checked = hasLowVision,
+                    onCheckedChange = onHasLowVisionChange,
+                    icon = Icons.Default.VisibilityOff
+                )
+                ProfileSwitchRow(
+                    label = "Outra condição que exija atenção especial",
+                    checked = hasSpecialCondition,
+                    onCheckedChange = onHasSpecialConditionChange,
+                    subtitle = "Descreva no campo de detalhes abaixo"
+                )
+                ProfileTextField("Detalhes complementares (opcional)", notes, onNotesChange, singleLine = false)
             }
         }
         // Seção 3: Contato de Emergência
@@ -492,6 +650,26 @@ private fun EditProfileSheetContent(
                     visualTransformation = BrPhoneVisualTransformation
                 )
                 ProfileTextField("Parentesco (ex: Mãe)", emergRel, onEmergRelChange)
+            }
+        }
+        // Botão de salvar no rodapé
+        item {
+            Button(
+                onClick = validateAndSave,
+                enabled = !isSaving,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Salvar Alterações", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -515,8 +693,16 @@ private fun EditSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp))
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp))
+                }
                 Text(
                     title,
                     style = MaterialTheme.typography.titleSmall,
@@ -574,6 +760,93 @@ private fun ThemePreferenceCard() {
                     }
             }
         }
+    }
+}
+
+// ── ProfileSwitchRow ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun ProfileSwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector? = null,
+    subtitle: String? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f).padding(end = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                }
+            }
+            Column {
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+                if (subtitle != null) {
+                    Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        PillToggle(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+// ── PillToggle — toggle estilo pílula (flat), mais próximo do visual do mockup
+// do que o Switch padrão do Material3 (que tem contorno e thumb menor). ──────────
+
+@Composable
+private fun PillToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val trackColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (checked) MaterialTheme.colorScheme.primary else Color(0xFFCBD5E1),
+        label = "pillTrackColor"
+    )
+    Box(
+        modifier = Modifier
+            .width(46.dp)
+            .height(26.dp)
+            .clip(RoundedCornerShape(50))
+            .background(trackColor)
+            .clickable { onCheckedChange(!checked) }
+            .padding(3.dp),
+        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+        )
+    }
+}
+
+// ── ProfileInfoBox — caixa de aviso clara (contexto de uso do dado) ──────────────
+
+@Composable
+private fun ProfileInfoBox(text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(12.dp)
+        )
     }
 }
 
