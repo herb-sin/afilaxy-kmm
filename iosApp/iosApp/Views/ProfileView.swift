@@ -127,6 +127,8 @@ struct ProfileView: View {
                 emergencyRelationship: $emergencyRelationship,
                 hasGerd: $hasGerd, hasSleepApnea: $hasSleepApnea, hasRhinitis: $hasRhinitis,
                 hasObesity: $hasObesity,
+                hasFoodAllergy: $hasFoodAllergy, hasNsaidAllergy: $hasNsaidAllergy,
+                hasInhalantAllergy: $hasInhalantAllergy,
                 hasWheelchair: $hasWheelchair, hasLowVision: $hasLowVision,
                 hasSpecialCondition: $hasSpecialCondition,
                 onSave: saveProfile
@@ -384,6 +386,9 @@ struct EditProfileSheet: View {
     @Binding var hasSleepApnea: Bool
     @Binding var hasRhinitis: Bool
     @Binding var hasObesity: Bool
+    @Binding var hasFoodAllergy: Bool
+    @Binding var hasNsaidAllergy: Bool
+    @Binding var hasInhalantAllergy: Bool
     @Binding var hasWheelchair: Bool
     @Binding var hasLowVision: Bool
     @Binding var hasSpecialCondition: Bool
