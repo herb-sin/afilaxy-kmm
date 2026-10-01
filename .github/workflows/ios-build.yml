@@ -335,12 +335,24 @@ jobs:
              ~/.appstoreconnect/private_keys/
 
           echo "📤 Enviando IPA ao TestFlight..."
+          # altool às vezes retorna exit code 0 mesmo logando um ERROR (ex: 403
+          # FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED) — não dá pra confiar
+          # só no status code do processo, então checamos o log também.
+          set +e
           xcrun altool --upload-app \
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "${{ secrets.APPLE_API_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}" \
-            --verbose 2>&1
+            --verbose 2>&1 | tee /tmp/altool_upload.log
+          ALTOOL_STATUS=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$ALTOOL_STATUS" -ne 0 ] || grep -q "ERROR:" /tmp/altool_upload.log; then
+            echo "❌ Upload ao TestFlight falhou (exit code $ALTOOL_STATUS):"
+            grep "ERROR:" /tmp/altool_upload.log || true
+            exit 1
+          fi
           echo "✅ Upload concluido. Aguarde 5-30 min para processamento no App Store Connect."
 
       # Faz upload do IPA como artefato do Actions (backup)
