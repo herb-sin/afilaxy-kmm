@@ -57,10 +57,10 @@ struct CheckInView: View {
             } else {
                 EveningCheckInContent(
                     onSubmit: { a, b, c, rescue, breathing, activity in
-                        wrapper.submitEvening(
+                        wrapper.submitEvening(EveningCheckInAnswers(
                             wellbeingA: a, wellbeingB: b, wellbeingC: c, rescueInhalerUses: Int32(rescue),
                             daytimeBreathingEase: breathing, activityAsPlanned: activity
-                        )
+                        ))
                     }
                 )
             }
@@ -81,10 +81,10 @@ struct CheckInView: View {
                     if type == .morning {
                         wrapper.submitMorning(wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, nighttimeAwakening: answer)
                     } else {
-                        wrapper.submitEvening(
+                        wrapper.submitEvening(EveningCheckInAnswers(
                             wellbeingA: answer, wellbeingB: answer, wellbeingC: answer, rescueInhalerUses: 0,
                             daytimeBreathingEase: answer, activityAsPlanned: answer
-                        )
+                        ))
                     }
                 }
             }

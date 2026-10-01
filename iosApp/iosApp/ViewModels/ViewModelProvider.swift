@@ -212,6 +212,15 @@ class RiskViewModelWrapper: ObservableObject {
 }
 
 // MARK: - CheckInViewModelWrapper
+struct EveningCheckInAnswers {
+    let wellbeingA: Bool
+    let wellbeingB: Bool
+    let wellbeingC: Bool
+    let rescueInhalerUses: Int32
+    let daytimeBreathingEase: Bool
+    let activityAsPlanned: Bool
+}
+
 class CheckInViewModelWrapper: ObservableObject {
     private let viewModel: CheckInViewModel?
     @Published var state: CheckInState?
@@ -244,14 +253,11 @@ class CheckInViewModelWrapper: ObservableObject {
         )
     }
 
-    func submitEvening(
-        wellbeingA: Bool, wellbeingB: Bool, wellbeingC: Bool, rescueInhalerUses: Int32,
-        daytimeBreathingEase: Bool, activityAsPlanned: Bool
-    ) {
+    func submitEvening(_ answers: EveningCheckInAnswers) {
         viewModel?.submitEveningCheckIn(
-            wellbeingA: wellbeingA, wellbeingB: wellbeingB, wellbeingC: wellbeingC,
-            rescueInhalerUses: rescueInhalerUses,
-            daytimeBreathingEase: daytimeBreathingEase, activityAsPlanned: activityAsPlanned
+            wellbeingA: answers.wellbeingA, wellbeingB: answers.wellbeingB, wellbeingC: answers.wellbeingC,
+            rescueInhalerUses: answers.rescueInhalerUses,
+            daytimeBreathingEase: answers.daytimeBreathingEase, activityAsPlanned: answers.activityAsPlanned
         )
     }
 
