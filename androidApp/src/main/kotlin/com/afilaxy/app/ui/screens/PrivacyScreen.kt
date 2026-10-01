@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.afilaxy.app.navigation.AppRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +89,16 @@ fun PrivacyScreen(navController: NavController) {
                     content = "Você pode:\n• Acessar seus dados\n• Solicitar correção\n• Solicitar exclusão\n• Revogar consentimento\n• Exportar dados"
                 )
             }
-            
+
+            item {
+                Button(
+                    onClick = { navController.navigate(AppRoutes.EXPORT_DATA) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Exportar meus dados")
+                }
+            }
+
             item {
                 PrivacySection(
                     title = "7. Retenção de Dados",

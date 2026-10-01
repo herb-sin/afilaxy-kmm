@@ -31,6 +31,9 @@ class CheckInRepositoryImpl(
                 "wellbeingB" to response.wellbeingB,
                 "wellbeingC" to response.wellbeingC,
                 "rescueInhalerUses" to response.rescueInhalerUses,
+                "nighttimeAwakening" to response.nighttimeAwakening,
+                "daytimeBreathingEase" to response.daytimeBreathingEase,
+                "activityAsPlanned" to response.activityAsPlanned,
                 "riskScore" to response.riskScore,
                 "aqi" to response.aqi,
                 "temperature" to response.temperature,
@@ -76,7 +79,10 @@ class CheckInRepositoryImpl(
                     wellbeingA = doc.get("wellbeingA"),
                     wellbeingB = doc.get("wellbeingB"),
                     wellbeingC = doc.get("wellbeingC"),
-                    rescueInhalerUses = doc.get("rescueInhalerUses")
+                    rescueInhalerUses = doc.get("rescueInhalerUses"),
+                    nighttimeAwakening = doc.get("nighttimeAwakening"),
+                    daytimeBreathingEase = doc.get("daytimeBreathingEase"),
+                    activityAsPlanned = doc.get("activityAsPlanned")
                 )
             )
         } catch (e: Exception) {
@@ -107,7 +113,10 @@ class CheckInRepositoryImpl(
                         wellbeingA = doc.get("wellbeingA"),
                         wellbeingB = doc.get("wellbeingB"),
                         wellbeingC = doc.get("wellbeingC"),
-                        rescueInhalerUses = doc.get("rescueInhalerUses")
+                        rescueInhalerUses = doc.get("rescueInhalerUses"),
+                        nighttimeAwakening = doc.get("nighttimeAwakening"),
+                        daytimeBreathingEase = doc.get("daytimeBreathingEase"),
+                        activityAsPlanned = doc.get("activityAsPlanned")
                     )
                 } catch (e: Exception) { null }
             }

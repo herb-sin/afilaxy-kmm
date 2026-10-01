@@ -14,7 +14,18 @@ struct ProfileView: View {
     @State private var emergencyName = ""
     @State private var emergencyPhone = ""
     @State private var emergencyRelationship = ""
+    @State private var hasGerd = false
+    @State private var hasSleepApnea = false
+    @State private var hasRhinitis = false
+    @State private var hasObesity = false
+    @State private var hasFoodAllergy = false
+    @State private var hasNsaidAllergy = false
+    @State private var hasInhalantAllergy = false
+    @State private var hasWheelchair = false
+    @State private var hasLowVision = false
+    @State private var hasSpecialCondition = false
     @State private var fieldsLoaded = false
+    @State private var showPhotoComingSoon = false
 
     var body: some View {
         let state = container.profile.state
@@ -27,15 +38,29 @@ struct ProfileView: View {
                     // Hero Section
                     HeroGradientCard {
                         VStack(spacing: 16) {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 80, height: 80)
-                                .overlay {
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(.afiPrimary)
+                            ZStack(alignment: .bottomTrailing) {
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 80, height: 80)
+                                    .overlay {
+                                        Image(systemName: "person.fill")
+                                            .font(.system(size: 32))
+                                            .foregroundColor(.afiPrimary)
+                                    }
+                                Button(action: { showPhotoComingSoon = true }) {
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 28, height: 28)
+                                        .overlay {
+                                            Image(systemName: "camera.fill")
+                                                .font(.system(size: 13))
+                                                .foregroundColor(.afiPrimary)
+                                        }
+                                        .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
                                 }
-                            
+                                .accessibilityLabel("Alterar foto do perfil")
+                            }
+
                             VStack(spacing: 8) {
                                 Text(profile.name) // Using name instead of displayName
                                     .font(.title2)
@@ -100,6 +125,10 @@ struct ProfileView: View {
                 allergies: $allergies, healthNotes: $healthNotes,
                 emergencyName: $emergencyName, emergencyPhone: $emergencyPhone,
                 emergencyRelationship: $emergencyRelationship,
+                hasGerd: $hasGerd, hasSleepApnea: $hasSleepApnea, hasRhinitis: $hasRhinitis,
+                hasObesity: $hasObesity,
+                hasWheelchair: $hasWheelchair, hasLowVision: $hasLowVision,
+                hasSpecialCondition: $hasSpecialCondition,
                 onSave: saveProfile
             )
         }
@@ -113,6 +142,19 @@ struct ProfileView: View {
             emergencyName = profile.emergencyContact?.name ?? ""
             emergencyPhone = profile.emergencyContact?.phone ?? ""
             emergencyRelationship = profile.emergencyContact?.relationship ?? ""
+            hasGerd = profile.healthData?.hasGerd ?? false
+            hasSleepApnea = profile.healthData?.hasSleepApnea ?? false
+            hasRhinitis = profile.healthData?.hasRhinitis ?? false
+            hasObesity = profile.healthData?.hasObesity ?? false
+            hasFoodAllergy = profile.healthData?.hasFoodAllergy ?? false
+            hasNsaidAllergy = profile.healthData?.hasNsaidAllergy ?? false
+            hasInhalantAllergy = profile.healthData?.hasInhalantAllergy ?? false
+            hasWheelchair = profile.healthData?.hasWheelchair ?? false
+            hasLowVision = profile.healthData?.hasLowVision ?? false
+            hasSpecialCondition = profile.healthData?.hasSpecialCondition ?? false
+        }
+        .alert("Upload de foto em breve", isPresented: $showPhotoComingSoon) {
+            Button("OK", role: .cancel) {}
         }
     }
 
@@ -219,7 +261,16 @@ struct ProfileView: View {
                 photoUrl: profile.photoUrl,
                 healthData: UserHealthData(
                     bloodType: bloodType,
-                    allergies: split(allergies), medications: [], conditions: [], notes: healthNotes
+                    allergies: split(allergies),
+                    medications: profile.healthData?.medications ?? [],
+                    conditions: profile.healthData?.conditions ?? [],
+                    notes: healthNotes,
+                    hasGerd: hasGerd, hasSleepApnea: hasSleepApnea, hasRhinitis: hasRhinitis,
+                    hasObesity: hasObesity,
+                    hasFoodAllergy: hasFoodAllergy, hasNsaidAllergy: hasNsaidAllergy,
+                    hasInhalantAllergy: hasInhalantAllergy,
+                    hasWheelchair: hasWheelchair, hasLowVision: hasLowVision,
+                    hasSpecialCondition: hasSpecialCondition
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
@@ -236,7 +287,13 @@ struct ProfileView: View {
                 photoUrl: nil,
                 healthData: UserHealthData(
                     bloodType: bloodType,
-                    allergies: split(allergies), medications: [], conditions: [], notes: healthNotes
+                    allergies: split(allergies), medications: [], conditions: [], notes: healthNotes,
+                    hasGerd: hasGerd, hasSleepApnea: hasSleepApnea, hasRhinitis: hasRhinitis,
+                    hasObesity: hasObesity,
+                    hasFoodAllergy: hasFoodAllergy, hasNsaidAllergy: hasNsaidAllergy,
+                    hasInhalantAllergy: hasInhalantAllergy,
+                    hasWheelchair: hasWheelchair, hasLowVision: hasLowVision,
+                    hasSpecialCondition: hasSpecialCondition
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
@@ -323,26 +380,93 @@ struct EditProfileSheet: View {
     @Binding var emergencyName: String
     @Binding var emergencyPhone: String
     @Binding var emergencyRelationship: String
+    @Binding var hasGerd: Bool
+    @Binding var hasSleepApnea: Bool
+    @Binding var hasRhinitis: Bool
+    @Binding var hasObesity: Bool
+    @Binding var hasWheelchair: Bool
+    @Binding var hasLowVision: Bool
+    @Binding var hasSpecialCondition: Bool
     let onSave: () -> Void
-    
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Informações Pessoais") {
-                    TextField("Nome completo", text: $name)
-                    TextField("Telefone", text: $phone).keyboardType(.phonePad)
-                }
-                Section("Informações Adicionais") {
-                    TextField("Alergias conhecidas (separadas por vírgula)", text: $allergies)
-                    TextField("Observações para quem for te ajudar", text: $healthNotes)
-                }
+            ScrollView {
+                VStack(spacing: 12) {
+                    EditProfileSection(icon: "person.fill", title: "Informações Pessoais") {
+                        FloatingLabelField(label: "Nome completo", text: $name)
+                        FloatingLabelField(label: "Telefone", text: $phone, keyboardType: .phonePad)
+                    }
 
-                Section("Contato de Emergência") {
-                    TextField("Nome", text: $emergencyName)
-                    TextField("Telefone", text: $emergencyPhone).keyboardType(.phonePad)
-                    TextField("Parentesco (ex: Mãe)", text: $emergencyRelationship)
+                    EditProfileSection(icon: "exclamationmark.circle.fill", title: "Alergias") {
+                        FloatingLabelField(label: "Alergias conhecidas (opcional)", text: $allergies)
+                        Text("Visível apenas para você no seu perfil pessoal.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    EditProfileSection(icon: "cross.case.fill", title: "Comorbidades (opcional)") {
+                        ProfileInfoBox("Marque as que se aplicam. Usado só para calcular seu nível de risco com mais precisão, nunca compartilhado.")
+                        Toggle("Refluxo / DRGE", isOn: $hasGerd)
+                        Toggle("Apneia do sono", isOn: $hasSleepApnea)
+                        Toggle("Rinite alérgica", isOn: $hasRhinitis)
+                        Toggle("Obesidade", isOn: $hasObesity)
+                        Divider()
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.fill").font(.caption2).foregroundColor(.secondary)
+                            Text("Dados sensíveis protegidos conforme a LGPD")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    EditProfileSection(icon: "bandage.fill", title: "Alergias Específicas (opcional)") {
+                        ProfileInfoBox("Marque as que se aplicam. Usado só para calcular seu nível de risco com mais precisão, nunca compartilhado.")
+                        Toggle("Alergia alimentar confirmada", isOn: $hasFoodAllergy)
+                        Toggle("Alergia a anti-inflamatórios (AINEs/aspirina)", isOn: $hasNsaidAllergy)
+                        Toggle("Alergia a ácaros, pólen, mofo ou pelos de animais", isOn: $hasInhalantAllergy)
+                        Divider()
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.fill").font(.caption2).foregroundColor(.secondary)
+                            Text("Dados sensíveis protegidos conforme a LGPD")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    EditProfileSection(icon: "questionmark.circle.fill", title: "Informações para quem for te ajudar") {
+                        ProfileInfoBox("Mostradas só para quem aceitar seu pedido de ajuda numa emergência.")
+                        IconToggleRow(icon: "figure.roll", label: "Uso cadeira de rodas", isOn: $hasWheelchair)
+                        IconToggleRow(icon: "eye.slash.fill", label: "Baixa visão ou cegueira", isOn: $hasLowVision)
+                        IconToggleRow(
+                            icon: nil, label: "Outra condição que exija atenção especial",
+                            subtitle: "Descreva no campo de detalhes abaixo", isOn: $hasSpecialCondition
+                        )
+                        FloatingLabelField(label: "Detalhes complementares (opcional)", text: $healthNotes)
+                    }
+
+                    EditProfileSection(icon: "person.2.fill", title: "Contato de Emergência") {
+                        FloatingLabelField(label: "Nome", text: $emergencyName)
+                        FloatingLabelField(label: "Telefone", text: $emergencyPhone, keyboardType: .phonePad)
+                        FloatingLabelField(label: "Parentesco (ex: Mãe)", text: $emergencyRelationship)
+                    }
+
+                    Button(action: onSave) {
+                        HStack {
+                            Image(systemName: "checkmark")
+                            Text("Salvar Alterações").fontWeight(.bold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.afiPrimary)
+                        .foregroundColor(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.top, 4)
                 }
+                .padding(16)
             }
+            .background(Color.afiBackground)
             .navigationTitle("Editar Perfil")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -352,6 +476,126 @@ struct EditProfileSheet: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Salvar") { onSave() }
                         .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - EditProfileSection (card com ícone em badge circular)
+
+struct EditProfileSection<Content: View>: View {
+    let icon: String
+    let title: String
+    let content: Content
+
+    init(icon: String, title: String, @ViewBuilder content: () -> Content) {
+        self.icon = icon
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(Color.afiPrimary.opacity(0.15))
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.afiPrimary)
+                }
+                .frame(width: 24, height: 24)
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.afiPrimary)
+            }
+            Divider()
+            VStack(alignment: .leading, spacing: 12) {
+                content
+            }
+        }
+        .padding(14)
+        .background(Color.afiSurface)
+        .cornerRadius(16)
+    }
+}
+
+// MARK: - FloatingLabelField (label sobe quando focado ou preenchido)
+
+struct FloatingLabelField: View {
+    let label: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+
+    @FocusState private var isFocused: Bool
+    private var isFloating: Bool { isFocused || !text.isEmpty }
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(isFocused ? Color.afiPrimary : Color(.systemGray4), lineWidth: isFocused ? 1.5 : 1)
+
+            TextField("", text: $text)
+                .keyboardType(keyboardType)
+                .focused($isFocused)
+                .padding(.horizontal, 14)
+                .padding(.top, isFloating ? 8 : 0)
+
+            Text(label)
+                .font(isFloating ? .caption2 : .body)
+                .foregroundColor(isFocused ? .afiPrimary : .secondary)
+                .padding(.horizontal, isFloating ? 4 : 0)
+                .background(isFloating ? Color.afiSurface : Color.clear)
+                .padding(.leading, 10)
+                .offset(y: isFloating ? -22 : 0)
+                .animation(.easeOut(duration: 0.15), value: isFloating)
+        }
+        .frame(height: 52)
+    }
+}
+
+// MARK: - ProfileInfoBox (caixa de aviso clara — contexto de uso do dado)
+
+struct ProfileInfoBox: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.afiPrimary.opacity(0.08))
+            .cornerRadius(12)
+    }
+}
+
+// MARK: - IconToggleRow (toggle com ícone opcional + subtítulo opcional)
+
+struct IconToggleRow: View {
+    let icon: String?
+    let label: String
+    var subtitle: String? = nil
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            HStack(spacing: 10) {
+                if let icon {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8).fill(Color(.systemGray6))
+                        Image(systemName: icon).font(.system(size: 14)).foregroundColor(.secondary)
+                    }
+                    .frame(width: 28, height: 28)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(label).font(.subheadline)
+                    if let subtitle {
+                        Text(subtitle).font(.caption2).foregroundColor(.secondary)
+                    }
                 }
             }
         }

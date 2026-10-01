@@ -215,6 +215,16 @@ class EnvironmentalRepositoryImpl(
                 checkInRepository?.getRecentCheckIns(userId, days = 7)?.getOrNull() ?: emptyList()
             } catch (e: Exception) { emptyList() }
 
+            // Comorbidades autodeclaradas no Perfil Médico (ver RiskScoreEngine)
+            val userDoc = try { firestore.collection("users").document(userId).get() } catch (e: Exception) { null }
+            val hasGerd: Boolean = try { userDoc?.get("healthData.hasGerd") ?: false } catch (e: Exception) { false }
+            val hasSleepApnea: Boolean = try { userDoc?.get("healthData.hasSleepApnea") ?: false } catch (e: Exception) { false }
+            val hasRhinitis: Boolean = try { userDoc?.get("healthData.hasRhinitis") ?: false } catch (e: Exception) { false }
+            val hasObesity: Boolean = try { userDoc?.get("healthData.hasObesity") ?: false } catch (e: Exception) { false }
+            val hasFoodAllergy: Boolean = try { userDoc?.get("healthData.hasFoodAllergy") ?: false } catch (e: Exception) { false }
+            val hasNsaidAllergy: Boolean = try { userDoc?.get("healthData.hasNsaidAllergy") ?: false } catch (e: Exception) { false }
+            val hasInhalantAllergy: Boolean = try { userDoc?.get("healthData.hasInhalantAllergy") ?: false } catch (e: Exception) { false }
+
             // Mês atual → sazonalidade
             val month = Clock.System.now()
                 .toLocalDateTime(TimeZone.currentSystemDefault()).monthNumber
@@ -225,7 +235,14 @@ class EnvironmentalRepositoryImpl(
                 crises7d = crises7d,
                 samuCalledCount = samuCalledCount,
                 monthOfYear = month,
-                recentCheckIns = recentCheckIns
+                recentCheckIns = recentCheckIns,
+                hasGerd = hasGerd,
+                hasSleepApnea = hasSleepApnea,
+                hasRhinitis = hasRhinitis,
+                hasObesity = hasObesity,
+                hasFoodAllergy = hasFoodAllergy,
+                hasNsaidAllergy = hasNsaidAllergy,
+                hasInhalantAllergy = hasInhalantAllergy
             )
 
             // Persist risk score snapshot for trend analysis and future ML training
@@ -269,7 +286,14 @@ internal object RiskScoreEngine {
         crises7d: Int,
         samuCalledCount: Int,
         monthOfYear: Int,
-        recentCheckIns: List<CheckInResponse> = emptyList()
+        recentCheckIns: List<CheckInResponse> = emptyList(),
+        hasGerd: Boolean = false,
+        hasSleepApnea: Boolean = false,
+        hasRhinitis: Boolean = false,
+        hasObesity: Boolean = false,
+        hasFoodAllergy: Boolean = false,
+        hasNsaidAllergy: Boolean = false,
+        hasInhalantAllergy: Boolean = false
     ): RiskScore {
         var score = 0
         val factors = mutableListOf<String>()
@@ -340,6 +364,88 @@ internal object RiskScoreEngine {
             } else if (rescueUses7d > 0) {
                 factors.add("Bombinha de resgate usada $rescueUses7d vez(es) nos últimos 7 dias")
             }
+        }
+
+        // ── Despertar noturno (autorrelato, check-in matinal) ─────────────────
+        // GINA: despertar noturno é um dos critérios de controle de asma, junto com
+        // sintomas diurnos, uso de resgate e limitação de atividades.
+        if (recentCheckIns.isNotEmpty()) {
+            val awakeningDays = recentCheckIns.count { it.nighttimeAwakening == false }
+            val awakeningScore = when {
+                awakeningDays >= 4 -> 25
+                awakeningDays >= 2 -> 15
+                awakeningDays == 1 -> 6
+                else -> 0
+            }
+            score += awakeningScore
+            if (awakeningDays > 0) {
+                factors.add("Sono interrompido em $awakeningDays dia(s) nos últimos 7 dias")
+            }
+        }
+
+        // ── Dificuldade respiratória diurna (autorrelato, check-in noturno) ───
+        // GINA: sintomas diurnos frequentes (>2x/semana) são critério de asma não
+        // controlada.
+        if (recentCheckIns.isNotEmpty()) {
+            val breathingDifficultyDays = recentCheckIns.count { it.daytimeBreathingEase == false }
+            val breathingScore = when {
+                breathingDifficultyDays >= 4 -> 25
+                breathingDifficultyDays >= 3 -> 18
+                breathingDifficultyDays == 2 -> 10
+                breathingDifficultyDays == 1 -> 4
+                else -> 0
+            }
+            score += breathingScore
+            if (breathingDifficultyDays > 2) {
+                factors.add("⚠️ Dificuldade respiratória relatada em $breathingDifficultyDays dia(s) nos últimos 7 dias")
+            } else if (breathingDifficultyDays > 0) {
+                factors.add("Dificuldade respiratória relatada em $breathingDifficultyDays dia(s) nos últimos 7 dias")
+            }
+        }
+
+        // ── Limitação de atividades (autorrelato, check-in noturno) ───────────
+        // GINA: limitação de atividades diárias é um dos critérios de controle.
+        if (recentCheckIns.isNotEmpty()) {
+            val limitedDays = recentCheckIns.count { it.activityAsPlanned == false }
+            val limitedScore = when {
+                limitedDays >= 4 -> 20
+                limitedDays >= 2 -> 12
+                limitedDays == 1 -> 5
+                else -> 0
+            }
+            score += limitedScore
+            if (limitedDays > 0) {
+                factors.add("Atividades planejadas não realizadas em $limitedDays dia(s) nos últimos 7 dias")
+                if (limitedDays >= 3) {
+                    recommendations.add("Considere conversar com seu médico sobre o impacto no seu dia a dia")
+                }
+            }
+        }
+
+        // ── Comorbidades autodeclaradas (Perfil Médico) ───────────────────────
+        // GINA: refluxo gastroesofágico (DRGE), apneia do sono, rinite alérgica e
+        // obesidade são citados como fatores de risco para exacerbação de asma.
+        // Autodeclarado, sem verificação clínica — peso modesto e fixo por item.
+        val comorbidityCount = listOf(hasGerd, hasSleepApnea, hasRhinitis, hasObesity).count { it }
+        if (comorbidityCount > 0) {
+            score += (comorbidityCount * 6).coerceAtMost(20)
+            factors.add("$comorbidityCount comorbidade(s) autodeclarada(s) no Perfil Médico")
+        }
+
+        // ── Alergias específicas autodeclaradas (Perfil Médico) ──────────────────
+        // GINA cita alergia alimentar confirmada e sensibilidade a AINEs/aspirina
+        // (AERD) como fatores de risco para crises quase-fatais/fatais; alergia a
+        // inalantes (ácaros, pólen, mofo, pelos de animais) como fator de risco de
+        // exacerbação por exposição a alérgeno ao qual o paciente é sensibilizado.
+        // Autodeclarado, sem verificação clínica — bucket próprio, separado do das
+        // comorbidades, pra não diluir o peso já calibrado delas.
+        var allergyScore = 0
+        if (hasFoodAllergy) allergyScore += 7
+        if (hasNsaidAllergy) allergyScore += 7
+        if (hasInhalantAllergy) allergyScore += 4
+        if (allergyScore > 0) {
+            score += allergyScore.coerceAtMost(15)
+            factors.add("Alergia(s) específica(s) autodeclarada(s) no Perfil Médico")
         }
 
         // ── Qualidade do ar ────────────────────────────────────────────────────

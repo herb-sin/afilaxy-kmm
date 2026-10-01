@@ -2,7 +2,8 @@ import SwiftUI
 
 struct PrivacyView: View {
     @Environment(\.dismiss) var dismiss
-    
+    @State private var showExportData = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -43,7 +44,11 @@ struct PrivacyView: View {
                         title: "6. Seus Direitos",
                         content: "Você pode acessar, corrigir, excluir ou exportar seus dados a qualquer momento."
                     )
-                    
+
+                    Button("Exportar meus dados") { showExportData = true }
+                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity)
+
                     PrivacySection(
                         title: "7. Segurança",
                         content: "Implementamos autenticação Firebase, HTTPS e monitoramento de segurança."
@@ -58,6 +63,9 @@ struct PrivacyView: View {
         }
         .navigationTitle("Privacidade")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showExportData) {
+            ExportDataView()
+        }
     }
 }
 
