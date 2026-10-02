@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
@@ -320,8 +321,7 @@ fun ProfileScreenNew(
                         )
                     )
                     showEditSheet = false
-                },
-                onCancel = { showEditSheet = false }
+                }
             )
         }
     }
@@ -492,8 +492,7 @@ private fun EditProfileSheetContent(
     hasLowVision: Boolean,        onHasLowVisionChange: (Boolean) -> Unit,
     hasSpecialCondition: Boolean, onHasSpecialConditionChange: (Boolean) -> Unit,
     isSaving: Boolean,
-    onSave: () -> Unit,
-    onCancel: () -> Unit
+    onSave: () -> Unit
 ) {
     var nameError by remember { mutableStateOf(false) }
 
@@ -512,21 +511,13 @@ private fun EditProfileSheetContent(
     ) {
         // Cabeçalho
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onCancel) { Text("Cancelar") }
-                Text("Editar Perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    TextButton(onClick = validateAndSave) {
-                        Text("Salvar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
+            Text(
+                "Editar Perfil",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            )
             HorizontalDivider()
         }
         // Seção 1: Informações Pessoais

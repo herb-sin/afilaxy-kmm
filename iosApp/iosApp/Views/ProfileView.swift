@@ -370,7 +370,6 @@ struct QuickActionRow: View {
 }
 
 struct EditProfileSheet: View {
-    @Environment(\.dismiss) private var dismiss
     @Binding var name: String
     @Binding var phone: String
     @Binding var allergies: String
@@ -468,15 +467,6 @@ struct EditProfileSheet: View {
             .background(Color.afiBackground)
             .navigationTitle("Editar Perfil")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancelar") { dismiss() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Salvar") { onSave() }
-                        .fontWeight(.semibold)
-                }
-            }
         }
     }
 }
