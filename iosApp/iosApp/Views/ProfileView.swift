@@ -24,7 +24,6 @@ struct ProfileView: View {
     @State private var hasWheelchair = false
     @State private var hasLowVision = false
     @State private var hasSpecialCondition = false
-    @State private var fieldsLoaded = false
     @State private var showPhotoComingSoon = false
 
     var body: some View {
@@ -111,11 +110,7 @@ struct ProfileView: View {
                 container.profile.vm?.loadProfile()
             }
         }
-        .sheet(isPresented: $showEditSheet, onDismiss: {
-            // Reseta flag ao fechar — garante que re-abrir o sheet
-            // sempre carrega os dados mais recentes do perfil salvo.
-            fieldsLoaded = false
-        }) {
+        .sheet(isPresented: $showEditSheet) {
             EditProfileSheet(
                 name: $name, phone: $phone,
                 allergies: $allergies, healthNotes: $healthNotes,
@@ -129,27 +124,6 @@ struct ProfileView: View {
                 hasSpecialCondition: $hasSpecialCondition,
                 onSave: saveProfile
             )
-        }
-        .onReceive(container.profile.objectWillChange) { _ in
-            guard !fieldsLoaded, let profile = container.profile.state?.profile else { return }
-            fieldsLoaded = true
-            name = profile.name; phone = profile.phone
-            bloodType = profile.healthData?.bloodType ?? ""
-            allergies = profile.healthData?.allergies.joined(separator: ", ") ?? ""
-            healthNotes = profile.healthData?.notes ?? ""
-            emergencyName = profile.emergencyContact?.name ?? ""
-            emergencyPhone = profile.emergencyContact?.phone ?? ""
-            emergencyRelationship = profile.emergencyContact?.relationship ?? ""
-            hasGerd = profile.healthData?.hasGerd ?? false
-            hasSleepApnea = profile.healthData?.hasSleepApnea ?? false
-            hasRhinitis = profile.healthData?.hasRhinitis ?? false
-            hasObesity = profile.healthData?.hasObesity ?? false
-            hasFoodAllergy = profile.healthData?.hasFoodAllergy ?? false
-            hasNsaidAllergy = profile.healthData?.hasNsaidAllergy ?? false
-            hasInhalantAllergy = profile.healthData?.hasInhalantAllergy ?? false
-            hasWheelchair = profile.healthData?.hasWheelchair ?? false
-            hasLowVision = profile.healthData?.hasLowVision ?? false
-            hasSpecialCondition = profile.healthData?.hasSpecialCondition ?? false
         }
         .alert("Upload de foto em breve", isPresented: $showPhotoComingSoon) {
             Button("OK", role: .cancel) {}
@@ -192,7 +166,10 @@ struct ProfileView: View {
                     Image(systemName: "calendar.badge.clock").foregroundColor(.afiPrimary)
                     Text("Meu Perfil").font(.headline).fontWeight(.semibold)
                     Spacer()
-                    Button { showEditSheet = true } label: {
+                    Button {
+                        populateFields(from: profile)
+                        showEditSheet = true
+                    } label: {
                         Image(systemName: "pencil.circle").font(.title3).foregroundColor(.afiPrimary)
                     }
                 }
@@ -234,6 +211,29 @@ struct ProfileView: View {
                 }
             }
         }
+    }
+
+    // Preenche os campos de edição a partir do perfil atual — chamado de forma
+    // determinística ao abrir o formulário (não depende de reagir a um evento
+    // assíncrono que pode não chegar a tempo, como a atualização pós-salvamento).
+    private func populateFields(from profile: UserProfile) {
+        name = profile.name; phone = profile.phone
+        bloodType = profile.healthData?.bloodType ?? ""
+        allergies = profile.healthData?.allergies.joined(separator: ", ") ?? ""
+        healthNotes = profile.healthData?.notes ?? ""
+        emergencyName = profile.emergencyContact?.name ?? ""
+        emergencyPhone = profile.emergencyContact?.phone ?? ""
+        emergencyRelationship = profile.emergencyContact?.relationship ?? ""
+        hasGerd = profile.healthData?.hasGerd ?? false
+        hasSleepApnea = profile.healthData?.hasSleepApnea ?? false
+        hasRhinitis = profile.healthData?.hasRhinitis ?? false
+        hasObesity = profile.healthData?.hasObesity ?? false
+        hasFoodAllergy = profile.healthData?.hasFoodAllergy ?? false
+        hasNsaidAllergy = profile.healthData?.hasNsaidAllergy ?? false
+        hasInhalantAllergy = profile.healthData?.hasInhalantAllergy ?? false
+        hasWheelchair = profile.healthData?.hasWheelchair ?? false
+        hasLowVision = profile.healthData?.hasLowVision ?? false
+        hasSpecialCondition = profile.healthData?.hasSpecialCondition ?? false
     }
 
     private func saveProfile() {

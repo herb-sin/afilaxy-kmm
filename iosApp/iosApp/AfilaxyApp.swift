@@ -277,6 +277,9 @@ class AppContainer: ObservableObject {
     func observeChildren() {
         _emergency?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         _auth?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        _profile?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        _history?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
+        _risk?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: .init("AfilaxyIncomingEmergency"))
             .sink { [weak self] notification in
