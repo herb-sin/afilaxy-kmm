@@ -527,11 +527,31 @@ struct HomeView: View {
                     ) {
                         showPharmacyMap = true
                     }
+
+                    SupportLinkRow(
+                        title: "Autocuidado",
+                        subtitle: "Saúde e bem-estar",
+                        icon: "heart.text.square.fill",
+                        color: Color(hex: "#00897B")
+                    ) {
+                        navigationPath.append(AppRoute.autocuidado)
+                    }
+
+                    SupportLinkRow(
+                        title: "Comunidade",
+                        subtitle: "Grupo no WhatsApp",
+                        icon: "person.3.fill",
+                        color: Color(hex: "#25D366")
+                    ) {
+                        if let url = URL(string: "https://chat.whatsapp.com/BmSp54ER4hHBeow0KYCedL") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
                 }
             }
         }
     }
-    
+
 }
 
 // MARK: - Helper Actions

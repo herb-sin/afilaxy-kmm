@@ -316,13 +316,15 @@ fun HomeScreenNew(
             )
         }
 
+        // Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Farmácias 24h, Autocuidado, Comunidade
         item {
-            HomeQuickActions(onNavigateToAutocuidado = onNavigateToAutocuidado)
+            HomeSupportLinksSection(
+                onNavigateToHelp = onNavigateToHelp,
+                onNavigateToPharmacyMap = onNavigateToPharmacyMap,
+                onNavigateToHealthReport = onNavigateToHealthReport,
+                onNavigateToAutocuidado = onNavigateToAutocuidado
+            )
         }
-
-
-        // Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
-        item { HomeSupportLinksSection(onNavigateToHelp = onNavigateToHelp, onNavigateToPharmacyMap = onNavigateToPharmacyMap, onNavigateToHealthReport = onNavigateToHealthReport) }
     }
 
     // Ícone de logout — topo direito, padronizado com iOS.
@@ -724,82 +726,6 @@ private fun HomeEmergencyButton(
     }
 }
 
-@Composable
-private fun HomeQuickActions(
-    onNavigateToAutocuidado: () -> Unit
-) {
-    val context = LocalContext.current
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Acesso Rápido",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            HomeActionCard(
-                title = "Autocuidado",
-                subtitle = "Saúde e bem-estar",
-                icon = Icons.Default.Healing,
-                onClick = onNavigateToAutocuidado,
-                modifier = Modifier.weight(1f)
-            )
-            HomeActionCard(
-                title = "Comunidade",
-                subtitle = "Grupo no WhatsApp",
-                icon = Icons.Default.Group,
-                onClick = { openWhatsAppGroup(context) },
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun HomeActionCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.height(90.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(26.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Modo Ajudante — card separado
 // ---------------------------------------------------------------------------
@@ -872,11 +798,16 @@ private fun openWhatsAppGroup(context: android.content.Context) {
 }
 
 // ---------------------------------------------------------------------------
-// Suporte Rápido — Farmácias 24h, Protocolo de Crise, SAMU 192
+// Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Farmácias 24h, Autocuidado, Comunidade
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPharmacyMap: () -> Unit, onNavigateToHealthReport: () -> Unit) {
+private fun HomeSupportLinksSection(
+    onNavigateToHelp: () -> Unit,
+    onNavigateToPharmacyMap: () -> Unit,
+    onNavigateToHealthReport: () -> Unit,
+    onNavigateToAutocuidado: () -> Unit
+) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -923,6 +854,23 @@ private fun HomeSupportLinksSection(onNavigateToHelp: () -> Unit, onNavigateToPh
                 color = Color(0xFF2E7D32)
             ) {
                 onNavigateToPharmacyMap()
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeSupportLinkRow(
+                title = "Autocuidado",
+                subtitle = "Saúde e bem-estar",
+                icon = Icons.Default.Healing,
+                color = Color(0xFF00897B),
+                onClick = onNavigateToAutocuidado
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            HomeSupportLinkRow(
+                title = "Comunidade",
+                subtitle = "Grupo no WhatsApp",
+                icon = Icons.Default.Group,
+                color = Color(0xFF25D366)
+            ) {
+                openWhatsAppGroup(context)
             }
         }
     }
