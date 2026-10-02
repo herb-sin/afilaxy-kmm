@@ -98,9 +98,6 @@ struct HomeView: View {
                     pendingEmergenciesSection
                 }
 
-                // Quick Actions Grid
-                quickActionsGrid
-
                 // Support Links
                 supportLinksSection
             }
@@ -456,30 +453,6 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Quick Actions Grid
-    private var quickActionsGrid: some View {
-        HStack(spacing: 16) {
-            ActionCard(
-                title: "Autocuidado",
-                subtitle: "Saúde e bem-estar",
-                icon: "heart.text.square.fill"
-            ) {
-                navigationPath.append(AppRoute.autocuidado)
-            }
-
-            ActionCard(
-                title: "Comunidade",
-                subtitle: "Grupo no WhatsApp",
-                icon: "person.3.fill"
-            ) {
-                if let url = URL(string: "https://chat.whatsapp.com/BmSp54ER4hHBeow0KYCedL") {
-                    UIApplication.shared.open(url)
-                }
-            }
-        }
-    }
-    
-
     // MARK: - Support Links
     private var supportLinksSection: some View {
         AfilaxyCard {
