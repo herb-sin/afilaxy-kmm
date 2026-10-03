@@ -213,8 +213,6 @@ class RiskViewModelWrapper: ObservableObject {
 
 // MARK: - CheckInViewModelWrapper
 struct EveningCheckInAnswers {
-    let hadGoodDay: Bool
-    let physicalActivityDone: Bool
     let selfCareGood: Bool
     let rescueInhalerUses: Int32
     let daytimeBreathingEase: Bool
@@ -255,7 +253,6 @@ class CheckInViewModelWrapper: ObservableObject {
 
     func submitEvening(_ answers: EveningCheckInAnswers) {
         viewModel?.submitEveningCheckIn(
-            hadGoodDay: answers.hadGoodDay, physicalActivityDone: answers.physicalActivityDone,
             selfCareGood: answers.selfCareGood, rescueInhalerUses: answers.rescueInhalerUses,
             daytimeBreathingEase: answers.daytimeBreathingEase, activityAsPlanned: answers.activityAsPlanned
         )

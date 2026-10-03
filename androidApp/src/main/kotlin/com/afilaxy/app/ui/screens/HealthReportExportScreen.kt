@@ -24,12 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.afilaxy.presentation.professional.CrmResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.functions.FirebaseFunctions
-import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.File
@@ -40,10 +37,9 @@ import java.util.*
 // ── Step machine ──────────────────────────────────────────────────────────────
 
 private sealed class ReportStep {
-    object CrmEntry : ReportStep()
-    object Validating : ReportStep()
-    data class Validated(val doctor: CrmResult) : ReportStep()
+    object Idle : ReportStep()
     object Generating : ReportStep()
+    object Done : ReportStep()
     data class Failed(val message: String) : ReportStep()
 }
 
@@ -52,9 +48,7 @@ private sealed class ReportStep {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HealthReportExportScreen(onNavigateBack: () -> Unit) {
-    var step by remember { mutableStateOf<ReportStep>(ReportStep.CrmEntry) }
-    var crm by remember { mutableStateOf("") }
-    var selectedUf by remember { mutableStateOf("") }
+    var step by remember { mutableStateOf<ReportStep>(ReportStep.Idle) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -72,58 +66,27 @@ fun HealthReportExportScreen(onNavigateBack: () -> Unit) {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (val s = step) {
-                is ReportStep.CrmEntry, is ReportStep.Validating -> CrmEntryContent(
-                    crm = crm,
-                    selectedUf = selectedUf,
-                    isValidating = step is ReportStep.Validating,
-                    onCrmChange = { crm = it.filter { c -> c.isDigit() }.take(10) },
-                    onUfChange = { selectedUf = it },
-                    onValidate = {
-                        scope.launch {
-                            step = ReportStep.Validating
-                            step = validateCrm(crm, selectedUf)
-                        }
-                    }
-                )
-                is ReportStep.Validated -> ValidatedContent(
-                    doctor = s.doctor,
+                is ReportStep.Idle, is ReportStep.Done -> IdleContent(
                     onGenerate = {
                         scope.launch {
                             step = ReportStep.Generating
-                            val ok = generateAndShare(context, s.doctor)
-                            step = if (ok) ReportStep.Validated(s.doctor)
+                            val ok = generateAndShare(context)
+                            step = if (ok) ReportStep.Done
                                    else ReportStep.Failed("Não foi possível gerar o PDF. Tente novamente.")
                         }
-                    },
-                    onChangeDoctor = { step = ReportStep.CrmEntry }
+                    }
                 )
                 is ReportStep.Generating -> GeneratingContent()
-                is ReportStep.Failed -> FailedContent(s.message) { step = ReportStep.CrmEntry }
+                is ReportStep.Failed -> FailedContent(s.message) { step = ReportStep.Idle }
             }
         }
     }
 }
 
-// ── Step 1: CRM Entry ─────────────────────────────────────────────────────────
+// ── Idle: pronto para gerar ────────────────────────────────────────────────────
 
-private val UF_LIST = listOf(
-    "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
-    "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CrmEntryContent(
-    crm: String,
-    selectedUf: String,
-    isValidating: Boolean,
-    onCrmChange: (String) -> Unit,
-    onUfChange: (String) -> Unit,
-    onValidate: () -> Unit
-) {
-    var ufExpanded by remember { mutableStateOf(false) }
-    val canValidate = crm.isNotBlank() && selectedUf.length == 2 && !isValidating
-
+private fun IdleContent(onGenerate: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -133,106 +96,15 @@ private fun CrmEntryContent(
     ) {
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Acesso por CRM", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text("Relatório completo", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Text(
-                        "Informe o CRM do profissional que irá receber o relatório. O nome e número serão registrados no documento como destinatário.",
+                        "Gere um PDF com seus check-ins dos últimos 30 dias e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
-            }
-        }
-
-        OutlinedTextField(
-            value = crm,
-            onValueChange = onCrmChange,
-            label = { Text("Número do CRM") },
-            placeholder = { Text("Ex: 123456") },
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-            ),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        ExposedDropdownMenuBox(expanded = ufExpanded, onExpandedChange = { ufExpanded = it }) {
-            OutlinedTextField(
-                value = selectedUf.ifEmpty { "Selecione a UF" },
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("UF de registro") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = ufExpanded) },
-                modifier = Modifier.fillMaxWidth().menuAnchor()
-            )
-            ExposedDropdownMenu(expanded = ufExpanded, onDismissRequest = { ufExpanded = false }) {
-                UF_LIST.forEach { uf ->
-                    DropdownMenuItem(
-                        text = { Text(uf) },
-                        onClick = { onUfChange(uf); ufExpanded = false }
-                    )
-                }
-            }
-        }
-
-        Button(
-            onClick = onValidate,
-            enabled = canValidate,
-            modifier = Modifier.fillMaxWidth().height(50.dp)
-        ) {
-            if (isValidating) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary)
-                Spacer(Modifier.width(8.dp))
-            } else {
-                Icon(Icons.Default.VerifiedUser, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-            }
-            Text("Validar e Continuar", fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-// ── Step 2: Validated ─────────────────────────────────────────────────────────
-
-@Composable
-private fun ValidatedContent(
-    doctor: CrmResult,
-    onGenerate: () -> Unit,
-    onChangeDoctor: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(2.dp)) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF2E7D32))
-                    Text("Médico confirmado no CFM", style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold)
-                }
-                HorizontalDivider()
-                InfoRow("Nome", doctor.name)
-                InfoRow("CRM", "${doctor.crm}/${doctor.uf}")
-                InfoRow("Especialidade", doctor.specialty.ifEmpty { "Não informada" })
-                val active = doctor.situation.lowercase().let { it.contains("ativo") || it.contains("regular") }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Situação: ", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(doctor.situation.ifEmpty { "Não informada" },
-                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium,
-                        color = if (active) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error)
-                }
-                Text("Fonte: Conselho Federal de Medicina (CFM)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -250,8 +122,8 @@ private fun ValidatedContent(
                     "Qualidade do sono (check-in matinal)",
                     "Bem-estar e energia matinal",
                     "Avaliação de bem-estar noturno",
-                    "Atividade física e autocuidado",
-                    "Eventos de emergência acionados"
+                    "Eventos de emergência acionados",
+                    "Perfil Médico (comorbidades, alergias, acessibilidade)"
                 ).forEach { item ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -268,10 +140,6 @@ private fun ValidatedContent(
             Icon(Icons.Default.Download, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text("Gerar Relatório PDF", fontWeight = FontWeight.Bold)
-        }
-
-        TextButton(onClick = onChangeDoctor, modifier = Modifier.fillMaxWidth()) {
-            Text("Trocar profissional")
         }
     }
 }
@@ -307,46 +175,9 @@ private fun FailedContent(message: String, onRetry: () -> Unit) {
     }
 }
 
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("$label: ", style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-    }
-}
-
 // ── Logic ─────────────────────────────────────────────────────────────────────
 
-private suspend fun validateCrm(crm: String, uf: String): ReportStep = try {
-    val result = FirebaseFunctions.getInstance("us-central1")
-        .getHttpsCallable("validateCrm")
-        .call(mapOf("crm" to crm.trim(), "uf" to uf))
-        .await()
-    @Suppress("UNCHECKED_CAST")
-    val data = result.getData() as? Map<String, Any> ?: emptyMap()
-    if (data["found"] == true) {
-        ReportStep.Validated(CrmResult(
-            name      = data["name"]      as? String ?: "",
-            specialty = data["specialty"] as? String ?: "",
-            situation = data["situation"] as? String ?: "",
-            uf        = data["uf"]        as? String ?: uf,
-            crm       = data["crm"]       as? String ?: crm
-        ))
-    } else {
-        ReportStep.Failed("CRM $crm/$uf não encontrado no CFM.\nVerifique o número e a UF informados.")
-    }
-} catch (e: FirebaseFunctionsException) {
-    ReportStep.Failed(
-        if (e.code == FirebaseFunctionsException.Code.UNAVAILABLE)
-            "Serviço do CFM indisponível. Tente novamente mais tarde."
-        else "Erro ao consultar CRM. Verifique os dados e tente novamente."
-    )
-} catch (e: Exception) {
-    ReportStep.Failed("Erro de conexão. Verifique sua internet e tente novamente.")
-}
-
-private suspend fun generateAndShare(context: Context, doctor: CrmResult): Boolean {
+private suspend fun generateAndShare(context: Context): Boolean {
     val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return false
     val patientName = FirebaseAuth.getInstance().currentUser?.displayName ?: "Usuário"
     val cutoffMs = System.currentTimeMillis() - 30L * 24 * 3_600_000
@@ -363,21 +194,43 @@ private suspend fun generateAndShare(context: Context, doctor: CrmResult): Boole
         FirebaseFirestore.getInstance().collection("user_stats").document(uid).get().await()
     } catch (e: Exception) { null }
 
+    val userDoc = try {
+        FirebaseFirestore.getInstance().collection("users").document(uid).get().await()
+    } catch (e: Exception) { null }
+
     val checkIns = checkInDocs.documents.map { doc ->
         WellbeingCheckInAndroid(
             type                 = doc.getString("type") ?: "",
             nighttimeAwakening   = doc.getBoolean("nighttimeAwakening") ?: false,
             morningMoodGood      = doc.getBoolean("morningMoodGood") ?: false,
             morningEnergyGood    = doc.getBoolean("morningEnergyGood") ?: false,
-            hadGoodDay           = doc.getBoolean("hadGoodDay") ?: false,
-            physicalActivityDone = doc.getBoolean("physicalActivityDone") ?: false,
-            selfCareGood         = doc.getBoolean("selfCareGood") ?: false
+            selfCareGood         = doc.getBoolean("selfCareGood") ?: false,
+            daytimeBreathingEase = doc.getBoolean("daytimeBreathingEase") ?: false,
+            activityAsPlanned    = doc.getBoolean("activityAsPlanned") ?: false
         )
     }
 
+    val healthProfile = HealthProfileAndroid(
+        bloodType = userDoc?.getString("healthData.bloodType") ?: "",
+        allergiesText = (userDoc?.get("healthData.allergies") as? List<*>)
+            ?.filterIsInstance<String>() ?: emptyList(),
+        hasGerd = userDoc?.getBoolean("healthData.hasGerd") ?: false,
+        hasSleepApnea = userDoc?.getBoolean("healthData.hasSleepApnea") ?: false,
+        hasRhinitis = userDoc?.getBoolean("healthData.hasRhinitis") ?: false,
+        hasObesity = userDoc?.getBoolean("healthData.hasObesity") ?: false,
+        hasFoodAllergy = userDoc?.getBoolean("healthData.hasFoodAllergy") ?: false,
+        hasNsaidAllergy = userDoc?.getBoolean("healthData.hasNsaidAllergy") ?: false,
+        hasInhalantAllergy = userDoc?.getBoolean("healthData.hasInhalantAllergy") ?: false,
+        hasWheelchair = userDoc?.getBoolean("healthData.hasWheelchair") ?: false,
+        hasLowVision = userDoc?.getBoolean("healthData.hasLowVision") ?: false,
+        hasSpecialCondition = userDoc?.getBoolean("healthData.hasSpecialCondition") ?: false,
+        emergencyContactName = userDoc?.getString("emergencyContact.name") ?: "",
+        emergencyContactPhone = userDoc?.getString("emergencyContact.phone") ?: ""
+    )
+
     val report = WellbeingReportAndroid(
         patientName       = patientName,
-        doctor            = doctor,
+        healthProfile     = healthProfile,
         checkIns          = checkIns,
         emergencyCount30d = emergency30d(statsDoc),
         generatedAt       = Date()
@@ -415,20 +268,37 @@ private data class WellbeingCheckInAndroid(
     val nighttimeAwakening: Boolean,
     val morningMoodGood: Boolean,
     val morningEnergyGood: Boolean,
-    val hadGoodDay: Boolean,
-    val physicalActivityDone: Boolean,
-    val selfCareGood: Boolean
+    val selfCareGood: Boolean,
+    val daytimeBreathingEase: Boolean,
+    val activityAsPlanned: Boolean
 ) {
     fun isCritical(): Boolean = if (type == "MORNING") {
         !nighttimeAwakening && !morningMoodGood && !morningEnergyGood
     } else {
-        !hadGoodDay && !physicalActivityDone && !selfCareGood
+        !selfCareGood && !daytimeBreathingEase && !activityAsPlanned
     }
 }
 
+private data class HealthProfileAndroid(
+    val bloodType: String,
+    val allergiesText: List<String>,
+    val hasGerd: Boolean,
+    val hasSleepApnea: Boolean,
+    val hasRhinitis: Boolean,
+    val hasObesity: Boolean,
+    val hasFoodAllergy: Boolean,
+    val hasNsaidAllergy: Boolean,
+    val hasInhalantAllergy: Boolean,
+    val hasWheelchair: Boolean,
+    val hasLowVision: Boolean,
+    val hasSpecialCondition: Boolean,
+    val emergencyContactName: String,
+    val emergencyContactPhone: String
+)
+
 private data class WellbeingReportAndroid(
     val patientName: String,
-    val doctor: CrmResult,
+    val healthProfile: HealthProfileAndroid,
     val checkIns: List<WellbeingCheckInAndroid>,
     val emergencyCount30d: Int,
     val generatedAt: Date
@@ -459,7 +329,8 @@ private object WellbeingPDFAndroid {
         y = summary(c, report, y)
         y = morningSection(c, report, y)
         y = eveningSection(c, report, y)
-        criticalSection(c, report, y)
+        y = criticalSection(c, report, y)
+        healthProfileSection(c, report, y)
         footer(c, report)
 
         doc.finishPage(page)
@@ -501,14 +372,11 @@ private object WellbeingPDFAndroid {
             tp(10f, android.graphics.Color.DKGRAY))
 
         val rx = PAGE_W - MARGIN - 205f
-        c.drawText("DESTINATÁRIO", rx, y + 10f + ascent(lp()), lp())
-        c.drawText(r.doctor.name.ifEmpty { "—" }, rx, y + 22f + ascent(tp(11f, android.graphics.Color.BLACK, bold = true)),
+        c.drawText("ORIGEM", rx, y + 10f + ascent(lp()), lp())
+        c.drawText("Autorrelato do paciente", rx, y + 22f + ascent(tp(11f, android.graphics.Color.BLACK, bold = true)),
             tp(11f, android.graphics.Color.BLACK, bold = true))
-        c.drawText("CRM ${r.doctor.crm}/${r.doctor.uf}", rx, y + 40f + ascent(tp(10f, android.graphics.Color.DKGRAY)),
+        c.drawText("Sem revisão clínica prévia", rx, y + 40f + ascent(tp(10f, android.graphics.Color.DKGRAY)),
             tp(10f, android.graphics.Color.DKGRAY))
-        if (r.doctor.specialty.isNotEmpty())
-            c.drawText(r.doctor.specialty, rx, y + 56f + ascent(tp(9f, android.graphics.Color.GRAY)),
-                tp(9f, android.graphics.Color.GRAY))
 
         return y + h + 20f
     }
@@ -541,9 +409,9 @@ private object WellbeingPDFAndroid {
         val e = r.checkIns.filter { it.type == "EVENING" }
         return barRows(c, listOf(
             "Registros noturnos: ${e.size}"    to null,
-            "\"Tive um bom dia\""              to pct(e) { it.hadGoodDay },
-            "\"Pratiquei atividade física\""   to pct(e) { it.physicalActivityDone },
-            "\"Me cuidei bem hoje\""          to pct(e) { it.selfCareGood }
+            "\"Me cuidei bem hoje\""          to pct(e) { it.selfCareGood },
+            "\"Respirei com facilidade ao longo do dia\"" to pct(e) { it.daytimeBreathingEase },
+            "\"Consegui fazer tudo que tinha planejado\""  to pct(e) { it.activityAsPlanned }
         ), sectionHeader(c, "3. CHECK-IN NOTURNO", y, EVENING), EVENING)
     }
 
@@ -553,6 +421,39 @@ private object WellbeingPDFAndroid {
             "Pedidos de ajuda emergencial (período)" to "${r.emergencyCount30d}",
             "Dias com bem-estar mínimo registrado"   to "$critical"
         ), sectionHeader(c, "4. EVENTOS CRÍTICOS", y, CRITICAL))
+    }
+
+    private fun healthProfileSection(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
+        val p = r.healthProfile
+        val comorbidities = buildList {
+            if (p.hasGerd) add("Refluxo / DRGE")
+            if (p.hasSleepApnea) add("Apneia do sono")
+            if (p.hasRhinitis) add("Rinite alérgica")
+            if (p.hasObesity) add("Obesidade")
+        }
+        val specificAllergies = buildList {
+            if (p.hasFoodAllergy) add("Alimentar")
+            if (p.hasNsaidAllergy) add("AINEs/aspirina")
+            if (p.hasInhalantAllergy) add("Inalantes (ácaros/pólen/mofo/pelos)")
+        }
+        val accessibility = buildList {
+            if (p.hasWheelchair) add("Cadeirante")
+            if (p.hasLowVision) add("Baixa visão ou cegueira")
+            if (p.hasSpecialCondition) add("Outra condição especial")
+        }
+        val emergencyContact = if (p.emergencyContactName.isNotEmpty()) {
+            if (p.emergencyContactPhone.isNotEmpty()) "${p.emergencyContactName} — ${p.emergencyContactPhone}"
+            else p.emergencyContactName
+        } else "Não informado"
+
+        return plainRows(c, listOf(
+            "Tipo sanguíneo"         to p.bloodType.ifEmpty { "Não informado" },
+            "Alergias conhecidas"    to p.allergiesText.joinToString(", ").ifEmpty { "Nenhuma relatada" },
+            "Comorbidades"           to comorbidities.joinToString(", ").ifEmpty { "Nenhuma" },
+            "Alergias específicas"   to specificAllergies.joinToString(", ").ifEmpty { "Nenhuma" },
+            "Acessibilidade"         to accessibility.joinToString(", ").ifEmpty { "Nenhuma" },
+            "Contato de emergência"  to emergencyContact
+        ), sectionHeader(c, "5. PERFIL MÉDICO", y, PRIMARY))
     }
 
     private fun footer(c: android.graphics.Canvas, r: WellbeingReportAndroid) {

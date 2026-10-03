@@ -68,8 +68,7 @@ A cada check-in (matinal e noturno), são registrados:
 Dado                                   | Natureza              | Finalidade
 ---------------------------------------|----------------------|----------------------
 morningMoodGood, morningEnergyGood,     | Bem-estar subjetivo  | Acompanhamento e
-hadGoodDay, physicalActivityDone,      | autodeclarado        | cálculo do Índice
-selfCareGood (respostas binárias)      |                      |
+selfCareGood (respostas binárias)      | autodeclarado        | cálculo do Índice
 AQI, temperatura, umidade              | Dado ambiental,      | Contextualização
 (contexto ambiental)                   | não pessoal          | do check-in
 Data, hora e período (matinal/noturno) | Dado temporal        | Registro histórico

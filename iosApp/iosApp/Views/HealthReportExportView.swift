@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 import FirebaseAuth
-import FirebaseCore
 import FirebaseFirestore
 
 // MARK: - Main View
@@ -10,21 +9,12 @@ struct HealthReportExportView: View {
     @Environment(\.dismiss) private var dismiss
 
     enum Step {
-        case crmEntry
-        case crmValidating
-        case crmValidated(CrmResultData)
+        case idle
         case generating
         case failed(String)
     }
 
-    private let ufList = [
-        "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
-        "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"
-    ]
-
-    @State private var step: Step = .crmEntry
-    @State private var crm = ""
-    @State private var selectedUF = ""
+    @State private var step: Step = .idle
     @State private var shareItems: [Any] = []
     @State private var showShareSheet = false
 
@@ -32,10 +22,8 @@ struct HealthReportExportView: View {
         NavigationStack {
             Group {
                 switch step {
-                case .crmEntry, .crmValidating:
-                    crmEntryView
-                case .crmValidated(let doctor):
-                    crmValidatedView(doctor: doctor)
+                case .idle:
+                    idleView
                 case .generating:
                     generatingView
                 case .failed(let message):
@@ -55,106 +43,22 @@ struct HealthReportExportView: View {
         }
     }
 
-    // MARK: - Step 1: CRM Entry
+    // MARK: - Idle
 
-    private var crmEntryView: some View {
+    private var idleView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "lock.shield.fill")
+                    Image(systemName: "doc.text.fill")
                         .foregroundColor(.afiPrimary)
                         .font(.title2)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Acesso por CRM")
+                        Text("Relatório completo")
                             .font(.headline)
-                        Text("Para gerar o relatório, informe o CRM do profissional de saúde que irá recebê-lo. O nome e número serão registrados no documento como destinatário.")
+                        Text("Gere um PDF com seus check-ins dos últimos 30 dias e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Número do CRM")
-                        .font(.caption).fontWeight(.medium).foregroundColor(.secondary)
-                    TextField("Ex: 123456", text: $crm)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: crm) { _ in
-                            crm = String(crm.filter { $0.isNumber }.prefix(10))
-                        }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("UF de registro")
-                        .font(.caption).fontWeight(.medium).foregroundColor(.secondary)
-                    Picker("UF", selection: $selectedUF) {
-                        Text("Selecione a UF").tag("")
-                        ForEach(ufList, id: \.self) { uf in Text(uf).tag(uf) }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(Color(.systemGray6)).cornerRadius(8)
-                }
-
-                Button {
-                    Task { await validateCrm() }
-                } label: {
-                    HStack {
-                        if case .crmValidating = step {
-                            ProgressView().scaleEffect(0.85).tint(.white)
-                        } else {
-                            Image(systemName: "checkmark.shield")
-                        }
-                        Text("Validar e Continuar")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity).frame(height: 50)
-                    .background(canValidate ? Color.afiPrimary : Color(.systemGray4))
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .disabled(!canValidate)
-
-                Spacer(minLength: 40)
-            }
-            .padding()
-        }
-    }
-
-    private var canValidate: Bool {
-        if case .crmValidating = step { return false }
-        return !crm.trimmingCharacters(in: .whitespaces).isEmpty && selectedUF.count == 2
-    }
-
-    // MARK: - Step 2: CRM Validated
-
-    private func crmValidatedView(doctor: CrmResultData) -> some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.shield.fill").foregroundColor(.green).font(.title3)
-                        Text("Médico confirmado no CFM").font(.headline)
-                    }
-                    Divider()
-                    labelRow("Nome", value: doctor.name)
-                    labelRow("CRM", value: "\(doctor.crm)/\(doctor.uf)")
-                    labelRow("Especialidade", value: doctor.specialty.isEmpty ? "Não informada" : doctor.specialty)
-                    HStack {
-                        Text("Situação: ").foregroundColor(.secondary)
-                        let active = doctor.situation.lowercased().contains("ativo")
-                            || doctor.situation.lowercased().contains("regular")
-                        Text(doctor.situation.isEmpty ? "Não informada" : doctor.situation)
-                            .foregroundColor(active ? .green : .red)
-                            .fontWeight(.medium)
-                    }.font(.subheadline)
-                    Text("Fonte: Conselho Federal de Medicina (CFM)")
-                        .font(.caption).foregroundColor(.secondary)
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -171,8 +75,8 @@ struct HealthReportExportView: View {
                         "Qualidade do sono (check-in matinal)",
                         "Bem-estar e energia matinal",
                         "Avaliação de bem-estar noturno",
-                        "Atividade física e autocuidado",
-                        "Eventos de emergência acionados"
+                        "Eventos de emergência acionados",
+                        "Perfil Médico (comorbidades, alergias, acessibilidade)"
                     ], id: \.self) { item in
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark")
@@ -187,7 +91,7 @@ struct HealthReportExportView: View {
                 .cornerRadius(12)
 
                 Button {
-                    Task { await generateReport(doctor: doctor) }
+                    Task { await generateReport() }
                 } label: {
                     HStack {
                         Image(systemName: "arrow.down.doc.fill")
@@ -200,20 +104,10 @@ struct HealthReportExportView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
 
-                Button("Trocar profissional") { step = .crmEntry }
-                    .font(.subheadline).foregroundColor(.secondary)
-
                 Spacer(minLength: 40)
             }
             .padding()
         }
-    }
-
-    private func labelRow(_ label: String, value: String) -> some View {
-        HStack(alignment: .top) {
-            Text("\(label): ").foregroundColor(.secondary)
-            Text(value).fontWeight(.medium)
-        }.font(.subheadline)
     }
 
     // MARK: - Step 3: Generating
@@ -242,60 +136,16 @@ struct HealthReportExportView: View {
             Text(message)
                 .font(.subheadline).foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Tentar novamente") { step = .crmEntry }
+            Button("Tentar novamente") { step = .idle }
                 .buttonStyle(.borderedProminent)
             Spacer()
         }
         .padding()
     }
 
-    // MARK: - CRM Validation
-
-    private func validateCrm() async {
-        step = .crmValidating
-        guard let user = Auth.auth().currentUser else {
-            step = .failed("Sessão expirada. Faça login novamente.")
-            return
-        }
-        do {
-            let token = try await user.getIDToken()
-            guard let projectId = FirebaseApp.app()?.options.projectID,
-                  let url = URL(string: "https://us-central1-\(projectId).cloudfunctions.net/validateCrm")
-            else {
-                step = .failed("Erro de configuração do Firebase.")
-                return
-            }
-            var req = URLRequest(url: url)
-            req.httpMethod = "POST"
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            req.httpBody = try JSONSerialization.data(withJSONObject: [
-                "data": ["crm": crm.trimmingCharacters(in: .whitespaces), "uf": selectedUF]
-            ])
-            let (data, response) = try await URLSession.shared.data(for: req)
-            let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
-            if (response as? HTTPURLResponse)?.statusCode == 200,
-               let res = json["result"] as? [String: Any],
-               res["found"] as? Bool == true {
-                let doctor = CrmResultData(
-                    name:      res["name"]      as? String ?? "",
-                    specialty: res["specialty"] as? String ?? "",
-                    situation: res["situation"] as? String ?? "",
-                    uf:        res["uf"]        as? String ?? selectedUF,
-                    crm:       res["crm"]       as? String ?? crm
-                )
-                step = .crmValidated(doctor)
-            } else {
-                step = .failed("CRM \(crm)/\(selectedUF) não encontrado no CFM.\nVerifique o número e a UF informados.")
-            }
-        } catch {
-            step = .failed("Erro de conexão. Verifique sua internet e tente novamente.")
-        }
-    }
-
     // MARK: - Report Generation
 
-    private func generateReport(doctor: CrmResultData) async {
+    private func generateReport() async {
         step = .generating
         guard let uid = Auth.auth().currentUser?.uid else {
             step = .failed("Sessão expirada.")
@@ -312,12 +162,14 @@ struct HealthReportExportView: View {
 
             let statsDoc = try? await Firestore.firestore()
                 .collection("user_stats").document(uid).getDocument()
+            let userDoc = try? await Firestore.firestore()
+                .collection("users").document(uid).getDocument()
             let emergencyCount = emergency30d(statsDoc: statsDoc)
             let patientName = Auth.auth().currentUser?.displayName ?? "Usuário"
 
             let report = WellbeingReportData(
                 patientName: patientName,
-                doctor: doctor,
+                healthProfile: HealthProfileData(doc: userDoc),
                 checkIns: checkInDocs.documents.map { WellbeingCheckIn(doc: $0) },
                 emergencyCount30d: emergencyCount
             )
@@ -329,7 +181,7 @@ struct HealthReportExportView: View {
             }
             shareItems = [fileURL]
             showShareSheet = true
-            step = .crmValidated(doctor)
+            step = .idle
         } catch {
             step = .failed("Erro ao carregar dados: \(error.localizedDescription)")
         }
@@ -363,10 +215,44 @@ struct HealthReportExportView: View {
 
 struct WellbeingReportData {
     let patientName: String
-    let doctor: CrmResultData
+    let healthProfile: HealthProfileData
     let checkIns: [WellbeingCheckIn]
     let emergencyCount30d: Int
     let generatedAt: Date = Date()
+}
+
+struct HealthProfileData {
+    let bloodType: String
+    let allergiesText: [String]
+    let hasGerd: Bool
+    let hasSleepApnea: Bool
+    let hasRhinitis: Bool
+    let hasObesity: Bool
+    let hasFoodAllergy: Bool
+    let hasNsaidAllergy: Bool
+    let hasInhalantAllergy: Bool
+    let hasWheelchair: Bool
+    let hasLowVision: Bool
+    let hasSpecialCondition: Bool
+    let emergencyContactName: String
+    let emergencyContactPhone: String
+
+    init(doc: DocumentSnapshot?) {
+        bloodType = doc?["healthData.bloodType"] as? String ?? ""
+        allergiesText = (doc?["healthData.allergies"] as? [String]) ?? []
+        hasGerd = doc?["healthData.hasGerd"] as? Bool ?? false
+        hasSleepApnea = doc?["healthData.hasSleepApnea"] as? Bool ?? false
+        hasRhinitis = doc?["healthData.hasRhinitis"] as? Bool ?? false
+        hasObesity = doc?["healthData.hasObesity"] as? Bool ?? false
+        hasFoodAllergy = doc?["healthData.hasFoodAllergy"] as? Bool ?? false
+        hasNsaidAllergy = doc?["healthData.hasNsaidAllergy"] as? Bool ?? false
+        hasInhalantAllergy = doc?["healthData.hasInhalantAllergy"] as? Bool ?? false
+        hasWheelchair = doc?["healthData.hasWheelchair"] as? Bool ?? false
+        hasLowVision = doc?["healthData.hasLowVision"] as? Bool ?? false
+        hasSpecialCondition = doc?["healthData.hasSpecialCondition"] as? Bool ?? false
+        emergencyContactName = doc?["emergencyContact.name"] as? String ?? ""
+        emergencyContactPhone = doc?["emergencyContact.phone"] as? String ?? ""
+    }
 }
 
 struct WellbeingCheckIn {
@@ -374,24 +260,24 @@ struct WellbeingCheckIn {
     let nighttimeAwakening: Bool
     let morningMoodGood: Bool
     let morningEnergyGood: Bool
-    let hadGoodDay: Bool
-    let physicalActivityDone: Bool
     let selfCareGood: Bool
+    let daytimeBreathingEase: Bool
+    let activityAsPlanned: Bool
 
     init(doc: QueryDocumentSnapshot) {
         type = doc["type"] as? String ?? ""
         nighttimeAwakening = doc["nighttimeAwakening"] as? Bool ?? false
         morningMoodGood = doc["morningMoodGood"] as? Bool ?? false
         morningEnergyGood = doc["morningEnergyGood"] as? Bool ?? false
-        hadGoodDay = doc["hadGoodDay"] as? Bool ?? false
-        physicalActivityDone = doc["physicalActivityDone"] as? Bool ?? false
         selfCareGood = doc["selfCareGood"] as? Bool ?? false
+        daytimeBreathingEase = doc["daytimeBreathingEase"] as? Bool ?? false
+        activityAsPlanned = doc["activityAsPlanned"] as? Bool ?? false
     }
 
     var isCritical: Bool {
         type == "MORNING"
             ? !nighttimeAwakening && !morningMoodGood && !morningEnergyGood
-            : !hadGoodDay && !physicalActivityDone && !selfCareGood
+            : !selfCareGood && !daytimeBreathingEase && !activityAsPlanned
     }
 }
 
@@ -419,7 +305,8 @@ enum WellbeingPDFGenerator {
             y = drawSummary(report: report, y: y)
             y = drawMorningSection(report: report, y: y)
             y = drawEveningSection(report: report, y: y)
-            _ = drawCriticalSection(report: report, y: y)
+            y = drawCriticalSection(report: report, y: y)
+            _ = drawHealthProfileSection(report: report, y: y)
             drawFooter(report: report)
         }
     }
@@ -462,17 +349,12 @@ enum WellbeingPDFGenerator {
              font: .systemFont(ofSize: 10), color: .darkGray)
 
         let rx = pageW - margin - 205
-        draw("DESTINATÁRIO", at: CGPoint(x: rx, y: y + 10),
+        draw("ORIGEM", at: CGPoint(x: rx, y: y + 10),
              font: .systemFont(ofSize: 8, weight: .medium), color: .gray)
-        draw(report.doctor.name.isEmpty ? "—" : report.doctor.name,
-             at: CGPoint(x: rx, y: y + 22),
+        draw("Autorrelato do paciente", at: CGPoint(x: rx, y: y + 22),
              font: .boldSystemFont(ofSize: 11), color: .black)
-        draw("CRM \(report.doctor.crm)/\(report.doctor.uf)", at: CGPoint(x: rx, y: y + 40),
+        draw("Sem revisão clínica prévia", at: CGPoint(x: rx, y: y + 40),
              font: .systemFont(ofSize: 10), color: .darkGray)
-        if !report.doctor.specialty.isEmpty {
-            draw(report.doctor.specialty, at: CGPoint(x: rx, y: y + 56),
-                 font: .systemFont(ofSize: 9), color: .gray)
-        }
 
         return y + h + 20
     }
@@ -509,9 +391,9 @@ enum WellbeingPDFGenerator {
         var y = drawSectionHeader("3. CHECK-IN NOTURNO", y: y, color: eveningColor)
         return drawBarRows([
             ("Registros noturnos: \(evening.count)", nil),
-            ("\"Tive um bom dia\"",           pct(evening, \.hadGoodDay)),
-            ("\"Pratiquei atividade física\"", pct(evening, \.physicalActivityDone)),
-            ("\"Me cuidei bem hoje\"",        pct(evening, \.selfCareGood))
+            ("\"Me cuidei bem hoje\"",        pct(evening, \.selfCareGood)),
+            ("\"Respirei com facilidade ao longo do dia\"", pct(evening, \.daytimeBreathingEase)),
+            ("\"Consegui fazer tudo que tinha planejado\"",  pct(evening, \.activityAsPlanned))
         ], y: y, barColor: eveningColor)
     }
 
@@ -521,6 +403,44 @@ enum WellbeingPDFGenerator {
         return drawPlainRows([
             ("Pedidos de ajuda emergencial (período)", "\(report.emergencyCount30d)"),
             ("Dias com bem-estar mínimo registrado",   "\(critical)")
+        ], y: y)
+    }
+
+    private static func drawHealthProfileSection(report: WellbeingReportData, y: CGFloat) -> CGFloat {
+        let p = report.healthProfile
+        var comorbidities: [String] = []
+        if p.hasGerd { comorbidities.append("Refluxo / DRGE") }
+        if p.hasSleepApnea { comorbidities.append("Apneia do sono") }
+        if p.hasRhinitis { comorbidities.append("Rinite alérgica") }
+        if p.hasObesity { comorbidities.append("Obesidade") }
+
+        var specificAllergies: [String] = []
+        if p.hasFoodAllergy { specificAllergies.append("Alimentar") }
+        if p.hasNsaidAllergy { specificAllergies.append("AINEs/aspirina") }
+        if p.hasInhalantAllergy { specificAllergies.append("Inalantes (ácaros/pólen/mofo/pelos)") }
+
+        var accessibility: [String] = []
+        if p.hasWheelchair { accessibility.append("Cadeirante") }
+        if p.hasLowVision { accessibility.append("Baixa visão ou cegueira") }
+        if p.hasSpecialCondition { accessibility.append("Outra condição especial") }
+
+        let emergencyContact: String
+        if !p.emergencyContactName.isEmpty {
+            emergencyContact = p.emergencyContactPhone.isEmpty
+                ? p.emergencyContactName
+                : "\(p.emergencyContactName) — \(p.emergencyContactPhone)"
+        } else {
+            emergencyContact = "Não informado"
+        }
+
+        var y = drawSectionHeader("5. PERFIL MÉDICO", y: y, color: primaryColor)
+        return drawPlainRows([
+            ("Tipo sanguíneo", p.bloodType.isEmpty ? "Não informado" : p.bloodType),
+            ("Alergias conhecidas", p.allergiesText.isEmpty ? "Nenhuma relatada" : p.allergiesText.joined(separator: ", ")),
+            ("Comorbidades", comorbidities.isEmpty ? "Nenhuma" : comorbidities.joined(separator: ", ")),
+            ("Alergias específicas", specificAllergies.isEmpty ? "Nenhuma" : specificAllergies.joined(separator: ", ")),
+            ("Acessibilidade", accessibility.isEmpty ? "Nenhuma" : accessibility.joined(separator: ", ")),
+            ("Contato de emergência", emergencyContact)
         ], y: y)
     }
 

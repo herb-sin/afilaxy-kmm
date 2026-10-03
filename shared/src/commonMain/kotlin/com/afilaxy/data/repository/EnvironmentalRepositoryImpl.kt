@@ -331,30 +331,38 @@ internal object RiskScoreEngine {
             recommendations.add("Tenha o número do SAMU (192) salvo no celular")
         }
 
-        // ── Bem-estar reportado nos check-ins dos últimos 7 dias ──────────────
-        // Matinal (humor/energia) e noturno (dia/atividade/autocuidado) são temas
-        // diferentes — contados e relatados em separado, mas somados sob o mesmo teto
-        // de 25 pontos de antes, pra não mudar o peso desse fator no score geral.
-        // nighttimeAwakening (bucket próprio acima) já cobre o sono matinal — não repetido aqui.
+        // ── Bem-estar matinal comprometido (humor + energia, autorrelato) ─────
+        // nighttimeAwakening (bucket próprio acima) já cobre o sono — não repetido aqui.
         if (recentCheckIns.isNotEmpty()) {
             val lowMorningDays = recentCheckIns.count { ci ->
                 ci.type == "MORNING" &&
                     listOfNotNull(ci.morningMoodGood, ci.morningEnergyGood).count { !it } >= 2
             }
-            val lowEveningDays = recentCheckIns.count { ci ->
-                ci.type == "EVENING" &&
-                    listOfNotNull(ci.hadGoodDay, ci.physicalActivityDone, ci.selfCareGood).count { !it } >= 2
+            if (lowMorningDays > 0) {
+                score += (lowMorningDays * 8).coerceAtMost(25)
+                factors.add("$lowMorningDays manhã(s) com humor/energia comprometidos esta semana")
+                if (lowMorningDays >= 3) {
+                    recommendations.add("Considere buscar apoio profissional para seu bem-estar")
+                }
             }
-            val lowWellbeingDays = lowMorningDays + lowEveningDays
-            if (lowWellbeingDays > 0) {
-                score += (lowWellbeingDays * 8).coerceAtMost(25)
-                if (lowMorningDays > 0) {
-                    factors.add("$lowMorningDays manhã(s) com humor/energia comprometidos esta semana")
-                }
-                if (lowEveningDays > 0) {
-                    factors.add("$lowEveningDays noite(s) com bem-estar comprometido esta semana")
-                }
-                if (lowWellbeingDays >= 3) {
+        }
+
+        // ── Autocuidado noturno comprometido (autorrelato) ────────────────────
+        // Sinal genérico de bem-estar, não específico da GINA — peso mais modesto
+        // que despertar noturno/dificuldade respiratória/limitação de atividades,
+        // que já têm bucket próprio acima.
+        if (recentCheckIns.isNotEmpty()) {
+            val lowSelfCareDays = recentCheckIns.count { it.type == "EVENING" && it.selfCareGood == false }
+            val selfCareScore = when {
+                lowSelfCareDays >= 4 -> 15
+                lowSelfCareDays >= 2 -> 9
+                lowSelfCareDays == 1 -> 4
+                else -> 0
+            }
+            score += selfCareScore
+            if (lowSelfCareDays > 0) {
+                factors.add("$lowSelfCareDays noite(s) com autocuidado comprometido esta semana")
+                if (lowSelfCareDays >= 3) {
                     recommendations.add("Considere buscar apoio profissional para seu bem-estar")
                 }
             }

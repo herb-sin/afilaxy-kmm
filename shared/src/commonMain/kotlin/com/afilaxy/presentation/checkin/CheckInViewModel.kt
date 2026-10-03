@@ -149,8 +149,6 @@ class CheckInViewModel(
     }
 
     fun submitEveningCheckIn(
-        hadGoodDay: Boolean,
-        physicalActivityDone: Boolean,
         selfCareGood: Boolean,
         rescueInhalerUses: Int,
         daytimeBreathingEase: Boolean,
@@ -166,8 +164,6 @@ class CheckInViewModel(
                 userId = userId,
                 type = CheckInType.EVENING.name,
                 timestamp = getCurrentTimeMillis(),
-                hadGoodDay = hadGoodDay,
-                physicalActivityDone = physicalActivityDone,
                 selfCareGood = selfCareGood,
                 rescueInhalerUses = rescueInhalerUses,
                 daytimeBreathingEase = daytimeBreathingEase,
@@ -181,7 +177,7 @@ class CheckInViewModel(
                 monthOfYear = now.monthNumber
             )
 
-            val critical = hadGoodDay == false && physicalActivityDone == false && selfCareGood == false
+            val critical = selfCareGood == false && daytimeBreathingEase == false && activityAsPlanned == false
             checkInRepository.saveCheckIn(response)
                 .onSuccess { _state.update { it.copy(isLoading = false, isSubmitted = true, showCriticalWellbeingCard = critical) } }
                 .onFailure { e ->
