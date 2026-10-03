@@ -65,7 +65,7 @@ class RiskScoreEngineTest {
     private fun checkInMalEstar() = CheckInResponse(
         id = "ci-bad", userId = "user-1",
         type = "EVENING", timestamp = System.currentTimeMillis(),
-        hadGoodDay = false, physicalActivityDone = false, selfCareGood = true
+        selfCareGood = false
     )
 
     private fun checkInNighttimeAwakening() = CheckInResponse(
@@ -254,7 +254,7 @@ class RiskScoreEngineTest {
     }
 
     @Test
-    fun `check-ins com bem-estar comprometido adicionam ao score`() {
+    fun `check-ins com autocuidado noturno comprometido adicionam ao score`() {
         val checkIns = List(3) { checkInMalEstar() }
         val result = RiskScoreEngine.calculate(
             env = envBom(),
@@ -262,22 +262,22 @@ class RiskScoreEngineTest {
             monthOfYear = 5,
             recentCheckIns = checkIns
         )
-        // 3 dias × 8 = 24 → mas cap em 25 → MODERATE
-        assertTrue(result.score >= 20)
-        assertTrue(result.factors.any { "bem-estar" in it.lowercase() })
+        // 3 noites → tier "≥2" → 9 pontos
+        assertEquals(9, result.score)
+        assertTrue(result.factors.any { "autocuidado" in it.lowercase() })
         assertTrue(result.recommendations.any { "apoio" in it.lowercase() || "profissional" in it.lowercase() })
     }
 
     @Test
-    fun `1 dia de baixo bem-estar adiciona pontos mas nao dispara recomendacao`() {
+    fun `1 noite de autocuidado comprometido adiciona pontos mas nao dispara recomendacao`() {
         val result = RiskScoreEngine.calculate(
             env = envBom(),
             crises30d = 0, crises7d = 0, samuCalledCount = 0,
             monthOfYear = 5,
             recentCheckIns = listOf(checkInMalEstar())
         )
-        assertEquals(8, result.score)
-        assertTrue(result.factors.any { "bem-estar" in it.lowercase() })
+        assertEquals(4, result.score)
+        assertTrue(result.factors.any { "autocuidado" in it.lowercase() })
         assertTrue(result.recommendations.none { "apoio" in it.lowercase() })
     }
 
@@ -294,21 +294,6 @@ class RiskScoreEngineTest {
             recentCheckIns = listOf(checkIn)
         )
         assertEquals(0, result.score)
-    }
-
-    @Test
-    fun `hadGoodDay noturno conta normalmente pro bucket de bem-estar`() {
-        // Noturno: hadGoodDay/physicalActivityDone/selfCareGood seguem independentes
-        // entre si — 2 negativas de 3 já dispara o bucket.
-        val checkIn = CheckInResponse("c1", "u1", "EVENING", 0L,
-            hadGoodDay = false, physicalActivityDone = false, selfCareGood = true)
-        val result = RiskScoreEngine.calculate(
-            env = envBom(),
-            crises30d = 0, crises7d = 0, samuCalledCount = 0,
-            monthOfYear = 5,
-            recentCheckIns = listOf(checkIn)
-        )
-        assertEquals(8, result.score)
     }
 
     // ── GRUPO 4: Pacientes de Risco Muito Alto ───────────────────────────────
@@ -409,21 +394,18 @@ class RiskScoreEngineTest {
     }
 
     @Test
-    fun `bem-estar cap e aplicado em 25 pontos maximo`() {
-        // 4 dias × 8 = 32 → cap em 25
-        val checkIns4 = List(4) { CheckInResponse("c$it", "u1", "EVENING", 0L,
-            hadGoodDay = false, physicalActivityDone = false, selfCareGood = true) }
-        val checkIns2 = List(2) { CheckInResponse("c$it", "u1", "EVENING", 0L,
-            hadGoodDay = false, physicalActivityDone = false, selfCareGood = true) }
+    fun `autocuidado noturno comprometido respeita o teto de 15 pontos`() {
+        val checkIns4 = List(4) { CheckInResponse("c$it", "u1", "EVENING", 0L, selfCareGood = false) }
+        val checkIns2 = List(2) { CheckInResponse("c$it", "u1", "EVENING", 0L, selfCareGood = false) }
 
         val r4 = RiskScoreEngine.calculate(env = null, crises30d = 0, crises7d = 0,
             samuCalledCount = 0, monthOfYear = 5, recentCheckIns = checkIns4)
         val r2 = RiskScoreEngine.calculate(env = null, crises30d = 0, crises7d = 0,
             samuCalledCount = 0, monthOfYear = 5, recentCheckIns = checkIns2)
 
-        // r4 deve ter 25 (cap), r2 deve ter 16
-        assertEquals(25, r4.score, "4+ dias devem resultar em score 25 (cap), obtido: ${r4.score}")
-        assertEquals(16, r2.score, "2 dias devem resultar em score 16, obtido: ${r2.score}")
+        // 4+ noites → tier máximo (15); 2 noites → tier intermediário (9)
+        assertEquals(15, r4.score, "4+ noites devem resultar em score 15 (teto), obtido: ${r4.score}")
+        assertEquals(9, r2.score, "2 noites devem resultar em score 9, obtido: ${r2.score}")
     }
 
     // ── GRUPO 6: Qualidade do Ar ──────────────────────────────────────────────
@@ -601,7 +583,7 @@ class RiskScoreEngineTest {
             samuCalledCount = 0, monthOfYear = 5,
             recentCheckIns = checkInsAntigos
         )
-        assertEquals(24, result.score, "Deve ser idêntico ao comportamento pré-existente (3 dias × 8 pts)")
+        assertEquals(9, result.score, "Deve ser idêntico ao comportamento pré-existente (3 noites, tier ≥2 = 9 pts)")
     }
 
     @Test

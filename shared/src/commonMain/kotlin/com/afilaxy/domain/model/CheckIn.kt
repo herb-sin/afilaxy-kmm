@@ -20,10 +20,8 @@ data class CheckInResponse(
     val morningMoodGood: Boolean? = null,   // "Me sinto bem esta manhã"
     val morningEnergyGood: Boolean? = null, // "Estou com boa energia"
 
-    // ── Bem-estar noturno (dia, atividade, autocuidado) ───────────────────
-    val hadGoodDay: Boolean? = null,           // "Tive um bom dia"
-    val physicalActivityDone: Boolean? = null, // "Pratiquei atividade física"
-    val selfCareGood: Boolean? = null,         // "Me cuidei bem hoje"
+    // ── Bem-estar noturno (autocuidado) ───────────────────────────────────
+    val selfCareGood: Boolean? = null, // "Me cuidei bem hoje"
 
     // Autorrelato — quantas vezes usou a bombinha de resgate no dia (só no check-in noturno,
     // que olha para o dia inteiro já vivido). Usado pelo motor de risco para aproximar o

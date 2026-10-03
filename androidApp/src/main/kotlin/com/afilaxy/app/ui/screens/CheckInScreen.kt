@@ -53,7 +53,7 @@ fun CheckInScreen(
                     nighttimeAwakening = true
                 )
                 CheckInType.EVENING -> viewModel.submitEveningCheckIn(
-                    hadGoodDay = true, physicalActivityDone = true, selfCareGood = true,
+                    selfCareGood = true,
                     rescueInhalerUses = 0,
                     daytimeBreathingEase = true, activityAsPlanned = true
                 )
@@ -86,8 +86,8 @@ fun CheckInScreen(
                 healthAvailable = state.healthAvailable,
                 healthPermissionsGranted = state.healthPermissionsGranted,
                 onHealthPermissionGranted = { viewModel.reloadHealthSnapshot() },
-                onSubmit = { goodDay, activityDone, selfCare, rescue, breathing, activity ->
-                    viewModel.submitEveningCheckIn(goodDay, activityDone, selfCare, rescue, breathing, activity)
+                onSubmit = { selfCare, rescue, breathing, activity ->
+                    viewModel.submitEveningCheckIn(selfCare, rescue, breathing, activity)
                 }
             )
         }
@@ -230,12 +230,10 @@ private fun EveningCheckInContent(
     healthPermissionsGranted: Boolean,
     onHealthPermissionGranted: () -> Unit,
     onSubmit: (
-        hadGoodDay: Boolean, physicalActivityDone: Boolean, selfCareGood: Boolean, rescueInhalerUses: Int,
+        selfCareGood: Boolean, rescueInhalerUses: Int,
         daytimeBreathingEase: Boolean, activityAsPlanned: Boolean
     ) -> Unit
 ) {
-    var hadGoodDay by remember { mutableStateOf(true) }           // "Tive um bom dia"
-    var physicalActivityDone by remember { mutableStateOf(false) } // "Pratiquei atividade física"
     var selfCareGood by remember { mutableStateOf(true) }          // "Me cuidei bem hoje"
     var rescueInhalerUses by remember { mutableStateOf(0) }
     var daytimeBreathingEase by remember { mutableStateOf(true) }  // "Respirei com facilidade ao longo do dia?"
@@ -285,21 +283,9 @@ private fun EveningCheckInContent(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     CheckInItem(
-                        label = "Tive um bom dia",
-                        checked = hadGoodDay, onToggle = { hadGoodDay = it },
-                        activeColor = Color(0xFF81C784)
-                    )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    CheckInItem(
-                        label = "Pratiquei atividade física",
-                        checked = physicalActivityDone, onToggle = { physicalActivityDone = it },
-                        activeColor = Color(0xFFFFCC02)
-                    )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    CheckInItem(
                         label = "Me cuidei bem hoje",
                         checked = selfCareGood, onToggle = { selfCareGood = it },
-                        activeColor = Color.White
+                        activeColor = Color(0xFF81C784)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     CheckInItem(
@@ -328,7 +314,7 @@ private fun EveningCheckInContent(
             Button(
                 onClick = {
                     onSubmit(
-                        hadGoodDay, physicalActivityDone, selfCareGood, rescueInhalerUses,
+                        selfCareGood, rescueInhalerUses,
                         daytimeBreathingEase, activityAsPlanned
                     )
                 },

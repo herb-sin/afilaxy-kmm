@@ -56,9 +56,9 @@ struct CheckInView: View {
                 )
             } else {
                 EveningCheckInContent(
-                    onSubmit: { goodDay, activityDone, selfCare, rescue, breathing, activity in
+                    onSubmit: { selfCare, rescue, breathing, activity in
                         wrapper.submitEvening(EveningCheckInAnswers(
-                            hadGoodDay: goodDay, physicalActivityDone: activityDone, selfCareGood: selfCare,
+                            selfCareGood: selfCare,
                             rescueInhalerUses: Int32(rescue),
                             daytimeBreathingEase: breathing, activityAsPlanned: activity
                         ))
@@ -83,7 +83,7 @@ struct CheckInView: View {
                         wrapper.submitMorning(morningMoodGood: answer, morningEnergyGood: answer, nighttimeAwakening: answer)
                     } else {
                         wrapper.submitEvening(EveningCheckInAnswers(
-                            hadGoodDay: answer, physicalActivityDone: answer, selfCareGood: answer, rescueInhalerUses: 0,
+                            selfCareGood: answer, rescueInhalerUses: 0,
                             daytimeBreathingEase: answer, activityAsPlanned: answer
                         ))
                     }
@@ -189,10 +189,8 @@ private struct MorningCheckInContent: View {
 // MARK: - Evening Check-in
 
 private struct EveningCheckInContent: View {
-    let onSubmit: (Bool, Bool, Bool, Int, Bool, Bool) -> Void
+    let onSubmit: (Bool, Int, Bool, Bool) -> Void
 
-    @State private var hadGoodDay = true           // "Tive um bom dia"
-    @State private var physicalActivityDone = false // "Pratiquei atividade física"
     @State private var selfCareGood = true          // "Me cuidei bem hoje"
     @State private var rescueInhalerUses = 0
     @State private var daytimeBreathingEase = true  // "Respirei com facilidade ao longo do dia?"
@@ -228,10 +226,6 @@ private struct EveningCheckInContent: View {
                     Spacer().frame(height: 20)
 
                     VStack(spacing: 0) {
-                        CheckInToggleRow(label: "Tive um bom dia", isOn: $hadGoodDay)
-                        Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Pratiquei atividade física", isOn: $physicalActivityDone)
-                        Divider().background(Color.white.opacity(0.2))
                         CheckInToggleRow(label: "Me cuidei bem hoje", isOn: $selfCareGood)
                         Divider().background(Color.white.opacity(0.2))
                         CheckInToggleRow(label: "Respirei com facilidade ao longo do dia", isOn: $daytimeBreathingEase)
@@ -249,7 +243,7 @@ private struct EveningCheckInContent: View {
                     Spacer().frame(height: 24)
 
                     Button(action: {
-                        onSubmit(hadGoodDay, physicalActivityDone, selfCareGood, rescueInhalerUses, daytimeBreathingEase, activityAsPlanned)
+                        onSubmit(selfCareGood, rescueInhalerUses, daytimeBreathingEase, activityAsPlanned)
                     }) {
                         Text("Confirmar")
                             .fontWeight(.bold)
