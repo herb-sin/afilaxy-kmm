@@ -16,7 +16,6 @@ data class UserProfile(
 
 @Serializable
 data class UserHealthData(
-    val bloodType: String = "",
     val allergies: List<String> = emptyList(),
     val medications: List<String> = emptyList(),
     val conditions: List<String> = emptyList(),

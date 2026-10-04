@@ -8,7 +8,6 @@ struct ProfileView: View {
     @State private var showEditSheet = false
     @State private var name = ""
     @State private var phone = ""
-    @State private var bloodType = ""
     @State private var allergies = ""
     @State private var healthNotes = ""
     @State private var emergencyName = ""
@@ -218,7 +217,6 @@ struct ProfileView: View {
     // assíncrono que pode não chegar a tempo, como a atualização pós-salvamento).
     private func populateFields(from profile: UserProfile) {
         name = profile.name; phone = profile.phone
-        bloodType = profile.healthData?.bloodType ?? ""
         allergies = profile.healthData?.allergies.joined(separator: ", ") ?? ""
         healthNotes = profile.healthData?.notes ?? ""
         emergencyName = profile.emergencyContact?.name ?? ""
@@ -258,7 +256,6 @@ struct ProfileView: View {
                 uid: profile.uid, name: safeName, email: profile.email, phone: phone,
                 photoUrl: profile.photoUrl,
                 healthData: UserHealthData(
-                    bloodType: bloodType,
                     allergies: split(allergies),
                     medications: profile.healthData?.medications ?? [],
                     conditions: profile.healthData?.conditions ?? [],
@@ -284,7 +281,6 @@ struct ProfileView: View {
                 phone: phone,
                 photoUrl: nil,
                 healthData: UserHealthData(
-                    bloodType: bloodType,
                     allergies: split(allergies), medications: [], conditions: [], notes: healthNotes,
                     hasGerd: hasGerd, hasSleepApnea: hasSleepApnea, hasRhinitis: hasRhinitis,
                     hasObesity: hasObesity,
