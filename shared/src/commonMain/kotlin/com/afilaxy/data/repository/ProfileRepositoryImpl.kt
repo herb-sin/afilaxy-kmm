@@ -4,10 +4,12 @@ import com.afilaxy.domain.model.EmergencyContact
 import com.afilaxy.domain.model.UserHealthData
 import com.afilaxy.domain.model.UserProfile
 import com.afilaxy.domain.repository.ProfileRepository
+import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 
 class ProfileRepositoryImpl(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ) : ProfileRepository {
     
     override suspend fun getProfile(userId: String): Result<UserProfile?> {
@@ -21,7 +23,6 @@ class ProfileRepositoryImpl(
             val phone: String = doc.get("phone") ?: ""
             val photoUrl: String? = doc.get("photoUrl")
 
-            val bloodType: String = doc.get("healthData.bloodType") ?: ""
             val notes: String = doc.get("healthData.notes") ?: ""
             val allergies: List<String> = doc.get("healthData.allergies") ?: emptyList()
             val medications: List<String> = doc.get("healthData.medications") ?: emptyList()
@@ -41,7 +42,7 @@ class ProfileRepositoryImpl(
             val contactPhone: String? = doc.get("emergencyContact.phone")
             val contactRel: String? = doc.get("emergencyContact.relationship")
 
-            val hasHealth = bloodType.isNotEmpty() || notes.isNotEmpty() ||
+            val hasHealth = notes.isNotEmpty() ||
                 allergies.isNotEmpty() || medications.isNotEmpty() || conditions.isNotEmpty() ||
                 hasGerd || hasSleepApnea || hasRhinitis || hasObesity ||
                 hasFoodAllergy || hasNsaidAllergy || hasInhalantAllergy ||
@@ -52,7 +53,7 @@ class ProfileRepositoryImpl(
                 uid = userId,
                 name = name, email = email, phone = phone, photoUrl = photoUrl,
                 healthData = if (hasHealth) UserHealthData(
-                    bloodType = bloodType, allergies = allergies,
+                    allergies = allergies,
                     medications = medications, conditions = conditions, notes = notes,
                     hasGerd = hasGerd, hasSleepApnea = hasSleepApnea, hasRhinitis = hasRhinitis,
                     hasObesity = hasObesity,
@@ -76,7 +77,6 @@ class ProfileRepositoryImpl(
         return try {
             val healthMap: Map<String, Any> = profile.healthData?.let {
                 mapOf(
-                    "bloodType" to it.bloodType,
                     "allergies" to it.allergies,
                     "medications" to it.medications,
                     "conditions" to it.conditions,
@@ -113,6 +113,20 @@ class ProfileRepositoryImpl(
 
             firestore.collection("users").document(profile.uid)
                 .set(data, merge = true)
+
+            // Mantém o displayName do Firebase Auth em sincronia com o nome do perfil —
+            // várias telas (chat, relatório PDF, nome de solicitante/helper numa emergência)
+            // leem currentUser.displayName em vez do Firestore, e ficavam presas no nome
+            // antigo (ex: do cadastro) mesmo depois do usuário editar o nome aqui.
+            // Best-effort: não falha o save do perfil se só essa sincronização falhar.
+            if (profile.name.isNotBlank()) {
+                try {
+                    auth.currentUser?.updateProfile(displayName = profile.name)
+                } catch (e: Exception) {
+                    com.afilaxy.util.Logger.e("ProfileRepo", "Falha ao sincronizar displayName: ${e.message}", e)
+                }
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -123,7 +137,6 @@ class ProfileRepositoryImpl(
         return try {
             val data: Map<String, Any> = mapOf(
                 "healthData" to mapOf(
-                    "bloodType" to healthData.bloodType,
                     "allergies" to healthData.allergies,
                     "medications" to healthData.medications,
                     "conditions" to healthData.conditions,

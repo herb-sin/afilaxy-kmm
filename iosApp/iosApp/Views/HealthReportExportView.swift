@@ -222,8 +222,10 @@ struct WellbeingReportData {
 }
 
 struct HealthProfileData {
-    let bloodType: String
     let allergiesText: [String]
+    let medications: [String]
+    let conditions: [String]
+    let notes: String
     let hasGerd: Bool
     let hasSleepApnea: Bool
     let hasRhinitis: Bool
@@ -238,8 +240,10 @@ struct HealthProfileData {
     let emergencyContactPhone: String
 
     init(doc: DocumentSnapshot?) {
-        bloodType = doc?["healthData.bloodType"] as? String ?? ""
         allergiesText = (doc?["healthData.allergies"] as? [String]) ?? []
+        medications = (doc?["healthData.medications"] as? [String]) ?? []
+        conditions = (doc?["healthData.conditions"] as? [String]) ?? []
+        notes = doc?["healthData.notes"] as? String ?? ""
         hasGerd = doc?["healthData.hasGerd"] as? Bool ?? false
         hasSleepApnea = doc?["healthData.hasSleepApnea"] as? Bool ?? false
         hasRhinitis = doc?["healthData.hasRhinitis"] as? Bool ?? false
@@ -287,33 +291,69 @@ enum WellbeingPDFGenerator {
     private static let margin: CGFloat   = 50
     private static let pageW: CGFloat    = 595.2
     private static let pageH: CGFloat    = 841.8
+    private static let footerReserve: CGFloat = 60
     private static var contentW: CGFloat { pageW - margin * 2 }
+    private static var bottomLimit: CGFloat { pageH - footerReserve }
 
     private static let primaryColor  = UIColor(red: 0,    green: 0.384, blue: 0.561, alpha: 1)
     private static let morningColor  = UIColor(red: 0.9,  green: 0.32,  blue: 0,     alpha: 1)
     private static let eveningColor  = UIColor(red: 0.1,  green: 0.14,  blue: 0.49,  alpha: 1)
     private static let criticalColor = UIColor(red: 0.73, green: 0.1,   blue: 0.1,   alpha: 1)
 
+    // Cursor de paginação: cada seção/linha pede espaço antes de desenhar, e uma
+    // nova página é aberta no mesmo UIGraphicsPDFRendererContext quando não há
+    // espaço suficiente antes da área reservada ao rodapé. Autocontido (recebe
+    // margin/contentW/bottomLimit no init) para não depender de acesso a
+    // membros privados do tipo que o envolve.
+    private final class PDFCursor {
+        private let context: UIGraphicsPDFRendererContext
+        private let margin: CGFloat
+        private let bottomLimit: CGFloat
+        var y: CGFloat = 0
+        private var pageNumber = 1
+
+        init(context: UIGraphicsPDFRendererContext, margin: CGFloat, bottomLimit: CGFloat) {
+            self.context = context
+            self.margin = margin
+            self.bottomLimit = bottomLimit
+            context.beginPage()
+        }
+
+        func breakIfNeeded(_ neededHeight: CGFloat) {
+            if y + neededHeight > bottomLimit { newPage() }
+        }
+
+        func newPage() {
+            context.beginPage()
+            pageNumber += 1
+            y = margin
+            let text = "AFILAXY — Relatório de Monitoramento de Saúde (continuação, pág. \(pageNumber))"
+            (text as NSString).draw(at: CGPoint(x: margin, y: y),
+                withAttributes: [.font: UIFont.systemFont(ofSize: 9), .foregroundColor: UIColor.gray])
+            y += 20
+        }
+    }
+
     static func generate(report: WellbeingReportData) -> Data? {
         let renderer = UIGraphicsPDFRenderer(
             bounds: CGRect(x: 0, y: 0, width: pageW, height: pageH)
         )
         return renderer.pdfData { ctx in
-            ctx.beginPage()
-            var y = drawHeader(report: report)
-            y = drawInfoBox(report: report, y: y)
-            y = drawSummary(report: report, y: y)
-            y = drawMorningSection(report: report, y: y)
-            y = drawEveningSection(report: report, y: y)
-            y = drawCriticalSection(report: report, y: y)
-            _ = drawHealthProfileSection(report: report, y: y)
-            drawFooter(report: report)
+            let cursor = PDFCursor(context: ctx, margin: margin, bottomLimit: bottomLimit)
+            drawHeader(report: report, cursor: cursor)
+            drawInfoBox(report: report, cursor: cursor)
+            drawSummary(report: report, cursor: cursor)
+            drawMorningSection(report: report, cursor: cursor)
+            drawEveningSection(report: report, cursor: cursor)
+            drawCriticalSection(report: report, cursor: cursor)
+            drawHealthProfileSection(report: report, cursor: cursor)
+            drawFooter(report: report, cursor: cursor)
         }
     }
 
     // MARK: Header
 
-    private static func drawHeader(report: WellbeingReportData) -> CGFloat {
+    private static func drawHeader(report: WellbeingReportData, cursor: PDFCursor) {
         let h: CGFloat = 88
         fillRect(CGRect(x: 0, y: 0, width: pageW, height: h), color: primaryColor)
 
@@ -328,13 +368,15 @@ enum WellbeingPDFGenerator {
         draw(dateStr, at: CGPoint(x: pageW - margin - dW, y: 40),
              font: .systemFont(ofSize: 10), color: UIColor.white.withAlphaComponent(0.8))
 
-        return h + 22
+        cursor.y = h + 22
     }
 
     // MARK: Info Box
 
-    private static func drawInfoBox(report: WellbeingReportData, y: CGFloat) -> CGFloat {
+    private static func drawInfoBox(report: WellbeingReportData, cursor: PDFCursor) {
         let h: CGFloat = 78
+        cursor.breakIfNeeded(h + 20)
+        let y = cursor.y
         fillRect(CGRect(x: margin, y: y, width: contentW, height: h),
                  color: UIColor(white: 0.96, alpha: 1))
 
@@ -356,57 +398,57 @@ enum WellbeingPDFGenerator {
         draw("Sem revisão clínica prévia", at: CGPoint(x: rx, y: y + 40),
              font: .systemFont(ofSize: 10), color: .darkGray)
 
-        return y + h + 20
+        cursor.y = y + h + 20
     }
 
     // MARK: Sections
 
-    private static func drawSummary(report: WellbeingReportData, y: CGFloat) -> CGFloat {
+    private static func drawSummary(report: WellbeingReportData, cursor: PDFCursor) {
         let total = report.checkIns.count
         let possible = 60
         let adherence = possible > 0 ? Int(Double(total) / Double(possible) * 100) : 0
         let critical = report.checkIns.filter { $0.isCritical }.count
-        var y = drawSectionHeader("1. RESUMO EXECUTIVO", y: y, color: primaryColor)
-        return drawPlainRows([
+        drawSectionHeader("1. RESUMO EXECUTIVO", cursor: cursor, color: primaryColor)
+        drawPlainRows([
             ("Check-ins realizados (30 dias)", "\(total) de \(possible) possíveis"),
             ("Taxa de adesão ao monitoramento", "\(adherence)%"),
             ("Pedidos de ajuda emergencial", "\(report.emergencyCount30d) ocorrência(s)"),
             ("Dias com bem-estar crítico registrado", "\(critical) ocorrência(s)")
-        ], y: y)
+        ], cursor: cursor)
     }
 
-    private static func drawMorningSection(report: WellbeingReportData, y: CGFloat) -> CGFloat {
+    private static func drawMorningSection(report: WellbeingReportData, cursor: PDFCursor) {
         let morning = report.checkIns.filter { $0.type == "MORNING" }
-        var y = drawSectionHeader("2. CHECK-IN MATINAL", y: y, color: morningColor)
-        return drawBarRows([
+        drawSectionHeader("2. CHECK-IN MATINAL", cursor: cursor, color: morningColor)
+        drawBarRows([
             ("Registros de manhã: \(morning.count)", nil),
             ("\"Meu sono foi tranquilo, sem interrupções\"", pct(morning, \.nighttimeAwakening)),
             ("\"Me sinto bem esta manhã\"",   pct(morning, \.morningMoodGood)),
             ("\"Estou com boa energia\"",     pct(morning, \.morningEnergyGood))
-        ], y: y, barColor: morningColor)
+        ], cursor: cursor, barColor: morningColor)
     }
 
-    private static func drawEveningSection(report: WellbeingReportData, y: CGFloat) -> CGFloat {
+    private static func drawEveningSection(report: WellbeingReportData, cursor: PDFCursor) {
         let evening = report.checkIns.filter { $0.type == "EVENING" }
-        var y = drawSectionHeader("3. CHECK-IN NOTURNO", y: y, color: eveningColor)
-        return drawBarRows([
+        drawSectionHeader("3. CHECK-IN NOTURNO", cursor: cursor, color: eveningColor)
+        drawBarRows([
             ("Registros noturnos: \(evening.count)", nil),
             ("\"Me cuidei bem hoje\"",        pct(evening, \.selfCareGood)),
             ("\"Respirei com facilidade ao longo do dia\"", pct(evening, \.daytimeBreathingEase)),
             ("\"Consegui fazer tudo que tinha planejado\"",  pct(evening, \.activityAsPlanned))
-        ], y: y, barColor: eveningColor)
+        ], cursor: cursor, barColor: eveningColor)
     }
 
-    private static func drawCriticalSection(report: WellbeingReportData, y: CGFloat) -> CGFloat {
+    private static func drawCriticalSection(report: WellbeingReportData, cursor: PDFCursor) {
         let critical = report.checkIns.filter { $0.isCritical }.count
-        var y = drawSectionHeader("4. EVENTOS CRÍTICOS", y: y, color: criticalColor)
-        return drawPlainRows([
+        drawSectionHeader("4. EVENTOS CRÍTICOS", cursor: cursor, color: criticalColor)
+        drawPlainRows([
             ("Pedidos de ajuda emergencial (período)", "\(report.emergencyCount30d)"),
             ("Dias com bem-estar mínimo registrado",   "\(critical)")
-        ], y: y)
+        ], cursor: cursor)
     }
 
-    private static func drawHealthProfileSection(report: WellbeingReportData, y: CGFloat) -> CGFloat {
+    private static func drawHealthProfileSection(report: WellbeingReportData, cursor: PDFCursor) {
         let p = report.healthProfile
         var comorbidities: [String] = []
         if p.hasGerd { comorbidities.append("Refluxo / DRGE") }
@@ -433,19 +475,22 @@ enum WellbeingPDFGenerator {
             emergencyContact = "Não informado"
         }
 
-        var y = drawSectionHeader("5. PERFIL MÉDICO", y: y, color: primaryColor)
-        return drawPlainRows([
-            ("Tipo sanguíneo", p.bloodType.isEmpty ? "Não informado" : p.bloodType),
+        drawSectionHeader("5. PERFIL MÉDICO", cursor: cursor, color: primaryColor)
+        drawPlainRows([
             ("Alergias conhecidas", p.allergiesText.isEmpty ? "Nenhuma relatada" : p.allergiesText.joined(separator: ", ")),
+            ("Medicamentos em uso", p.medications.isEmpty ? "Nenhum relatado" : p.medications.joined(separator: ", ")),
+            ("Condições relatadas", p.conditions.isEmpty ? "Nenhuma" : p.conditions.joined(separator: ", ")),
             ("Comorbidades", comorbidities.isEmpty ? "Nenhuma" : comorbidities.joined(separator: ", ")),
             ("Alergias específicas", specificAllergies.isEmpty ? "Nenhuma" : specificAllergies.joined(separator: ", ")),
             ("Acessibilidade", accessibility.isEmpty ? "Nenhuma" : accessibility.joined(separator: ", ")),
+            ("Detalhes complementares", p.notes.isEmpty ? "Nenhum" : p.notes),
             ("Contato de emergência", emergencyContact)
-        ], y: y)
+        ], cursor: cursor)
     }
 
-    private static func drawFooter(report: WellbeingReportData) {
+    private static func drawFooter(report: WellbeingReportData, cursor: PDFCursor) {
         let footerY = pageH - 52
+        if cursor.y > footerY - 10 { cursor.newPage() }
         fillRect(CGRect(x: margin, y: footerY, width: contentW, height: 0.5),
                  color: .lightGray)
         let text = "Este relatório foi gerado automaticamente pelo aplicativo Afilaxy com base nas respostas fornecidas pelo próprio usuário. Não substitui avaliação clínica presencial. Gerado em \(dateFormatted(report.generatedAt))."
@@ -461,35 +506,46 @@ enum WellbeingPDFGenerator {
 
     // MARK: Row Drawers
 
-    private static func drawSectionHeader(_ title: String, y: CGFloat, color: UIColor) -> CGFloat {
+    private static func drawSectionHeader(_ title: String, cursor: PDFCursor, color: UIColor) {
+        cursor.breakIfNeeded(22 + 21)
+        let y = cursor.y
         draw(title, at: CGPoint(x: margin, y: y), font: .boldSystemFont(ofSize: 11), color: color)
         fillRect(CGRect(x: margin, y: y + 16, width: contentW, height: 1),
                  color: color.withAlphaComponent(0.25))
-        return y + 22
+        cursor.y = y + 22
     }
 
-    private static func drawPlainRows(_ rows: [(String, String)], y: CGFloat) -> CGFloat {
-        var y = y
-        let rh: CGFloat = 21
+    private static func drawPlainRows(_ rows: [(String, String)], cursor: PDFCursor) {
+        let labelFont = UIFont.systemFont(ofSize: 10)
+        let valueFont = UIFont.boldSystemFont(ofSize: 10)
+        let valueMaxW = contentW - 150
+        let lineH: CGFloat = 12
         for (i, (label, value)) in rows.enumerated() {
+            let lines = wrapText(value, font: valueFont, maxWidth: valueMaxW)
+            let rh = max(lineH * CGFloat(lines.count) + 9, 21)
+            cursor.breakIfNeeded(rh)
+            let y = cursor.y
             if i % 2 == 0 { fillRect(CGRect(x: margin, y: y, width: contentW, height: rh),
                                      color: UIColor(white: 0.97, alpha: 1)) }
             draw(label, at: CGPoint(x: margin + 8, y: y + 5),
-                 font: .systemFont(ofSize: 10), color: .darkGray)
-            let vW = measure(value, font: .boldSystemFont(ofSize: 10)).width
-            draw(value, at: CGPoint(x: margin + contentW - vW - 8, y: y + 5),
-                 font: .boldSystemFont(ofSize: 10), color: .black)
-            y += rh
+                 font: labelFont, color: .darkGray)
+            for (li, line) in lines.enumerated() {
+                let vW = measure(line, font: valueFont).width
+                draw(line, at: CGPoint(x: margin + contentW - vW - 8, y: y + 5 + CGFloat(li) * lineH),
+                     font: valueFont, color: .black)
+            }
+            cursor.y = y + rh
         }
-        return y + 16
+        cursor.y += 16
     }
 
-    private static func drawBarRows(_ rows: [(String, Double?)], y: CGFloat, barColor: UIColor) -> CGFloat {
-        var y = y
+    private static func drawBarRows(_ rows: [(String, Double?)], cursor: PDFCursor, barColor: UIColor) {
         let rh: CGFloat = 24
         let barMaxW: CGFloat = 110
         let barRight = margin + contentW - 8
         for (i, (label, pctVal)) in rows.enumerated() {
+            cursor.breakIfNeeded(rh)
+            let y = cursor.y
             if i % 2 == 0 { fillRect(CGRect(x: margin, y: y, width: contentW, height: rh),
                                      color: UIColor(white: 0.97, alpha: 1)) }
             draw(label, at: CGPoint(x: margin + 8, y: y + 7),
@@ -508,9 +564,27 @@ enum WellbeingPDFGenerator {
                 draw(valStr, at: CGPoint(x: barRight - vW, y: y + 7),
                      font: .boldSystemFont(ofSize: 10), color: .black)
             }
-            y += rh
+            cursor.y = y + rh
         }
-        return y + 16
+        cursor.y += 16
+    }
+
+    private static func wrapText(_ text: String, font: UIFont, maxWidth: CGFloat) -> [String] {
+        if text.isEmpty { return [text] }
+        let words = text.split(separator: " ").map(String.init)
+        var lines: [String] = []
+        var current = ""
+        for word in words {
+            let candidate = current.isEmpty ? word : "\(current) \(word)"
+            if current.isEmpty || measure(candidate, font: font).width <= maxWidth {
+                current = candidate
+            } else {
+                lines.append(current)
+                current = word
+            }
+        }
+        if !current.isEmpty { lines.append(current) }
+        return lines.isEmpty ? [""] : lines
     }
 
     // MARK: Primitives

@@ -57,7 +57,6 @@ fun ProfileScreenNew(
     // Campos de edição — inicializados com os dados do perfil
     var editName        by remember { mutableStateOf("") }
     var editPhone       by remember { mutableStateOf("") }
-    var editBloodType   by remember { mutableStateOf("") }
     var editAllergies   by remember { mutableStateOf("") }
     var editNotes       by remember { mutableStateOf("") }
     var editEmergName   by remember { mutableStateOf("") }
@@ -79,7 +78,6 @@ fun ProfileScreenNew(
         if (profile != null) {
             editName        = profile.name
             editPhone       = profile.phone.filter { it.isDigit() }.take(11)
-            editBloodType   = profile.healthData?.bloodType ?: ""
             editAllergies   = profile.healthData?.allergies?.joinToString(", ") ?: ""
             editNotes       = profile.healthData?.notes ?: ""
             editEmergName   = profile.emergencyContact?.name ?: ""
@@ -297,7 +295,6 @@ fun ProfileScreenNew(
                             name = safeName,
                             phone = editPhone,
                             healthData = UserHealthData(
-                                bloodType     = current.healthData?.bloodType ?: "",
                                 allergies     = split(editAllergies),
                                 medications   = current.healthData?.medications ?: emptyList(),
                                 conditions    = current.healthData?.conditions ?: emptyList(),

@@ -211,9 +211,13 @@ private suspend fun generateAndShare(context: Context): Boolean {
     }
 
     val healthProfile = HealthProfileAndroid(
-        bloodType = userDoc?.getString("healthData.bloodType") ?: "",
         allergiesText = (userDoc?.get("healthData.allergies") as? List<*>)
             ?.filterIsInstance<String>() ?: emptyList(),
+        medications = (userDoc?.get("healthData.medications") as? List<*>)
+            ?.filterIsInstance<String>() ?: emptyList(),
+        conditions = (userDoc?.get("healthData.conditions") as? List<*>)
+            ?.filterIsInstance<String>() ?: emptyList(),
+        notes = userDoc?.getString("healthData.notes") ?: "",
         hasGerd = userDoc?.getBoolean("healthData.hasGerd") ?: false,
         hasSleepApnea = userDoc?.getBoolean("healthData.hasSleepApnea") ?: false,
         hasRhinitis = userDoc?.getBoolean("healthData.hasRhinitis") ?: false,
@@ -280,8 +284,10 @@ private data class WellbeingCheckInAndroid(
 }
 
 private data class HealthProfileAndroid(
-    val bloodType: String,
     val allergiesText: List<String>,
+    val medications: List<String>,
+    val conditions: List<String>,
+    val notes: String,
     val hasGerd: Boolean,
     val hasSleepApnea: Boolean,
     val hasRhinitis: Boolean,
@@ -310,7 +316,9 @@ private object WellbeingPDFAndroid {
     private const val PAGE_W = 595
     private const val PAGE_H = 842
     private const val MARGIN = 50f
+    private const val FOOTER_RESERVE = 60f
     private val CONTENT_W get() = PAGE_W - MARGIN * 2
+    private val BOTTOM_LIMIT get() = PAGE_H - FOOTER_RESERVE
 
     private val PRIMARY  = android.graphics.Color.rgb(0, 98, 143)
     private val MORNING  = android.graphics.Color.rgb(230, 81, 0)
@@ -319,21 +327,60 @@ private object WellbeingPDFAndroid {
     private val ROW_ALT  = android.graphics.Color.rgb(247, 247, 247)
     private val TRACK_BG = android.graphics.Color.rgb(220, 220, 220)
 
+    // Cursor de paginação: cada seção/linha pede espaço antes de desenhar, e uma
+    // nova página do PdfDocument é aberta automaticamente quando não há espaço
+    // suficiente antes da área reservada ao rodapé. onPageStart desenha o
+    // cabeçalho de continuação nas páginas 2+ e devolve o Y inicial de conteúdo.
+    private class Cursor(
+        private val doc: PdfDocument,
+        private val pageW: Int,
+        private val pageH: Int,
+        private val bottomLimit: Float,
+        private val onPageStart: (android.graphics.Canvas, Int) -> Float
+    ) {
+        var page: PdfDocument.Page = doc.startPage(PdfDocument.PageInfo.Builder(pageW, pageH, 1).create())
+        var canvas: android.graphics.Canvas = page.canvas
+        var y: Float = 0f
+        private var pageNumber = 1
+
+        fun breakIfNeeded(neededHeight: Float) {
+            if (y + neededHeight > bottomLimit) newPage()
+        }
+
+        fun newPage() {
+            doc.finishPage(page)
+            pageNumber++
+            page = doc.startPage(PdfDocument.PageInfo.Builder(pageW, pageH, pageNumber).create())
+            canvas = page.canvas
+            y = onPageStart(canvas, pageNumber)
+        }
+
+        fun finish() {
+            doc.finishPage(page)
+        }
+    }
+
     fun generate(context: Context, report: WellbeingReportAndroid): File? {
         val doc = PdfDocument()
-        val page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, 1).create())
-        val c = page.canvas
+        val cursor = Cursor(doc, PAGE_W, PAGE_H, BOTTOM_LIMIT) { canvas, pageNumber ->
+            val p = tp(9f, android.graphics.Color.GRAY)
+            canvas.drawText(
+                "AFILAXY — Relatório de Monitoramento de Saúde (continuação, pág. $pageNumber)",
+                MARGIN, MARGIN + ascent(p), p
+            )
+            MARGIN + 20f
+        }
 
-        var y = header(c, report)
-        y = infoBox(c, report, y)
-        y = summary(c, report, y)
-        y = morningSection(c, report, y)
-        y = eveningSection(c, report, y)
-        y = criticalSection(c, report, y)
-        healthProfileSection(c, report, y)
-        footer(c, report)
+        header(cursor, report)
+        infoBox(cursor, report)
+        summary(cursor, report)
+        morningSection(cursor, report)
+        eveningSection(cursor, report)
+        criticalSection(cursor, report)
+        healthProfileSection(cursor, report)
+        footer(cursor, report)
+        cursor.finish()
 
-        doc.finishPage(page)
         return try {
             val dir = File(context.cacheDir, "reports").also { it.mkdirs() }
             val file = File(dir, "relatorio_afilaxy_${System.currentTimeMillis()}.pdf")
@@ -345,7 +392,8 @@ private object WellbeingPDFAndroid {
 
     // MARK: Header
 
-    private fun header(c: android.graphics.Canvas, r: WellbeingReportAndroid): Float {
+    private fun header(cursor: Cursor, r: WellbeingReportAndroid) {
+        val c = cursor.canvas
         val h = 88f
         c.drawRect(RectF(0f, 0f, PAGE_W.toFloat(), h), fill(PRIMARY))
         c.drawText("AFILAXY", MARGIN, 18f + ascent(tp(22f, android.graphics.Color.WHITE, bold = true)), tp(22f, android.graphics.Color.WHITE, bold = true))
@@ -354,13 +402,16 @@ private object WellbeingPDFAndroid {
         val datePaint = tp(10f, android.graphics.Color.WHITE).apply { alpha = 200 }
         val dateStr = "Gerado em ${dateFmt(r.generatedAt)}"
         c.drawText(dateStr, PAGE_W - MARGIN - datePaint.measureText(dateStr), 40f + ascent(datePaint), datePaint)
-        return h + 22f
+        cursor.y = h + 22f
     }
 
     // MARK: Info Box
 
-    private fun infoBox(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
+    private fun infoBox(cursor: Cursor, r: WellbeingReportAndroid) {
         val h = 78f
+        cursor.breakIfNeeded(h + 20f)
+        val c = cursor.canvas
+        val y = cursor.y
         c.drawRect(RectF(MARGIN, y, MARGIN + CONTENT_W, y + h), fill(android.graphics.Color.rgb(245, 245, 245)))
 
         val lx = MARGIN + 10f
@@ -378,52 +429,56 @@ private object WellbeingPDFAndroid {
         c.drawText("Sem revisão clínica prévia", rx, y + 40f + ascent(tp(10f, android.graphics.Color.DKGRAY)),
             tp(10f, android.graphics.Color.DKGRAY))
 
-        return y + h + 20f
+        cursor.y = y + h + 20f
     }
 
     // MARK: Sections
 
-    private fun summary(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
+    private fun summary(cursor: Cursor, r: WellbeingReportAndroid) {
         val total = r.checkIns.size
         val adherence = total * 100 / 60
         val critical = r.checkIns.count { it.isCritical() }
-        return plainRows(c, listOf(
+        sectionHeader(cursor, "1. RESUMO EXECUTIVO", PRIMARY)
+        plainRows(cursor, listOf(
             "Check-ins realizados (30 dias)"        to "$total de 60 possíveis",
             "Taxa de adesão ao monitoramento"       to "$adherence%",
             "Pedidos de ajuda emergencial"          to "${r.emergencyCount30d} ocorrência(s)",
             "Dias com bem-estar crítico registrado" to "$critical ocorrência(s)"
-        ), sectionHeader(c, "1. RESUMO EXECUTIVO", y, PRIMARY))
+        ))
     }
 
-    private fun morningSection(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
+    private fun morningSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val m = r.checkIns.filter { it.type == "MORNING" }
-        return barRows(c, listOf(
+        sectionHeader(cursor, "2. CHECK-IN MATINAL", MORNING)
+        barRows(cursor, listOf(
             "Registros de manhã: ${m.size}"  to null,
             "\"Meu sono foi tranquilo, sem interrupções\"" to pct(m) { it.nighttimeAwakening },
             "\"Me sinto bem esta manhã\""    to pct(m) { it.morningMoodGood },
             "\"Estou com boa energia\""      to pct(m) { it.morningEnergyGood }
-        ), sectionHeader(c, "2. CHECK-IN MATINAL", y, MORNING), MORNING)
+        ), MORNING)
     }
 
-    private fun eveningSection(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
+    private fun eveningSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val e = r.checkIns.filter { it.type == "EVENING" }
-        return barRows(c, listOf(
+        sectionHeader(cursor, "3. CHECK-IN NOTURNO", EVENING)
+        barRows(cursor, listOf(
             "Registros noturnos: ${e.size}"    to null,
             "\"Me cuidei bem hoje\""          to pct(e) { it.selfCareGood },
             "\"Respirei com facilidade ao longo do dia\"" to pct(e) { it.daytimeBreathingEase },
             "\"Consegui fazer tudo que tinha planejado\""  to pct(e) { it.activityAsPlanned }
-        ), sectionHeader(c, "3. CHECK-IN NOTURNO", y, EVENING), EVENING)
+        ), EVENING)
     }
 
-    private fun criticalSection(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
+    private fun criticalSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val critical = r.checkIns.count { it.isCritical() }
-        return plainRows(c, listOf(
+        sectionHeader(cursor, "4. EVENTOS CRÍTICOS", CRITICAL)
+        plainRows(cursor, listOf(
             "Pedidos de ajuda emergencial (período)" to "${r.emergencyCount30d}",
             "Dias com bem-estar mínimo registrado"   to "$critical"
-        ), sectionHeader(c, "4. EVENTOS CRÍTICOS", y, CRITICAL))
+        ))
     }
 
-    private fun healthProfileSection(c: android.graphics.Canvas, r: WellbeingReportAndroid, y: Float): Float {
+    private fun healthProfileSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val p = r.healthProfile
         val comorbidities = buildList {
             if (p.hasGerd) add("Refluxo / DRGE")
@@ -446,63 +501,76 @@ private object WellbeingPDFAndroid {
             else p.emergencyContactName
         } else "Não informado"
 
-        return plainRows(c, listOf(
-            "Tipo sanguíneo"         to p.bloodType.ifEmpty { "Não informado" },
+        sectionHeader(cursor, "5. PERFIL MÉDICO", PRIMARY)
+        plainRows(cursor, listOf(
             "Alergias conhecidas"    to p.allergiesText.joinToString(", ").ifEmpty { "Nenhuma relatada" },
+            "Medicamentos em uso"    to p.medications.joinToString(", ").ifEmpty { "Nenhum relatado" },
+            "Condições relatadas"    to p.conditions.joinToString(", ").ifEmpty { "Nenhuma" },
             "Comorbidades"           to comorbidities.joinToString(", ").ifEmpty { "Nenhuma" },
             "Alergias específicas"   to specificAllergies.joinToString(", ").ifEmpty { "Nenhuma" },
             "Acessibilidade"         to accessibility.joinToString(", ").ifEmpty { "Nenhuma" },
+            "Detalhes complementares" to p.notes.ifEmpty { "Nenhum" },
             "Contato de emergência"  to emergencyContact
-        ), sectionHeader(c, "5. PERFIL MÉDICO", y, PRIMARY))
+        ))
     }
 
-    private fun footer(c: android.graphics.Canvas, r: WellbeingReportAndroid) {
+    private fun footer(cursor: Cursor, r: WellbeingReportAndroid) {
         val fy = PAGE_H - 52f
+        if (cursor.y > fy - 10f) cursor.newPage()
+        val c = cursor.canvas
         c.drawRect(RectF(MARGIN, fy, MARGIN + CONTENT_W, fy + 0.5f), fill(android.graphics.Color.LTGRAY))
         val text = "Este relatório foi gerado automaticamente pelo aplicativo Afilaxy com base nas respostas fornecidas pelo próprio usuário. Não substitui avaliação clínica presencial. Gerado em ${dateFmt(r.generatedAt)}."
-        val tp = TextPaint().apply { color = android.graphics.Color.GRAY; textSize = 8f; isAntiAlias = true }
-        val sl = StaticLayout.Builder.obtain(text, 0, text.length, tp, CONTENT_W.toInt()).build()
+        val textPaint = TextPaint().apply { color = android.graphics.Color.GRAY; textSize = 8f; isAntiAlias = true }
+        val sl = StaticLayout.Builder.obtain(text, 0, text.length, textPaint, CONTENT_W.toInt()).build()
         c.save(); c.translate(MARGIN, fy + 6f); sl.draw(c); c.restore()
     }
 
     // MARK: Row Drawers
 
-    private fun sectionHeader(c: android.graphics.Canvas, title: String, y: Float, color: Int): Float {
+    private fun sectionHeader(cursor: Cursor, title: String, color: Int) {
+        cursor.breakIfNeeded(22f + 21f)
+        val c = cursor.canvas
+        val y = cursor.y
         c.drawText(title, MARGIN, y + ascent(tp(11f, color, bold = true)), tp(11f, color, bold = true))
         val a = android.graphics.Color.argb(64,
             android.graphics.Color.red(color), android.graphics.Color.green(color), android.graphics.Color.blue(color))
         c.drawRect(RectF(MARGIN, y + 16f, MARGIN + CONTENT_W, y + 17f), fill(a))
-        return y + 22f
+        cursor.y = y + 22f
     }
 
-    private fun plainRows(c: android.graphics.Canvas, rows: List<Pair<String, String>>, y: Float): Float {
-        var y = y
-        val rh = 21f
+    private fun plainRows(cursor: Cursor, rows: List<Pair<String, String>>) {
+        val labelPaint = tp(10f, android.graphics.Color.DKGRAY)
+        val valuePaint = tp(10f, android.graphics.Color.BLACK, bold = true)
+        val valueMaxW = CONTENT_W - 150f
+        val lineH = 12f
         rows.forEachIndexed { i, (label, value) ->
+            val lines = wrapText(value, valuePaint, valueMaxW)
+            val rh = (lineH * lines.size + 9f).coerceAtLeast(21f)
+            cursor.breakIfNeeded(rh)
+            val c = cursor.canvas
+            val y = cursor.y
             if (i % 2 == 0) c.drawRect(RectF(MARGIN, y, MARGIN + CONTENT_W, y + rh), fill(ROW_ALT))
-            val lp = tp(10f, android.graphics.Color.DKGRAY)
-            val vp = tp(10f, android.graphics.Color.BLACK, bold = true)
-            c.drawText(label, MARGIN + 8f, y + 5f + ascent(lp), lp)
-            c.drawText(value, MARGIN + CONTENT_W - vp.measureText(value) - 8f, y + 5f + ascent(vp), vp)
-            y += rh
+            c.drawText(label, MARGIN + 8f, y + 5f + ascent(labelPaint), labelPaint)
+            lines.forEachIndexed { li, line ->
+                val lineY = y + 5f + ascent(valuePaint) + li * lineH
+                c.drawText(line, MARGIN + CONTENT_W - valuePaint.measureText(line) - 8f, lineY, valuePaint)
+            }
+            cursor.y = y + rh
         }
-        return y + 16f
+        cursor.y += 16f
     }
 
-    private fun barRows(
-        c: android.graphics.Canvas,
-        rows: List<Pair<String, Double?>>,
-        y: Float,
-        barColor: Int
-    ): Float {
-        var y = y
+    private fun barRows(cursor: Cursor, rows: List<Pair<String, Double?>>, barColor: Int) {
         val rh = 24f
         val barMaxW = 110f
         val barRight = MARGIN + CONTENT_W - 8f
         rows.forEachIndexed { i, (label, pctVal) ->
+            cursor.breakIfNeeded(rh)
+            val c = cursor.canvas
+            val y = cursor.y
             if (i % 2 == 0) c.drawRect(RectF(MARGIN, y, MARGIN + CONTENT_W, y + rh), fill(ROW_ALT))
-            val lp = tp(10f, android.graphics.Color.DKGRAY)
-            c.drawText(label, MARGIN + 8f, y + 7f + ascent(lp), lp)
+            val labelPaint = tp(10f, android.graphics.Color.DKGRAY)
+            c.drawText(label, MARGIN + 8f, y + 7f + ascent(labelPaint), labelPaint)
             if (pctVal != null) {
                 val vp = tp(10f, android.graphics.Color.BLACK, bold = true)
                 val valStr = "${pctVal.toInt()}%"
@@ -514,9 +582,27 @@ private object WellbeingPDFAndroid {
                     fill(barColor).apply { alpha = 180 })
                 c.drawText(valStr, barRight - vW, y + 7f + ascent(vp), vp)
             }
-            y += rh
+            cursor.y = y + rh
         }
-        return y + 16f
+        cursor.y += 16f
+    }
+
+    private fun wrapText(text: String, paint: Paint, maxWidth: Float): List<String> {
+        if (text.isEmpty()) return listOf(text)
+        val words = text.split(" ")
+        val lines = mutableListOf<String>()
+        var current = StringBuilder()
+        for (word in words) {
+            val candidate = if (current.isEmpty()) word else "$current $word"
+            if (current.isEmpty() || paint.measureText(candidate) <= maxWidth) {
+                current = StringBuilder(candidate)
+            } else {
+                lines.add(current.toString())
+                current = StringBuilder(word)
+            }
+        }
+        if (current.isNotEmpty()) lines.add(current.toString())
+        return lines.ifEmpty { listOf("") }
     }
 
     // MARK: Primitives

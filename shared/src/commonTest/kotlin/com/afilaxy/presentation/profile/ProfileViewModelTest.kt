@@ -131,7 +131,7 @@ class ProfileViewModelTest {
     fun `updateHealthData should update health data and show success`() = runTest(testDispatcher) {
         testDispatcher.scheduler.advanceUntilIdle()
 
-        val healthData = UserHealthData(bloodType = "O+", allergies = listOf("Penicilina"))
+        val healthData = UserHealthData(allergies = listOf("Penicilina"))
         viewModel.updateHealthData(healthData)
         testDispatcher.scheduler.advanceUntilIdle()
 

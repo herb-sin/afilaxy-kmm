@@ -37,7 +37,6 @@ informações:
 
 Dado                        | Finalidade
 ----------------------------|-----------------------------------------------
-Tipo sanguíneo              | Fator de ponderação no Índice de Bem-Estar
 Alergias conhecidas         | Fator de ponderação no Índice de Bem-Estar
 Medicações em uso           | Fator de ponderação no Índice de Bem-Estar
 Condições médicas           | Fator de ponderação no Índice de Bem-Estar
