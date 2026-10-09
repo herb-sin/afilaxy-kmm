@@ -229,6 +229,17 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Sinal de interesse em agendar consulta (diálogo pós-crise) — write-only,
+    // o app nunca lê de volta; consumido manualmente/exportado pela equipe.
+    match /consultation_interest/{interestId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['userId', 'source', 'timestamp'])
+        && request.resource.data.source is string
+        && request.resource.data.timestamp is number;
+      allow read, update, delete: if false;
+    }
+
     // Reviews de emergência
     match /reviews/{reviewId} {
       allow create: if isAuthenticated()

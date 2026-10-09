@@ -413,14 +413,23 @@ fun HomeScreenNew(
             },
             title = { Text("Que bom que você está bem") },
             text = {
-                Text("A comunidade Afilaxy estava do seu lado. Continue se cuidando!")
+                Text("A comunidade Afilaxy estava do seu lado. Quer dar continuidade ao seu tratamento com um especialista?")
             },
             confirmButton = {
                 Button(onClick = {
                     showPostCrisisDialog = false
                     prefsRepo.putBoolean("post_crisis_dialog_shown", true)
+                    viewModel.registerConsultationInterest("post_crisis_dialog")
                 }) {
-                    Text("Entendido")
+                    Text("Quero agendar uma consulta")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPostCrisisDialog = false
+                    prefsRepo.putBoolean("post_crisis_dialog_shown", true)
+                }) {
+                    Text("Agora não")
                 }
             }
         )
