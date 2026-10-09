@@ -22,8 +22,7 @@ private let faqItems: [FaqItem] = [
                 "✔️ Informar que a criança tem asma.\n" +
                 "✔️ Deixar a bombinha e o espaçador acessíveis.\n" +
                 "✔️ Ensinar quem cuida da criança a usar corretamente.\n" +
-                "✔️ Deixar um plano de ação escrito com orientações sobre quando usar a medicação e quando procurar atendimento.\n\n" +
-                "A escola não precisa \"adivinhar\". Ela precisa estar preparada.")
+                "✔️ Deixar um plano de ação escrito com orientações sobre quando usar a medicação e quando procurar atendimento.")
 ]
 
 struct AutocuidadoView: View {
