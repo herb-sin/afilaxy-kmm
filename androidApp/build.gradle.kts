@@ -11,7 +11,7 @@ android {
     
     defaultConfig {
         applicationId = "com.afilaxy.app"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 36
 
         // Leitura única do local.properties para todo o defaultConfig
