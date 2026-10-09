@@ -23,5 +23,6 @@ interface EmergencyRepository {
     fun observeNearbyEmergencies(latitude: Double, longitude: Double, radiusKm: Double): Flow<List<Emergency>>
     fun observeEmergencyStatus(emergencyId: String): Flow<String?>
     suspend fun getEmergencyExpiresAt(emergencyId: String): Long?
+    suspend fun registerConsultationInterest(source: String): Result<Unit>
 
 }

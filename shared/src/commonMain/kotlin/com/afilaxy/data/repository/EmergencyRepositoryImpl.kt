@@ -523,6 +523,27 @@ class EmergencyRepositoryImpl(
         } catch (e: Exception) { null }
     }
 
+    // Sinal de interesse em agendar consulta — captado no diálogo pós-crise (ver
+    // HomeScreenNew.kt). Write-only por design (ver firestore.rules): o app nunca lê de
+    // volta, é consumido manualmente/exportado pela equipe para dar continuidade ao
+    // tratamento do paciente fora do app.
+    override suspend fun registerConsultationInterest(source: String): Result<Unit> {
+        return try {
+            val userId = auth.currentUser?.uid
+                ?: return Result.failure(IllegalStateException("User not authenticated"))
+
+            val data = mapOf(
+                "userId" to userId,
+                "source" to source,
+                "timestamp" to getCurrentTimeMillis()
+            )
+            firestore.collection("consultation_interest").add(data)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // Lê emergency_pings (projeção sem PII) em vez de emergency_requests — este observer é
     // ligado assim que EmergencyResponseScreen abre, ou seja, ANTES do usuário aceitar e virar
     // participante (helperId). emergency_requests só permite get/listen a participantes (ver

@@ -337,6 +337,11 @@ struct EmergencyView: View {
                 countdownTimer = nil
                 statusListener?.remove()
                 statusListener = nil
+                // Salva timestamp para o diálogo pós-crise (exibido 60 min depois na Home) —
+                // espelha NavGraph.kt (Android) no mesmo momento: nova emergência detectada.
+                let nowMs = String(Int64(Date().timeIntervalSince1970 * 1000))
+                UserDefaults.standard.set(nowMs, forKey: "last_emergency_requested_at")
+                UserDefaults.standard.set(false, forKey: "post_crisis_dialog_shown")
             }
             guard !chatNavigated else { return }
             if statusListener == nil {

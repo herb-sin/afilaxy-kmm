@@ -407,4 +407,15 @@ class EmergencyViewModel(
     fun clearError() {
         _state.update { it.copy(error = null) }
     }
+
+    /** Registra interesse em agendar consulta (ex.: diálogo pós-crise). Fire-and-forget:
+     *  não há estado de loading/erro na UI, é um sinal de lead, não uma ação crítica. */
+    fun registerConsultationInterest(source: String) {
+        viewModelScope.coroutineScope.launch {
+            emergencyRepository.registerConsultationInterest(source)
+                .onFailure { e ->
+                    com.afilaxy.util.Logger.e("EmergencyViewModel", "registerConsultationInterest failed: ${e.message}", e)
+                }
+        }
+    }
 }

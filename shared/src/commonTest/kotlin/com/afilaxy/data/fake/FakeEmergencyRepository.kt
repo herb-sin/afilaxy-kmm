@@ -112,6 +112,16 @@ class FakeEmergencyRepository(
 
     override suspend fun getEmergencyExpiresAt(emergencyId: String): Long? = null
 
+    var registerConsultationInterestCallCount = 0
+    var lastConsultationInterestSource: String? = null
+
+    override suspend fun registerConsultationInterest(source: String): Result<Unit> {
+        registerConsultationInterestCallCount++
+        lastConsultationInterestSource = source
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Erro ao registrar interesse"))
+    }
+
     // Test helpers
     fun setShouldSucceed(value: Boolean) { shouldSucceed = value }
     fun setActiveEmergencyId(id: String?) { activeEmergencyId = id }

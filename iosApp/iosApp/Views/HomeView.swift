@@ -23,6 +23,7 @@ struct HomeView: View {
     @State private var showHelperErrorAlert = false
     @State private var helperErrorMessage = ""
     @State private var showNps = false
+    @State private var showPostCrisisDialog = false
     @State private var weeklyCount: Int = -1     // -1 = ainda carregando
     // Total acumulado de todas as semanas — nunca zera na virada de semana ISO.
     // Exibido no pill do WeeklyStatusCard para que o usuário veja seu histórico real.
@@ -157,6 +158,7 @@ struct HomeView: View {
         .onAppear {
             fetchWeeklyStatus()
             checkNps()
+            checkPostCrisisDialog()
             fetchLocationForRisk()
             helperIntendedValue = container.emergency.state?.isHelperMode == true
             // Dispara sempre que o usuário acabou de concluir login/cadastro nesta sessão
@@ -179,6 +181,17 @@ struct HomeView: View {
                     showNps = false
                 }
             )
+        }
+        .alert("Que bom que você está bem", isPresented: $showPostCrisisDialog) {
+            Button("Quero agendar uma consulta") {
+                UserDefaults.standard.set(true, forKey: "post_crisis_dialog_shown")
+                container.emergency.vm?.registerConsultationInterest(source: "post_crisis_dialog")
+            }
+            Button("Agora não", role: .cancel) {
+                UserDefaults.standard.set(true, forKey: "post_crisis_dialog_shown")
+            }
+        } message: {
+            Text("A comunidade Afilaxy estava do seu lado. Quer dar continuidade ao seu tratamento com um especialista?")
         }
         .sheet(isPresented: $showReportExport) {
             HealthReportExportView()
@@ -755,6 +768,25 @@ extension HomeView {
             "score": score,
             "timestamp": nowMs
         ])
+    }
+}
+
+// MARK: - Post-Crisis Dialog Helpers
+
+extension HomeView {
+
+    /// Exibido 60 min após um pedido de emergência (mesma janela que HomeScreenNew.kt
+    /// no Android — ver last_emergency_requested_at em EmergencyView.swift).
+    private func checkPostCrisisDialog() {
+        guard !UserDefaults.standard.bool(forKey: "post_crisis_dialog_shown") else { return }
+        guard let requestedAtStr = UserDefaults.standard.string(forKey: "last_emergency_requested_at"),
+              let requestedAt = Double(requestedAtStr) else { return }
+        let sixtyMinMs: Double = 60 * 60 * 1000
+        let fortyEightHMs: Double = 48 * 60 * 60 * 1000
+        let elapsed = Date().timeIntervalSince1970 * 1000 - requestedAt
+        if elapsed >= sixtyMinMs && elapsed <= fortyEightHMs {
+            showPostCrisisDialog = true
+        }
     }
 }
 
