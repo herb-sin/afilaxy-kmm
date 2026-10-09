@@ -18,8 +18,7 @@ private let faqItems: [FaqItem] = [
     FaqItem(pergunta: "Como prevenir crises?",
             resposta: "Evite gatilhos (poeira, fumaça, pólen), use medicação preventiva conforme prescrito e mantenha acompanhamento médico."),
     FaqItem(pergunta: "Como preparar a escola do meu filho com asma?",
-            resposta: "O que toda família de uma criança com asma deve combinar com a escola:\n" +
-                "✔️ Informar que a criança tem asma.\n" +
+            resposta: "✔️ Informar que a criança tem asma.\n" +
                 "✔️ Deixar a bombinha e o espaçador acessíveis.\n" +
                 "✔️ Ensinar quem cuida da criança a usar corretamente.\n" +
                 "✔️ Deixar um plano de ação escrito com orientações sobre quando usar a medicação e quando procurar atendimento.")
