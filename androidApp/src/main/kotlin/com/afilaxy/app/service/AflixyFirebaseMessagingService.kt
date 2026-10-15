@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.afilaxy.app.MainActivity
 import com.afilaxy.app.R
+import com.afilaxy.app.util.canPostNotifications
 import com.afilaxy.domain.repository.AuthRepository
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -104,6 +105,10 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
     }
     
     private fun showChatNotification(senderName: String, body: String, emergencyId: String) {
+        // Sem permissão POST_NOTIFICATIONS o notify() é descartado em silêncio
+        // pelo sistema — sai cedo antes de montar canal/PendingIntent (C1).
+        if (!canPostNotifications()) return
+
         val channelId = "afilaxy_chat"
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -134,6 +139,10 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun showHelperMatchedNotification(title: String, body: String, emergencyId: String) {
+        // Sem permissão POST_NOTIFICATIONS o notify() é descartado em silêncio
+        // pelo sistema — sai cedo antes de montar canal/PendingIntent (C1).
+        if (!canPostNotifications()) return
+
         val channelId = "afilaxy_emergency"
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -164,6 +173,10 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun showEmergencyNotification(title: String, body: String, emergencyId: String) {
+        // Sem permissão POST_NOTIFICATIONS o notify() é descartado em silêncio
+        // pelo sistema — sai cedo antes de montar canal/PendingIntent (C1).
+        if (!canPostNotifications()) return
+
         val channelId = "afilaxy_emergency"
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -214,6 +227,10 @@ class AflixyFirebaseMessagingService : FirebaseMessagingService() {
     }
     
     private fun showNotification(title: String, body: String, emergencyId: String?) {
+        // Sem permissão POST_NOTIFICATIONS o notify() é descartado em silêncio
+        // pelo sistema — sai cedo antes de montar canal/PendingIntent (C1).
+        if (!canPostNotifications()) return
+
         val channelId = "afilaxy_emergency"
         val notificationId = emergencyId
             ?.let { safeNotificationId(it) }

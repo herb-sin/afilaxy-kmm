@@ -28,9 +28,12 @@ object AppRoutes {
 
     // Rotas sem tela de configurações dedicada — usadas como strings no NavGraph
     const val EMAIL_VERIFICATION = "email_verification"
-    const val CHECK_IN = "check_in/{type}"
+    // "quick" é query arg opcional (nullable + default null): rotas sem quick
+    // ("check_in/MORNING") continuam casando com o padrão.
+    const val CHECK_IN = "check_in/{type}?quick={quick}"
 
-    fun checkIn(type: String) = "check_in/$type"
+    fun checkIn(type: String, quick: Boolean? = null) =
+        if (quick == null) "check_in/$type" else "check_in/$type?quick=$quick"
 
     fun emergencyResponse(emergencyId: String) = "emergency_response/$emergencyId"
     fun chat(emergencyId: String) = "chat/$emergencyId"

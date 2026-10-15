@@ -376,14 +376,29 @@ fun NavGraph(
 
         composable(
             route = AppRoutes.CHECK_IN,
-            arguments = listOf(navArgument("type") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("type") { type = NavType.StringType },
+                navArgument("quick") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
             val typeStr = backStackEntry.arguments?.getString("type") ?: "MORNING"
             val checkInType = if (typeStr == "EVENING") CheckInType.EVENING else CheckInType.MORNING
+            // "quick" vem do deep-link da notificação: true = auto-submit positivo,
+            // false/null = formulário normal.
+            val quickAnswer = when (backStackEntry.arguments?.getString("quick")) {
+                "true" -> true
+                "false" -> false
+                else -> null
+            }
             val riskViewModel: com.afilaxy.presentation.risk.RiskViewModel = org.koin.androidx.compose.koinViewModel()
             val riskState by riskViewModel.state.collectAsStateWithLifecycle()
             CheckInScreen(
                 type = checkInType,
+                quickAnswer = quickAnswer,
                 riskScore = riskState.riskScore?.score,
                 aqi = riskState.riskScore?.aqi,
                 temperature = riskState.riskScore?.temperature,

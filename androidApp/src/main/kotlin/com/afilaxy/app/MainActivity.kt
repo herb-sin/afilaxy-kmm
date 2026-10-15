@@ -1,10 +1,13 @@
 package com.afilaxy.app
 
+import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,6 +22,7 @@ import com.afilaxy.app.navigation.AppRoutes
 import com.afilaxy.app.navigation.NavGraph
 import com.afilaxy.app.ui.theme.AflixyTheme
 import com.afilaxy.app.ui.theme.ThemeState
+import com.afilaxy.app.util.canPostNotifications
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.afilaxy.presentation.emergency.EmergencyViewModel
 import com.afilaxy.util.FileLogger
@@ -39,6 +43,25 @@ class MainActivity : ComponentActivity() {
 
     // Destino pendente de navegação (preenchido por onCreate ou onNewIntent)
     private val pendingDestination = mutableStateOf<String?>(null)
+
+    // Registrado na inicialização da classe (antes do onCreate), exigência do
+    // ActivityResultRegistry para poder lançar o pedido de permissão depois.
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> }
+
+    /**
+     * Pede POST_NOTIFICATIONS uma única vez por instalação (chave "notif_perm_asked"
+     * gravada ANTES do diálogo), apenas em SDK >= 33 e com notificações desativadas.
+     * Sem isso as notificações de check-in/emergência nunca chegam no Android 13+.
+     */
+    private fun maybeRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (canPostNotifications()) return
+        val prefs = getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        if (prefs.getBoolean("notif_perm_asked", false)) return
+        prefs.edit().putBoolean("notif_perm_asked", true).apply()
+        requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,12 +113,22 @@ class MainActivity : ComponentActivity() {
                             val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
                                 if (!authResolved.value) {
                                     val user = firebaseAuth.currentUser
+                                    val pending = pendingDestination.value
+                                    val usedPending = user != null && pending != null
                                     startDestination.value = when {
-                                        user != null && pendingDestination.value != null -> pendingDestination.value
+                                        usedPending -> pending
                                         user != null -> AppRoutes.HOME
                                         else -> AppRoutes.LOGIN
                                     }
+                                    // Consome o destino pendente para que o LaunchedEffect do
+                                    // NavGraph não navegue de novo para o mesmo startDestination.
+                                    if (usedPending) pendingDestination.value = null
                                     authResolved.value = true
+                                }
+                                // Fora do bloco acima de propósito: cobre sessão restaurada
+                                // no cold start (listener 1) e login fresco (listener 2).
+                                if (firebaseAuth.currentUser != null) {
+                                    maybeRequestNotificationPermission()
                                 }
                             }
                             auth.addAuthStateListener(listener)
@@ -145,8 +178,25 @@ class MainActivity : ComponentActivity() {
             emergencyId != null && openChat              -> "chat/$emergencyId"
             emergencyId != null && openEmergencyResponse -> "emergency_response/$emergencyId"
             emergencyId != null && openEmergencyRequest  -> "emergency_request/$emergencyId"
-            else -> null
+            // "open_screen" vem das notificações de check-in (morning/evening + _yes/_no)
+            else -> openScreenDestination(intent.getStringExtra("open_screen"))
         }
+    }
+
+    /**
+     * Mapeia o extra "open_screen" das notificações de check-in para a rota.
+     * `_yes`/`_no` abrem a mesma tela com quickAnswer (auto-submit positivo em
+     * `_yes`; `_no` abre o formulário normal para o usuário relatar o dia).
+     * Precedência sempre com os casos de emergência (tratados antes).
+     */
+    private fun openScreenDestination(openScreen: String?): String? = when (openScreen) {
+        "morning_checkin"     -> AppRoutes.checkIn("MORNING")
+        "morning_checkin_yes" -> AppRoutes.checkIn("MORNING", quick = true)
+        "morning_checkin_no"  -> AppRoutes.checkIn("MORNING", quick = false)
+        "evening_checkin"     -> AppRoutes.checkIn("EVENING")
+        "evening_checkin_yes" -> AppRoutes.checkIn("EVENING", quick = true)
+        "evening_checkin_no"  -> AppRoutes.checkIn("EVENING", quick = false)
+        else -> null
     }
 
     private fun startEmergencyObserver() {

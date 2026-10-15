@@ -42,10 +42,20 @@ class ChatViewModel(
 
     private fun observeMessages() {
         viewModelScope.coroutineScope.launch {
-            chatRepository.getMessages(emergencyId).collect { messages ->
-                // Sort explicitly on the client: Firestore orderBy can behave differently
-                // when mixing stored types (Double from Android, Timestamp from iOS native).
-                _state.update { it.copy(messages = messages.sortedBy { it.timestamp }, isLoading = false) }
+            // Padrão de try/catch idêntico ao de EmergencyViewModel.observeEmergencyStatus
+            // (EmergencyViewModel.kt, ~88-96): sem isso uma exceção do Firestore (rede,
+            // PERMISSION_DENIED) lançada dentro do collect propaga pela coroutine e derruba
+            // o app inteiro.
+            try {
+                chatRepository.getMessages(emergencyId).collect { messages ->
+                    // Sort explicitly on the client: Firestore orderBy can behave differently
+                    // when mixing stored types (Double from Android, Timestamp from iOS native).
+                    _state.update { it.copy(messages = messages.sortedBy { it.timestamp }, isLoading = false) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // deixa o job cancelar normalmente
+            } catch (e: Exception) {
+                com.afilaxy.util.Logger.e("ChatViewModel", "observeMessages failed emergencyId=$emergencyId", e)
             }
         }
     }
@@ -76,10 +86,17 @@ class ChatViewModel(
 
     private fun observeEmergencyStatus() {
         viewModelScope.coroutineScope.launch {
-            emergencyRepository.observeEmergencyStatus(emergencyId).collect { status ->
-                if (status == "resolved" || status == "finished") {
-                    _state.update { it.copy(isResolvedByOther = true) }
+            // Mesmo padrão de EmergencyViewModel.observeEmergencyStatus (EmergencyViewModel.kt, ~88-96).
+            try {
+                emergencyRepository.observeEmergencyStatus(emergencyId).collect { status ->
+                    if (status == "resolved" || status == "finished") {
+                        _state.update { it.copy(isResolvedByOther = true) }
+                    }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // deixa o job cancelar normalmente
+            } catch (e: Exception) {
+                com.afilaxy.util.Logger.e("ChatViewModel", "observeEmergencyStatus failed emergencyId=$emergencyId", e)
             }
         }
     }

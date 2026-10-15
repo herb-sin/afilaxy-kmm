@@ -9,8 +9,16 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.afilaxy.app.MainActivity
+import com.afilaxy.app.util.canPostNotifications
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
 import java.util.concurrent.TimeUnit
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 // ── Canais de notificação ──────────────────────────────────────────────────────
 
@@ -95,20 +103,67 @@ class MorningCheckInWorker(
     }
 
     override suspend fun doWork(): Result {
-        val riskScore = inputData.getInt(KEY_RISK_SCORE, 0)
         val inhalerName = inputData.getString(KEY_INHALER_NAME)?.takeIf { it.isNotBlank() }
 
-        // Só notifica em risco moderado ou superior (score >= 45)
-        if (riskScore >= MIN_RISK_SCORE_FOR_NOTIFICATION) {
+        // Gate de score REAL: o inputData(KEY_RISK_SCORE) era sempre 0 (nenhum
+        // chamador passa score), então a condição abaixo nunca era satisfeita e a
+        // notificação nunca disparava. Consulta o snapshot do Firestore antes.
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        val riskScore = uid?.let { fetchLatestRiskScore(it) }
+
+        val shouldNotify = when {
+            // Deslogado: não notifica (mas re-agenda sempre, ao final).
+            uid == null -> false
+            // Score desconhecido (sem snapshot OU falha de rede): NOTIFICA mesmo
+            // assim — fail-open. O lembrete é benigno e perder o check-in diário
+            // piora o dado do produto; nenhum conteúdo sensível é exposto.
+            riskScore == null -> true
+            // Score conhecido: só em risco moderado ou superior (>= 45).
+            else -> riskScore >= MIN_RISK_SCORE_FOR_NOTIFICATION
+        }
+        if (shouldNotify) {
             showMorningNotification(inhalerName)
         }
 
-        // Re-agenda para o próximo dia
+        // Re-agenda para o próximo dia (incondicional)
         scheduleNext(context)
         return Result.success()
     }
 
+    /**
+     * Lê o score de risco real em `risk_scores/{uid}/snapshots/{yyyy-MM-dd}`.
+     * Se o snapshot de hoje não existir, busca o último disponível (orderBy "date").
+     * Retorna null quando não há snapshot ou quando a leitura falha (rede),
+     * sinalizando "desconhecido" para o fail-open do [doWork].
+     * SimpleDateFormat em vez de java.time.LocalDate: minSdk 24 (LocalDate é API 26).
+     */
+    private suspend fun fetchLatestRiskScore(uid: String): Int? {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val snapshots = FirebaseFirestore.getInstance()
+            .collection("risk_scores").document(uid).collection("snapshots")
+        return try {
+            val todayDoc = snapshots.document(today).get().await()
+            (todayDoc.get("score") as? Number)?.toInt()
+                ?: snapshots
+                    .orderBy("date", Query.Direction.DESCENDING)
+                    .limit(1)
+                    .get().await().documents.firstOrNull()
+                    ?.let { (it.get("score") as? Number)?.toInt() }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Cancelamento do worker NÃO é falha de rede: propagar para que o
+            // coroutine encerre e o fail-open (notificação) não dispare após o
+            // cancelamento.
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun showMorningNotification(inhalerName: String?) {
+        // Sem permissão POST_NOTIFICATIONS concedida o notify() seria descartado
+        // em silêncio pelo sistema — evita o trabalho inútil (C1).
+        if (!context.canPostNotifications()) return
+
         createCheckInNotificationChannel(context)
 
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -212,6 +267,10 @@ class EveningCheckInWorker(
     }
 
     private fun showEveningNotification() {
+        // Sem permissão POST_NOTIFICATIONS concedida o notify() seria descartado
+        // em silêncio pelo sistema — evita o trabalho inútil (C1).
+        if (!context.canPostNotifications()) return
+
         createCheckInNotificationChannel(context)
 
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -247,8 +306,8 @@ class EveningCheckInWorker(
             .setContentText("Como foi seu dia hoje?")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
-            .addAction(android.R.drawable.ic_menu_send, "✅ Bem", noPending)
-            .addAction(android.R.drawable.ic_delete, "⚠️ Dia difícil", yesPending)
+            .addAction(android.R.drawable.ic_menu_send, "✅ Bem", yesPending)
+            .addAction(android.R.drawable.ic_delete, "⚠️ Dia difícil", noPending)
             .setAutoCancel(true)
             .build()
 

@@ -85,13 +85,22 @@ class AuthViewModel(
     private fun startSessionGuard() {
         sessionGuardJob?.cancel()
         sessionGuardJob = viewModelScope.coroutineScope.launch {
-            authRepository.observeSessionInvalidation().collect { invalidated ->
-                if (invalidated) {
-                    authRepository.logout()
-                    _state.update {
-                        it.copy(user = null, isAuthenticated = false, isSessionInvalidated = true)
+            // Padrão de try/catch idêntico ao de EmergencyViewModel.observeEmergencyStatus
+            // (EmergencyViewModel.kt, ~88-96): sem isso, uma exceção do Firestore (rede,
+            // PERMISSION_DENIED) aqui dentro derrubaria o app em vez de apenas logar.
+            try {
+                authRepository.observeSessionInvalidation().collect { invalidated ->
+                    if (invalidated) {
+                        authRepository.logout()
+                        _state.update {
+                            it.copy(user = null, isAuthenticated = false, isSessionInvalidated = true)
+                        }
                     }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e // deixa o job cancelar normalmente
+            } catch (e: Exception) {
+                Logger.e("AuthViewModel", "startSessionGuard collector failed", e)
             }
         }
     }
@@ -237,7 +246,9 @@ class AuthViewModel(
                 "Email inválido"
             exception.message?.contains("network") == true -> 
                 "Erro de conexão. Verifique sua internet"
-            else -> exception.message ?: "Erro desconhecido"
+            // Genérico: NÃO expor exception.message aqui (vazava PERMISSION_DENIED,
+            // paths e uids crus do Firestore/Functions direto para a pessoa).
+            else -> "Erro inesperado. Tente novamente."
         }
     }
 }

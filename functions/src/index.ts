@@ -4,6 +4,9 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onTaskDispatched } from 'firebase-functions/v2/tasks';
 import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
+// firebase-admin v14: firestore/messaging saíram do export raiz — import dos submódulos
+import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 import * as geofireCommon from 'geofire-common';
 
 // Inicializar Firebase Admin
@@ -45,7 +48,7 @@ export const createCheckoutSession = onCall(async (request) => {
         // Usar uid do Firebase Auth como ID do documento — operação idempotente.
         // set+merge atualiza campos de perfil sem sobrescrever dados de assinatura já existentes.
         const professionalId = request.auth!.uid;
-        const professionalsRef = admin.firestore().collection('health_professionals');
+        const professionalsRef = getFirestore().collection('health_professionals');
         const profRef = professionalsRef.doc(professionalId);
 
         // 1. Atualizar campos de perfil (sempre): name, email, crm
@@ -55,7 +58,7 @@ export const createCheckoutSession = onCall(async (request) => {
                 email: verifiedEmail,
                 crm: metadata.crm,
                 specialty: 'PNEUMOLOGIST',
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
             },
             { merge: true } // merge:true — não sobrescreve subscriptionPlan, subscriptionExpiry, etc.
         );
@@ -66,7 +69,7 @@ export const createCheckoutSession = onCall(async (request) => {
             await profRef.update({
                 subscriptionPlan: 'NONE',
                 subscriptionExpiry: 0,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: FieldValue.serverTimestamp(),
             });
         }
 
@@ -118,26 +121,26 @@ export const stripeWebhook = onRequest(async (req, res) => {
             const subscription = await getStripe().subscriptions.retrieve(session.subscription);
             const expiryDate = subscription.current_period_end * 1000; // Unix → ms
 
-            await admin.firestore()
+            await getFirestore()
                 .collection('health_professionals')
                 .doc(professionalId)
                 .update({
                     subscriptionPlan: 'PARTNER',
                     subscriptionExpiry: expiryDate,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
             // stripeCustomerId/stripeSubscriptionId ficam numa coleção separada, sem regra de
             // leitura pública (cai no default-deny do firestore.rules) — health_professionals
             // é lido por qualquer usuário autenticado, e esses identificadores de billing não
             // precisam estar ali (achado de auditoria de segurança).
-            await admin.firestore()
+            await getFirestore()
                 .collection('health_professionals_billing')
                 .doc(professionalId)
                 .set({
                     stripeCustomerId: session.customer,
                     stripeSubscriptionId: session.subscription,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 }, { merge: true });
 
             console.log(`✅ PARTNER ativado para ${professionalId}, expira em ${new Date(expiryDate).toISOString()}`);
@@ -155,7 +158,7 @@ export const stripeWebhook = onRequest(async (req, res) => {
         try {
             // Buscar profissional pelo stripeCustomerId — agora em health_professionals_billing
             // (ver comentário em checkout.session.completed acima)
-            const snapshot = await admin.firestore()
+            const snapshot = await getFirestore()
                 .collection('health_professionals_billing')
                 .where('stripeCustomerId', '==', customerId)
                 .limit(1)
@@ -163,10 +166,10 @@ export const stripeWebhook = onRequest(async (req, res) => {
 
             if (!snapshot.empty) {
                 const professionalId = snapshot.docs[0].id;
-                await admin.firestore().collection('health_professionals').doc(professionalId).update({
+                await getFirestore().collection('health_professionals').doc(professionalId).update({
                     subscriptionPlan: 'NONE',
                     subscriptionExpiry: 0,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
 
                 console.log(`✅ Subscription cancelled for ${professionalId}`);
@@ -191,16 +194,16 @@ export const stripeWebhook = onRequest(async (req, res) => {
         const customerId = subscription.customer;
         const currentPeriodEnd = subscription.current_period_end * 1000; // Unix → ms
         try {
-            const snapshot = await admin.firestore()
+            const snapshot = await getFirestore()
                 .collection('health_professionals_billing')
                 .where('stripeCustomerId', '==', customerId)
                 .limit(1)
                 .get();
             if (!snapshot.empty) {
                 const professionalId = snapshot.docs[0].id;
-                await admin.firestore().collection('health_professionals').doc(professionalId).update({
+                await getFirestore().collection('health_professionals').doc(professionalId).update({
                     subscriptionExpiry: currentPeriodEnd,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
                 console.log(`🔄 Expiry sincronizado para ${professionalId}: ${new Date(currentPeriodEnd).toISOString()}`);
             }
@@ -229,7 +232,7 @@ export const checkExpiredSubscriptions = onSchedule(
             const now = Date.now();
 
             // Buscar profissionais com assinatura expirada
-            const snapshot = await admin.firestore()
+            const snapshot = await getFirestore()
                 .collection('health_professionals')
                 .where('subscriptionExpiry', '<', now)
                 .where('subscriptionPlan', '!=', 'NONE')
@@ -240,13 +243,13 @@ export const checkExpiredSubscriptions = onSchedule(
                 return;
             }
 
-            const batch = admin.firestore().batch();
+            const batch = getFirestore().batch();
             let count = 0;
 
             snapshot.docs.forEach((doc) => {
                 batch.update(doc.ref, {
                     subscriptionPlan: 'NONE',
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    updatedAt: FieldValue.serverTimestamp()
                 });
                 count++;
                 console.log(`Expiring subscription for ${doc.id}`);
@@ -296,7 +299,7 @@ export const onEmergencyCreated = onDocumentCreated(
             console.log(`Geohash bounds: ${bounds.length} queries necessárias`);
 
             const boundPromises = bounds.map((b: [string, string]) =>
-                admin.firestore()
+                getFirestore()
                     .collection('helpers')
                     .where('isActive', '==', true)
                     .where('geohash', '>=', b[0])
@@ -346,7 +349,7 @@ export const onEmergencyCreated = onDocumentCreated(
             const tokens: string[] = [];
             const tokenFetches = nearbyHelpers.map(async (helper) => {
                 try {
-                    const userDoc = await admin.firestore().collection('users').doc(helper.id).get();
+                    const userDoc = await getFirestore().collection('users').doc(helper.id).get();
                     const fcmToken = userDoc.data()?.fcmToken;
                     if (fcmToken) tokens.push(fcmToken);
                 } catch (e) {
@@ -402,7 +405,7 @@ export const onEmergencyCreated = onDocumentCreated(
                 tokens: tokens,
             };
 
-            const response = await admin.messaging().sendEachForMulticast(message);
+            const response = await getMessaging().sendEachForMulticast(message);
 
             console.log(`Notificação enviada: ${response.successCount} enviadas, ${response.failureCount} falhas`);
 
@@ -439,7 +442,7 @@ export const onEmergencyAccepted = onDocumentUpdated(
 
             try {
                 // Buscar dados do requester
-                const requesterDoc = await admin.firestore()
+                const requesterDoc = await getFirestore()
                     .collection('users')
                     .doc(after.requesterId)
                     .get();
@@ -460,7 +463,7 @@ export const onEmergencyAccepted = onDocumentUpdated(
                 // Buscar dados do helper
                 let helperName = 'Um ajudante';
                 if (after.helperId) {
-                    const helperDoc = await admin.firestore()
+                    const helperDoc = await getFirestore()
                         .collection('users')
                         .doc(after.helperId)
                         .get();
@@ -497,7 +500,7 @@ export const onEmergencyAccepted = onDocumentUpdated(
                     token: requesterToken,
                 };
 
-                await admin.messaging().send(message);
+                await getMessaging().send(message);
                 console.log('Notificação de aceitação enviada com sucesso');
             } catch (error) {
                 console.error('Erro ao enviar notificação de aceitação:', error);
@@ -519,7 +522,7 @@ export const onChatMessage = onDocumentCreated(
         const emergencyId = event.params.emergencyId;
 
         try {
-            const emergencyDoc = await admin.firestore()
+            const emergencyDoc = await getFirestore()
                 .collection('emergency_requests')
                 .doc(emergencyId)
                 .get();
@@ -549,7 +552,7 @@ export const onChatMessage = onDocumentCreated(
             }
 
             // Buscar token FCM do destinatário
-            const recipientDoc = await admin.firestore()
+            const recipientDoc = await getFirestore()
                 .collection('users')
                 .doc(recipientId)
                 .get();
@@ -594,7 +597,7 @@ export const onChatMessage = onDocumentCreated(
                 token: recipientToken,
             };
 
-            await admin.messaging().send(notificationMessage);
+            await getMessaging().send(notificationMessage);
             console.log('Notificação de chat enviada com sucesso');
         } catch (error) {
             console.error('Erro ao enviar notificação de chat:', error);
@@ -648,7 +651,7 @@ export const onUserLocationUpdate = onDocumentUpdated(
 export const cleanStaleLocations = onSchedule(
     { schedule: '0 6 * * *', timeZone: 'UTC' },
     async () => {
-        const db = admin.firestore();
+        const db = getFirestore();
         const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24h atrás
 
         const snapshot = await db.collection('users')
@@ -664,9 +667,9 @@ export const cleanStaleLocations = onSchedule(
         const batch = db.batch();
         snapshot.docs.forEach((doc) => {
             batch.update(doc.ref, {
-                latitude: admin.firestore.FieldValue.delete(),
-                longitude: admin.firestore.FieldValue.delete(),
-                locationUpdatedAt: admin.firestore.FieldValue.delete(),
+                latitude: FieldValue.delete(),
+                longitude: FieldValue.delete(),
+                locationUpdatedAt: FieldValue.delete(),
             });
         });
 
@@ -689,7 +692,7 @@ export const expireEmergencyTask = onTaskDispatched(
             return;
         }
 
-        const docRef = admin.firestore().collection('emergency_requests').doc(emergencyId);
+        const docRef = getFirestore().collection('emergency_requests').doc(emergencyId);
         const current = await docRef.get();
 
         if (!current.exists) {
@@ -706,7 +709,7 @@ export const expireEmergencyTask = onTaskDispatched(
         await docRef.update({
             active: false,
             status: 'expired',
-            expiredAt: admin.firestore.FieldValue.serverTimestamp()
+            expiredAt: FieldValue.serverTimestamp()
         });
 
         console.log(`✅ Emergência ${emergencyId} expirada automaticamente via Cloud Task`);
@@ -792,9 +795,9 @@ export const onEmergencyFinalized = onDocumentUpdated(
         const week = Math.ceil(((isoDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
         const weekKey = `${isoDate.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 
-        const db = admin.firestore();
-        const inc = admin.firestore.FieldValue.increment;
-        const now = admin.firestore.FieldValue.serverTimestamp;
+        const db = getFirestore();
+        const inc = FieldValue.increment;
+        const now = FieldValue.serverTimestamp;
 
         const batch = db.batch();
 
@@ -815,8 +818,8 @@ export const onEmergencyFinalized = onDocumentUpdated(
         // weeklyCount: ISO week (legacy, kept for compatibility)
         // dailyCount: per-day count for rolling-7-day window on the client
         const dateKey = new Date(timestamp).toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
-        const weeklyPath = new admin.firestore.FieldPath('weeklyCount', weekKey);
-        const dailyPath  = new admin.firestore.FieldPath('dailyCount',  dateKey);
+        const weeklyPath = new FieldPath('weeklyCount', weekKey);
+        const dailyPath  = new FieldPath('dailyCount',  dateKey);
         batch.set(
             statsRef,
             { ...statsFlat, weeklyCount: { [weekKey]: inc(1) }, dailyCount: { [dateKey]: inc(1) } },
@@ -864,7 +867,7 @@ export const onEmergencyFinalized = onDocumentUpdated(
 export const weeklyRiskAlert = onSchedule(
     { schedule: '0 11 * * 1', timeZone: 'UTC' },
     async () => {
-        const db = admin.firestore();
+        const db = getFirestore();
 
         // Semana anterior
         const now = new Date();
@@ -901,7 +904,7 @@ export const weeklyRiskAlert = onSchedule(
                 const fcmToken: string | undefined = userDoc.data()?.fcmToken;
                 if (!fcmToken) continue;
 
-                await admin.messaging().send({
+                await getMessaging().send({
                     token: fcmToken,
                     notification: {
                         title: '⚠️ Atenção à sua saúde',
@@ -991,9 +994,9 @@ const RATE_LIMIT_MAX_PER_WINDOW = 20;
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 async function enforceRateLimit(uid: string, action: string): Promise<void> {
-    const ref = admin.firestore().collection('rate_limits').doc(`${action}_${uid}`);
+    const ref = getFirestore().collection('rate_limits').doc(`${action}_${uid}`);
     const now = Date.now();
-    await admin.firestore().runTransaction(async (tx) => {
+    await getFirestore().runTransaction(async (tx) => {
         const snap = await tx.get(ref);
         const data = snap.data();
         const lastCallAt: number = data?.lastCallAt ?? 0;
@@ -1055,7 +1058,7 @@ export const getNearbyHelpers = onCall(async (request) => {
 
     const bounds = geofireCommon.geohashQueryBounds(center, radiusInM);
     const boundPromises = bounds.map((b: [string, string]) =>
-        admin.firestore()
+        getFirestore()
             .collection('helpers')
             .where('isActive', '==', true)
             .where('geohash', '>=', b[0])
@@ -1112,7 +1115,7 @@ export const onEmergencyRequestWrite = onDocumentWritten(
         if (!change) return;
 
         const emergencyId = event.params.emergencyId;
-        const pingRef = admin.firestore().collection('emergency_pings').doc(emergencyId);
+        const pingRef = getFirestore().collection('emergency_pings').doc(emergencyId);
 
         // emergency_requests nunca é deletado via regras (allow delete: if false),
         // mas mantemos o espelho consistente caso isso mude ou ocorra via console.

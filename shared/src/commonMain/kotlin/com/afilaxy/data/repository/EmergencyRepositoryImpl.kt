@@ -483,6 +483,17 @@ class EmergencyRepositoryImpl(
                 ("latitude" greaterThanOrEqualTo latitude - deltaLat) and
                 ("latitude" lessThanOrEqualTo latitude + deltaLat)
             }
+            // limit(50) (API dev.gitlive:firebase-firestore 2.1.0 — Query.limit(Number)):
+            // (1) longitude NÃO entra no where: o Firestore só permite inequality (range) em
+            //     UM campo por query, então já há range em "latitude" e não pode haver também
+            //     em "longitude". O corte por distância real é client-side pelo haversine
+            //     (ver filter logo abaixo, ~linhas haversineDistance).
+            // (2) O índice composto emergency_pings active|latitude JÁ existe em
+            //     firestore.indexes.json — não precisa criar índice novo.
+            // (3) limit(50) pina o número de documentos lidos por snapshot: pings ativos são
+            //     raros e a banda de latitude filtrada é estreita, então 50 é folgado e evita
+            //     leituras descontroladas em rajada de emergências.
+            .limit(50)
             .snapshots
             .map { snapshot ->
                 snapshot.documents.mapNotNull { doc ->

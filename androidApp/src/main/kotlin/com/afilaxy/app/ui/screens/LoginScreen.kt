@@ -457,16 +457,17 @@ private fun LogViewerSheet(onDismiss: () -> Unit) {
 private fun friendlyLoginError(raw: String): String {
     val msg = raw.lowercase()
     return when {
+        // Credenciais inválidas E conta inexistente viram a MESMA mensagem: branches
+        // separados permitiam enumerar contas cadastradas ("Nenhuma conta encontrada com
+        // esse e-mail." vs "Senha incorreta.") — ataques de account enumeration.
         msg.contains("password is invalid") ||
         msg.contains("wrong password") ||
         msg.contains("invalid credential") ||
-        msg.contains("auth credential is incorrect") ->
-            "Senha incorreta. Verifique e tente novamente."
-
+        msg.contains("auth credential is incorrect") ||
         msg.contains("no user record") ||
         msg.contains("user not found") ||
         msg.contains("there is no user") ->
-            "Nenhuma conta encontrada com esse e-mail."
+            "E-mail ou senha incorretos."
 
         msg.contains("badly formatted") ||
         msg.contains("invalid email") ||

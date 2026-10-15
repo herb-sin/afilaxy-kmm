@@ -1,5 +1,6 @@
 package com.afilaxy.app.ui.screens
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Paint
@@ -8,6 +9,7 @@ import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.view.WindowManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,8 +30,10 @@ import androidx.core.content.FileProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -51,6 +56,16 @@ fun HealthReportExportScreen(onNavigateBack: () -> Unit) {
     var step by remember { mutableStateOf<ReportStep>(ReportStep.Idle) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    // FLAG_SECURE: enquanto esta tela (relatório de saúde) estiver visível, a
+    // janela não pode ser capturada por screenshot nem pela tela recentes.
+    // Limpo no dispose ao sair da tela, para não afetar o resto do app.
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        val window = (view.context as? Activity)?.window
+        window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
 
     Scaffold(
         topBar = {
@@ -240,7 +255,11 @@ private suspend fun generateAndShare(context: Context): Boolean {
         generatedAt       = Date()
     )
 
-    val file = WellbeingPDFAndroid.generate(context, report) ?: return false
+    // PdfDocument + FileOutputStream rodam em IO: a geração do PDF é pesada e
+    // nunca deve bloquear a main thread.
+    val file = withContext(Dispatchers.IO) {
+        WellbeingPDFAndroid.generate(context, report)
+    } ?: return false
 
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     val intent = Intent(Intent.ACTION_SEND).apply {
@@ -383,6 +402,16 @@ private object WellbeingPDFAndroid {
 
         return try {
             val dir = File(context.cacheDir, "reports").also { it.mkdirs() }
+            // Rotação: apaga SOMENTE PDFs de gerações anteriores (lastModified
+            // anterior ao início desta geração) — duas gerações rápidas não se
+            // apagam mutuamente. Trade-off: um relatório já compartilhado deixa
+            // de existir em disco, mas o arquivo atual fica disponível para o
+            // chooser do share até a próxima geração, e cacheDir é liberável
+            // pelo sistema quando o armazenamento aperta.
+            val generationStartMs = System.currentTimeMillis()
+            dir.listFiles()?.forEach { old ->
+                if (old.isFile && old.lastModified() < generationStartMs) old.delete()
+            }
             val file = File(dir, "relatorio_afilaxy_${System.currentTimeMillis()}.pdf")
             FileOutputStream(file).use { doc.writeTo(it) }
             doc.close()
