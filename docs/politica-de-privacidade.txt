@@ -92,6 +92,11 @@ Localização precisa (GPS)  | Apenas durante pedido P2P ativo    | Somente com 
 Localização aproximada     | Para consulta de AQI e clima       | WAQI e OpenMeteo            | Não armazenada
 (cidade/região)            |                                    | (sem ID individual)         | individualmente
 
+Ao registrar um pedido de ajuda, a AFILAXY também armazena junto ao pedido o
+contexto ambiental do local e momento da crise (temperatura, umidade, índice de
+qualidade do ar e PM2.5) — dado ambiental, não pessoal, usado para relacionar
+crises às condições que podem tê-las desencadeado e aprimorar o Índice de Risco.
+
 A AFILAXY não realiza rastreamento contínuo da localização do Usuário fora dos
 contextos acima.
 

@@ -7,6 +7,7 @@ import com.afilaxy.domain.model.Helper
 import com.afilaxy.domain.model.Location
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.EmergencyRepository
+import com.afilaxy.domain.repository.EnvironmentalRepository
 import com.afilaxy.util.haversineDistance
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FieldValue
@@ -16,14 +17,27 @@ import dev.gitlive.firebase.functions.FirebaseFunctions
 import kotlin.math.round
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+
+/** Limite para buscar clima/AQI após criar a emergência — além disso o contexto é descartado. */
+private const val ENVIRONMENT_FETCH_TIMEOUT_MS = 15_000L
 
 class EmergencyRepositoryImpl(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    private val functions: FirebaseFunctions
+    private val functions: FirebaseFunctions,
+    private val environmentalRepository: EnvironmentalRepository? = null
 ) : EmergencyRepository {
+
+    // Escopo próprio para tarefas pós-criação que não podem atrasar o pedido de ajuda
+    // nem ser canceladas quando a tela que disparou a emergência sai de cena.
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override suspend fun createEmergency(emergency: Emergency): Result<String> {
         return createEmergency(emergency.location.latitude, emergency.location.longitude)
@@ -62,6 +76,7 @@ class EmergencyRepositoryImpl(
             for (attempt in 1..3) {
                 try {
                     val docRef = firestore.collection("emergency_requests").add(emergencyData)
+                    backgroundScope.launch { attachEnvironmentalContext(docRef.id, latitude, longitude) }
                     return Result.success(docRef.id)
                 } catch (e: Exception) {
                     lastException = e
@@ -78,6 +93,33 @@ class EmergencyRepositoryImpl(
         }
     }
     
+    /**
+     * Grava no pedido de ajuda o clima e a qualidade do ar no local e momento da crise —
+     * mesmo contexto ambiental que os check-ins já registram, para que cada crise possa ser
+     * cruzada com as condições que podem tê-la desencadeado (base para o futuro modelo de ML).
+     * Roda depois da criação e nunca falha o pedido: sem rede/API, a emergência segue sem esses campos.
+     * Campos planos (env*) em vez de mapa aninhado para manter a regra de update simples.
+     */
+    private suspend fun attachEnvironmentalContext(emergencyId: String, latitude: Double, longitude: Double) {
+        val repository = environmentalRepository ?: return
+        try {
+            val env = withTimeoutOrNull(ENVIRONMENT_FETCH_TIMEOUT_MS) {
+                repository.getEnvironmentalData(latitude, longitude).getOrNull()
+            } ?: return
+
+            val fields = buildList<Pair<String, Any?>> {
+                add("envTemperature" to env.temperatureCelsius.toDouble())
+                add("envHumidity" to env.humidity.toDouble())
+                env.aqi?.let { add("envAqi" to it) }
+                env.pm25?.let { add("envPm25" to it.toDouble()) }
+                add("envCapturedAt" to getCurrentTimeMillis())
+            }
+            firestore.collection("emergency_requests").document(emergencyId).update(*fields.toTypedArray())
+        } catch (e: Exception) {
+            com.afilaxy.util.Logger.w("EmergencyRepo", "Contexto ambiental não gravado em $emergencyId: ${e.message}")
+        }
+    }
+
     override suspend fun cancelEmergency(emergencyId: String): Result<Boolean> {
         return try {
             val userId = auth.currentUser?.uid

@@ -59,10 +59,12 @@ service cloud.firestore {
         && request.resource.data.active == true;
       allow update: if isAuthenticated()
         && (
-          // Requester: cancel (active+status), severity, samuCalled/At, resolvedAt
+          // Requester: cancel (active+status), severity, samuCalled/At, resolvedAt,
+          // contexto ambiental da crise (env*, gravado logo após a criação)
           (request.auth.uid == resource.data.requesterId
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['status', 'active', 'severity', 'samuCalled', 'samuCalledAt', 'resolvedAt']))
+                 .hasOnly(['status', 'active', 'severity', 'samuCalled', 'samuCalledAt', 'resolvedAt',
+                           'envTemperature', 'envHumidity', 'envAqi', 'envPm25', 'envCapturedAt']))
           // Helper atribuído: encerrar (status+active+resolvedAt)
           || (request.auth.uid == resource.data.helperId
             && request.resource.data.diff(resource.data).affectedKeys()

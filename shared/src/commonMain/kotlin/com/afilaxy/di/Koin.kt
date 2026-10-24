@@ -36,7 +36,7 @@ fun sharedModule(): Module = module {
     // Repositories
     single<AuthRepository> { AuthRepositoryImpl(get(), get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get()) }
-    single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get(), get()) }
+    single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get(), get(), get()) }
     single<ReviewRepository> { ReviewRepositoryImpl(get(), get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get(), get()) }
