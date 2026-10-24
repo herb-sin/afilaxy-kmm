@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.afilaxy.domain.model.AsthmaControlLevel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -115,7 +116,7 @@ private fun IdleContent(onGenerate: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Relatório completo", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Text(
-                        "Gere um PDF com seus check-ins dos últimos 30 dias e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.",
+                        "Gere um PDF com seus check-ins e pedidos de ajuda dos últimos 30 dias, seus Testes de Controle da Asma e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -133,11 +134,12 @@ private fun IdleContent(onGenerate: () -> Unit) {
                         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
                 listOf(
-                    "Resumo executivo e adesão ao monitoramento",
+                    "Resumo executivo, adesão e uso de bombinha de resgate",
+                    "Teste de Controle da Asma (último resultado e histórico)",
                     "Qualidade do sono (check-in matinal)",
                     "Bem-estar e energia matinal",
                     "Avaliação de bem-estar noturno",
-                    "Eventos de emergência acionados",
+                    "Pedidos de ajuda com data, hora e condições ambientais",
                     "Perfil Médico (comorbidades, alergias, acessibilidade)"
                 ).forEach { item ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -213,9 +215,50 @@ private suspend fun generateAndShare(context: Context): Boolean {
         FirebaseFirestore.getInstance().collection("users").document(uid).get().await()
     } catch (e: Exception) { null }
 
+    // ACT: histórico completo (não só 30 dias) — o teste é mensal, então a janela do
+    // relatório mostraria no máximo um resultado e esconderia a tendência.
+    val actResults = try {
+        FirebaseFirestore.getInstance()
+            .collection("act").document(uid)
+            .collection("results")
+            .get().await()
+            .documents.map { doc ->
+                ActResultAndroid(
+                    timestamp = doc.getLong("timestamp") ?: 0L,
+                    score = doc.getLong("score")?.toInt() ?: 0,
+                    answers = ACT_ANSWER_FIELDS.map { doc.getLong(it)?.toInt() ?: 0 }
+                )
+            }
+            .sortedByDescending { it.timestamp }
+            .take(ACT_HISTORY_LIMIT)
+    } catch (e: Exception) { emptyList() }
+
+    // Filtro só por requesterId (exigido pela regra de list) e período aplicado no cliente —
+    // evita índice composto, e o volume de pedidos por usuário é pequeno.
+    val emergencies = try {
+        FirebaseFirestore.getInstance()
+            .collection("emergency_requests")
+            .whereEqualTo("requesterId", uid)
+            .get().await()
+            .documents.mapNotNull { doc ->
+                val ts = doc.getLong("timestamp") ?: return@mapNotNull null
+                if (ts < cutoffMs) return@mapNotNull null
+                EmergencyEventAndroid(
+                    timestamp = ts,
+                    status = doc.getString("status") ?: "",
+                    samuCalled = doc.getBoolean("samuCalled") ?: false,
+                    temperature = doc.getDouble("envTemperature"),
+                    humidity = doc.getDouble("envHumidity"),
+                    aqi = doc.getLong("envAqi")?.toInt()
+                )
+            }
+            .sortedByDescending { it.timestamp }
+    } catch (e: Exception) { emptyList() }
+
     val checkIns = checkInDocs.documents.map { doc ->
         WellbeingCheckInAndroid(
             type                 = doc.getString("type") ?: "",
+            rescueInhalerUses    = doc.getLong("rescueInhalerUses")?.toInt(),
             nighttimeAwakening   = doc.getBoolean("nighttimeAwakening") ?: false,
             morningMoodGood      = doc.getBoolean("morningMoodGood") ?: false,
             morningEnergyGood    = doc.getBoolean("morningEnergyGood") ?: false,
@@ -252,6 +295,8 @@ private suspend fun generateAndShare(context: Context): Boolean {
         healthProfile     = healthProfile,
         checkIns          = checkIns,
         emergencyCount30d = emergency30d(statsDoc),
+        emergencies       = emergencies,
+        actResults        = actResults,
         generatedAt       = Date()
     )
 
@@ -286,8 +331,40 @@ private fun emergency30d(statsDoc: DocumentSnapshot?): Int {
 
 // ── Data Models ───────────────────────────────────────────────────────────────
 
+/** Campos do ACT na ordem das perguntas P1–P5 (ver AsthmaControlTestResult). */
+private val ACT_ANSWER_FIELDS = listOf(
+    "activityImpairment", "shortnessOfBreath", "nighttimeSymptoms", "rescueMedicationUse", "selfRatedControl"
+)
+private val ACT_ANSWER_LABELS = listOf(
+    "P1 · Limitação de atividades",
+    "P2 · Falta de ar",
+    "P3 · Despertares noturnos por asma",
+    "P4 · Uso de medicação de alívio",
+    "P5 · Autoavaliação do controle"
+)
+private const val ACT_HISTORY_LIMIT = 6
+
+private data class ActResultAndroid(
+    val timestamp: Long,
+    val score: Int,
+    val answers: List<Int> // P1–P5, cada uma de 1 (pior) a 5 (melhor)
+) {
+    val levelLabel: String get() = AsthmaControlLevel.fromScore(score).label
+}
+
+private data class EmergencyEventAndroid(
+    val timestamp: Long,
+    val status: String,
+    val samuCalled: Boolean,
+    // Contexto ambiental gravado na criação do pedido — null em pedidos antigos ou sem rede
+    val temperature: Double?,
+    val humidity: Double?,
+    val aqi: Int?
+)
+
 private data class WellbeingCheckInAndroid(
     val type: String,
+    val rescueInhalerUses: Int?,
     val nighttimeAwakening: Boolean,
     val morningMoodGood: Boolean,
     val morningEnergyGood: Boolean,
@@ -326,6 +403,8 @@ private data class WellbeingReportAndroid(
     val healthProfile: HealthProfileAndroid,
     val checkIns: List<WellbeingCheckInAndroid>,
     val emergencyCount30d: Int,
+    val emergencies: List<EmergencyEventAndroid>,
+    val actResults: List<ActResultAndroid>,
     val generatedAt: Date
 )
 
@@ -393,6 +472,7 @@ private object WellbeingPDFAndroid {
         header(cursor, report)
         infoBox(cursor, report)
         summary(cursor, report)
+        actSection(cursor, report)
         morningSection(cursor, report)
         eveningSection(cursor, report)
         criticalSection(cursor, report)
@@ -467,18 +547,42 @@ private object WellbeingPDFAndroid {
         val total = r.checkIns.size
         val adherence = total * 100 / 60
         val critical = r.checkIns.count { it.isCritical() }
+        val rescueAnswers = r.checkIns.mapNotNull { it.rescueInhalerUses }
+        val rescueValue = if (rescueAnswers.isEmpty()) "Não informado"
+            else "${rescueAnswers.sum()} vez(es) em ${rescueAnswers.size} dia(s) informado(s)"
         sectionHeader(cursor, "1. RESUMO EXECUTIVO", PRIMARY)
         plainRows(cursor, listOf(
             "Check-ins realizados (30 dias)"        to "$total de 60 possíveis",
             "Taxa de adesão ao monitoramento"       to "$adherence%",
+            "Uso de bombinha de resgate"            to rescueValue,
             "Pedidos de ajuda emergencial"          to "${r.emergencyCount30d} ocorrência(s)",
             "Dias com bem-estar crítico registrado" to "$critical ocorrência(s)"
         ))
     }
 
+    private fun actSection(cursor: Cursor, r: WellbeingReportAndroid) {
+        sectionHeader(cursor, "2. CONTROLE DA ASMA — ACT", PRIMARY)
+        val latest = r.actResults.firstOrNull()
+        if (latest == null) {
+            plainRows(cursor, listOf("Teste de Controle da Asma (ACT)" to "Nunca respondido"))
+            return
+        }
+        val rows = mutableListOf(
+            "Último resultado (${dateFmt(Date(latest.timestamp))})" to "${latest.score}/25 — ${latest.levelLabel}"
+        )
+        ACT_ANSWER_LABELS.forEachIndexed { i, label ->
+            rows += label to "${latest.answers.getOrElse(i) { 0 }}/5"
+        }
+        r.actResults.drop(1).forEach { previous ->
+            rows += "Anterior (${dateFmt(Date(previous.timestamp))})" to "${previous.score}/25 — ${previous.levelLabel}"
+        }
+        rows += "Interpretação" to "Itens de 1 (pior) a 5 (melhor). Total ≥20: bem controlada; 15–19: parcialmente; ≤14: não controlada. Respondido pelo paciente."
+        plainRows(cursor, rows)
+    }
+
     private fun morningSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val m = r.checkIns.filter { it.type == "MORNING" }
-        sectionHeader(cursor, "2. CHECK-IN MATINAL", MORNING)
+        sectionHeader(cursor, "3. CHECK-IN MATINAL", MORNING)
         barRows(cursor, listOf(
             "Registros de manhã: ${m.size}"  to null,
             "\"Meu sono foi tranquilo, sem interrupções\"" to pct(m) { it.nighttimeAwakening },
@@ -489,7 +593,7 @@ private object WellbeingPDFAndroid {
 
     private fun eveningSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val e = r.checkIns.filter { it.type == "EVENING" }
-        sectionHeader(cursor, "3. CHECK-IN NOTURNO", EVENING)
+        sectionHeader(cursor, "4. CHECK-IN NOTURNO", EVENING)
         barRows(cursor, listOf(
             "Registros noturnos: ${e.size}"    to null,
             "\"Me cuidei bem hoje\""          to pct(e) { it.selfCareGood },
@@ -500,11 +604,24 @@ private object WellbeingPDFAndroid {
 
     private fun criticalSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val critical = r.checkIns.count { it.isCritical() }
-        sectionHeader(cursor, "4. EVENTOS CRÍTICOS", CRITICAL)
-        plainRows(cursor, listOf(
+        sectionHeader(cursor, "5. EVENTOS CRÍTICOS", CRITICAL)
+        val rows = mutableListOf(
             "Pedidos de ajuda emergencial (período)" to "${r.emergencyCount30d}",
             "Dias com bem-estar mínimo registrado"   to "$critical"
-        ))
+        )
+        r.emergencies.forEach { e -> rows += dateTimeFmt(Date(e.timestamp)) to emergencyDetail(e) }
+        plainRows(cursor, rows)
+    }
+
+    private fun emergencyDetail(e: EmergencyEventAndroid): String {
+        val parts = mutableListOf<String>()
+        e.temperature?.let { parts += "${it.toInt()}°C" }
+        e.humidity?.let { parts += "umidade ${it.toInt()}%" }
+        e.aqi?.let { parts += "AQI $it" }
+        if (parts.isEmpty()) parts += "sem dados ambientais"
+        if (e.samuCalled) parts += "SAMU acionado"
+        if (e.status == "cancelled") parts += "cancelado"
+        return parts.joinToString(" · ")
     }
 
     private fun healthProfileSection(cursor: Cursor, r: WellbeingReportAndroid) {
@@ -530,7 +647,7 @@ private object WellbeingPDFAndroid {
             else p.emergencyContactName
         } else "Não informado"
 
-        sectionHeader(cursor, "5. PERFIL MÉDICO", PRIMARY)
+        sectionHeader(cursor, "6. PERFIL MÉDICO", PRIMARY)
         plainRows(cursor, listOf(
             "Alergias conhecidas"    to p.allergiesText.joinToString(", ").ifEmpty { "Nenhuma relatada" },
             "Medicamentos em uso"    to p.medications.joinToString(", ").ifEmpty { "Nenhum relatado" },
@@ -655,6 +772,8 @@ private object WellbeingPDFAndroid {
     }
 
     private fun dateFmt(d: Date) = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")).format(d)
+
+    private fun dateTimeFmt(d: Date) = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR")).format(d)
 
     private fun periodStr(): String {
         val fmt = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
