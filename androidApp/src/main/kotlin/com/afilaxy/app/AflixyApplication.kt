@@ -4,6 +4,7 @@ import android.app.Application
 import com.afilaxy.app.analytics.AnalyticsManager
 import com.afilaxy.app.performance.AnrOptimizer
 import com.afilaxy.app.performance.LogOptimizer
+import com.afilaxy.app.workers.ActReminderWorker
 import com.afilaxy.app.workers.EveningCheckInWorker
 import com.afilaxy.app.workers.MorningCheckInWorker
 import com.afilaxy.app.workers.createCheckInNotificationChannel
@@ -85,6 +86,7 @@ class AflixyApplication : Application() {
             // uma notificação imediatamente se minutesUntil() retornar 0 (borda de horário).
             MorningCheckInWorker.scheduleNextKeep(this@AflixyApplication)
             EveningCheckInWorker.scheduleNextKeep(this@AflixyApplication)
+            ActReminderWorker.scheduleNextKeep(this@AflixyApplication)
             LogOptimizer.d("AflixyApp", "Check-in workers agendados")
         }
     }

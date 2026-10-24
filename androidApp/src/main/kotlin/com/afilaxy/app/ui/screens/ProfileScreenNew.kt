@@ -45,6 +45,7 @@ import java.util.Locale
 fun ProfileScreenNew(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
+    onNavigateToAct: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -248,6 +249,7 @@ fun ProfileScreenNew(
                 recentHistory = recentHistory,
                 onNavigateToHistory = onNavigateToHistory,
                 onNavigateToHelp = onNavigateToHelp,
+                onNavigateToAct = onNavigateToAct,
                 onEditProfile = { showEditSheet = true }
             )
         }
@@ -368,6 +370,7 @@ private fun AgendaDeSaudeCard(
     recentHistory: List<EmergencyHistory>,
     onNavigateToHistory: () -> Unit,
     onNavigateToHelp: () -> Unit,
+    onNavigateToAct: () -> Unit,
     onEditProfile: () -> Unit
 ) {
     Card(
@@ -411,6 +414,13 @@ private fun AgendaDeSaudeCard(
                     onClick = onNavigateToHelp
                 )
             }
+            ProfileInfoCard(
+                "Teste de Controle da Asma (ACT)",
+                "Avalie o controle nas últimas 4 semanas",
+                Icons.Default.Checklist,
+                Modifier.fillMaxWidth(),
+                onClick = onNavigateToAct
+            )
             HorizontalDivider()
             // Ocorrências Recentes
             Text(

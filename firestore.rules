@@ -167,6 +167,11 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
+    // Teste de Controle da Asma (ACT) — dado de saúde sensível, só o próprio usuário
+    match /act/{userId}/results/{resultId} {
+      allow read, write: if isOwner(userId);
+    }
+
     // Perfil médico — dados clínicos sensíveis, apenas o próprio usuário
     match /medical_profiles/{userId} {
       allow read, write: if isOwner(userId);

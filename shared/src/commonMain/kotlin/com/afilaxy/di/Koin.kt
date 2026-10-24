@@ -12,6 +12,7 @@ import com.afilaxy.presentation.professional.CrmLookupViewModel
 import com.afilaxy.presentation.profile.ProfileViewModel
 import com.afilaxy.presentation.home.HomeViewModel
 import com.afilaxy.domain.repository.HealthRepository
+import com.afilaxy.presentation.act.ActViewModel
 import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.risk.RiskViewModel
 import com.afilaxy.presentation.ubs.UBSMapViewModel
@@ -47,6 +48,7 @@ fun sharedModule(): Module = module {
         EnvironmentalRepositoryImpl(get(), token, get())
     }
     single<CheckInRepository> { CheckInRepositoryImpl(get(), get()) }
+    single<ActRepository> { ActRepositoryImpl(get()) }
     single<UBSRepository> { UBSRepositoryImpl(get()) }
 
     // LocationRepository é injetado no platformModule()
@@ -67,6 +69,7 @@ fun sharedModule(): Module = module {
     factory { HomeViewModel(get(), get()) }
     factory { RiskViewModel(get(), get()) }
     factory { CheckInViewModel(get(), get(), get<HealthRepository>()) }
+    factory { ActViewModel(get(), get()) }
     factory { UBSMapViewModel(get(), get()) }
 }
 

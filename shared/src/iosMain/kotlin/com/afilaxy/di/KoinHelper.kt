@@ -1,5 +1,6 @@
 package com.afilaxy.di
 
+import com.afilaxy.presentation.act.ActViewModel
 import com.afilaxy.presentation.auth.AuthViewModel
 import com.afilaxy.presentation.checkin.CheckInViewModel
 import com.afilaxy.presentation.emergency.EmergencyViewModel
@@ -83,4 +84,10 @@ fun safeGetRiskViewModel(): RiskViewModel {
 fun safeGetCheckInViewModel(): CheckInViewModel {
     Logger.d(TAG, "safeGetCheckInViewModel")
     return getKoin().get<CheckInViewModel>().also { Logger.d(TAG, "CheckInViewModel OK") }
+}
+
+@Throws(Exception::class)
+fun safeGetActViewModel(): ActViewModel {
+    Logger.d(TAG, "safeGetActViewModel")
+    return getKoin().get<ActViewModel>().also { Logger.d(TAG, "ActViewModel OK") }
 }

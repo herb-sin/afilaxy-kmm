@@ -23,6 +23,8 @@ object AppRoutes {
     const val HELP = "help"
     const val HEALTH_REPORT = "health_report"
     const val EXPORT_DATA = "export_data"
+    const val ACT_TEST = "act_test"
+    const val ACT_HISTORY = "act_history"
 
     const val NAVIGATION = "navigation/{lat}/{lng}/{name}"
 

@@ -340,6 +340,7 @@ fun NavGraph(
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
                     onNavigateToHealthReport = { navController.navigate(AppRoutes.HEALTH_REPORT) },
+                    onNavigateToAct = { navController.navigate(AppRoutes.ACT_TEST) },
                     onLogout = {
                         scope.launch {
                             // Cancela observers/emergência ANTES do signOut — evita listener do
@@ -416,7 +417,8 @@ fun NavGraph(
             AfilaxyAppScaffoldSimple(navController = navController) {
                 ProfileScreenNew(
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
-                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) }
+                    onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
+                    onNavigateToAct = { navController.navigate(AppRoutes.ACT_TEST) }
                 )
             }
         }
@@ -542,6 +544,17 @@ fun NavGraph(
 
         composable(AppRoutes.HELP) {
             HelpScreen(navController = navController)
+        }
+
+        composable(AppRoutes.ACT_TEST) {
+            ActScreen(
+                navController = navController,
+                onNavigateToHistory = { navController.navigate(AppRoutes.ACT_HISTORY) }
+            )
+        }
+
+        composable(AppRoutes.ACT_HISTORY) {
+            ActHistoryScreen(navController = navController)
         }
 
 

@@ -24,6 +24,12 @@ struct HomeView: View {
     @State private var helperErrorMessage = ""
     @State private var showNps = false
     @State private var showPostCrisisDialog = false
+    @StateObject private var actWrapper: ActViewModelWrapper = {
+        if let vm = ViewModelProvider.shared.getActViewModel() {
+            return ActViewModelWrapper(vm)
+        }
+        return ActViewModelWrapper.empty()
+    }()
     @State private var weeklyCount: Int = -1     // -1 = ainda carregando
     // Total acumulado de todas as semanas — nunca zera na virada de semana ISO.
     // Exibido no pill do WeeklyStatusCard para que o usuário veja seu histórico real.
@@ -101,6 +107,12 @@ struct HomeView: View {
 
                 // Support Links
                 supportLinksSection
+
+                // Lembrete do ACT — nunca feito, ou último resultado com 28+ dias
+                // (janela retrospectiva do instrumento é de 4 semanas).
+                if isActReminderDue {
+                    actReminderCard
+                }
             }
             .padding()
         }
@@ -159,6 +171,7 @@ struct HomeView: View {
             fetchWeeklyStatus()
             checkNps()
             checkPostCrisisDialog()
+            actWrapper.loadLatest()
             fetchLocationForRisk()
             helperIntendedValue = container.emergency.state?.isHelperMode == true
             // Dispara sempre que o usuário acabou de concluir login/cadastro nesta sessão
@@ -466,6 +479,41 @@ struct HomeView: View {
         }
     }
     
+    // MARK: - ACT Reminder
+    private var isActReminderDue: Bool {
+        guard let lastTimestamp = actWrapper.state?.latestResult?.timestamp else { return true }
+        let elapsedMs = Date().timeIntervalSince1970 * 1000 - Double(lastTimestamp)
+        let twentyEightDaysMs: Double = 28 * 24 * 60 * 60 * 1000
+        return elapsedMs >= twentyEightDaysMs
+    }
+
+    private var actReminderCard: some View {
+        Button {
+            navigationPath.append(AppRoute.actTest)
+        } label: {
+            AfilaxyCard {
+                HStack(spacing: 14) {
+                    Image(systemName: "checklist")
+                        .foregroundColor(.afiPrimary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Teste de Controle da Asma (ACT)")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.afiTextPrimary)
+                        Text("Avalie como sua asma esteve nas últimas 4 semanas")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Support Links
     private var supportLinksSection: some View {
         AfilaxyCard {
@@ -708,43 +756,6 @@ struct PendingEmergencyRow: View {
     }
 }
 
-
-struct SupportLinkRow: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let color: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(color)
-                    .frame(width: 24)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.afiTextPrimary)
-                    
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.afiTextSecondary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.afiTextSecondary)
-            }
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
 
 // MARK: - NPS Helpers
 

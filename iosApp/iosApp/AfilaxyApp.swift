@@ -572,6 +572,7 @@ struct AfilaxyApp: App {
                 self.isKoinInitialized = true
                 // Agenda notificações diárias de check-in (matinal 07:30 + noturno 21:00)
                 CheckInNotificationScheduler.shared.scheduleDaily()
+                CheckInNotificationScheduler.shared.scheduleActReminder()
                 FileLogger.shared.write(level: "INFO", tag: "AfilaxyApp", message: "App totalmente inicializado")
             } else {
                 FileLogger.shared.write(level: "ERROR", tag: "AfilaxyApp", message: "warmUp falhou — tela de erro exibida")
