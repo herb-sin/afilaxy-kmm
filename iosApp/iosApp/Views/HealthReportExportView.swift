@@ -55,7 +55,7 @@ struct HealthReportExportView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Relatório completo")
                             .font(.headline)
-                        Text("Gere um PDF com seus check-ins dos últimos 30 dias e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.")
+                        Text("Gere um PDF com seus check-ins e pedidos de ajuda dos últimos 30 dias, seus Testes de Controle da Asma e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -71,11 +71,12 @@ struct HealthReportExportView: View {
                         Text("Conteúdo do Relatório (30 dias)").font(.headline)
                     }
                     ForEach([
-                        "Resumo executivo e adesão ao monitoramento",
+                        "Resumo executivo, adesão e uso de bombinha de resgate",
+                        "Teste de Controle da Asma (último resultado e histórico)",
                         "Qualidade do sono (check-in matinal)",
                         "Bem-estar e energia matinal",
                         "Avaliação de bem-estar noturno",
-                        "Eventos de emergência acionados",
+                        "Pedidos de ajuda com data, hora e condições ambientais",
                         "Perfil Médico (comorbidades, alergias, acessibilidade)"
                     ], id: \.self) { item in
                         HStack(spacing: 8) {
@@ -167,11 +168,35 @@ struct HealthReportExportView: View {
             let emergencyCount = emergency30d(statsDoc: statsDoc)
             let patientName = Auth.auth().currentUser?.displayName ?? "Usuário"
 
+            // ACT: histórico completo (não só 30 dias) — o teste é mensal, então a janela do
+            // relatório mostraria no máximo um resultado e esconderia a tendência.
+            let actDocs = try? await Firestore.firestore()
+                .collection("act").document(uid)
+                .collection("results")
+                .getDocuments()
+            let actResults = (actDocs?.documents ?? [])
+                .map { ActResultData(doc: $0) }
+                .sorted { $0.timestamp > $1.timestamp }
+                .prefix(ActResultData.historyLimit)
+
+            // Filtro só por requesterId (exigido pela regra de list) e período aplicado no
+            // cliente — evita índice composto, e o volume de pedidos por usuário é pequeno.
+            let emergencyDocs = try? await Firestore.firestore()
+                .collection("emergency_requests")
+                .whereField("requesterId", isEqualTo: uid)
+                .getDocuments()
+            let emergencies = (emergencyDocs?.documents ?? [])
+                .map { EmergencyEventData(doc: $0) }
+                .filter { $0.timestamp >= cutoffMs }
+                .sorted { $0.timestamp > $1.timestamp }
+
             let report = WellbeingReportData(
                 patientName: patientName,
                 healthProfile: HealthProfileData(doc: userDoc),
                 checkIns: checkInDocs.documents.map { WellbeingCheckIn(doc: $0) },
-                emergencyCount30d: emergencyCount
+                emergencyCount30d: emergencyCount,
+                emergencies: emergencies,
+                actResults: Array(actResults)
             )
 
             guard let pdfData = WellbeingPDFGenerator.generate(report: report),
@@ -218,7 +243,69 @@ struct WellbeingReportData {
     let healthProfile: HealthProfileData
     let checkIns: [WellbeingCheckIn]
     let emergencyCount30d: Int
+    let emergencies: [EmergencyEventData]
+    let actResults: [ActResultData]
     let generatedAt: Date = Date()
+}
+
+struct ActResultData {
+    static let historyLimit = 6
+    /// Campos na ordem das perguntas P1–P5 (ver AsthmaControlTestResult no shared).
+    static let answerFields = ["activityImpairment", "shortnessOfBreath", "nighttimeSymptoms",
+                               "rescueMedicationUse", "selfRatedControl"]
+    static let answerLabels = ["P1 · Limitação de atividades", "P2 · Falta de ar",
+                               "P3 · Despertares noturnos por asma", "P4 · Uso de medicação de alívio",
+                               "P5 · Autoavaliação do controle"]
+
+    let timestamp: Int64
+    let score: Int
+    let answers: [Int] // P1–P5, cada uma de 1 (pior) a 5 (melhor)
+
+    init(doc: QueryDocumentSnapshot) {
+        timestamp = (doc["timestamp"] as? NSNumber)?.int64Value ?? 0
+        score = (doc["score"] as? NSNumber)?.intValue ?? 0
+        answers = Self.answerFields.map { (doc[$0] as? NSNumber)?.intValue ?? 0 }
+    }
+
+    /// Mesmos cortes de AsthmaControlLevel (shared) — lido direto do Firestore aqui, como o
+    /// restante deste relatório, em vez de atravessar a ponte Kotlin só para o rótulo.
+    var levelLabel: String {
+        switch score {
+        case 20...: return "Bem controlada"
+        case 15..<20: return "Parcialmente controlada"
+        default: return "Não controlada"
+        }
+    }
+}
+
+struct EmergencyEventData {
+    let timestamp: Int64
+    let status: String
+    let samuCalled: Bool
+    // Contexto ambiental gravado na criação do pedido — nil em pedidos antigos ou sem rede
+    let temperature: Double?
+    let humidity: Double?
+    let aqi: Int?
+
+    init(doc: QueryDocumentSnapshot) {
+        timestamp = (doc["timestamp"] as? NSNumber)?.int64Value ?? 0
+        status = doc["status"] as? String ?? ""
+        samuCalled = doc["samuCalled"] as? Bool ?? false
+        temperature = (doc["envTemperature"] as? NSNumber)?.doubleValue
+        humidity = (doc["envHumidity"] as? NSNumber)?.doubleValue
+        aqi = (doc["envAqi"] as? NSNumber)?.intValue
+    }
+
+    var detail: String {
+        var parts: [String] = []
+        if let t = temperature { parts.append("\(Int(t))°C") }
+        if let h = humidity { parts.append("umidade \(Int(h))%") }
+        if let a = aqi { parts.append("AQI \(a)") }
+        if parts.isEmpty { parts.append("sem dados ambientais") }
+        if samuCalled { parts.append("SAMU acionado") }
+        if status == "cancelled" { parts.append("cancelado") }
+        return parts.joined(separator: " · ")
+    }
 }
 
 struct HealthProfileData {
@@ -261,6 +348,7 @@ struct HealthProfileData {
 
 struct WellbeingCheckIn {
     let type: String
+    let rescueInhalerUses: Int?
     let nighttimeAwakening: Bool
     let morningMoodGood: Bool
     let morningEnergyGood: Bool
@@ -270,6 +358,7 @@ struct WellbeingCheckIn {
 
     init(doc: QueryDocumentSnapshot) {
         type = doc["type"] as? String ?? ""
+        rescueInhalerUses = (doc["rescueInhalerUses"] as? NSNumber)?.intValue
         nighttimeAwakening = doc["nighttimeAwakening"] as? Bool ?? false
         morningMoodGood = doc["morningMoodGood"] as? Bool ?? false
         morningEnergyGood = doc["morningEnergyGood"] as? Bool ?? false
@@ -343,6 +432,7 @@ enum WellbeingPDFGenerator {
             drawHeader(report: report, cursor: cursor)
             drawInfoBox(report: report, cursor: cursor)
             drawSummary(report: report, cursor: cursor)
+            drawActSection(report: report, cursor: cursor)
             drawMorningSection(report: report, cursor: cursor)
             drawEveningSection(report: report, cursor: cursor)
             drawCriticalSection(report: report, cursor: cursor)
@@ -408,18 +498,46 @@ enum WellbeingPDFGenerator {
         let possible = 60
         let adherence = possible > 0 ? Int(Double(total) / Double(possible) * 100) : 0
         let critical = report.checkIns.filter { $0.isCritical }.count
+        let rescueAnswers = report.checkIns.compactMap { $0.rescueInhalerUses }
+        let rescueValue = rescueAnswers.isEmpty
+            ? "Não informado"
+            : "\(rescueAnswers.reduce(0, +)) vez(es) em \(rescueAnswers.count) dia(s) informado(s)"
         drawSectionHeader("1. RESUMO EXECUTIVO", cursor: cursor, color: primaryColor)
         drawPlainRows([
             ("Check-ins realizados (30 dias)", "\(total) de \(possible) possíveis"),
             ("Taxa de adesão ao monitoramento", "\(adherence)%"),
+            ("Uso de bombinha de resgate", rescueValue),
             ("Pedidos de ajuda emergencial", "\(report.emergencyCount30d) ocorrência(s)"),
             ("Dias com bem-estar crítico registrado", "\(critical) ocorrência(s)")
         ], cursor: cursor)
     }
 
+    private static func drawActSection(report: WellbeingReportData, cursor: PDFCursor) {
+        drawSectionHeader("2. CONTROLE DA ASMA — ACT", cursor: cursor, color: primaryColor)
+        guard let latest = report.actResults.first else {
+            drawPlainRows([("Teste de Controle da Asma (ACT)", "Nunca respondido")], cursor: cursor)
+            return
+        }
+        var rows: [(String, String)] = [
+            ("Último resultado (\(dateFormatted(msDate(latest.timestamp))))",
+             "\(latest.score)/25 — \(latest.levelLabel)")
+        ]
+        for (i, label) in ActResultData.answerLabels.enumerated() {
+            let answer = i < latest.answers.count ? latest.answers[i] : 0
+            rows.append((label, "\(answer)/5"))
+        }
+        for previous in report.actResults.dropFirst() {
+            rows.append(("Anterior (\(dateFormatted(msDate(previous.timestamp))))",
+                         "\(previous.score)/25 — \(previous.levelLabel)"))
+        }
+        rows.append(("Interpretação",
+                     "Itens de 1 (pior) a 5 (melhor). Total ≥20: bem controlada; 15–19: parcialmente; ≤14: não controlada. Respondido pelo paciente."))
+        drawPlainRows(rows, cursor: cursor)
+    }
+
     private static func drawMorningSection(report: WellbeingReportData, cursor: PDFCursor) {
         let morning = report.checkIns.filter { $0.type == "MORNING" }
-        drawSectionHeader("2. CHECK-IN MATINAL", cursor: cursor, color: morningColor)
+        drawSectionHeader("3. CHECK-IN MATINAL", cursor: cursor, color: morningColor)
         drawBarRows([
             ("Registros de manhã: \(morning.count)", nil),
             ("\"Meu sono foi tranquilo, sem interrupções\"", pct(morning, \.nighttimeAwakening)),
@@ -430,7 +548,7 @@ enum WellbeingPDFGenerator {
 
     private static func drawEveningSection(report: WellbeingReportData, cursor: PDFCursor) {
         let evening = report.checkIns.filter { $0.type == "EVENING" }
-        drawSectionHeader("3. CHECK-IN NOTURNO", cursor: cursor, color: eveningColor)
+        drawSectionHeader("4. CHECK-IN NOTURNO", cursor: cursor, color: eveningColor)
         drawBarRows([
             ("Registros noturnos: \(evening.count)", nil),
             ("\"Me cuidei bem hoje\"",        pct(evening, \.selfCareGood)),
@@ -441,11 +559,15 @@ enum WellbeingPDFGenerator {
 
     private static func drawCriticalSection(report: WellbeingReportData, cursor: PDFCursor) {
         let critical = report.checkIns.filter { $0.isCritical }.count
-        drawSectionHeader("4. EVENTOS CRÍTICOS", cursor: cursor, color: criticalColor)
-        drawPlainRows([
+        drawSectionHeader("5. EVENTOS CRÍTICOS", cursor: cursor, color: criticalColor)
+        var rows: [(String, String)] = [
             ("Pedidos de ajuda emergencial (período)", "\(report.emergencyCount30d)"),
             ("Dias com bem-estar mínimo registrado",   "\(critical)")
-        ], cursor: cursor)
+        ]
+        for event in report.emergencies {
+            rows.append((dateTimeFormatted(msDate(event.timestamp)), event.detail))
+        }
+        drawPlainRows(rows, cursor: cursor)
     }
 
     private static func drawHealthProfileSection(report: WellbeingReportData, cursor: PDFCursor) {
@@ -475,7 +597,7 @@ enum WellbeingPDFGenerator {
             emergencyContact = "Não informado"
         }
 
-        drawSectionHeader("5. PERFIL MÉDICO", cursor: cursor, color: primaryColor)
+        drawSectionHeader("6. PERFIL MÉDICO", cursor: cursor, color: primaryColor)
         drawPlainRows([
             ("Alergias conhecidas", p.allergiesText.isEmpty ? "Nenhuma relatada" : p.allergiesText.joined(separator: ", ")),
             ("Medicamentos em uso", p.medications.isEmpty ? "Nenhum relatado" : p.medications.joined(separator: ", ")),
@@ -617,6 +739,17 @@ enum WellbeingPDFGenerator {
         f.dateFormat = "dd/MM/yyyy"
         f.locale = Locale(identifier: "pt_BR")
         return f.string(from: date)
+    }
+
+    private static func dateTimeFormatted(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy HH:mm"
+        f.locale = Locale(identifier: "pt_BR")
+        return f.string(from: date)
+    }
+
+    private static func msDate(_ ms: Int64) -> Date {
+        Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
     }
 
     private static func periodString() -> String {
