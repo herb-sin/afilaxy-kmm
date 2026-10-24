@@ -15,6 +15,7 @@ class CheckInNotificationScheduler {
     private let eveningId = "checkin_evening"
     private let categoryMorning = "CHECKIN_MORNING"
     private let categoryEvening = "CHECKIN_EVENING"
+    private let actReminderId = "act_reminder"
 
     private init() {}
 
@@ -29,10 +30,31 @@ class CheckInNotificationScheduler {
         FileLogger.shared.write(level: "INFO", tag: "CheckInScheduler", message: "Notificações de check-in agendadas (07:30 + 21:00)")
     }
 
+    /// Lembrete do ACT a cada 28 dias — janela retrospectiva do instrumento é de 4
+    /// semanas, por isso não é diário como os check-ins. Seguro chamar múltiplas vezes.
+    func scheduleActReminder() {
+        let content = UNMutableNotificationContent()
+        content.title = "📋 Teste de Controle da Asma (ACT)"
+        content.body = "Faz um mês — hora de reavaliar como sua asma esteve nas últimas 4 semanas."
+        content.sound = .default
+        content.userInfo = ["type": "act_reminder"]
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 28 * 24 * 60 * 60, repeats: true)
+        let request = UNNotificationRequest(identifier: actReminderId, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [actReminderId])
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                FileLogger.shared.write(level: "ERROR", tag: "CheckInScheduler",
+                    message: "Erro ao agendar lembrete do ACT: \(error.localizedDescription)")
+            }
+        }
+    }
+
     /// Remove todas as notificações de check-in pendentes (usado no logout).
     func cancelAll() {
         UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [morningId, eveningId])
+            .removePendingNotificationRequests(withIdentifiers: [morningId, eveningId, actReminderId])
         FileLogger.shared.write(level: "INFO", tag: "CheckInScheduler", message: "Notificações de check-in canceladas")
     }
 

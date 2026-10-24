@@ -9,6 +9,8 @@ enum AppRoute: Hashable {
     case checkIn(String)          // "MORNING" ou "EVENING"
     case emergencyResponse(String)
     case chat(String)
+    case actTest
+    case actHistory
 }
 
 // MARK: - Tab Selection
@@ -267,6 +269,10 @@ struct ContentView: View {
 
         case .autocuidado:
             AutocuidadoView()
+        case .actTest:
+            ActView()
+        case .actHistory:
+            ActHistoryView()
         case .checkIn(let typeStr):
             let checkInType: CheckInType = typeStr == "MORNING" ? .morning : .evening
             let riskScore = container.risk.state?.riskScore

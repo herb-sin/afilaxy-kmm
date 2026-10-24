@@ -189,6 +189,9 @@ struct ProfileView: View {
                             InfoGridItem(title: "Protocolo de Crise", value: "Ver passos", icon: "list.clipboard.fill", accentColor: .afiWarning)
                         }.buttonStyle(.plain)
                     }
+                    NavigationLink(value: AppRoute.actTest) {
+                        InfoGridItem(title: "Teste de Controle da Asma (ACT)", value: "Avalie as últimas 4 semanas", icon: "checklist", accentColor: .afiPrimary)
+                    }.buttonStyle(.plain)
                 }
 
                 Divider()

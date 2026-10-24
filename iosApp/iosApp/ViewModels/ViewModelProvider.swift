@@ -269,6 +269,50 @@ class CheckInViewModelWrapper: ObservableObject {
     }
 }
 
+// MARK: - ActViewModelWrapper
+class ActViewModelWrapper: ObservableObject {
+    private let viewModel: ActViewModel?
+    @Published var state: ActState?
+    private var observer: StateFlowObserver<ActState>?
+    private var cancellable: AnyCancellable?
+
+    init(_ viewModel: ActViewModel) {
+        self.viewModel = viewModel
+        let obs = StateFlowObserver<ActState>(viewModel.state)
+        self.observer = obs
+        self.state = obs.value
+        self.cancellable = obs.$value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newState in self?.state = newState }
+    }
+
+    static func empty() -> ActViewModelWrapper { ActViewModelWrapper() }
+    private init() { self.viewModel = nil }
+
+    var vm: ActViewModel? { viewModel }
+
+    func loadLatest() { viewModel?.loadLatest() }
+    func loadHistory() { viewModel?.loadHistory() }
+    func startNewTest() { viewModel?.startNewTest() }
+
+    func submitTest(
+        activityImpairment: Int32, shortnessOfBreath: Int32, nighttimeSymptoms: Int32,
+        rescueMedicationUse: Int32, selfRatedControl: Int32
+    ) {
+        viewModel?.submitTest(
+            activityImpairment: activityImpairment, shortnessOfBreath: shortnessOfBreath,
+            nighttimeSymptoms: nighttimeSymptoms, rescueMedicationUse: rescueMedicationUse,
+            selfRatedControl: selfRatedControl
+        )
+    }
+
+    func freeze() {
+        cancellable?.cancel()
+        cancellable = nil
+        observer = nil
+    }
+}
+
 // MARK: - ViewModelProvider
 class ViewModelProvider {
     static let shared = ViewModelProvider()
@@ -281,6 +325,7 @@ class ViewModelProvider {
     func getHistoryViewModel() -> HistoryViewModel? { safeGetHistoryViewModel() }
     func getHomeViewModel() -> HomeViewModel? { safeGetHomeViewModel() }
     func getCheckInViewModel() -> CheckInViewModel? { safeGetCheckInViewModel() }
+    func getActViewModel() -> ActViewModel? { safeGetActViewModel() }
 
 
     func getChatViewModel(emergencyId: String) -> ChatViewModel? {

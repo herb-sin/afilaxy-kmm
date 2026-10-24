@@ -70,13 +70,16 @@ fun HomeScreenNew(
     onNavigateToHelp: () -> Unit = {},
     onNavigateToPharmacyMap: () -> Unit = {},
     onNavigateToHealthReport: () -> Unit = {},
+    onNavigateToAct: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
-    authViewModel: AuthViewModel = koinViewModel()
+    authViewModel: AuthViewModel = koinViewModel(),
+    actViewModel: com.afilaxy.presentation.act.ActViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val emergencyState by viewModel.state.collectAsState()
     val authState by authViewModel.state.collectAsState()
+    val actState by actViewModel.state.collectAsState()
     val prefsRepo: PreferencesRepository = koinInject()
     val reviewRepo: ReviewRepository = koinInject()
     val scope = rememberCoroutineScope()
@@ -113,6 +116,12 @@ fun HomeScreenNew(
         if (!dialogShown && elapsed >= sixtyMinMs && elapsed <= fortyEightHMs) {
             showPostCrisisDialog = true
         }
+    }
+
+    // Teste de Controle da Asma (ACT) — carrega o último resultado para decidir
+    // se o card de lembrete (28 dias desde o último, ou nunca feito) aparece na Home.
+    LaunchedEffect(Unit) {
+        actViewModel.loadLatest()
     }
 
 
@@ -324,6 +333,17 @@ fun HomeScreenNew(
                 onNavigateToHealthReport = onNavigateToHealthReport,
                 onNavigateToAutocuidado = onNavigateToAutocuidado
             )
+        }
+
+        // Lembrete do ACT — aparece se nunca foi feito, ou se o último resultado
+        // tem 28+ dias (janela retrospectiva do instrumento é de 4 semanas).
+        val lastActTimestamp = actState.latestResult?.timestamp
+        val actDue = lastActTimestamp == null ||
+            (System.currentTimeMillis() - lastActTimestamp) >= 28L * 24 * 60 * 60 * 1000
+        if (actDue) {
+            item {
+                ActReminderCard(onClick = onNavigateToAct)
+            }
         }
     }
 
@@ -684,6 +704,32 @@ private fun HomeCheckInCard(type: String, onNavigate: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ActReminderCard(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Icon(Icons.Default.Checklist, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Teste de Controle da Asma (ACT)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text("Avalie como sua asma esteve nas últimas 4 semanas", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,

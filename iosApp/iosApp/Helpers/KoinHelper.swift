@@ -54,3 +54,7 @@ func safeGetRiskViewModel() -> RiskViewModel? {
 func safeGetCheckInViewModel() -> CheckInViewModel? {
     koinGet({ try KoinHelperKt.safeGetCheckInViewModel() }, tag: "CheckInViewModel")
 }
+
+func safeGetActViewModel() -> ActViewModel? {
+    koinGet({ try KoinHelperKt.safeGetActViewModel() }, tag: "ActViewModel")
+}
