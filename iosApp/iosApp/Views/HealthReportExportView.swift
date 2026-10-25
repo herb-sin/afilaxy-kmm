@@ -55,7 +55,9 @@ struct HealthReportExportView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Relatório completo")
                             .font(.headline)
-                        Text("Gere um PDF com seus check-ins e pedidos de ajuda dos últimos 30 dias, seus Testes de Controle da Asma e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.")
+                        Text("Gere um PDF com seus check-ins e pedidos de ajuda dos últimos 30 dias, "
+                             + "seus Testes de Controle da Asma e seu Perfil Médico — pronto para compartilhar "
+                             + "com quem você quiser, sem precisar informar um profissional específico.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
