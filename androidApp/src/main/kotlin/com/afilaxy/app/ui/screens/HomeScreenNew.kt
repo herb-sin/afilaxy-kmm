@@ -325,6 +325,18 @@ fun HomeScreenNew(
             )
         }
 
+        // Lembrete do ACT — aparece se nunca foi feito, ou se o último resultado
+        // tem 28+ dias (janela retrospectiva do instrumento é de 4 semanas).
+        // Fica depois do Modo Ajudante: os índices do tour guiado vão só até ele.
+        val lastActTimestamp = actState.latestResult?.timestamp
+        val actDue = lastActTimestamp == null ||
+            (System.currentTimeMillis() - lastActTimestamp) >= 28L * 24 * 60 * 60 * 1000
+        if (actDue) {
+            item {
+                ActReminderCard(onClick = onNavigateToAct)
+            }
+        }
+
         // Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Farmácias 24h, Autocuidado, Comunidade
         item {
             HomeSupportLinksSection(
@@ -333,17 +345,6 @@ fun HomeScreenNew(
                 onNavigateToHealthReport = onNavigateToHealthReport,
                 onNavigateToAutocuidado = onNavigateToAutocuidado
             )
-        }
-
-        // Lembrete do ACT — aparece se nunca foi feito, ou se o último resultado
-        // tem 28+ dias (janela retrospectiva do instrumento é de 4 semanas).
-        val lastActTimestamp = actState.latestResult?.timestamp
-        val actDue = lastActTimestamp == null ||
-            (System.currentTimeMillis() - lastActTimestamp) >= 28L * 24 * 60 * 60 * 1000
-        if (actDue) {
-            item {
-                ActReminderCard(onClick = onNavigateToAct)
-            }
         }
     }
 

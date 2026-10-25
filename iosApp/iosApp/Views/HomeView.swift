@@ -105,14 +105,14 @@ struct HomeView: View {
                     pendingEmergenciesSection
                 }
 
-                // Support Links
-                supportLinksSection
-
                 // Lembrete do ACT — nunca feito, ou último resultado com 28+ dias
                 // (janela retrospectiva do instrumento é de 4 semanas).
                 if isActReminderDue {
                     actReminderCard
                 }
+
+                // Support Links
+                supportLinksSection
             }
             .padding()
         }
