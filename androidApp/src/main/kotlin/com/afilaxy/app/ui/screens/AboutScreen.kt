@@ -21,6 +21,7 @@ fun AboutScreen(navController: NavController) {
     val versionName = packageInfo.versionName ?: "?"
     val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P)
         packageInfo.longVersionCode else @Suppress("DEPRECATION") packageInfo.versionCode.toLong()
+    val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -67,7 +68,7 @@ fun AboutScreen(navController: NavController) {
             
             item {
                 Text(
-                    "Sistema de Emergência Médica",
+                    "A rede de quem tem asma",
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center
                 )
@@ -75,13 +76,13 @@ fun AboutScreen(navController: NavController) {
             
             item {
                 Text(
-                    "Conectamos pessoas em situações críticas com helpers próximos, oferecendo suporte rápido e eficiente.",
+                    "Conectamos quem está em crise de asma, sem a bombinha por perto, a pessoas próximas que podem ajudar. No dia a dia, ajudamos você a acompanhar sua asma e a manter o tratamento com um profissional de saúde.",
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth()
@@ -94,50 +95,47 @@ fun AboutScreen(navController: NavController) {
                             "Recursos",
                             style = MaterialTheme.typography.titleMedium
                         )
-                        Text("🚨 Criação de emergências em tempo real")
-                        Text("💬 Chat direto com helpers")
-                        Text("📍 Busca de helpers próximos")
-                        Text("🔐 Autenticação segura")
-                        Text("🌍 Multiplataforma (Android/iOS)")
+                        Text("🤝 Pedido de ajuda a pessoas próximas (Modo Ajudante)")
+                        Text("💬 Chat com quem vai te ajudar")
+                        Text("📝 Check-ins diários de bem-estar")
+                        Text("✅ Teste de Controle da Asma (ACT)")
+                        Text("🌤️ Índice de risco com clima e qualidade do ar")
+                        Text("📄 Relatório de saúde para compartilhar com seu médico")
+                        Text("💊 Mapa de farmácias 24h")
                     }
                 }
             }
-            
+
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                 ) {
-                    Column(
+                    Text(
+                        "O Afilaxy não substitui atendimento médico. Em uma crise grave, ligue 192 (SAMU).",
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            "Tecnologias",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text("• Kotlin Multiplatform Mobile")
-                        Text("• Firebase (Auth + Firestore)")
-                        Text("• Clean Architecture + MVVM")
-                        Text("• Jetpack Compose")
-                    }
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
-            
+
             item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
-            
+
             item {
                 Text(
-                    "Desenvolvido com ❤️",
+                    "Feito com ❤️ por quem também tem asma",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
             }
-            
+
             item {
                 Text(
-                    "© 2024 Afilaxy. Todos os direitos reservados.",
+                    "© 2024–$currentYear Afilaxy. Todos os direitos reservados.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center

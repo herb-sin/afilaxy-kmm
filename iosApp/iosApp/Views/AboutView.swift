@@ -9,6 +9,10 @@ struct AboutView: View {
         return "\(version) (\(build))"
     }
 
+    private var currentYear: String {
+        String(Calendar.current.component(.year, from: Date()))
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -27,11 +31,13 @@ struct AboutView: View {
                 Divider()
                     .padding(.vertical)
 
-                Text("Sistema de Emergência Médica")
+                Text("A rede de quem tem asma")
                     .font(.title3)
                     .fontWeight(.semibold)
 
-                Text("Conectamos pessoas em situações críticas com helpers próximos, oferecendo suporte rápido e eficiente.")
+                Text("Conectamos quem está em crise de asma, sem a bombinha por perto, a pessoas próximas "
+                     + "que podem ajudar. No dia a dia, ajudamos você a acompanhar sua asma e a manter o "
+                     + "tratamento com um profissional de saúde.")
                     .multilineTextAlignment(.center)
                     .foregroundColor(.gray)
                     .padding(.horizontal)
@@ -40,22 +46,34 @@ struct AboutView: View {
                     Text("Recursos")
                         .font(.headline)
 
-                    FeatureRow(icon: "exclamationmark.triangle.fill", text: "Emergências em tempo real")
-                    FeatureRow(icon: "message.fill", text: "Chat direto com helpers")
-                    FeatureRow(icon: "location.fill", text: "Busca de helpers próximos")
-                    FeatureRow(icon: "lock.fill", text: "Autenticação segura")
-                    FeatureRow(icon: "globe", text: "Multiplataforma")
+                    FeatureRow(icon: "person.2.fill", text: "Pedido de ajuda a pessoas próximas (Modo Ajudante)")
+                    FeatureRow(icon: "message.fill", text: "Chat com quem vai te ajudar")
+                    FeatureRow(icon: "sun.max.fill", text: "Check-ins diários de bem-estar")
+                    FeatureRow(icon: "checklist", text: "Teste de Controle da Asma (ACT)")
+                    FeatureRow(icon: "cloud.sun.fill", text: "Índice de risco com clima e qualidade do ar")
+                    FeatureRow(icon: "doc.text.fill", text: "Relatório de saúde para compartilhar com seu médico")
+                    FeatureRow(icon: "cross.case.fill", text: "Mapa de farmácias 24h")
                 }
                 .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGray6))
                 .cornerRadius(10)
                 .padding(.horizontal)
 
-                Text("Desenvolvido com ❤️")
+                Text("O Afilaxy não substitui atendimento médico. Em uma crise grave, ligue 192 (SAMU).")
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+
+                Text("Feito com ❤️ por quem também tem asma")
                     .font(.caption)
                     .foregroundColor(.gray)
 
-                Text("© 2024 Afilaxy")
+                Text("© 2024–\(currentYear) Afilaxy")
                     .font(.caption2)
                     .foregroundColor(.gray)
             }

@@ -34,7 +34,7 @@ struct LoginView: View {
                     .font(.system(size: 48, weight: .bold))
                     .foregroundColor(.red)
                     .onTapGesture(count: 5) { showLogs = true }
-                Text("Sistema de Emergência")
+                Text("A rede de quem tem asma")
                     .font(.subheadline)
                     .foregroundColor(.gray)
                 Spacer()
