@@ -190,6 +190,11 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 - Hotspots de crises (clustering geoespacial)
 - Mapa de estabelecimentos com disponibilidade de medicação gratuita
 - Modelo ML personalizado (substituir heurística por predição supervisionada com dados reais dos check-ins)
+- Modo cuidador: perfil de dependente com check-ins e pedidos de ajuda feitos pelo responsável — crianças de 1 a 4 anos são a faixa com mais internações por asma no SUS
+- Acessibilidade para idosos: fontes maiores, fluxos simplificados e apoio de um familiar — a faixa de 75 a 89 anos concentra 46,4% dos óbitos por asma
+- Raio de busca de ajuda dinâmico (hoje fixo em 250 m) e tolerância a conexão instável, para regiões de baixa densidade de usuários como o Norte
+
+> Os três últimos itens vêm da revisão *Internações por asma no Brasil segundo o DATASUS* (Costa et al., Lumen et Virtus, 2026 — DOI 10.56238/levv17n57-045); o raio dinâmico também foi sugerido na sessão de pôsteres do ENIAC/BRACIS 2026.
 
 ---
 
