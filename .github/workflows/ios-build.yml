@@ -24,10 +24,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -101,7 +101,7 @@ jobs:
       # Evita baixar specs do GitHub CDN a cada run → elimina o erro 429.
       # A chave inclui o hash do Podfile; muda de spec repo só quando deps mudam.
       - name: Cache CocoaPods Specs
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cocoapods
           key: cocoapods-specs-${{ hashFiles('iosApp/Podfile') }}
@@ -111,7 +111,7 @@ jobs:
       # Cache dos Pods baixados — evita re-download de frameworks grandes
       # (ex.: FirebaseFirestore ~200 MB) a cada run.
       - name: Cache CocoaPods Pods
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: iosApp/Pods
           key: cocoapods-pods-${{ hashFiles('iosApp/Podfile.lock') }}
@@ -133,7 +133,7 @@ jobs:
 
       # Importa o certificado de distribuição Apple (P12 em base64)
       - name: Import Apple Distribution Certificate
-        uses: apple-actions/import-codesign-certs@8f3fb608891dd2244cdab3d69cd68c0d37a7fe93 # v2
+        uses: apple-actions/import-codesign-certs@288b8ec97b82c66b6f2a6baaf7acc8dfbcbe331c # v7.2.0
         with:
           p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_P12 }}
           p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
@@ -357,7 +357,7 @@ jobs:
 
       # Faz upload do IPA como artefato do Actions (backup)
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: iosApp-${{ github.sha }}.ipa
           path: ${{ runner.temp }}/ipa/*.ipa
