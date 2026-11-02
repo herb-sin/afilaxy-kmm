@@ -75,21 +75,21 @@ kotlin {
             kotlin.srcDir(layout.buildDirectory.dir("generated/waqi"))
             dependencies {
                 // Coroutines
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
                 // Serialization
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
 
                 // DateTime
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
 
                 // Firebase KMM
-                implementation("dev.gitlive:firebase-auth:2.1.0")
-                implementation("dev.gitlive:firebase-firestore:2.1.0")
-                implementation("dev.gitlive:firebase-functions:2.1.0")
+                implementation("dev.gitlive:firebase-auth:2.7.0")
+                implementation("dev.gitlive:firebase-firestore:2.7.0")
+                implementation("dev.gitlive:firebase-functions:2.7.0")
 
                 // Settings
-                implementation("com.russhwolf:multiplatform-settings:1.1.1")
+                implementation("com.russhwolf:multiplatform-settings:1.3.0")
 
                 // Koin DI
                 implementation("io.insert-koin:koin-core:3.5.0")
@@ -106,19 +106,19 @@ kotlin {
 
         commonTest.dependencies {
             implementation(kotlin("test"))
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-            implementation("app.cash.turbine:turbine:1.0.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+            implementation("app.cash.turbine:turbine:1.2.1")
         }
 
         androidMain.dependencies {
             implementation("io.insert-koin:koin-android:3.5.0")
-            implementation("com.google.android.gms:play-services-location:21.3.0")
+            implementation("com.google.android.gms:play-services-location:21.4.0")
             // Ktor engine Android
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
             // Health Connect — em standby até CNPJ/conta organização disponível
             // implementation("androidx.health.connect:connect-client:1.1.0-rc01")
             // EncryptedSharedPreferences — armazenamento seguro de preferências
-            implementation("androidx.security:security-crypto:1.0.0")
+            implementation("androidx.security:security-crypto:1.1.0")
         }
 
         iosMain.dependencies {
