@@ -28,9 +28,18 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-      # 0.5 → 0.7 quebra a compilação (Clock saiu para kotlin.time.Clock). Migração planejada à
-      # parte — remover esta linha quando os imports de Clock no shared forem migrados.
-      - dependency-name: "org.jetbrains.kotlinx:kotlinx-datetime"
+      # Toolchain (Gradle, AGP, Kotlin) e bibliotecas atreladas à versão do Kotlin: fora da rotina.
+      # Kotlin 2.2 → 2.4 + AGP 9.1 → 9.5 + Gradle 9.3 → 9.8 transformam avisos de DSL obsoleta
+      # (android {}, kotlinOptions/jvmTarget) em erro de build — exige migração planejada do
+      # build.gradle.kts para o novo DSL do AGP 9 / compilerOptions, testada em Android e iOS.
+      # kotlinx-datetime 0.5 → 0.7 também quebra (Clock migrou para kotlin.time.Clock).
+      - dependency-name: "gradle-wrapper"
+      - dependency-name: "com.android.*"
+      - dependency-name: "org.jetbrains.kotlin.*"
+      - dependency-name: "org.jetbrains.kotlin:*"
+      - dependency-name: "org.jetbrains.kotlinx:*"
+      # Firebase KMM 2.1 → 2.7 acompanha o Kotlin e os pods do Firebase no iOS — vai junto da migração
+      - dependency-name: "dev.gitlive:*"
     groups:
       gradle-minor-patch:
         update-types: ["minor", "patch"]
