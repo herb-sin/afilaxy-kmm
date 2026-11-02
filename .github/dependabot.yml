@@ -1,0 +1,54 @@
+# Dependabot — avisa sobre atualizações e vulnerabilidades nas dependências.
+# Só abre pull requests: nada muda no projeto até um PR ser aprovado e mergeado.
+# Mensal e agrupado para não gastar minutos do GitHub Actions com um PR por pacote
+# (os workflows de Android, testes e deploy rodam em pull_request).
+# Alertas de segurança chegam fora desse calendário (Settings → Code security → Dependabot alerts).
+# CocoaPods (iosApp/Podfile) não é suportado pelo Dependabot — revisar manualmente.
+version: 2
+updates:
+  # Actions fixadas por SHA nos workflows — o Dependabot atualiza o SHA e o comentário da versão
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Kotlin Multiplatform / Android (gradle/libs.versions.toml)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
+    groups:
+      gradle-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/functions"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
+    groups:
+      functions-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/web-professional"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
+    groups:
+      web-professional-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/scripts"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      scripts-all:
+        patterns: ["*"]
