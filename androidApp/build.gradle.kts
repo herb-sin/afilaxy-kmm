@@ -158,7 +158,7 @@ dependencies {
     implementation("io.insert-koin:koin-androidx-compose:3.5.6")
     
     // KMM ViewModel — ALPHA-16 mantido: migração para 2.x requer refactor de API (tech debt)
-    implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16")
+    implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-21")
     
     // Firebase (Android specific) — BOM atualizado 2025-03 (era 33.0.0)
     implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
