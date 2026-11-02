@@ -95,7 +95,7 @@ kotlin {
                 implementation("io.insert-koin:koin-core:3.5.6")
 
                 // KMM-ViewModel
-                implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-16")
+                implementation("com.rickclephas.kmm:kmm-viewmodel-core:1.0.0-ALPHA-21")
 
                 // Ktor HTTP client (OpenMeteo + WAQI)
                 implementation("io.ktor:ktor-client-core:2.3.13")
