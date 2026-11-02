@@ -28,6 +28,9 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # 0.5 → 0.7 quebra a compilação (Clock saiu para kotlin.time.Clock). Migração planejada à
+      # parte — remover esta linha quando os imports de Clock no shared forem migrados.
+      - dependency-name: "org.jetbrains.kotlinx:kotlinx-datetime"
     groups:
       gradle-minor-patch:
         update-types: ["minor", "patch"]
