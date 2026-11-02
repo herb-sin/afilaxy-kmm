@@ -40,6 +40,12 @@ updates:
       - dependency-name: "org.jetbrains.kotlinx:*"
       # Firebase KMM 2.1 → 2.7 acompanha o Kotlin e os pods do Firebase no iOS — vai junto da migração
       - dependency-name: "dev.gitlive:*"
+      # Navigation 2.10+ (e o Lifecycle 2.11 que ela puxa) exige compileSdk 37, que o AGP 9.1 não
+      # suporta — também depende da migração do toolchain. Até lá, só correções da linha 2.9.x.
+      - dependency-name: "androidx.navigation:*"
+        versions: [">= 2.10.0"]
+      - dependency-name: "androidx.lifecycle:*"
+        versions: [">= 2.11.0"]
     groups:
       gradle-minor-patch:
         update-types: ["minor", "patch"]
