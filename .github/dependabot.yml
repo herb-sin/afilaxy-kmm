@@ -3,6 +3,8 @@
 # Mensal e agrupado para não gastar minutos do GitHub Actions com um PR por pacote
 # (os workflows de Android, testes e deploy rodam em pull_request).
 # Alertas de segurança chegam fora desse calendário (Settings → Code security → Dependabot alerts).
+# Atualizações major de npm/Gradle são ignoradas na rotina mensal (ver "ignore" abaixo);
+# GitHub Actions mantêm major porque costumam trazer migrações exigidas pelo próprio GitHub (ex.: Node 24).
 # CocoaPods (iosApp/Podfile) não é suportado pelo Dependabot — revisar manualmente.
 version: 2
 updates:
@@ -22,6 +24,10 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 2
+    # Major fica fora da rotina mensal: pode quebrar compatibilidade e é feito manualmente
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       gradle-minor-patch:
         update-types: ["minor", "patch"]
@@ -31,6 +37,10 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 2
+    # Major fica fora da rotina mensal: pode quebrar compatibilidade e é feito manualmente
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       functions-minor-patch:
         update-types: ["minor", "patch"]
@@ -40,6 +50,10 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 2
+    # Major fica fora da rotina mensal: pode quebrar compatibilidade e é feito manualmente
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       web-professional-minor-patch:
         update-types: ["minor", "patch"]
@@ -49,6 +63,10 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 1
+    # Major fica fora da rotina mensal: pode quebrar compatibilidade e é feito manualmente
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       scripts-all:
         patterns: ["*"]
