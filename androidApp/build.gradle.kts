@@ -142,11 +142,11 @@ dependencies {
     implementation("androidx.window:window:1.3.0")
 
     // Coil — carregamento de imagens (AsyncImage)
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     
     // Navigation Compose — atualizado 2025-03 (era 2.7.7)
-    implementation("androidx.navigation:navigation-compose:2.8.9")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.1")
@@ -169,24 +169,24 @@ dependencies {
     
     // Google Maps
     implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.maps.android:maps-compose:4.3.3")
-    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.maps.android:maps-compose:4.4.2")
+    implementation("com.google.android.gms:play-services-location:21.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     
     // Biometric
     implementation("androidx.biometric:biometric:1.1.0")
 
     // EncryptedSharedPreferences — armazenamento seguro de preferências
-    implementation("androidx.security:security-crypto:1.0.0")
+    implementation("androidx.security:security-crypto:1.1.0")
 
     // multiplatform-settings — necessário para injetar Settings no AnalyticsManager
-    implementation("com.russhwolf:multiplatform-settings:1.1.1")
+    implementation("com.russhwolf:multiplatform-settings:1.3.0")
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     // WorkManager — agendamento de check-ins matinal e noturno
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
 
     // Health Connect — em standby até CNPJ/conta organização disponível
     // implementation("androidx.health.connect:connect-client:1.1.0-rc01")
@@ -200,7 +200,7 @@ dependencies {
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     
     // Accompanist Permissions
-    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
     
     // Testing
     testImplementation("org.jetbrains.kotlin:kotlin-test")
