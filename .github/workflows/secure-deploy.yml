@@ -117,7 +117,7 @@ jobs:
       uses: FirebaseExtended/action-hosting-deploy@092436dca3ec6dacb231d965ae56f7ff6c09f258 # v0
       with:
         repoToken: '${{ secrets.GITHUB_TOKEN }}'
-        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_AFILAXY_APP }}'
         projectId: afilaxy-app
         channelId: live
         # Versão fixa: '@latest' já quebrou o deploy (15.34.1 passou a exigir serviceusage) e
