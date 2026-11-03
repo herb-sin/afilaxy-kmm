@@ -2,7 +2,10 @@ import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onTaskDispatched } from 'firebase-functions/v2/tasks';
+import { defineSecret } from 'firebase-functions/params';
 import * as admin from 'firebase-admin';
+import { createHmac } from 'node:crypto';
+import * as nodemailer from 'nodemailer';
 import { getFunctions } from 'firebase-admin/functions';
 // firebase-admin v14: firestore/messaging saíram do export raiz — import dos submódulos
 import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
@@ -993,7 +996,11 @@ const RATE_LIMIT_MIN_INTERVAL_MS = 5_000;
 const RATE_LIMIT_MAX_PER_WINDOW = 20;
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-async function enforceRateLimit(uid: string, action: string): Promise<void> {
+async function enforceRateLimit(
+    uid: string,
+    action: string,
+    maxPerWindow: number = RATE_LIMIT_MAX_PER_WINDOW,
+): Promise<void> {
     const ref = getFirestore().collection('rate_limits').doc(`${action}_${uid}`);
     const now = Date.now();
     await getFirestore().runTransaction(async (tx) => {
@@ -1012,7 +1019,7 @@ async function enforceRateLimit(uid: string, action: string): Promise<void> {
             count = 0;
         }
 
-        if (count >= RATE_LIMIT_MAX_PER_WINDOW) {
+        if (count >= maxPerWindow) {
             throw new HttpsError('resource-exhausted', 'Limite diário de chamadas atingido.');
         }
 
@@ -1186,5 +1193,99 @@ export const onHelperWrite = onDocumentWritten(
         } catch (error) {
             console.error('Erro ao atualizar geohash do helper:', error);
         }
+    }
+);
+// ============================================
+// LEADS DO SITE (afilaxy.com/profissionais)
+// Substitui a gravação direta do site em 'leads' (que exigia login anônimo e
+// App Check/reCAPTCHA — os dois derrubaram o formulário sem ninguém perceber).
+// Aqui o servidor valida, limita abuso por IP, grava com o Admin SDK e avisa
+// por e-mail — se o formulário parar de chegar, a falta dos avisos denuncia.
+// ============================================
+const LEAD_NOTIFY_ADDRESS = 'afilaxy@gmail.com';
+// Senha de app do Gmail de afilaxy@gmail.com (não a senha da conta).
+// Configurar com: firebase functions:secrets:set GMAIL_APP_PASSWORD
+const gmailAppPassword = defineSecret('GMAIL_APP_PASSWORD');
+const LEAD_MAX_PER_DAY_PER_IP = 5;
+
+function requireText(value: unknown, field: string, min: number, max: number): string {
+    const text = typeof value === 'string' ? value.trim() : '';
+    if (text.length < min || text.length > max) {
+        throw new HttpsError('invalid-argument', `Campo inválido: ${field}`);
+    }
+    return text;
+}
+
+function optionalText(value: unknown, max: number): string {
+    return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+export const submitLead = onCall(
+    {
+        secrets: [gmailAppPassword],
+        // Só o site chama esta função — outros domínios recebem erro de CORS no navegador.
+        cors: ['https://afilaxy.com', 'https://www.afilaxy.com', 'http://localhost:5173'],
+    },
+    async (request) => {
+        const data = request.data ?? {};
+        const lead = {
+            name: requireText(data.name, 'nome', 2, 200),
+            email: requireText(data.email, 'e-mail', 5, 100),
+            phone: optionalText(data.phone, 30),
+            crm: optionalText(data.crm, 20),
+            cnpj: optionalText(data.cnpj, 20),
+            plan: requireText(data.plan, 'plano', 1, 200),
+            type: data.type === 'clinica' ? 'clinica' : 'medico',
+            segment: optionalText(data.segment, 100),
+        };
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lead.email)) {
+            throw new HttpsError('invalid-argument', 'Campo inválido: e-mail');
+        }
+
+        // Limite por IP sem guardar o IP: HMAC com um segredo do servidor, então o
+        // valor em 'rate_limits' não pode ser revertido para o IP real (LGPD).
+        // Atrás do balanceador do Google, o IP do visitante é o primeiro de X-Forwarded-For.
+        const forwarded = request.rawRequest.headers['x-forwarded-for'];
+        const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim()
+            || request.rawRequest.ip
+            || 'desconhecido';
+        const ipKey = createHmac('sha256', gmailAppPassword.value()).update(ip).digest('hex').slice(0, 32);
+        await enforceRateLimit(ipKey, 'submitLead', LEAD_MAX_PER_DAY_PER_IP);
+
+        const ref = await getFirestore().collection('leads').add({
+            ...lead,
+            source: 'site',
+            createdAt: FieldValue.serverTimestamp(),
+        });
+
+        // Falha no e-mail não pode perder o lead — ele já está gravado.
+        try {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: { user: LEAD_NOTIFY_ADDRESS, pass: gmailAppPassword.value() },
+            });
+            await transporter.sendMail({
+                from: `Afilaxy <${LEAD_NOTIFY_ADDRESS}>`,
+                to: LEAD_NOTIFY_ADDRESS,
+                replyTo: lead.email,
+                subject: `Novo interessado: ${lead.name} (${lead.plan})`,
+                text: [
+                    `Nome: ${lead.name}`,
+                    `E-mail: ${lead.email}`,
+                    `Telefone: ${lead.phone || '-'}`,
+                    `CRM: ${lead.crm || '-'}`,
+                    `CNPJ: ${lead.cnpj || '-'}`,
+                    `Plano: ${lead.plan}`,
+                    `Tipo: ${lead.type}`,
+                    `Segmento: ${lead.segment || '-'}`,
+                    '',
+                    `Documento: leads/${ref.id}`,
+                ].join('\n'),
+            });
+        } catch (error) {
+            console.error(`submitLead: lead ${ref.id} gravado, mas o e-mail de aviso falhou:`, error);
+        }
+
+        return { ok: true };
     }
 );

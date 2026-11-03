@@ -155,13 +155,10 @@ service cloud.firestore {
     }
 
     // Leads collection (website interest forms)
+    // Leads do site só entram pela Cloud Function submitLead (Admin SDK), que valida,
+    // limita abuso por IP e avisa por e-mail. Nenhum acesso direto de clientes.
     match /leads/{leadId} {
-      allow create: if isAuthenticated()
-        && isValidString(request.resource.data.name, 2, 200)
-        && isValidString(request.resource.data.email, 5, 100)
-        && isValidString(request.resource.data.plan, 1, 200)
-        && request.resource.data.type in ['medico', 'clinica'];
-      allow read, update, delete: if false;
+      allow read, write: if false;
     }
 
     // Check-ins da Agenda de Saúde — cada usuário lê/escreve apenas os seus
