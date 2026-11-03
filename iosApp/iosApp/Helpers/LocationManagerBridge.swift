@@ -148,6 +148,14 @@ final class LocationManagerBridge {
             // Firestore no iOS devolve esse null como NSNull, não como o nil do Swift.
             // "pingDoc.data()?["helperId"] == nil" nunca era true por causa disso, fazendo
             // TODA emergência (mesmo a primeira tentativa de aceite) cair no guard abaixo.
+            // Mesma checagem do Android (EmergencyRepositoryImpl.acceptEmergency): quem pediu
+            // ajuda não pode aceitar o próprio pedido. As regras do Firestore também barram.
+            if (pingDoc.data()?["requesterId"] as? String) == uid {
+                let e = NSError(domain: "Afilaxy", code: 403,
+                    userInfo: [NSLocalizedDescriptionKey: "Não é possível aceitar sua própria emergência"])
+                errorPointer?.pointee = e
+                return nil
+            }
             guard pingDoc.exists,
                   let active = pingDoc.data()?["active"] as? Bool, active,
                   let status = pingDoc.data()?["status"] as? String, status == "waiting",

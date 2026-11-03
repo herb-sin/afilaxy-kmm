@@ -348,18 +348,25 @@ export const onEmergencyCreated = onDocumentCreated(
                 return;
             }
 
-            // Buscar tokens FCM dos helpers próximos na coleção 'users'
-            const tokens: string[] = [];
+            // Token do próprio requester: um mesmo aparelho pode ter ficado registrado em
+            // outra conta (troca de conta sem limpeza do token) — nunca notificar o aparelho
+            // de quem pediu ajuda, mesmo que o token esteja gravado no perfil de um helper.
+            const requesterDoc = await getFirestore().collection('users').doc(emergency.requesterId).get();
+            const requesterToken: string | undefined = requesterDoc.data()?.fcmToken;
+
+            // Buscar tokens FCM dos helpers próximos na coleção 'users' (Set: sem duplicatas)
+            const tokenSet = new Set<string>();
             const tokenFetches = nearbyHelpers.map(async (helper) => {
                 try {
                     const userDoc = await getFirestore().collection('users').doc(helper.id).get();
                     const fcmToken = userDoc.data()?.fcmToken;
-                    if (fcmToken) tokens.push(fcmToken);
+                    if (fcmToken && fcmToken !== requesterToken) tokenSet.add(fcmToken);
                 } catch (e) {
                     console.log(`Erro ao buscar token do helper ${helper.id}:`, e);
                 }
             });
             await Promise.all(tokenFetches);
+            const tokens = [...tokenSet];
 
             if (tokens.length === 0) {
                 console.log('Nenhum helper próximo com token FCM');
@@ -1287,5 +1294,41 @@ export const submitLead = onCall(
         }
 
         return { ok: true };
+    }
+);
+
+// ============================================
+// FCM TOKEN ÚNICO POR APARELHO
+// O token de notificação fica num campo único users/{uid}.fcmToken e o logout não o
+// apagava. Ao trocar de conta no mesmo aparelho, as duas contas ficavam com o mesmo
+// token — e as notificações de uma (com o nome de quem pede ajuda) iam para o aparelho
+// da outra. Sempre que um perfil passa a ter um token, ele é removido dos demais.
+// Server-side de propósito: corrige também as versões do app já instaladas.
+// ============================================
+export const onUserFcmTokenWrite = onDocumentWritten(
+    'users/{userId}',
+    async (event) => {
+        const before = event.data?.before?.data();
+        const after = event.data?.after?.data();
+        const token: string | undefined = after?.fcmToken;
+        if (!token || token === before?.fcmToken) return;
+
+        const userId = event.params.userId;
+        const others = await getFirestore()
+            .collection('users')
+            .where('fcmToken', '==', token)
+            .get();
+
+        const batch = getFirestore().batch();
+        let removed = 0;
+        for (const doc of others.docs) {
+            if (doc.id === userId) continue;
+            batch.update(doc.ref, { fcmToken: FieldValue.delete() });
+            removed++;
+        }
+        if (removed > 0) {
+            await batch.commit();
+            console.log(`onUserFcmTokenWrite: token de ${userId} removido de ${removed} outro(s) perfil(is)`);
+        }
     }
 );

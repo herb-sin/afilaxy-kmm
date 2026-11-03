@@ -69,9 +69,11 @@ service cloud.firestore {
           || (request.auth.uid == resource.data.helperId
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['status', 'active', 'resolvedAt']))
-          // Helper a aceitar: status waiting → matched, campos restritos
+          // Helper a aceitar: status waiting → matched, campos restritos.
+          // Quem pediu ajuda nunca pode aceitar o próprio pedido (o iOS aceitava).
           || (resource.data.status == 'waiting'
               && resource.data.active == true
+              && request.auth.uid != resource.data.requesterId
               && request.resource.data.helperId == request.auth.uid
               && request.resource.data.status == 'matched'
               && request.resource.data.diff(resource.data).affectedKeys()
