@@ -1,6 +1,7 @@
 import Foundation
 import shared
 import FirebaseAuth
+import FirebaseFirestore
 import Combine
 
 // MARK: - AuthViewModelWrapper
@@ -26,7 +27,25 @@ class AuthViewModelWrapper: ObservableObject {
     var vm: AuthViewModel? { viewModel }
 
     func signOutSwift() {
-        try? FirebaseAuth.Auth.auth().signOut()
+        // Apaga o fcmToken (e o sessionId) do perfil ANTES de deslogar — a escrita precisa
+        // da sessão ativa para passar nas regras. Sem isso, este aparelho seguia recebendo
+        // as notificações da conta depois do logout. Best-effort: desloga mesmo sem rede,
+        // no máximo 3 s depois (o servidor também remove tokens repetidos entre contas).
+        guard let uid = FirebaseAuth.Auth.auth().currentUser?.uid else {
+            try? FirebaseAuth.Auth.auth().signOut()
+            return
+        }
+        var didSignOut = false
+        let finish = {
+            guard !didSignOut else { return }
+            didSignOut = true
+            try? FirebaseAuth.Auth.auth().signOut()
+        }
+        Firestore.firestore().collection("users").document(uid).updateData([
+            "fcmToken": FieldValue.delete(),
+            "sessionId": ""
+        ]) { _ in DispatchQueue.main.async(execute: finish) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: finish)
     }
 }
 

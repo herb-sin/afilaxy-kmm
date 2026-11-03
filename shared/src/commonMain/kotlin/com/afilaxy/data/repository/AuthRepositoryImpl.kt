@@ -121,8 +121,12 @@ class AuthRepositoryImpl(
             try {
                 // Timeout defensivo: best-effort, não pode travar o sign-out se a rede
                 // estiver degradada (ex.: stream do Firestore caiu — visto em testes no emulador).
+                // fcmToken também sai: sem isso, este aparelho seguia recebendo as notificações
+                // desta conta depois do logout (e de outra conta, se alguém logasse em seguida).
                 withTimeoutOrNull(3_000) {
-                    firestore.collection("users").document(uid).update(mapOf("sessionId" to ""))
+                    firestore.collection("users").document(uid).update(
+                        mapOf("sessionId" to "", "fcmToken" to FieldValue.delete)
+                    )
                 }
             } catch (e: Exception) {
                 Logger.e("AuthRepository", "Falha ao limpar sessionId no logout: ${e.message}", e)
