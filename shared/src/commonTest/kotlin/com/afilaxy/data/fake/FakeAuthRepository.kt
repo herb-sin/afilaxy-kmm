@@ -48,6 +48,16 @@ class FakeAuthRepository(
     override suspend fun logout() {
         currentUser = null
     }
+
+    var deleteAccountResult: Result<Unit> = Result.success(Unit)
+    var deleteAccountCalls = 0
+        private set
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        deleteAccountCalls++
+        if (deleteAccountResult.isSuccess) currentUser = null
+        return deleteAccountResult
+    }
     
     override suspend fun getCurrentUser(): User? {
         return currentUser

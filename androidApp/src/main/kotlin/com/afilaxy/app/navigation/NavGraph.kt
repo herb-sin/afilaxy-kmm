@@ -375,6 +375,20 @@ fun NavGraph(
             ExportDataScreen(onNavigateBack = { navController.popBackStack() })
         }
 
+        composable(AppRoutes.DELETE_ACCOUNT) {
+            val emergencyState = emergencyViewModel?.state?.collectAsStateWithLifecycle()
+            DeleteAccountScreen(
+                hasActiveEmergency = emergencyState?.value?.hasActiveEmergency == true,
+                onNavigateBack = { navController.popBackStack() },
+                // Mesmo cuidado do logout: encerra observers/modo ajudante enquanto a sessão vale.
+                onBeforeDelete = { emergencyViewModel?.onLogout() },
+                onDeleteAccount = { authRepository.deleteAccount() },
+                onDeleted = {
+                    navController.navigate(AppRoutes.LOGIN) { popUpTo(0) { inclusive = true } }
+                }
+            )
+        }
+
         composable(
             route = AppRoutes.CHECK_IN,
             arguments = listOf(
@@ -418,7 +432,10 @@ fun NavGraph(
                 ProfileScreenNew(
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
-                    onNavigateToAct = { navController.navigate(AppRoutes.ACT_TEST) }
+                    onNavigateToAct = { navController.navigate(AppRoutes.ACT_TEST) },
+                    onNavigateToPrivacy = { navController.navigate(AppRoutes.PRIVACY) },
+                    onNavigateToExportData = { navController.navigate(AppRoutes.EXPORT_DATA) },
+                    onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) }
                 )
             }
         }

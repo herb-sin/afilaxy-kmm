@@ -34,7 +34,7 @@ fun sharedModule(): Module = module {
     single { Firebase.functions }
 
     // Repositories
-    single<AuthRepository> { AuthRepositoryImpl(get(), get(), get()) }
+    single<AuthRepository> { AuthRepositoryImpl(get(), get(), get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get()) }
     single<EmergencyRepository> { EmergencyRepositoryImpl(get(), get(), get(), get()) }
     single<ReviewRepository> { ReviewRepositoryImpl(get(), get()) }
