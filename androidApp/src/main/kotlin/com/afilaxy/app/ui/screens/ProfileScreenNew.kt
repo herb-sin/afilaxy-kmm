@@ -46,6 +46,9 @@ fun ProfileScreenNew(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToAct: () -> Unit = {},
+    onNavigateToPrivacy: () -> Unit = {},
+    onNavigateToExportData: () -> Unit = {},
+    onNavigateToDeleteAccount: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -257,6 +260,15 @@ fun ProfileScreenNew(
         // ── Aparência ─────────────────────────────────────────────────────────────────────────
         item {
             ThemePreferenceCard()
+        }
+
+        // ── Privacidade e conta (LGPD: acesso, portabilidade e exclusão) ──────────
+        item {
+            PrivacyAndAccountCard(
+                onNavigateToPrivacy = onNavigateToPrivacy,
+                onNavigateToExportData = onNavigateToExportData,
+                onNavigateToDeleteAccount = onNavigateToDeleteAccount
+            )
         }
 
     }
@@ -757,6 +769,60 @@ private fun ThemePreferenceCard() {
                     }
             }
         }
+    }
+}
+
+// ── PrivacyAndAccountCard ────────────────────────────────────────────────────────
+
+@Composable
+private fun PrivacyAndAccountCard(
+    onNavigateToPrivacy: () -> Unit,
+    onNavigateToExportData: () -> Unit,
+    onNavigateToDeleteAccount: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            Text(
+                "Privacidade e conta",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            PrivacyActionRow(Icons.Default.Lock, "Política de Privacidade", onClick = onNavigateToPrivacy)
+            PrivacyActionRow(Icons.Default.Share, "Exportar meus dados", onClick = onNavigateToExportData)
+            PrivacyActionRow(
+                Icons.Default.Delete, "Excluir minha conta",
+                color = MaterialTheme.colorScheme.error,
+                onClick = onNavigateToDeleteAccount
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrivacyActionRow(
+    icon: ImageVector,
+    label: String,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = color, modifier = Modifier.weight(1f))
     }
 }
 

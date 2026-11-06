@@ -7,6 +7,11 @@ interface AuthRepository {
     suspend fun login(email: String, password: String): Result<User>
     suspend fun register(email: String, password: String, name: String): Result<User>
     suspend fun logout()
+    /**
+     * Exclui a conta e todos os dados do usuário (Cloud Function deleteAccount) e encerra a
+     * sessão local. Irreversível. Em caso de falha nada é perdido e a sessão continua ativa.
+     */
+    suspend fun deleteAccount(): Result<Unit>
     suspend fun getCurrentUser(): User?
     fun getCurrentUserId(): String?
     suspend fun updateFcmToken(token: String)

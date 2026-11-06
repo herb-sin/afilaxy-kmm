@@ -7,43 +7,13 @@ struct SettingsView: View {
     @EnvironmentObject var container: AppContainer
     @State private var showLogoutAlert = false
     @State private var showExportData = false
-    @State private var notificationsEnabled = true
-    @State private var helperModeAutoActivate = false
-    @State private var emergencyRadius = 5.0
+    @State private var showDeleteAccount = false
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 // Profile Summary Card
                 ProfileSummaryCard()
-                
-                // Preferences Section
-                SettingsSectionCard(title: "Preferências", icon: "slider.horizontal.3") {
-                    VStack(spacing: 12) {
-                        SettingsToggleRow(
-                            title: "Notificações",
-                            subtitle: "Receber alertas de emergência",
-                            icon: "bell.fill",
-                            isOn: $notificationsEnabled
-                        )
-                        
-                        SettingsToggleRow(
-                            title: "Modo Helper Automático",
-                            subtitle: "Ativar automaticamente ao abrir o app",
-                            icon: "heart.fill",
-                            isOn: $helperModeAutoActivate
-                        )
-                        
-                        SettingsSliderRow(
-                            title: "Raio de Busca",
-                            subtitle: "Distância para encontrar helpers",
-                            icon: "location.circle.fill",
-                            value: $emergencyRadius,
-                            range: 1...10,
-                            unit: "km"
-                        )
-                    }
-                }
                 
                 // Account Section
                 SettingsSectionCard(title: "Conta", icon: "person.circle.fill") {
@@ -68,6 +38,14 @@ struct SettingsView: View {
                             icon: "square.and.arrow.up.fill",
                             action: { showExportData = true }
                         )
+
+                        SettingsActionRow(
+                            title: "Excluir Conta",
+                            subtitle: "Apagar sua conta e todos os seus dados",
+                            icon: "trash.fill",
+                            isDestructive: true,
+                            action: { showDeleteAccount = true }
+                        )
                     }
                 }
                 
@@ -86,20 +64,6 @@ struct SettingsView: View {
                             subtitle: "Informações sobre o aplicativo",
                             icon: "info.circle.fill",
                             destination: .about
-                        )
-                        
-                        SettingsActionRow(
-                            title: "Avaliar App",
-                            subtitle: "Deixe sua avaliação na App Store",
-                            icon: "star.fill",
-                            action: { /* Rate app */ }
-                        )
-                        
-                        SettingsActionRow(
-                            title: "Compartilhar",
-                            subtitle: "Indique o Afilaxy para amigos",
-                            icon: "square.and.arrow.up.fill",
-                            action: { /* Share app */ }
                         )
                     }
                 }
@@ -162,6 +126,9 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showExportData) {
             ExportDataView()
+        }
+        .sheet(isPresented: $showDeleteAccount) {
+            DeleteAccountView()
         }
     }
     

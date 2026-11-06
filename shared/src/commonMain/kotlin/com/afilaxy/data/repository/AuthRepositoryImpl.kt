@@ -10,6 +10,7 @@ import dev.gitlive.firebase.auth.GoogleAuthProvider
 import dev.gitlive.firebase.auth.OAuthProvider
 import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -27,7 +28,8 @@ private const val PREF_SESSION_ID = "session_id"
 class AuthRepositoryImpl(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val preferences: PreferencesRepository
+    private val preferences: PreferencesRepository,
+    private val functions: FirebaseFunctions
 ) : AuthRepository {
     
     override suspend fun login(email: String, password: String): Result<User> {
@@ -139,6 +141,25 @@ class AuthRepositoryImpl(
         }
     }
     
+    override suspend fun deleteAccount(): Result<Unit> {
+        return try {
+            // A função apaga os dados e a conta no servidor. Depois disso o users/{uid} não
+            // existe mais, então não passa pelo logout() (que tentaria atualizar esse doc):
+            // só limpa a sessão local.
+            functions.httpsCallable("deleteAccount").invoke()
+            preferences.putString(PREF_SESSION_ID, "")
+            try {
+                auth.signOut()
+            } catch (e: Exception) {
+                Logger.e("AuthRepository", "Falha ao encerrar sessão após exclusão: ${e.message}", e)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Logger.e("AuthRepository", "Falha ao excluir conta: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     override suspend fun getCurrentUser(): User? {
         val firebaseUser = auth.currentUser ?: return null
         return try {

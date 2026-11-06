@@ -10,6 +10,8 @@ import { getFunctions } from 'firebase-admin/functions';
 // firebase-admin v14: firestore/messaging saíram do export raiz — import dos submódulos
 import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getStorage } from 'firebase-admin/storage';
+import { getAuth } from 'firebase-admin/auth';
 import * as geofireCommon from 'geofire-common';
 
 // Inicializar Firebase Admin
@@ -1332,3 +1334,158 @@ export const onUserFcmTokenWrite = onDocumentWritten(
         }
     }
 );
+
+// ============================================
+// EXCLUSÃO DE CONTA (LGPD art. 18, VI; Google Play e App Store exigem no app)
+// Apaga, em cascata, tudo o que pertence ao usuário e por último a conta do
+// Firebase Authentication. É idempotente: se falhar no meio, o usuário ainda
+// está logado e pode tentar de novo; o que já foi apagado só não é achado.
+//
+// Emergências:
+//   - em que o usuário pediu ajuda → o pedido e o chat inteiro são apagados
+//     (delete direto, sem passar por active=false, para o onEmergencyFinalized
+//     não recriar user_stats do usuário que está sendo apagado);
+//   - em que o usuário atendeu → o registro fica (é histórico de quem pediu
+//     ajuda), sem helperId/helperName, e as mensagens dele no chat são apagadas.
+//     Se ainda estava ativa, é cancelada.
+// Assinatura de profissional: cancelada no Stripe ANTES de apagar qualquer
+// coisa — se o cancelamento falhar, nada é apagado (a pessoa não pode continuar
+// sendo cobrada sem ter mais a conta).
+// Sign in with Apple: a revogação do token (exigência da App Store) é feita
+// no app iOS antes de chamar esta função — precisa de um authorizationCode novo.
+// ============================================
+
+// Coleções em que o documento pertence ao usuário pelo campo indicado.
+const OWNED_BY_FIELD: Array<[collection: string, field: string]> = [
+    ['medications', 'userId'],
+    ['emergency_contacts', 'userId'],
+    ['medical_exams', 'userId'],
+    ['notifications', 'userId'],
+    ['nps_responses', 'userId'],
+    ['consultation_interest', 'userId'],
+    ['ratings', 'userId'],
+    ['ratings', 'reviewedId'],
+    ['reviews', 'reviewerId'],
+    ['reviews', 'reviewedId'],
+];
+
+// Documentos com id = uid (recursiveDelete também apaga as subcoleções:
+// checkins/{uid}/responses, act/{uid}/results, risk_scores/{uid}/snapshots).
+const OWNED_BY_ID = [
+    'users', 'helpers', 'medical_profiles', 'checkins', 'act', 'risk_scores',
+    'user_stats', 'health_professionals', 'health_professionals_billing',
+];
+
+// Prefixos do Storage com arquivos do usuário (ver storage.rules).
+const OWNED_STORAGE_PREFIXES = (uid: string) => [`users/${uid}/`, `professionals/${uid}/`];
+
+async function cancelStripeSubscriptionIfAny(uid: string): Promise<void> {
+    const billing = await getFirestore().collection('health_professionals_billing').doc(uid).get();
+    const subscriptionId: string | undefined = billing.data()?.stripeSubscriptionId;
+    if (!subscriptionId) return;
+    try {
+        // Numa nova tentativa (exclusão que falhou depois do cancelamento) a assinatura
+        // já está cancelada — não cancela de novo.
+        const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
+        if (subscription.status === 'canceled') return;
+        await getStripe().subscriptions.cancel(subscriptionId);
+    } catch (error: any) {
+        // Já cancelada ou inexistente no Stripe: nada a cobrar, segue a exclusão.
+        if (error?.code === 'resource_missing') return;
+        console.error(`deleteAccount: falha ao cancelar assinatura de ${uid}:`, error?.message);
+        throw new HttpsError('unavailable',
+            'Não foi possível cancelar sua assinatura agora. Nada foi apagado. Tente novamente em alguns minutos.');
+    }
+}
+
+// Aplica exclusões e atualizações em lotes (limite do Firestore: 500 por lote).
+// Diferente do BulkWriter, uma falha interrompe a exclusão com erro — a conta de
+// login só é apagada se todos os dados tiverem saído.
+async function commitInBatches(
+    deletes: Map<string, FirebaseFirestore.DocumentReference>,
+    updates: Array<[FirebaseFirestore.DocumentReference, Record<string, any>]>,
+): Promise<void> {
+    const db = getFirestore();
+    const ops: Array<(b: FirebaseFirestore.WriteBatch) => void> = [
+        ...updates.map(([ref, data]) => (b: FirebaseFirestore.WriteBatch) => { b.update(ref, data); }),
+        ...[...deletes.values()].map((ref) => (b: FirebaseFirestore.WriteBatch) => { b.delete(ref); }),
+    ];
+    for (let i = 0; i < ops.length; i += 400) {
+        const batch = db.batch();
+        ops.slice(i, i + 400).forEach((op) => op(batch));
+        await batch.commit();
+    }
+}
+
+export const deleteAccount = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Autenticação necessária');
+    }
+    const uid = request.auth.uid;
+    const db = getFirestore();
+
+    await cancelStripeSubscriptionIfAny(uid);
+
+    // Map por caminho: o mesmo documento pode aparecer em mais de uma consulta
+    // (ex.: avaliação com userId e reviewedId iguais) e não pode ser escrito 2x.
+    const deletes = new Map<string, FirebaseFirestore.DocumentReference>();
+    const markDelete = (ref: FirebaseFirestore.DocumentReference) => deletes.set(ref.path, ref);
+    const updates: Array<[FirebaseFirestore.DocumentReference, Record<string, any>]> = [];
+    const emergencies = db.collection('emergency_requests');
+
+    // 1. Emergências em que o usuário pediu ajuda: pedido + chat inteiro.
+    const asRequester = await emergencies.where('requesterId', '==', uid).get();
+    for (const doc of asRequester.docs) {
+        await db.recursiveDelete(db.collection('emergency_chats').doc(doc.id));
+        markDelete(doc.ref);
+    }
+
+    // 2. Emergências em que o usuário atendeu: anonimiza e apaga só as mensagens dele.
+    //    Pula as que ele mesmo pediu (o iOS antigo deixava aceitar o próprio pedido) —
+    //    essas já saem inteiras no passo 1.
+    const asHelper = await emergencies.where('helperId', '==', uid).get();
+    let anonymized = 0;
+    for (const doc of asHelper.docs) {
+        if (doc.data().requesterId === uid) continue;
+        const update: Record<string, any> = {
+            helperId: FieldValue.delete(),
+            helperName: 'Conta excluída',
+        };
+        if (doc.data().active === true) {
+            update.active = false;
+            update.status = 'cancelled';
+        }
+        updates.push([doc.ref, update]);
+        anonymized++;
+
+        const ownMessages = await db.collection('emergency_chats').doc(doc.id)
+            .collection('messages').where('senderId', '==', uid).get();
+        ownMessages.docs.forEach((m) => markDelete(m.ref));
+    }
+
+    // 3. Documentos ligados ao usuário por campo.
+    for (const [collection, field] of OWNED_BY_FIELD) {
+        const snap = await db.collection(collection).where(field, '==', uid).get();
+        snap.docs.forEach((d) => markDelete(d.ref));
+    }
+    markDelete(db.collection('rate_limits').doc(`getNearbyHelpers_${uid}`));
+
+    await commitInBatches(deletes, updates);
+
+    // 4. Documentos com id = uid, com subcoleções.
+    for (const collection of OWNED_BY_ID) {
+        await db.recursiveDelete(db.collection(collection).doc(uid));
+    }
+
+    // 5. Arquivos (fotos de perfil).
+    const bucket = getStorage().bucket();
+    for (const prefix of OWNED_STORAGE_PREFIXES(uid)) {
+        await bucket.deleteFiles({ prefix });
+    }
+
+    // 6. Por último, a conta de login — antes disso o usuário ainda pode tentar de novo.
+    await getAuth().deleteUser(uid);
+
+    console.log(`deleteAccount: conta ${uid} excluída (${asRequester.size} pedido(s), ${anonymized} atendimento(s) anonimizado(s))`);
+    return { deleted: true };
+});

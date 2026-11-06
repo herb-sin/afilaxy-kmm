@@ -211,6 +211,17 @@ struct ProfileView: View {
                         Image(systemName: "chevron.right").font(.caption)
                     }.foregroundColor(.afiPrimary).padding(.vertical, 2)
                 }
+
+                Divider()
+                // Configurações: privacidade, exportar dados e excluir conta (LGPD / App Store 5.1.1(v))
+                NavigationLink(value: AppRoute.settings) {
+                    HStack {
+                        Image(systemName: "gearshape.fill").font(.caption)
+                        Text("Configurações e privacidade").font(.subheadline)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption)
+                    }.foregroundColor(.afiPrimary).padding(.vertical, 2)
+                }
             }
         }
     }

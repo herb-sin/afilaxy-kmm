@@ -23,6 +23,7 @@ object AppRoutes {
     const val HELP = "help"
     const val HEALTH_REPORT = "health_report"
     const val EXPORT_DATA = "export_data"
+    const val DELETE_ACCOUNT = "delete_account"
     const val ACT_TEST = "act_test"
     const val ACT_HISTORY = "act_history"
 
