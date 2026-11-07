@@ -23,6 +23,12 @@ struct ProfileView: View {
     @State private var hasWheelchair = false
     @State private var hasLowVision = false
     @State private var hasSpecialCondition = false
+    // Crises graves (GINA): a data só é renovada quando a pessoa mexe/confirma a
+    // contagem, porque ela cobre os 12 meses anteriores à data em que foi informada.
+    @State private var severeCount = 0
+    @State private var severeTouched = false
+    @State private var severeUpdatedAt: Int64 = 0
+    @State private var everIcu = false
     @State private var showPhotoComingSoon = false
 
     var body: some View {
@@ -121,6 +127,8 @@ struct ProfileView: View {
                 hasInhalantAllergy: $hasInhalantAllergy,
                 hasWheelchair: $hasWheelchair, hasLowVision: $hasLowVision,
                 hasSpecialCondition: $hasSpecialCondition,
+                severeCount: $severeCount, severeTouched: $severeTouched,
+                severeUpdatedAt: severeUpdatedAt, everIcu: $everIcu,
                 onSave: saveProfile
             )
         }
@@ -246,6 +254,10 @@ struct ProfileView: View {
         hasWheelchair = profile.healthData?.hasWheelchair ?? false
         hasLowVision = profile.healthData?.hasLowVision ?? false
         hasSpecialCondition = profile.healthData?.hasSpecialCondition ?? false
+        severeCount = Int(profile.healthData?.severeExacerbations12m ?? 0)
+        severeTouched = false
+        severeUpdatedAt = profile.healthData?.severeExacerbationsUpdatedAt ?? 0
+        everIcu = profile.healthData?.everIcuOrIntubated ?? false
     }
 
     private func saveProfile() {
@@ -278,6 +290,9 @@ struct ProfileView: View {
                     hasObesity: hasObesity,
                     hasFoodAllergy: hasFoodAllergy, hasNsaidAllergy: hasNsaidAllergy,
                     hasInhalantAllergy: hasInhalantAllergy,
+                    severeExacerbations12m: Int32(severeCount),
+                    severeExacerbationsUpdatedAt: severeTouched ? nowMs() : (profile.healthData?.severeExacerbationsUpdatedAt ?? 0),
+                    everIcuOrIntubated: everIcu,
                     hasWheelchair: hasWheelchair, hasLowVision: hasLowVision,
                     hasSpecialCondition: hasSpecialCondition
                 ),
@@ -300,6 +315,9 @@ struct ProfileView: View {
                     hasObesity: hasObesity,
                     hasFoodAllergy: hasFoodAllergy, hasNsaidAllergy: hasNsaidAllergy,
                     hasInhalantAllergy: hasInhalantAllergy,
+                    severeExacerbations12m: Int32(severeCount),
+                    severeExacerbationsUpdatedAt: severeTouched ? nowMs() : 0,
+                    everIcuOrIntubated: everIcu,
                     hasWheelchair: hasWheelchair, hasLowVision: hasLowVision,
                     hasSpecialCondition: hasSpecialCondition
                 ),
@@ -313,6 +331,8 @@ struct ProfileView: View {
         container.profile.vm?.updateProfile(profile: updated)
         showEditSheet = false
     }
+
+    private func nowMs() -> Int64 { Int64(Date().timeIntervalSince1970 * 1000) }
 
     private func split(_ s: String) -> [String] {
         s.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
@@ -397,7 +417,30 @@ struct EditProfileSheet: View {
     @Binding var hasWheelchair: Bool
     @Binding var hasLowVision: Bool
     @Binding var hasSpecialCondition: Bool
+    @Binding var severeCount: Int
+    @Binding var severeTouched: Bool
+    let severeUpdatedAt: Int64
+    @Binding var everIcu: Bool
     let onSave: () -> Void
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "pt_BR")
+        f.dateFormat = "dd/MM/yyyy"
+        return f
+    }()
+
+    /// Mexer na contagem marca como "informado hoje" (ver ProfileView.saveProfile).
+    private var severeCountBinding: Binding<Int> {
+        Binding(get: { severeCount }, set: { severeCount = $0; severeTouched = true })
+    }
+
+    /// Contagem informada há 12 meses ou mais já não cobre o último ano.
+    private var severeIsStale: Bool {
+        guard severeUpdatedAt > 0, !severeTouched else { return false }
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        return nowMs - severeUpdatedAt >= 365 * 24 * 60 * 60 * 1000
+    }
 
     var body: some View {
         NavigationStack {
@@ -421,6 +464,33 @@ struct EditProfileSheet: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
+                    }
+
+                    // Crises graves (GINA) — corticoide oral ≥3 dias, pronto-socorro/UPA ou
+                    // internação nos últimos 12 meses, e UTI/intubação alguma vez. Alimenta o
+                    // piso de risco do motor (espelha ProfileScreenNew.kt).
+                    EditProfileSection(icon: "cross.fill", title: "Crises graves (opcional)") {
+                        ProfileInfoBox("Crise grave é a que precisou de corticoide em comprimido ou xarope por 3 dias ou mais, de pronto-socorro/UPA ou de internação. Usado só para calcular seu nível de risco e no seu relatório.")
+                        Stepper(value: severeCountBinding, in: 0...12) {
+                            Text("Crises graves nos últimos 12 meses: " + (severeCount >= 12 ? "12+" : String(severeCount)))
+                        }
+                        if severeTouched {
+                            Text("Será salvo com a data de hoje.")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        } else if severeIsStale {
+                            Text("Informado há mais de 12 meses — atualize o número ou confirme que continua correto.")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                            Button("Continua correto") { severeTouched = true }
+                                .font(.caption)
+                        } else if severeUpdatedAt > 0 {
+                            Text("Informado em " + Self.dateFormatter.string(from: Date(timeIntervalSince1970: Double(severeUpdatedAt) / 1000)))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        Divider()
+                        Toggle("Já precisei de UTI ou intubação por crise respiratória (alguma vez)", isOn: $everIcu)
                     }
 
                     EditProfileSection(icon: "bandage.fill", title: "Alergias (opcional)") {

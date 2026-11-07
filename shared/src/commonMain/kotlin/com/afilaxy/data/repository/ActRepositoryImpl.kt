@@ -10,16 +10,18 @@ class ActRepositoryImpl(
 
     override suspend fun saveResult(result: AsthmaControlTestResult): Result<Unit> {
         return try {
-            val data = mapOf(
-                "userId" to result.userId,
-                "timestamp" to result.timestamp,
-                "activityImpairment" to result.activityImpairment,
-                "shortnessOfBreath" to result.shortnessOfBreath,
-                "nighttimeSymptoms" to result.nighttimeSymptoms,
-                "rescueMedicationUse" to result.rescueMedicationUse,
-                "selfRatedControl" to result.selfRatedControl,
-                "score" to result.score
-            )
+            val data: Map<String, Any> = buildMap {
+                put("userId", result.userId)
+                put("timestamp", result.timestamp)
+                put("activityImpairment", result.activityImpairment)
+                put("shortnessOfBreath", result.shortnessOfBreath)
+                put("nighttimeSymptoms", result.nighttimeSymptoms)
+                put("rescueMedicationUse", result.rescueMedicationUse)
+                put("selfRatedControl", result.selfRatedControl)
+                put("score", result.score)
+                result.oralSteroidCourse4w?.let { put("oralSteroidCourse4w", it) }
+                result.emergencyVisit4w?.let { put("emergencyVisit4w", it) }
+            }
 
             firestore.collection("act")
                 .document(result.userId)
@@ -69,7 +71,9 @@ class ActRepositoryImpl(
                     nighttimeSymptoms = doc.get<Long>("nighttimeSymptoms")?.toInt() ?: 0,
                     rescueMedicationUse = doc.get<Long>("rescueMedicationUse")?.toInt() ?: 0,
                     selfRatedControl = doc.get<Long>("selfRatedControl")?.toInt() ?: 0,
-                    score = doc.get<Long>("score")?.toInt() ?: 0
+                    score = doc.get<Long>("score")?.toInt() ?: 0,
+                    oralSteroidCourse4w = try { doc.get<Boolean?>("oralSteroidCourse4w") } catch (e: Exception) { null },
+                    emergencyVisit4w = try { doc.get<Boolean?>("emergencyVisit4w") } catch (e: Exception) { null }
                 )
             } catch (e: Exception) { null }
         }

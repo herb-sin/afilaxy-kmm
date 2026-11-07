@@ -25,4 +25,11 @@ interface EmergencyRepository {
     suspend fun getEmergencyExpiresAt(emergencyId: String): Long?
     suspend fun registerConsultationInterest(source: String): Result<Unit>
 
+    /**
+     * Grava no próprio pedido de ajuda se, depois dele, a pessoa precisou ir ao
+     * pronto-socorro/UPA ou foi internada — critério de crise grave da GINA.
+     * Respondido no diálogo pós-crise; só o solicitante pode gravar (firestore.rules).
+     */
+    suspend fun registerPostCrisisEmergencyVisit(emergencyId: String, visited: Boolean): Result<Unit>
+
 }

@@ -122,6 +122,14 @@ class FakeEmergencyRepository(
         else Result.failure(Exception("Erro ao registrar interesse"))
     }
 
+    var lastPostCrisisEmergencyVisit: Pair<String, Boolean>? = null
+
+    override suspend fun registerPostCrisisEmergencyVisit(emergencyId: String, visited: Boolean): Result<Unit> {
+        lastPostCrisisEmergencyVisit = emergencyId to visited
+        return if (shouldSucceed) Result.success(Unit)
+        else Result.failure(Exception("Erro ao registrar ida ao pronto-socorro"))
+    }
+
     // Test helpers
     fun setShouldSucceed(value: Boolean) { shouldSucceed = value }
     fun setActiveEmergencyId(id: String?) { activeEmergencyId = id }

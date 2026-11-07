@@ -59,7 +59,9 @@ class ActViewModel(
         shortnessOfBreath: Int,
         nighttimeSymptoms: Int,
         rescueMedicationUse: Int,
-        selfRatedControl: Int
+        selfRatedControl: Int,
+        oralSteroidCourse4w: Boolean,
+        emergencyVisit4w: Boolean
     ) {
         val userId = authRepository.getCurrentUserId() ?: return
         val score = activityImpairment + shortnessOfBreath + nighttimeSymptoms +
@@ -76,7 +78,9 @@ class ActViewModel(
                 nighttimeSymptoms = nighttimeSymptoms,
                 rescueMedicationUse = rescueMedicationUse,
                 selfRatedControl = selfRatedControl,
-                score = score
+                score = score,
+                oralSteroidCourse4w = oralSteroidCourse4w,
+                emergencyVisit4w = emergencyVisit4w
             )
 
             actRepository.saveResult(result)

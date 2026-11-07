@@ -34,7 +34,33 @@ data class AsthmaControlTestResult(
     val nighttimeSymptoms: Int,    // P3: despertares noturnos
     val rescueMedicationUse: Int,  // P4: uso de medicação de alívio
     val selfRatedControl: Int,     // P5: autoavaliação do controle
-    val score: Int                 // soma das 5 respostas, 5-25
+    val score: Int,                // soma das 5 respostas, 5-25
+    // ── Crise grave nas mesmas 4 semanas (definição da GINA) ──────────────────
+    // Perguntas complementares, fora do ACT: NÃO entram no escore. A GINA define
+    // exacerbação grave como a que exigiu corticoide oral por ≥3 dias, ida ao
+    // pronto-socorro ou internação, e ter tido ≥1 nos últimos 12 meses é fator de
+    // risco para novas crises mesmo com sintomas controlados. Null = resultado
+    // anterior à inclusão das perguntas.
+    val oralSteroidCourse4w: Boolean? = null,  // corticoide oral por 3 dias ou mais
+    val emergencyVisit4w: Boolean? = null      // pronto-socorro/UPA ou internação
 ) {
     val level: AsthmaControlLevel get() = AsthmaControlLevel.fromScore(score)
+
+    /** Crise grave (definição da GINA) relatada na janela de 4 semanas deste teste. */
+    val hadSevereExacerbation: Boolean
+        get() = oralSteroidCourse4w == true || emergencyVisit4w == true
 }
+
+/**
+ * Intervalo recomendado entre dois ACTs: o instrumento olha as últimas 4 semanas,
+ * então refazer antes disso repete boa parte da mesma janela.
+ */
+const val ACT_INTERVAL_DAYS = 28
+const val ACT_INTERVAL_MS = ACT_INTERVAL_DAYS * 24L * 60 * 60 * 1000
+
+/** Dias inteiros desde o resultado (0 = hoje). */
+fun AsthmaControlTestResult.daysSince(nowMs: Long): Int =
+    ((nowMs - timestamp) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
+
+/** true se o último ACT tem menos de 28 dias — refazer agora repetiria a mesma janela. */
+fun AsthmaControlTestResult.isRecent(nowMs: Long): Boolean = nowMs - timestamp < ACT_INTERVAL_MS

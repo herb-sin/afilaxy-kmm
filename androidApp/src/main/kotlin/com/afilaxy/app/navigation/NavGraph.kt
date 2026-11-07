@@ -474,6 +474,8 @@ fun NavGraph(
                     }
                     // Salva timestamp para o diálogo pós-crise (exibido 60 min depois)
                     prefs.putString("last_emergency_requested_at", System.currentTimeMillis().toString())
+                    // Id do pedido: o diálogo pós-crise grava nele se houve ida ao pronto-socorro
+                    prefs.putString("last_emergency_id", emergencyId)
                     prefs.putBoolean("post_crisis_dialog_shown", false)
                     navController.navigate("emergency_request/$emergencyId") {
                         launchSingleTop = true  // evita duplicata se já estiver no topo

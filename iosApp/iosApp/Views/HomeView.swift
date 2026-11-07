@@ -24,6 +24,9 @@ struct HomeView: View {
     @State private var helperErrorMessage = ""
     @State private var showNps = false
     @State private var showPostCrisisDialog = false
+    // Etapa 2 do pós-crise (convite para consulta), aberta depois da etapa 1
+    // (pergunta sobre pronto-socorro/UPA — crise grave pela GINA).
+    @State private var showPostCrisisConsultation = false
     @StateObject private var actWrapper: ActViewModelWrapper = {
         if let vm = ViewModelProvider.shared.getActViewModel() {
             return ActViewModelWrapper(vm)
@@ -195,7 +198,17 @@ struct HomeView: View {
                 }
             )
         }
+        // Pós-crise, etapa 1: precisou de pronto-socorro/UPA ou internação? A resposta é
+        // gravada no próprio pedido de ajuda (espelha HomeScreenNew.kt no Android).
         .alert("Que bom que você está bem", isPresented: $showPostCrisisDialog) {
+            Button("Sim") { answerPostCrisisEmergencyVisit(true) }
+            Button("Não") { answerPostCrisisEmergencyVisit(false) }
+            Button("Prefiro não dizer", role: .cancel) { answerPostCrisisEmergencyVisit(nil) }
+        } message: {
+            Text("Depois do seu pedido de ajuda, você precisou ir ao pronto-socorro/UPA ou ficou internado?")
+        }
+        // Pós-crise, etapa 2: convite para dar continuidade ao tratamento.
+        .alert("Continue cuidando de você", isPresented: $showPostCrisisConsultation) {
             Button("Quero agendar uma consulta") {
                 UserDefaults.standard.set(true, forKey: "post_crisis_dialog_shown")
                 container.emergency.vm?.registerConsultationInterest(source: "post_crisis_dialog")
@@ -515,6 +528,19 @@ struct HomeView: View {
     }
 
     // MARK: - Support Links
+    private var meuControleSubtitle: String {
+        guard let act = actWrapper.state?.latestResult else { return "Teste de Controle da Asma" }
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        let days = max(0, Int((nowMs - act.timestamp) / (24 * 60 * 60 * 1000)))
+        let whenText: String
+        switch days {
+        case 0: whenText = "hoje"
+        case 1: whenText = "ontem"
+        default: whenText = "há \(days) dias"
+        }
+        return "ACT: \(act.score) pontos · \(act.level.label) · \(whenText)"
+    }
+
     private var supportLinksSection: some View {
         AfilaxyCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -551,6 +577,17 @@ struct HomeView: View {
                         color: .afiPrimary
                     ) {
                         showReportExport = true
+                    }
+
+                    // Meu Controle — último ACT e histórico. A tela do ACT avisa antes de
+                    // refazer com menos de 28 dias (janela de 4 semanas do teste).
+                    SupportLinkRow(
+                        title: "Meu Controle",
+                        subtitle: meuControleSubtitle,
+                        icon: "chart.bar.doc.horizontal.fill",
+                        color: Color(hex: "#5E35B1")
+                    ) {
+                        navigationPath.append(AppRoute.actTest)
                     }
 
                     SupportLinkRow(
@@ -785,6 +822,19 @@ extension HomeView {
 // MARK: - Post-Crisis Dialog Helpers
 
 extension HomeView {
+
+    /// Etapa 1 do pós-crise. `nil` = preferiu não responder (nada é gravado).
+    /// A etapa 2 abre com um pequeno atraso: o SwiftUI não apresenta um alert
+    /// enquanto o anterior ainda está sendo fechado.
+    private func answerPostCrisisEmergencyVisit(_ visited: Bool?) {
+        if let visited = visited,
+           let emergencyId = UserDefaults.standard.string(forKey: "last_emergency_id") {
+            container.emergency.vm?.registerPostCrisisEmergencyVisit(emergencyId: emergencyId, visited: visited)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            showPostCrisisConsultation = true
+        }
+    }
 
     /// Exibido 60 min após um pedido de emergência (mesma janela que HomeScreenNew.kt
     /// no Android — ver last_emergency_requested_at em EmergencyView.swift).

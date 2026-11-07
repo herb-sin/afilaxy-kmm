@@ -79,7 +79,7 @@ struct HealthReportExportView: View {
                         "Bem-estar e energia matinal",
                         "Avaliação de bem-estar noturno",
                         "Pedidos de ajuda com data, hora e condições ambientais",
-                        "Perfil Médico (comorbidades, alergias, acessibilidade)"
+                        "Perfil Médico (comorbidades, alergias, crises graves, acessibilidade)"
                     ], id: \.self) { item in
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark")
@@ -262,12 +262,19 @@ struct ActResultData {
     let timestamp: Int64
     let score: Int
     let answers: [Int] // P1–P5, cada uma de 1 (pior) a 5 (melhor)
+    // Perguntas complementares (fora do escore) — nil em resultados antigos
+    let oralSteroidCourse4w: Bool?
+    let emergencyVisit4w: Bool?
 
     init(doc: QueryDocumentSnapshot) {
         timestamp = (doc["timestamp"] as? NSNumber)?.int64Value ?? 0
         score = (doc["score"] as? NSNumber)?.intValue ?? 0
         answers = Self.answerFields.map { (doc[$0] as? NSNumber)?.intValue ?? 0 }
+        oralSteroidCourse4w = doc["oralSteroidCourse4w"] as? Bool
+        emergencyVisit4w = doc["emergencyVisit4w"] as? Bool
     }
+
+    var hadSevereExacerbation: Bool { oralSteroidCourse4w == true || emergencyVisit4w == true }
 
     /// Mesmos cortes de AsthmaControlLevel (shared) — lido direto do Firestore aqui, como o
     /// restante deste relatório, em vez de atravessar a ponte Kotlin só para o rótulo.
@@ -288,11 +295,14 @@ struct EmergencyEventData {
     let temperature: Double?
     let humidity: Double?
     let aqi: Int?
+    // Resposta do diálogo pós-crise — nil se não respondida
+    let emergencyVisitAfter: Bool?
 
     init(doc: QueryDocumentSnapshot) {
         timestamp = (doc["timestamp"] as? NSNumber)?.int64Value ?? 0
         status = doc["status"] as? String ?? ""
         samuCalled = doc["samuCalled"] as? Bool ?? false
+        emergencyVisitAfter = doc["emergencyVisitAfter"] as? Bool
         temperature = (doc["envTemperature"] as? NSNumber)?.doubleValue
         humidity = (doc["envHumidity"] as? NSNumber)?.doubleValue
         aqi = (doc["envAqi"] as? NSNumber)?.intValue
@@ -305,6 +315,7 @@ struct EmergencyEventData {
         if let a = aqi { parts.append("AQI \(a)") }
         if parts.isEmpty { parts.append("sem dados ambientais") }
         if samuCalled { parts.append("SAMU acionado") }
+        if emergencyVisitAfter == true { parts.append("foi ao pronto-socorro/UPA ou internado") }
         if status == "cancelled" { parts.append("cancelado") }
         return parts.joined(separator: " · ")
     }
@@ -325,6 +336,9 @@ struct HealthProfileData {
     let hasWheelchair: Bool
     let hasLowVision: Bool
     let hasSpecialCondition: Bool
+    let severeExacerbations12m: Int
+    let severeExacerbationsUpdatedAt: Int64
+    let everIcuOrIntubated: Bool
     let emergencyContactName: String
     let emergencyContactPhone: String
 
@@ -343,6 +357,9 @@ struct HealthProfileData {
         hasWheelchair = doc?["healthData.hasWheelchair"] as? Bool ?? false
         hasLowVision = doc?["healthData.hasLowVision"] as? Bool ?? false
         hasSpecialCondition = doc?["healthData.hasSpecialCondition"] as? Bool ?? false
+        severeExacerbations12m = (doc?["healthData.severeExacerbations12m"] as? NSNumber)?.intValue ?? 0
+        severeExacerbationsUpdatedAt = (doc?["healthData.severeExacerbationsUpdatedAt"] as? NSNumber)?.int64Value ?? 0
+        everIcuOrIntubated = doc?["healthData.everIcuOrIntubated"] as? Bool ?? false
         emergencyContactName = doc?["emergencyContact.name"] as? String ?? ""
         emergencyContactPhone = doc?["emergencyContact.phone"] as? String ?? ""
     }
@@ -528,10 +545,15 @@ enum WellbeingPDFGenerator {
             let answer = i < latest.answers.count ? latest.answers[i] : 0
             rows.append((label, "\(answer)/5"))
         }
+        rows.append(("Corticoide oral ≥3 dias (4 semanas)", yesNo(latest.oralSteroidCourse4w)))
+        rows.append(("Pronto-socorro/UPA ou internação (4 semanas)", yesNo(latest.emergencyVisit4w)))
         for previous in report.actResults.dropFirst() {
+            let severe = previous.hadSevereExacerbation ? " · crise grave relatada" : ""
             rows.append(("Anterior (\(dateFormatted(msDate(previous.timestamp))))",
-                         "\(previous.score)/25 — \(previous.levelLabel)"))
+                         "\(previous.score)/25 — \(previous.levelLabel)\(severe)"))
         }
+        rows.append(("Crise grave",
+                     "Definição da GINA: corticoide oral por 3 dias ou mais, pronto-socorro ou internação. Perguntas complementares, fora da pontuação do ACT."))
         rows.append(("Interpretação",
                      "Itens de 1 (pior) a 5 (melhor). Total ≥20: bem controlada; 15–19: parcialmente; ≤14: não controlada. Respondido pelo paciente."))
         drawPlainRows(rows, cursor: cursor)
@@ -599,6 +621,15 @@ enum WellbeingPDFGenerator {
             emergencyContact = "Não informado"
         }
 
+        let severeHistory: String
+        if p.severeExacerbationsUpdatedAt <= 0 {
+            severeHistory = "Não informado"
+        } else if p.severeExacerbations12m == 0 {
+            severeHistory = "Nenhuma (informado em \(dateFormatted(msDate(p.severeExacerbationsUpdatedAt))))"
+        } else {
+            severeHistory = "\(p.severeExacerbations12m) nos 12 meses anteriores a \(dateFormatted(msDate(p.severeExacerbationsUpdatedAt)))"
+        }
+
         drawSectionHeader("6. PERFIL MÉDICO", cursor: cursor, color: primaryColor)
         drawPlainRows([
             ("Alergias conhecidas", p.allergiesText.isEmpty ? "Nenhuma relatada" : p.allergiesText.joined(separator: ", ")),
@@ -606,6 +637,8 @@ enum WellbeingPDFGenerator {
             ("Condições relatadas", p.conditions.isEmpty ? "Nenhuma" : p.conditions.joined(separator: ", ")),
             ("Comorbidades", comorbidities.isEmpty ? "Nenhuma" : comorbidities.joined(separator: ", ")),
             ("Alergias específicas", specificAllergies.isEmpty ? "Nenhuma" : specificAllergies.joined(separator: ", ")),
+            ("Crises graves (autodeclarado)", severeHistory),
+            ("UTI ou intubação (alguma vez)", p.everIcuOrIntubated ? "Sim" : "Não informado"),
             ("Acessibilidade", accessibility.isEmpty ? "Nenhuma" : accessibility.joined(separator: ", ")),
             ("Detalhes complementares", p.notes.isEmpty ? "Nenhum" : p.notes),
             ("Contato de emergência", emergencyContact)
@@ -734,6 +767,14 @@ enum WellbeingPDFGenerator {
     private static func pct(_ items: [WellbeingCheckIn], _ kp: KeyPath<WellbeingCheckIn, Bool>) -> Double? {
         guard !items.isEmpty else { return nil }
         return Double(items.filter { $0[keyPath: kp] }.count) / Double(items.count) * 100
+    }
+
+    private static func yesNo(_ value: Bool?) -> String {
+        switch value {
+        case .some(true): return "Sim"
+        case .some(false): return "Não"
+        case .none: return "Não perguntado (teste anterior)"
+        }
     }
 
     private static func dateFormatted(_ date: Date) -> String {

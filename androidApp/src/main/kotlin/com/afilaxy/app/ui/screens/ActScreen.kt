@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.afilaxy.domain.model.AsthmaControlLevel
 import com.afilaxy.domain.model.AsthmaControlTestResult
+import com.afilaxy.domain.model.daysSince
+import com.afilaxy.domain.model.isRecent
 import org.koin.androidx.compose.koinViewModel
 import com.afilaxy.presentation.act.ActViewModel
 
@@ -26,6 +28,10 @@ import com.afilaxy.presentation.act.ActViewModel
 // retrospectiva de 4 semanas. Perguntas e opções reproduzidas literalmente
 // do teste público de um pneumologista parceiro (Dr. Carlos Nogueira).
 // Cortes (20-25/15-19/5-14) conferidos empiricamente contra a mesma fonte.
+//
+// Depois das 5 perguntas vêm 2 perguntas complementares de sim/não sobre crise
+// grave nas mesmas 4 semanas (definição da GINA). Elas NÃO fazem parte do ACT e
+// não entram no escore — alimentam o motor de risco e o relatório para o médico.
 // ---------------------------------------------------------------------------
 
 private data class ActQuestion(val text: String, val options: List<String>)
@@ -53,6 +59,11 @@ private val ACT_QUESTIONS = listOf(
     )
 )
 
+private val SEVERE_EXACERBATION_QUESTIONS = listOf(
+    "Nas últimas 4 semanas, você precisou tomar corticoide em comprimido ou xarope (ex.: prednisolona) por 3 dias ou mais por causa da asma?",
+    "Nas últimas 4 semanas, você foi ao pronto-socorro/UPA ou ficou internado por causa da asma?"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActScreen(
@@ -62,8 +73,46 @@ fun ActScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showQuestionnaire by rememberSaveable { mutableStateOf(false) }
+    var showRecentWarning by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.loadLatest() }
+
+    // Refazer antes de 28 dias repete boa parte da mesma janela de 4 semanas do ACT.
+    // Não bloqueia (ex.: depois de uma crise ou troca de remédio), só avisa.
+    val startTest: () -> Unit = {
+        val latest = state.latestResult
+        if (latest != null && latest.isRecent(System.currentTimeMillis())) {
+            showRecentWarning = true
+        } else {
+            viewModel.startNewTest()
+            showQuestionnaire = true
+        }
+    }
+
+    if (showRecentWarning) {
+        val days = state.latestResult?.daysSince(System.currentTimeMillis()) ?: 0
+        AlertDialog(
+            onDismissRequest = { showRecentWarning = false },
+            title = { Text("Refazer o teste agora?") },
+            text = {
+                Text(
+                    "O ACT avalia as últimas 4 semanas, e seu último teste foi ${daysAgoText(days)}. " +
+                        "Refazer agora repete boa parte do mesmo período. O ideal é refazer a cada 4 semanas, " +
+                        "mas você pode refazer antes se algo mudou (por exemplo, depois de uma crise ou de uma troca de remédio)."
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showRecentWarning = false
+                    viewModel.startNewTest()
+                    showQuestionnaire = true
+                }) { Text("Refazer mesmo assim") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRecentWarning = false }) { Text("Agora não") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -82,7 +131,7 @@ fun ActScreen(
                 state.isSubmitted && state.latestResult != null -> {
                     ActResultContent(
                         result = state.latestResult!!,
-                        onRedo = { viewModel.startNewTest(); showQuestionnaire = true },
+                        onRedo = startTest,
                         onHistory = onNavigateToHistory,
                         onDone = { navController.popBackStack() }
                     )
@@ -90,7 +139,7 @@ fun ActScreen(
                 showQuestionnaire -> {
                     ActQuestionnaireContent(
                         isLoading = state.isLoading,
-                        onSubmit = { a, b, c, d, e -> viewModel.submitTest(a, b, c, d, e) }
+                        onSubmit = { a, b, c, d, e, steroid, er -> viewModel.submitTest(a, b, c, d, e, steroid, er) }
                     )
                 }
                 state.isLoading && state.latestResult == null -> {
@@ -101,7 +150,7 @@ fun ActScreen(
                 else -> {
                     ActEntryContent(
                         latestResult = state.latestResult,
-                        onStart = { showQuestionnaire = true },
+                        onStart = startTest,
                         onHistory = onNavigateToHistory
                     )
                 }
@@ -142,6 +191,12 @@ private fun ActEntryContent(
                         fontWeight = FontWeight.Bold
                     )
                     Text(latestResult.level.label, fontWeight = FontWeight.SemiBold)
+                    val days = latestResult.daysSince(System.currentTimeMillis())
+                    Text(
+                        "Feito ${daysAgoText(days)}" +
+                            if (latestResult.isRecent(System.currentTimeMillis())) " · próximo em ${ActIntervalDaysLeft(days)} dia(s)" else " · já pode refazer",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         } else {
@@ -178,9 +233,10 @@ private fun ActEntryContent(
 @Composable
 private fun ActQuestionnaireContent(
     isLoading: Boolean,
-    onSubmit: (Int, Int, Int, Int, Int) -> Unit
+    onSubmit: (Int, Int, Int, Int, Int, Boolean, Boolean) -> Unit
 ) {
     val answers = remember { mutableStateListOf<Int?>(null, null, null, null, null) }
+    val severeAnswers = remember { mutableStateListOf<Boolean?>(null, null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -196,12 +252,31 @@ private fun ActQuestionnaireContent(
             )
         }
         item {
+            Text(
+                "Para o seu médico (não entram na pontuação do ACT)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        itemsIndexed(SEVERE_EXACERBATION_QUESTIONS) { index, question ->
+            YesNoQuestionCard(
+                number = ACT_QUESTIONS.size + index + 1,
+                text = question,
+                selected = severeAnswers[index],
+                onSelect = { severeAnswers[index] = it }
+            )
+        }
+        item {
             Button(
                 onClick = {
                     val values = answers.filterNotNull()
-                    if (values.size == 5) onSubmit(values[0], values[1], values[2], values[3], values[4])
+                    val steroid = severeAnswers[0]
+                    val er = severeAnswers[1]
+                    if (values.size == 5 && steroid != null && er != null) {
+                        onSubmit(values[0], values[1], values[2], values[3], values[4], steroid, er)
+                    }
                 },
-                enabled = !isLoading && answers.all { it != null },
+                enabled = !isLoading && answers.all { it != null } && severeAnswers.all { it != null },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (isLoading) {
@@ -245,6 +320,33 @@ private fun ActQuestionCard(
 }
 
 @Composable
+private fun YesNoQuestionCard(
+    number: Int,
+    text: String,
+    selected: Boolean?,
+    onSelect: (Boolean) -> Unit
+) {
+    Card(shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "$number. $text",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            listOf(true to "Sim", false to "Não").forEach { (value, label) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    RadioButton(selected = selected == value, onClick = { onSelect(value) })
+                    Text(label, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ActResultContent(
     result: AsthmaControlTestResult,
     onRedo: () -> Unit,
@@ -275,6 +377,21 @@ private fun ActResultContent(
 
         Text(levelMessage(result.level), style = MaterialTheme.typography.bodyMedium)
 
+        if (result.hadSevereExacerbation) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Text(
+                    "Você relatou uma crise grave nas últimas 4 semanas (corticoide em comprimido, pronto-socorro ou internação). " +
+                        "Leve essa informação ao seu médico: uma crise grave aumenta o risco de novas crises, mesmo quando os sintomas melhoram.",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+
         Text(
             "Este resultado é informativo e não substitui consulta médica. Leve-o ao seu pneumologista.",
             style = MaterialTheme.typography.bodySmall,
@@ -299,3 +416,13 @@ private fun levelContainerColor(level: AsthmaControlLevel) = when (level) {
     AsthmaControlLevel.PARTIALLY_CONTROLLED -> androidx.compose.ui.graphics.Color(0xFFF57F17).copy(alpha = 0.15f)
     AsthmaControlLevel.NOT_CONTROLLED -> androidx.compose.ui.graphics.Color(0xFFB71C1C).copy(alpha = 0.15f)
 }
+
+private fun daysAgoText(days: Int): String = when (days) {
+    0 -> "hoje"
+    1 -> "ontem"
+    else -> "há $days dias"
+}
+
+@Suppress("FunctionName")
+private fun ActIntervalDaysLeft(daysSince: Int): Int =
+    (com.afilaxy.domain.model.ACT_INTERVAL_DAYS - daysSince).coerceAtLeast(1)

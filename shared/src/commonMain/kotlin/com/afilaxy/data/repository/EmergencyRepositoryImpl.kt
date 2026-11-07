@@ -597,6 +597,23 @@ class EmergencyRepositoryImpl(
         }
     }
 
+    // Grava no próprio emergency_requests (e não numa coleção nova) para herdar a
+    // exportação de dados e a exclusão de conta que já cobrem essa coleção. As Cloud
+    // Functions de update só reagem a status/active, então o campo não dispara nada.
+    override suspend fun registerPostCrisisEmergencyVisit(emergencyId: String, visited: Boolean): Result<Unit> {
+        return try {
+            firestore.collection("emergency_requests").document(emergencyId).update(
+                mapOf(
+                    "emergencyVisitAfter" to visited,
+                    "emergencyVisitAnsweredAt" to getCurrentTimeMillis()
+                )
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // Lê emergency_pings (projeção sem PII) em vez de emergency_requests — este observer é
     // ligado assim que EmergencyResponseScreen abre, ou seja, ANTES do usuário aceitar e virar
     // participante (helperId). emergency_requests só permite get/listen a participantes (ver

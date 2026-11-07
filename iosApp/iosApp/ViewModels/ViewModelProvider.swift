@@ -316,12 +316,14 @@ class ActViewModelWrapper: ObservableObject {
 
     func submitTest(
         activityImpairment: Int32, shortnessOfBreath: Int32, nighttimeSymptoms: Int32,
-        rescueMedicationUse: Int32, selfRatedControl: Int32
+        rescueMedicationUse: Int32, selfRatedControl: Int32,
+        oralSteroidCourse4w: Bool, emergencyVisit4w: Bool
     ) {
         viewModel?.submitTest(
             activityImpairment: activityImpairment, shortnessOfBreath: shortnessOfBreath,
             nighttimeSymptoms: nighttimeSymptoms, rescueMedicationUse: rescueMedicationUse,
-            selfRatedControl: selfRatedControl
+            selfRatedControl: selfRatedControl,
+            oralSteroidCourse4w: oralSteroidCourse4w, emergencyVisit4w: emergencyVisit4w
         )
     }
 

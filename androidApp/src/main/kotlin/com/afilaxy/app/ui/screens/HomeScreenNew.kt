@@ -91,6 +91,9 @@ fun HomeScreenNew(
     var showHelperConsentDialog by remember { mutableStateOf(false) }
     var showNps by remember { mutableStateOf(false) }
     var showPostCrisisDialog by remember { mutableStateOf(false) }
+    // Etapa 1 do pós-crise: pergunta se precisou de pronto-socorro/UPA ou internação
+    // (crise grave pela GINA). Etapa 2: o convite para consulta que já existia.
+    var postCrisisAskedEmergencyVisit by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     val today = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) }
 
@@ -337,13 +340,15 @@ fun HomeScreenNew(
             }
         }
 
-        // Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Farmácias 24h, Autocuidado, Comunidade
+        // Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Meu Controle, Farmácias 24h, Autocuidado, Comunidade
         item {
             HomeSupportLinksSection(
                 onNavigateToHelp = onNavigateToHelp,
                 onNavigateToPharmacyMap = onNavigateToPharmacyMap,
                 onNavigateToHealthReport = onNavigateToHealthReport,
-                onNavigateToAutocuidado = onNavigateToAutocuidado
+                onNavigateToAutocuidado = onNavigateToAutocuidado,
+                latestAct = actState.latestResult,
+                onNavigateToAct = onNavigateToAct
             )
         }
     }
@@ -418,8 +423,44 @@ fun HomeScreenNew(
         )
     }
 
-    // Diálogo pós-crise: exibido após 60 min de um pedido de emergência
-    if (showPostCrisisDialog) {
+    // Diálogo pós-crise: exibido após 60 min de um pedido de emergência.
+    // Etapa 1: precisou de pronto-socorro/UPA ou internação? A resposta é gravada no
+    // próprio pedido (critério de crise grave da GINA, usado pelo motor de risco).
+    if (showPostCrisisDialog && !postCrisisAskedEmergencyVisit) {
+        val answerEmergencyVisit: (Boolean?) -> Unit = { visited ->
+            if (visited != null) {
+                val emergencyId = prefsRepo.getString("last_emergency_id", null).orEmpty()
+                viewModel.registerPostCrisisEmergencyVisit(emergencyId, visited)
+            }
+            postCrisisAskedEmergencyVisit = true
+        }
+        AlertDialog(
+            onDismissRequest = { answerEmergencyVisit(null) },
+            icon = {
+                Icon(
+                    Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("Que bom que você está bem") },
+            text = {
+                Text("Depois do seu pedido de ajuda, você precisou ir ao pronto-socorro/UPA ou ficou internado?")
+            },
+            confirmButton = {
+                Button(onClick = { answerEmergencyVisit(true) }) { Text("Sim") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { answerEmergencyVisit(null) }) { Text("Prefiro não dizer") }
+                    TextButton(onClick = { answerEmergencyVisit(false) }) { Text("Não") }
+                }
+            }
+        )
+    }
+
+    // Etapa 2: convite para dar continuidade ao tratamento com um especialista.
+    if (showPostCrisisDialog && postCrisisAskedEmergencyVisit) {
         AlertDialog(
             onDismissRequest = {
                 showPostCrisisDialog = false
@@ -432,7 +473,7 @@ fun HomeScreenNew(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            title = { Text("Que bom que você está bem") },
+            title = { Text("Continue cuidando de você") },
             text = {
                 Text("A comunidade Afilaxy estava do seu lado. Quer dar continuidade ao seu tratamento com um especialista?")
             },
@@ -854,7 +895,7 @@ private fun openWhatsAppGroup(context: android.content.Context) {
 }
 
 // ---------------------------------------------------------------------------
-// Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Farmácias 24h, Autocuidado, Comunidade
+// Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Meu Controle, Farmácias 24h, Autocuidado, Comunidade
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -862,7 +903,9 @@ private fun HomeSupportLinksSection(
     onNavigateToHelp: () -> Unit,
     onNavigateToPharmacyMap: () -> Unit,
     onNavigateToHealthReport: () -> Unit,
-    onNavigateToAutocuidado: () -> Unit
+    onNavigateToAutocuidado: () -> Unit,
+    latestAct: com.afilaxy.domain.model.AsthmaControlTestResult?,
+    onNavigateToAct: () -> Unit
 ) {
     val context = LocalContext.current
     Card(
@@ -901,6 +944,20 @@ private fun HomeSupportLinksSection(
                 icon = Icons.Default.Description,
                 color = Color(0xFF00628F),
                 onClick = onNavigateToHealthReport
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            // Meu Controle — último ACT e histórico. Abre a tela do ACT, que avisa
+            // antes de refazer com menos de 28 dias (janela de 4 semanas do teste).
+            HomeSupportLinkRow(
+                title = "Meu Controle",
+                subtitle = latestAct?.let { act ->
+                    val days = ((System.currentTimeMillis() - act.timestamp) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(0)
+                    val whenText = when (days) { 0 -> "hoje"; 1 -> "ontem"; else -> "há $days dias" }
+                    "ACT: ${act.score} pontos · ${act.level.label} · $whenText"
+                } ?: "Teste de Controle da Asma",
+                icon = Icons.Default.Assessment,
+                color = Color(0xFF5E35B1),
+                onClick = onNavigateToAct
             )
             Spacer(modifier = Modifier.height(8.dp))
             HomeSupportLinkRow(

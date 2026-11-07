@@ -76,6 +76,11 @@ fun ProfileScreenNew(
     var editHasWheelchair       by remember { mutableStateOf(false) }
     var editHasLowVision        by remember { mutableStateOf(false) }
     var editHasSpecialCondition by remember { mutableStateOf(false) }
+    // Crises graves (GINA): a data só é renovada quando a pessoa mexe/confirma a contagem,
+    // porque ela cobre os 12 meses anteriores à data em que foi informada.
+    var editSevereCount         by remember { mutableStateOf(0) }
+    var editSevereTouched       by remember { mutableStateOf(false) }
+    var editEverIcu             by remember { mutableStateOf(false) }
 
     // Preenche campos quando o perfil chega pela primeira vez
     LaunchedEffect(profile) {
@@ -97,6 +102,9 @@ fun ProfileScreenNew(
             editHasWheelchair       = profile.healthData?.hasWheelchair ?: false
             editHasLowVision        = profile.healthData?.hasLowVision ?: false
             editHasSpecialCondition = profile.healthData?.hasSpecialCondition ?: false
+            editSevereCount         = profile.healthData?.severeExacerbations12m ?: 0
+            editSevereTouched       = false
+            editEverIcu             = profile.healthData?.everIcuOrIntubated ?: false
         }
     }
 
@@ -297,6 +305,12 @@ fun ProfileScreenNew(
                 hasWheelchair = editHasWheelchair,             onHasWheelchairChange = { editHasWheelchair = it },
                 hasLowVision = editHasLowVision,               onHasLowVisionChange = { editHasLowVision = it },
                 hasSpecialCondition = editHasSpecialCondition, onHasSpecialConditionChange = { editHasSpecialCondition = it },
+                severeCount = editSevereCount,
+                onSevereCountChange = { editSevereCount = it; editSevereTouched = true },
+                onSevereConfirm = { editSevereTouched = true },
+                severeUpdatedAt = profile?.healthData?.severeExacerbationsUpdatedAt ?: 0L,
+                severeTouched = editSevereTouched,
+                everIcu = editEverIcu,      onEverIcuChange = { editEverIcu = it },
                 isSaving = state.isSaving,
                 onSave = {
                     val current = profile ?: return@EditProfileSheetContent
@@ -320,6 +334,11 @@ fun ProfileScreenNew(
                                 hasFoodAllergy     = editHasFoodAllergy,
                                 hasNsaidAllergy    = editHasNsaidAllergy,
                                 hasInhalantAllergy = editHasInhalantAllergy,
+                                severeExacerbations12m = editSevereCount,
+                                severeExacerbationsUpdatedAt =
+                                    if (editSevereTouched) System.currentTimeMillis()
+                                    else current.healthData?.severeExacerbationsUpdatedAt ?: 0L,
+                                everIcuOrIntubated = editEverIcu,
                                 hasWheelchair = editHasWheelchair,
                                 hasLowVision  = editHasLowVision,
                                 hasSpecialCondition = editHasSpecialCondition
@@ -510,6 +529,11 @@ private fun EditProfileSheetContent(
     hasWheelchair: Boolean,       onHasWheelchairChange: (Boolean) -> Unit,
     hasLowVision: Boolean,        onHasLowVisionChange: (Boolean) -> Unit,
     hasSpecialCondition: Boolean, onHasSpecialConditionChange: (Boolean) -> Unit,
+    severeCount: Int,             onSevereCountChange: (Int) -> Unit,
+    onSevereConfirm: () -> Unit,
+    severeUpdatedAt: Long,
+    severeTouched: Boolean,
+    everIcu: Boolean,             onEverIcuChange: (Boolean) -> Unit,
     isSaving: Boolean,
     onSave: () -> Unit
 ) {
@@ -583,6 +607,48 @@ private fun EditProfileSheetContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+        // Seção 2b-1: Crises graves (GINA) — corticoide oral ≥3 dias, pronto-socorro/UPA
+        // ou internação nos últimos 12 meses, e UTI/intubação alguma vez. Alimenta o piso
+        // de risco do motor (nunca "Baixo" com histórico de crise grave).
+        item {
+            EditSection(icon = Icons.Default.LocalHospital, title = "Crises graves (opcional)") {
+                ProfileInfoBox("Crise grave é a que precisou de corticoide em comprimido ou xarope por 3 dias ou mais, de pronto-socorro/UPA ou de internação. Usado só para calcular seu nível de risco e no seu relatório.")
+                SevereExacerbationCounter(
+                    count = severeCount,
+                    onCountChange = onSevereCountChange
+                )
+                val now = System.currentTimeMillis()
+                val stale = severeUpdatedAt > 0L && !severeTouched &&
+                    now - severeUpdatedAt >= com.afilaxy.domain.model.SEVERE_EXACERBATION_WINDOW_MS
+                when {
+                    severeTouched -> Text(
+                        "Será salvo com a data de hoje.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    stale -> Column {
+                        Text(
+                            "Informado há mais de 12 meses — atualize o número ou confirme que continua correto.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        TextButton(onClick = onSevereConfirm) { Text("Continua correto") }
+                    }
+                    severeUpdatedAt > 0L -> Text(
+                        "Informado em " + java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale("pt", "BR"))
+                            .format(java.util.Date(severeUpdatedAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                HorizontalDivider()
+                ProfileSwitchRow(
+                    "Já precisei de UTI ou intubação por crise respiratória",
+                    everIcu, onEverIcuChange,
+                    subtitle = "Alguma vez na vida"
+                )
             }
         }
         // Seção 2b-2: Alergias (toggles específicos autodeclarados alimentam o motor de
@@ -825,6 +891,40 @@ private fun PrivacyActionRow(
         Text(label, style = MaterialTheme.typography.bodyLarge, color = color, modifier = Modifier.weight(1f))
     }
 }
+
+// ── SevereExacerbationCounter ────────────────────────────────────────────────────
+
+@Composable
+private fun SevereExacerbationCounter(count: Int, onCountChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "Crises graves nos últimos 12 meses",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f).padding(end = 12.dp)
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = { onCountChange((count - 1).coerceAtLeast(0)) },
+                enabled = count > 0
+            ) { Icon(Icons.Default.Remove, contentDescription = "Diminuir") }
+            Text(
+                if (count >= MAX_SEVERE_COUNT) "$MAX_SEVERE_COUNT+" else "$count",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            IconButton(
+                onClick = { onCountChange((count + 1).coerceAtMost(MAX_SEVERE_COUNT)) },
+                enabled = count < MAX_SEVERE_COUNT
+            ) { Icon(Icons.Default.Add, contentDescription = "Aumentar") }
+        }
+    }
+}
+
+private const val MAX_SEVERE_COUNT = 12
 
 // ── ProfileSwitchRow ─────────────────────────────────────────────────────────────
 

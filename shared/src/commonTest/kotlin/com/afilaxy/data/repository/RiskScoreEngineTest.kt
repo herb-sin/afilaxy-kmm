@@ -710,4 +710,49 @@ class RiskScoreEngineTest {
         // comorbidade: +6; alergia: +7 = 13
         assertEquals(13, result.score)
     }
+    // ── Crises graves (GINA): pontuação e piso de risco ───────────────────────
+
+    @Test
+    fun `crise grave nos ultimos 12 meses nunca deixa o risco Baixo`() {
+        // Paciente sem nenhum outro sinal (ambiente bom, sem crises no app, fora de
+        // sazonalidade): sem o histórico seria LOW.
+        val semHistorico = RiskScoreEngine.calculate(
+            env = envBom(), crises30d = 0, crises7d = 0, samuCalledCount = 0, monthOfYear = 11
+        )
+        assertEquals(AsthmaRiskLevel.LOW.name, semHistorico.level)
+
+        val comHistorico = RiskScoreEngine.calculate(
+            env = envBom(), crises30d = 0, crises7d = 0, samuCalledCount = 0, monthOfYear = 11,
+            hadSevereExacerbation12m = true
+        )
+        assertTrue(comHistorico.score >= RiskScoreEngine.MODERATE_MIN_SCORE)
+        assertEquals(AsthmaRiskLevel.MODERATE.name, comHistorico.level)
+        assertTrue(comHistorico.factors.any { it.contains("Crise grave nos últimos 12 meses") })
+    }
+
+    @Test
+    fun `UTI ou intubacao alguma vez tambem aplica o piso Moderado`() {
+        // UTI/intubação soma só 10, mas o piso da GINA leva a 20 (Moderado).
+        val result = RiskScoreEngine.calculate(
+            env = envBom(), crises30d = 0, crises7d = 0, samuCalledCount = 0, monthOfYear = 11,
+            everIcuOrIntubated = true
+        )
+        assertEquals(RiskScoreEngine.MODERATE_MIN_SCORE, result.score)
+        assertEquals(AsthmaRiskLevel.MODERATE.name, result.level)
+        assertTrue(result.factors.any { it.contains("UTI ou intubação") })
+        assertTrue(result.recommendations.any { it.contains("plano de ação escrito") })
+    }
+
+    @Test
+    fun `piso nao reduz um risco que ja era maior`() {
+        val semHistorico = RiskScoreEngine.calculate(
+            env = envCritico(), crises30d = 4, crises7d = 3, samuCalledCount = 1, monthOfYear = 7
+        )
+        val comHistorico = RiskScoreEngine.calculate(
+            env = envCritico(), crises30d = 4, crises7d = 3, samuCalledCount = 1, monthOfYear = 7,
+            hadSevereExacerbation12m = true
+        )
+        assertTrue(comHistorico.score >= semHistorico.score)
+        assertEquals(AsthmaRiskLevel.VERY_HIGH.name, comHistorico.level)
+    }
 }

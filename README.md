@@ -171,6 +171,8 @@ WAQI_API_TOKEN=SEU_TOKEN_AQUI
 
 - **Emergência P2P:** Geolocalização + chat em tempo real com voluntários próximos (raio 250m)
 - **Score de Risco Contextual:** Motor heurístico com escala não-linear — combina AQI (WAQI), clima (OpenMeteo), perfil autodeclarado e histórico de crises dos últimos 7 dias para gerar score 0–100 em 4 níveis (Baixo / Moderado / Alto / Muito Alto). Histórico diário persistido para futura análise de tendência e ML
+- **Crises graves (GINA):** Registro de crise grave — corticoide oral por 3 dias ou mais, pronto-socorro/UPA ou internação — em três momentos: histórico dos 12 meses no Perfil (com UTI/intubação alguma vez), perguntas complementares junto ao ACT e diálogo pós-crise. Com crise grave no último ano ou UTI/intubação, o score de risco nunca fica abaixo de Moderado
+- **Teste de Controle da Asma (ACT) e Meu Controle:** ACT a cada 4 semanas com histórico, atalho "Meu Controle" no Suporte Rápido e aviso ao refazer antes de 28 dias
 - **Check-ins de Bem-Estar:** Acompanhamento diário matinal e noturno com notificações baseadas no score de risco
 - **Perfil de Saúde Autodeclarado:** Medicações, alergias, condições e contatos de emergência
 - **Portal de Profissionais:** Listagem de profissionais de saúde com filtro por especialidade e planos de assinatura

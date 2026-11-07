@@ -140,7 +140,7 @@ private fun IdleContent(onGenerate: () -> Unit) {
                     "Bem-estar e energia matinal",
                     "Avaliação de bem-estar noturno",
                     "Pedidos de ajuda com data, hora e condições ambientais",
-                    "Perfil Médico (comorbidades, alergias, acessibilidade)"
+                    "Perfil Médico (comorbidades, alergias, crises graves, acessibilidade)"
                 ).forEach { item ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -226,7 +226,9 @@ private suspend fun generateAndShare(context: Context): Boolean {
                 ActResultAndroid(
                     timestamp = doc.getLong("timestamp") ?: 0L,
                     score = doc.getLong("score")?.toInt() ?: 0,
-                    answers = ACT_ANSWER_FIELDS.map { doc.getLong(it)?.toInt() ?: 0 }
+                    answers = ACT_ANSWER_FIELDS.map { doc.getLong(it)?.toInt() ?: 0 },
+                    oralSteroidCourse4w = doc.getBoolean("oralSteroidCourse4w"),
+                    emergencyVisit4w = doc.getBoolean("emergencyVisit4w")
                 )
             }
             .sortedByDescending { it.timestamp }
@@ -249,7 +251,8 @@ private suspend fun generateAndShare(context: Context): Boolean {
                     samuCalled = doc.getBoolean("samuCalled") ?: false,
                     temperature = doc.getDouble("envTemperature"),
                     humidity = doc.getDouble("envHumidity"),
-                    aqi = doc.getLong("envAqi")?.toInt()
+                    aqi = doc.getLong("envAqi")?.toInt(),
+                    emergencyVisitAfter = doc.getBoolean("emergencyVisitAfter")
                 )
             }
             .sortedByDescending { it.timestamp }
@@ -286,6 +289,9 @@ private suspend fun generateAndShare(context: Context): Boolean {
         hasWheelchair = userDoc?.getBoolean("healthData.hasWheelchair") ?: false,
         hasLowVision = userDoc?.getBoolean("healthData.hasLowVision") ?: false,
         hasSpecialCondition = userDoc?.getBoolean("healthData.hasSpecialCondition") ?: false,
+        severeExacerbations12m = userDoc?.getLong("healthData.severeExacerbations12m")?.toInt() ?: 0,
+        severeExacerbationsUpdatedAt = userDoc?.getLong("healthData.severeExacerbationsUpdatedAt") ?: 0L,
+        everIcuOrIntubated = userDoc?.getBoolean("healthData.everIcuOrIntubated") ?: false,
         emergencyContactName = userDoc?.getString("emergencyContact.name") ?: "",
         emergencyContactPhone = userDoc?.getString("emergencyContact.phone") ?: ""
     )
@@ -347,9 +353,13 @@ private const val ACT_HISTORY_LIMIT = 6
 private data class ActResultAndroid(
     val timestamp: Long,
     val score: Int,
-    val answers: List<Int> // P1–P5, cada uma de 1 (pior) a 5 (melhor)
+    val answers: List<Int>, // P1–P5, cada uma de 1 (pior) a 5 (melhor)
+    // Perguntas complementares (fora do escore) — null em resultados antigos
+    val oralSteroidCourse4w: Boolean?,
+    val emergencyVisit4w: Boolean?
 ) {
     val levelLabel: String get() = AsthmaControlLevel.fromScore(score).label
+    val hadSevereExacerbation: Boolean get() = oralSteroidCourse4w == true || emergencyVisit4w == true
 }
 
 private data class EmergencyEventAndroid(
@@ -359,7 +369,9 @@ private data class EmergencyEventAndroid(
     // Contexto ambiental gravado na criação do pedido — null em pedidos antigos ou sem rede
     val temperature: Double?,
     val humidity: Double?,
-    val aqi: Int?
+    val aqi: Int?,
+    // Resposta do diálogo pós-crise — null se não respondida
+    val emergencyVisitAfter: Boolean?
 )
 
 private data class WellbeingCheckInAndroid(
@@ -394,6 +406,9 @@ private data class HealthProfileAndroid(
     val hasWheelchair: Boolean,
     val hasLowVision: Boolean,
     val hasSpecialCondition: Boolean,
+    val severeExacerbations12m: Int,
+    val severeExacerbationsUpdatedAt: Long,
+    val everIcuOrIntubated: Boolean,
     val emergencyContactName: String,
     val emergencyContactPhone: String
 )
@@ -573,9 +588,13 @@ private object WellbeingPDFAndroid {
         ACT_ANSWER_LABELS.forEachIndexed { i, label ->
             rows += label to "${latest.answers.getOrElse(i) { 0 }}/5"
         }
+        rows += "Corticoide oral ≥3 dias (4 semanas)" to yesNo(latest.oralSteroidCourse4w)
+        rows += "Pronto-socorro/UPA ou internação (4 semanas)" to yesNo(latest.emergencyVisit4w)
         r.actResults.drop(1).forEach { previous ->
-            rows += "Anterior (${dateFmt(Date(previous.timestamp))})" to "${previous.score}/25 — ${previous.levelLabel}"
+            val severe = if (previous.hadSevereExacerbation) " · crise grave relatada" else ""
+            rows += "Anterior (${dateFmt(Date(previous.timestamp))})" to "${previous.score}/25 — ${previous.levelLabel}$severe"
         }
+        rows += "Crise grave" to "Definição da GINA: corticoide oral por 3 dias ou mais, pronto-socorro ou internação. Perguntas complementares, fora da pontuação do ACT."
         rows += "Interpretação" to "Itens de 1 (pior) a 5 (melhor). Total ≥20: bem controlada; 15–19: parcialmente; ≤14: não controlada. Respondido pelo paciente."
         plainRows(cursor, rows)
     }
@@ -620,6 +639,7 @@ private object WellbeingPDFAndroid {
         e.aqi?.let { parts += "AQI $it" }
         if (parts.isEmpty()) parts += "sem dados ambientais"
         if (e.samuCalled) parts += "SAMU acionado"
+        if (e.emergencyVisitAfter == true) parts += "foi ao pronto-socorro/UPA ou internado"
         if (e.status == "cancelled") parts += "cancelado"
         return parts.joinToString(" · ")
     }
@@ -647,6 +667,12 @@ private object WellbeingPDFAndroid {
             else p.emergencyContactName
         } else "Não informado"
 
+        val severeHistory = when {
+            p.severeExacerbationsUpdatedAt <= 0L -> "Não informado"
+            p.severeExacerbations12m == 0 -> "Nenhuma (informado em ${dateFmt(Date(p.severeExacerbationsUpdatedAt))})"
+            else -> "${p.severeExacerbations12m} nos 12 meses anteriores a ${dateFmt(Date(p.severeExacerbationsUpdatedAt))}"
+        }
+
         sectionHeader(cursor, "6. PERFIL MÉDICO", PRIMARY)
         plainRows(cursor, listOf(
             "Alergias conhecidas"    to p.allergiesText.joinToString(", ").ifEmpty { "Nenhuma relatada" },
@@ -654,6 +680,8 @@ private object WellbeingPDFAndroid {
             "Condições relatadas"    to p.conditions.joinToString(", ").ifEmpty { "Nenhuma" },
             "Comorbidades"           to comorbidities.joinToString(", ").ifEmpty { "Nenhuma" },
             "Alergias específicas"   to specificAllergies.joinToString(", ").ifEmpty { "Nenhuma" },
+            "Crises graves (autodeclarado)" to severeHistory,
+            "UTI ou intubação (alguma vez)" to if (p.everIcuOrIntubated) "Sim" else "Não informado",
             "Acessibilidade"         to accessibility.joinToString(", ").ifEmpty { "Nenhuma" },
             "Detalhes complementares" to p.notes.ifEmpty { "Nenhum" },
             "Contato de emergência"  to emergencyContact
@@ -769,6 +797,12 @@ private object WellbeingPDFAndroid {
     private fun pct(items: List<WellbeingCheckInAndroid>, sel: (WellbeingCheckInAndroid) -> Boolean): Double? {
         if (items.isEmpty()) return null
         return items.count { sel(it) }.toDouble() / items.size * 100
+    }
+
+    private fun yesNo(value: Boolean?) = when (value) {
+        true -> "Sim"
+        false -> "Não"
+        null -> "Não perguntado (teste anterior)"
     }
 
     private fun dateFmt(d: Date) = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")).format(d)

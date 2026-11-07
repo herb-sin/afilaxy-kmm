@@ -5,6 +5,10 @@ import shared
 // retrospectiva de 4 semanas. Perguntas e opções reproduzidas literalmente do teste
 // público de um pneumologista parceiro (Dr. Carlos Nogueira). Cortes (20-25/15-19/5-14)
 // conferidos empiricamente contra a mesma fonte.
+//
+// Depois das 5 perguntas vêm 2 perguntas complementares de sim/não sobre crise grave
+// nas mesmas 4 semanas (definição da GINA). Elas NÃO fazem parte do ACT e não entram
+// no escore — alimentam o motor de risco e o relatório (espelha ActScreen.kt).
 
 private struct ActQuestion {
     let text: String
@@ -34,6 +38,28 @@ private let actQuestions: [ActQuestion] = [
     )
 ]
 
+private let severeExacerbationQuestions: [String] = [
+    "Nas últimas 4 semanas, você precisou tomar corticoide em comprimido ou xarope (ex.: prednisolona) por 3 dias ou mais por causa da asma?",
+    "Nas últimas 4 semanas, você foi ao pronto-socorro/UPA ou ficou internado por causa da asma?"
+]
+
+/// Intervalo recomendado entre dois ACTs (janela de 4 semanas do instrumento) —
+/// mesmo valor de ACT_INTERVAL_DAYS no shared.
+private let actIntervalDays = 28
+
+private func actDaysSince(_ result: AsthmaControlTestResult) -> Int {
+    let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+    return max(0, Int((nowMs - result.timestamp) / (24 * 60 * 60 * 1000)))
+}
+
+private func daysAgoText(_ days: Int) -> String {
+    switch days {
+    case 0: return "hoje"
+    case 1: return "ontem"
+    default: return "há \(days) dias"
+    }
+}
+
 struct ActView: View {
     @StateObject private var wrapper: ActViewModelWrapper = {
         if let vm = ViewModelProvider.shared.getActViewModel() {
@@ -42,29 +68,51 @@ struct ActView: View {
         return ActViewModelWrapper.empty()
     }()
     @State private var showQuestionnaire = false
+    @State private var showRecentWarning = false
+
+    /// Refazer antes de 28 dias repete boa parte da mesma janela do ACT — só avisa, não bloqueia.
+    private func startTest() {
+        if let latest = wrapper.state?.latestResult, actDaysSince(latest) < actIntervalDays {
+            showRecentWarning = true
+        } else {
+            wrapper.startNewTest()
+            showQuestionnaire = true
+        }
+    }
 
     var body: some View {
         Group {
             if wrapper.state?.isSubmitted == true, let result = wrapper.state?.latestResult {
                 ActResultContent(
                     result: result,
-                    onRedo: { wrapper.startNewTest(); showQuestionnaire = true }
+                    onRedo: { startTest() }
                 )
             } else if showQuestionnaire {
                 ActQuestionnaireContent(
                     isLoading: wrapper.state?.isLoading == true,
-                    onSubmit: { a, b, c, d, e in
+                    onSubmit: { a, b, c, d, e, steroid, er in
                         wrapper.submitTest(
                             activityImpairment: a, shortnessOfBreath: b, nighttimeSymptoms: c,
-                            rescueMedicationUse: d, selfRatedControl: e
+                            rescueMedicationUse: d, selfRatedControl: e,
+                            oralSteroidCourse4w: steroid, emergencyVisit4w: er
                         )
                     }
                 )
             } else if wrapper.state?.isLoading == true && wrapper.state?.latestResult == nil {
                 ProgressView()
             } else {
-                ActEntryContent(latestResult: wrapper.state?.latestResult, onStart: { showQuestionnaire = true })
+                ActEntryContent(latestResult: wrapper.state?.latestResult, onStart: { startTest() })
             }
+        }
+        .alert("Refazer o teste agora?", isPresented: $showRecentWarning) {
+            Button("Refazer mesmo assim") {
+                wrapper.startNewTest()
+                showQuestionnaire = true
+            }
+            Button("Agora não", role: .cancel) {}
+        } message: {
+            let days = wrapper.state?.latestResult.map { actDaysSince($0) } ?? 0
+            Text("O ACT avalia as últimas 4 semanas, e seu último teste foi \(daysAgoText(days)). Refazer agora repete boa parte do mesmo período. O ideal é refazer a cada 4 semanas, mas você pode refazer antes se algo mudou (por exemplo, depois de uma crise ou de uma troca de remédio).")
         }
         .navigationTitle("Teste de Controle da Asma")
         .navigationBarTitleDisplayMode(.inline)
@@ -88,6 +136,11 @@ private struct ActEntryContent: View {
                         Text("Último resultado").font(.caption).foregroundColor(.secondary)
                         Text("\(result.score) pontos").font(.largeTitle).fontWeight(.bold)
                         Text(result.level.label).fontWeight(.semibold)
+                        let days = actDaysSince(result)
+                        Text("Feito \(daysAgoText(days))" + (days < actIntervalDays
+                            ? " · próximo em \(max(1, actIntervalDays - days)) dia(s)"
+                            : " · já pode refazer"))
+                            .font(.caption)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(20)
@@ -125,8 +178,9 @@ private struct ActEntryContent: View {
 
 private struct ActQuestionnaireContent: View {
     let isLoading: Bool
-    let onSubmit: (Int32, Int32, Int32, Int32, Int32) -> Void
+    let onSubmit: (Int32, Int32, Int32, Int32, Int32, Bool, Bool) -> Void
     @State private var answers: [Int?] = [nil, nil, nil, nil, nil]
+    @State private var severeAnswers: [Bool?] = [nil, nil]
 
     var body: some View {
         ScrollView {
@@ -139,10 +193,23 @@ private struct ActQuestionnaireContent: View {
                         onSelect: { answers[index] = $0 }
                     )
                 }
+                Text("Para o seu médico (não entram na pontuação do ACT)")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(severeExacerbationQuestions.indices, id: \.self) { index in
+                    YesNoQuestionCard(
+                        number: actQuestions.count + index + 1,
+                        text: severeExacerbationQuestions[index],
+                        selected: severeAnswers[index],
+                        onSelect: { severeAnswers[index] = $0 }
+                    )
+                }
                 Button {
                     let values = answers.compactMap { $0 }
-                    guard values.count == 5 else { return }
-                    onSubmit(Int32(values[0]), Int32(values[1]), Int32(values[2]), Int32(values[3]), Int32(values[4]))
+                    guard values.count == 5,
+                          let steroid = severeAnswers[0],
+                          let er = severeAnswers[1] else { return }
+                    onSubmit(Int32(values[0]), Int32(values[1]), Int32(values[2]), Int32(values[3]), Int32(values[4]), steroid, er)
                 } label: {
                     if isLoading {
                         ProgressView()
@@ -151,7 +218,7 @@ private struct ActQuestionnaireContent: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isLoading || answers.contains(nil))
+                .disabled(isLoading || answers.contains(nil) || severeAnswers.contains(nil))
             }
             .padding(20)
         }
@@ -192,6 +259,38 @@ private struct ActQuestionCard: View {
     }
 }
 
+private struct YesNoQuestionCard: View {
+    let number: Int
+    let text: String
+    let selected: Bool?
+    let onSelect: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("\(number). \(text)")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            ForEach([true, false], id: \.self) { value in
+                Button {
+                    onSelect(value)
+                } label: {
+                    HStack {
+                        Image(systemName: selected == value ? "largecircle.fill.circle" : "circle")
+                            .foregroundColor(selected == value ? .accentColor : .secondary)
+                        Text(value ? "Sim" : "Não")
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(16)
+    }
+}
+
 private struct ActResultContent: View {
     let result: AsthmaControlTestResult
     let onRedo: () -> Void
@@ -210,6 +309,15 @@ private struct ActResultContent: View {
                 .cornerRadius(20)
 
                 Text(levelMessage(result.level)).font(.subheadline)
+
+                if result.hadSevereExacerbation {
+                    Text("Você relatou uma crise grave nas últimas 4 semanas (corticoide em comprimido, pronto-socorro ou internação). Leve essa informação ao seu médico: uma crise grave aumenta o risco de novas crises, mesmo quando os sintomas melhoram.")
+                        .font(.subheadline)
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.12))
+                        .cornerRadius(16)
+                }
 
                 Text("Este resultado é informativo e não substitui consulta médica. Leve-o ao seu pneumologista.")
                     .font(.caption)

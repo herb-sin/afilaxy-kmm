@@ -418,4 +418,16 @@ class EmergencyViewModel(
                 }
         }
     }
+
+    /** Resposta do diálogo pós-crise: precisou de pronto-socorro/UPA ou internação?
+     *  Fire-and-forget, como registerConsultationInterest. */
+    fun registerPostCrisisEmergencyVisit(emergencyId: String, visited: Boolean) {
+        if (emergencyId.isBlank()) return
+        viewModelScope.coroutineScope.launch {
+            emergencyRepository.registerPostCrisisEmergencyVisit(emergencyId, visited)
+                .onFailure { e ->
+                    com.afilaxy.util.Logger.e("EmergencyViewModel", "registerPostCrisisEmergencyVisit failed: ${e.message}", e)
+                }
+        }
+    }
 }

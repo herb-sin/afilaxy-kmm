@@ -34,6 +34,9 @@ class ProfileRepositoryImpl(
             val hasFoodAllergy: Boolean = doc.get("healthData.hasFoodAllergy") ?: false
             val hasNsaidAllergy: Boolean = doc.get("healthData.hasNsaidAllergy") ?: false
             val hasInhalantAllergy: Boolean = doc.get("healthData.hasInhalantAllergy") ?: false
+            val severeExacerbations12m: Int = try { doc.get<Long?>("healthData.severeExacerbations12m")?.toInt() } catch (e: Exception) { null } ?: 0
+            val severeExacerbationsUpdatedAt: Long = try { doc.get<Long?>("healthData.severeExacerbationsUpdatedAt") } catch (e: Exception) { null } ?: 0L
+            val everIcuOrIntubated: Boolean = try { doc.get<Boolean?>("healthData.everIcuOrIntubated") } catch (e: Exception) { null } ?: false
             val hasWheelchair: Boolean = doc.get("healthData.hasWheelchair") ?: false
             val hasLowVision: Boolean = doc.get("healthData.hasLowVision") ?: false
             val hasSpecialCondition: Boolean = doc.get("healthData.hasSpecialCondition") ?: false
@@ -46,6 +49,7 @@ class ProfileRepositoryImpl(
                 allergies.isNotEmpty() || medications.isNotEmpty() || conditions.isNotEmpty() ||
                 hasGerd || hasSleepApnea || hasRhinitis || hasObesity ||
                 hasFoodAllergy || hasNsaidAllergy || hasInhalantAllergy ||
+                severeExacerbations12m > 0 || severeExacerbationsUpdatedAt > 0L || everIcuOrIntubated ||
                 hasWheelchair || hasLowVision || hasSpecialCondition
             val hasContact = contactName != null || contactPhone != null
 
@@ -59,6 +63,9 @@ class ProfileRepositoryImpl(
                     hasObesity = hasObesity,
                     hasFoodAllergy = hasFoodAllergy, hasNsaidAllergy = hasNsaidAllergy,
                     hasInhalantAllergy = hasInhalantAllergy,
+                    severeExacerbations12m = severeExacerbations12m,
+                    severeExacerbationsUpdatedAt = severeExacerbationsUpdatedAt,
+                    everIcuOrIntubated = everIcuOrIntubated,
                     hasWheelchair = hasWheelchair, hasLowVision = hasLowVision,
                     hasSpecialCondition = hasSpecialCondition
                 ) else null,
@@ -88,6 +95,9 @@ class ProfileRepositoryImpl(
                     "hasFoodAllergy" to it.hasFoodAllergy,
                     "hasNsaidAllergy" to it.hasNsaidAllergy,
                     "hasInhalantAllergy" to it.hasInhalantAllergy,
+                    "severeExacerbations12m" to it.severeExacerbations12m,
+                    "severeExacerbationsUpdatedAt" to it.severeExacerbationsUpdatedAt,
+                    "everIcuOrIntubated" to it.everIcuOrIntubated,
                     "hasWheelchair" to it.hasWheelchair,
                     "hasLowVision" to it.hasLowVision,
                     "hasSpecialCondition" to it.hasSpecialCondition
@@ -148,6 +158,9 @@ class ProfileRepositoryImpl(
                     "hasFoodAllergy" to healthData.hasFoodAllergy,
                     "hasNsaidAllergy" to healthData.hasNsaidAllergy,
                     "hasInhalantAllergy" to healthData.hasInhalantAllergy,
+                    "severeExacerbations12m" to healthData.severeExacerbations12m,
+                    "severeExacerbationsUpdatedAt" to healthData.severeExacerbationsUpdatedAt,
+                    "everIcuOrIntubated" to healthData.everIcuOrIntubated,
                     "hasWheelchair" to healthData.hasWheelchair,
                     "hasLowVision" to healthData.hasLowVision,
                     "hasSpecialCondition" to healthData.hasSpecialCondition

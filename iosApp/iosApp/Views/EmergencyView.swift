@@ -341,6 +341,8 @@ struct EmergencyView: View {
                 // espelha NavGraph.kt (Android) no mesmo momento: nova emergência detectada.
                 let nowMs = String(Int64(Date().timeIntervalSince1970 * 1000))
                 UserDefaults.standard.set(nowMs, forKey: "last_emergency_requested_at")
+                // Id do pedido: o diálogo pós-crise grava nele se houve ida ao pronto-socorro
+                UserDefaults.standard.set(eid, forKey: "last_emergency_id")
                 UserDefaults.standard.set(false, forKey: "post_crisis_dialog_shown")
             }
             guard !chatNavigated else { return }

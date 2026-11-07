@@ -4,6 +4,7 @@ import com.afilaxy.domain.model.CheckInResponse
 import com.afilaxy.domain.model.EnvironmentalData
 import com.afilaxy.domain.model.AsthmaRiskLevel
 import com.afilaxy.domain.model.RiskScore
+import com.afilaxy.domain.model.declaredSevereExacerbationIsCurrent
 import com.afilaxy.domain.repository.CheckInRepository
 import com.afilaxy.domain.repository.EnvironmentalRepository
 import com.afilaxy.domain.model.getCurrentTimeMillis
@@ -225,6 +226,41 @@ class EnvironmentalRepositoryImpl(
             val hasNsaidAllergy: Boolean = try { userDoc?.get("healthData.hasNsaidAllergy") ?: false } catch (e: Exception) { false }
             val hasInhalantAllergy: Boolean = try { userDoc?.get("healthData.hasInhalantAllergy") ?: false } catch (e: Exception) { false }
 
+            // ── Crise grave nos últimos 12 meses (definição da GINA) ─────────────
+            // Corticoide oral ≥3 dias, pronto-socorro/UPA ou internação. Três fontes,
+            // combinadas como "sim/não" (a GINA usa ≥1 crise como fator de risco) para
+            // não contar duas vezes a mesma crise relatada em lugares diferentes:
+            // 1) contagem informada no Perfil (vale por 12 meses a partir de quando foi informada)
+            val declaredCount: Int = try { userDoc?.get<Long?>("healthData.severeExacerbations12m")?.toInt() } catch (e: Exception) { null } ?: 0
+            val declaredAt: Long = try { userDoc?.get<Long?>("healthData.severeExacerbationsUpdatedAt") } catch (e: Exception) { null } ?: 0L
+            val everIcuOrIntubated: Boolean = try { userDoc?.get<Boolean?>("healthData.everIcuOrIntubated") } catch (e: Exception) { null } ?: false
+            val nowMs = getCurrentTimeMillis()
+            val fromProfile = declaredSevereExacerbationIsCurrent(declaredCount, declaredAt, nowMs)
+            // 2) perguntas complementares do ACT ("nas últimas 4 semanas")
+            val fromAct = !fromProfile && try {
+                firestore.collection("act").document(userId).collection("results")
+                    .get().documents.any { doc ->
+                        val ts = doc.get<Long?>("timestamp") ?: 0L
+                        ts >= twelveMonthsAgo && (
+                            (try { doc.get<Boolean?>("oralSteroidCourse4w") } catch (e: Exception) { null } == true) ||
+                            (try { doc.get<Boolean?>("emergencyVisit4w") } catch (e: Exception) { null } == true)
+                        )
+                    }
+            } catch (e: Exception) { false }
+            // 3) resposta do diálogo pós-crise, gravada no próprio pedido de ajuda.
+            // Filtro só por requesterId (exigido pela regra de list) e o resto no cliente —
+            // evita índice composto; o volume de pedidos por usuário é pequeno.
+            val fromPostCrisis = !fromProfile && !fromAct && try {
+                firestore.collection("emergency_requests")
+                    .where { "requesterId" equalTo userId }
+                    .get().documents.any { doc ->
+                        val ts = doc.get<Long?>("timestamp") ?: 0L
+                        ts >= twelveMonthsAgo &&
+                            (try { doc.get<Boolean?>("emergencyVisitAfter") } catch (e: Exception) { null } == true)
+                    }
+            } catch (e: Exception) { false }
+            val hadSevereExacerbation12m = fromProfile || fromAct || fromPostCrisis
+
             // Mês atual → sazonalidade
             val month = Clock.System.now()
                 .toLocalDateTime(TimeZone.currentSystemDefault()).monthNumber
@@ -242,7 +278,9 @@ class EnvironmentalRepositoryImpl(
                 hasObesity = hasObesity,
                 hasFoodAllergy = hasFoodAllergy,
                 hasNsaidAllergy = hasNsaidAllergy,
-                hasInhalantAllergy = hasInhalantAllergy
+                hasInhalantAllergy = hasInhalantAllergy,
+                hadSevereExacerbation12m = hadSevereExacerbation12m,
+                everIcuOrIntubated = everIcuOrIntubated
             )
 
             // Persist risk score snapshot for trend analysis and future ML training
@@ -260,6 +298,8 @@ class EnvironmentalRepositoryImpl(
                         "level" to riskScore.level,
                         "crises7d" to crises7d,
                         "crises30d" to crises30d,
+                        // Rótulo candidato para o modelo supervisionado do roadmap
+                        "severeExacerbation12m" to hadSevereExacerbation12m,
                         "aqi" to (env?.aqi ?: 0),
                         "temperature" to (env?.temperatureCelsius ?: 0f),
                         "humidity" to (env?.humidity ?: 0f),
@@ -280,6 +320,9 @@ class EnvironmentalRepositoryImpl(
 
 internal object RiskScoreEngine {
 
+    /** Score mínimo do nível Moderado — também é o piso aplicado pelos fatores de risco da GINA. */
+    const val MODERATE_MIN_SCORE = 20
+
     fun calculate(
         env: EnvironmentalData?,
         crises30d: Int,
@@ -293,7 +336,9 @@ internal object RiskScoreEngine {
         hasObesity: Boolean = false,
         hasFoodAllergy: Boolean = false,
         hasNsaidAllergy: Boolean = false,
-        hasInhalantAllergy: Boolean = false
+        hasInhalantAllergy: Boolean = false,
+        hadSevereExacerbation12m: Boolean = false,
+        everIcuOrIntubated: Boolean = false
     ): RiskScore {
         var score = 0
         val factors = mutableListOf<String>()
@@ -471,6 +516,25 @@ internal object RiskScoreEngine {
             factors.add("Alergia(s) específica(s) autodeclarada(s) no Perfil Médico")
         }
 
+        // ── Crises graves (GINA) ───────────────────────────────────────────────
+        // ≥1 crise grave nos últimos 12 meses (corticoide oral ≥3 dias, pronto-socorro
+        // ou internação) é um dos fatores de risco independentes mais fortes da GINA
+        // para novas crises — vale mesmo com os sintomas controlados hoje. UTI ou
+        // intubação alguma vez é fator de risco da GINA para crise fatal. Ambos
+        // aplicam o piso de risco no fim do cálculo.
+        if (hadSevereExacerbation12m) {
+            score += 20
+            factors.add("⚠️ Crise grave nos últimos 12 meses (corticoide oral, pronto-socorro ou internação)")
+            recommendations.add("Leve essa informação ao seu médico: uma crise grave no último ano aumenta o risco de novas crises, mesmo com os sintomas controlados")
+        }
+        if (everIcuOrIntubated) {
+            score += 10
+            factors.add("Histórico de UTI ou intubação por crise respiratória")
+            // GINA: quem já teve crise quase fatal deve ter plano de ação escrito e
+            // buscar atendimento cedo quando os sintomas pioram.
+            recommendations.add("Tenha um plano de ação escrito pelo seu médico e procure atendimento logo no início de uma piora — não espere a crise ficar forte")
+        }
+
         // ── Qualidade do ar ────────────────────────────────────────────────────
         val aqi = env?.aqi
         if (aqi != null) {
@@ -530,12 +594,16 @@ internal object RiskScoreEngine {
         }
 
         // ── Score final e nível ────────────────────────────────────────────────
-        val finalScore = score.coerceIn(0, 100)
+        // Piso da GINA: com histórico de crise grave (12 meses) ou de UTI/intubação,
+        // o risco nunca aparece como Baixo, por melhores que estejam os outros sinais.
+        val hasGinaRiskFloor = hadSevereExacerbation12m || everIcuOrIntubated
+        val flooredScore = if (hasGinaRiskFloor) maxOf(score, MODERATE_MIN_SCORE) else score
+        val finalScore = flooredScore.coerceIn(0, 100)
 
         val level = when {
             finalScore >= 70 -> AsthmaRiskLevel.VERY_HIGH
             finalScore >= 45 -> AsthmaRiskLevel.HIGH
-            finalScore >= 20 -> AsthmaRiskLevel.MODERATE
+            finalScore >= MODERATE_MIN_SCORE -> AsthmaRiskLevel.MODERATE
             else             -> AsthmaRiskLevel.LOW
         }
 
