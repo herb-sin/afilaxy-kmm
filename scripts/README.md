@@ -52,3 +52,20 @@ Você verá 8 UBS cadastradas em São Paulo.
 ### Adicionar mais UBS
 
 Edite `ubs_seed_data.json` e execute o script novamente.
+
+## Contagem do volume de dados de pesquisa
+
+`contagem_firestore.js` conta, sem alterar nada, quantos registros existem de ACT,
+crises graves (GINA), check-ins, emergências e pós-crise. Serve para acompanhar se
+já há volume para treinar ou avaliar um modelo de ML com dados reais do app.
+Imprime apenas totais (nenhum dado individual).
+
+Rodar no **Cloud Shell** do projeto `afilaxy-app` (usa as credenciais da sua conta,
+sem chave de serviço):
+
+```bash
+git clone https://github.com/herb-sin/afilaxy-kmm.git && cd afilaxy-kmm/scripts
+npm ci
+node contagem_firestore.js
+```
+
