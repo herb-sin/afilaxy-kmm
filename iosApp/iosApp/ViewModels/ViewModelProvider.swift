@@ -314,15 +314,13 @@ class ActViewModelWrapper: ObservableObject {
     func loadHistory() { viewModel?.loadHistory() }
     func startNewTest() { viewModel?.startNewTest() }
 
-    func submitTest(
-        activityImpairment: Int32, shortnessOfBreath: Int32, nighttimeSymptoms: Int32,
-        rescueMedicationUse: Int32, selfRatedControl: Int32,
-        oralSteroidCourse4w: Bool, emergencyVisit4w: Bool
-    ) {
+    /// `answers`: as 5 respostas do ACT na ordem P1–P5 (1 a 5 cada).
+    func submitTest(answers: [Int32], oralSteroidCourse4w: Bool, emergencyVisit4w: Bool) {
+        guard answers.count == 5 else { return }
         viewModel?.submitTest(
-            activityImpairment: activityImpairment, shortnessOfBreath: shortnessOfBreath,
-            nighttimeSymptoms: nighttimeSymptoms, rescueMedicationUse: rescueMedicationUse,
-            selfRatedControl: selfRatedControl,
+            activityImpairment: answers[0], shortnessOfBreath: answers[1],
+            nighttimeSymptoms: answers[2], rescueMedicationUse: answers[3],
+            selfRatedControl: answers[4],
             oralSteroidCourse4w: oralSteroidCourse4w, emergencyVisit4w: emergencyVisit4w
         )
     }

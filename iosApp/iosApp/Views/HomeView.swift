@@ -24,8 +24,7 @@ struct HomeView: View {
     @State private var helperErrorMessage = ""
     @State private var showNps = false
     @State private var showPostCrisisDialog = false
-    // Etapa 2 do pós-crise (convite para consulta), aberta depois da etapa 1
-    // (pergunta sobre pronto-socorro/UPA — crise grave pela GINA).
+    // Pós-crise etapa 2 (convite para consulta), aberta depois da etapa 1 (pronto-socorro/UPA).
     @State private var showPostCrisisConsultation = false
     @StateObject private var actWrapper: ActViewModelWrapper = {
         if let vm = ViewModelProvider.shared.getActViewModel() {
@@ -198,8 +197,7 @@ struct HomeView: View {
                 }
             )
         }
-        // Pós-crise, etapa 1: precisou de pronto-socorro/UPA ou internação? A resposta é
-        // gravada no próprio pedido de ajuda (espelha HomeScreenNew.kt no Android).
+        // Pós-crise etapa 1: pronto-socorro/UPA ou internação? Gravado no pedido (espelha HomeScreenNew.kt).
         .alert("Que bom que você está bem", isPresented: $showPostCrisisDialog) {
             Button("Sim") { answerPostCrisisEmergencyVisit(true) }
             Button("Não") { answerPostCrisisEmergencyVisit(false) }
@@ -270,7 +268,6 @@ struct HomeView: View {
         WeeklyStatusCard(weeklyCount: weeklyCount, totalEmergencies: totalEmergencies)
         #endif
     }
-
 
     // MARK: - Check-in Card
     @ViewBuilder
@@ -526,18 +523,16 @@ struct HomeView: View {
         }
         .buttonStyle(.plain)
     }
+}
 
-    // MARK: - Support Links
+// MARK: - Support Links
+
+extension HomeView {
     private var meuControleSubtitle: String {
         guard let act = actWrapper.state?.latestResult else { return "Teste de Controle da Asma" }
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         let days = max(0, Int((nowMs - act.timestamp) / (24 * 60 * 60 * 1000)))
-        let whenText: String
-        switch days {
-        case 0: whenText = "hoje"
-        case 1: whenText = "ontem"
-        default: whenText = "há \(days) dias"
-        }
+        let whenText = days == 0 ? "hoje" : (days == 1 ? "ontem" : "há \(days) dias")
         return "ACT: \(act.score) pontos · \(act.level.label) · \(whenText)"
     }
 
@@ -579,8 +574,7 @@ struct HomeView: View {
                         showReportExport = true
                     }
 
-                    // Meu Controle — último ACT e histórico. A tela do ACT avisa antes de
-                    // refazer com menos de 28 dias (janela de 4 semanas do teste).
+                    // Meu Controle — último ACT; a tela do ACT avisa ao refazer antes de 28 dias.
                     SupportLinkRow(
                         title: "Meu Controle",
                         subtitle: meuControleSubtitle,
@@ -622,7 +616,6 @@ struct HomeView: View {
             }
         }
     }
-
 }
 
 // MARK: - Helper Actions
@@ -793,7 +786,6 @@ struct PendingEmergencyRow: View {
     }
 }
 
-
 // MARK: - NPS Helpers
 
 extension HomeView {
@@ -823,9 +815,8 @@ extension HomeView {
 
 extension HomeView {
 
-    /// Etapa 1 do pós-crise. `nil` = preferiu não responder (nada é gravado).
-    /// A etapa 2 abre com um pequeno atraso: o SwiftUI não apresenta um alert
-    /// enquanto o anterior ainda está sendo fechado.
+    /// Pós-crise etapa 1 (`nil` = preferiu não responder, nada é gravado). A etapa 2 abre com
+    /// atraso porque o SwiftUI não apresenta um alert enquanto o anterior ainda fecha.
     private func answerPostCrisisEmergencyVisit(_ visited: Bool?) {
         if let visited = visited,
            let emergencyId = UserDefaults.standard.string(forKey: "last_emergency_id") {
@@ -850,4 +841,3 @@ extension HomeView {
         }
     }
 }
-

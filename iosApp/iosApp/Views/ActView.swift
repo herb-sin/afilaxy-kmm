@@ -90,12 +90,8 @@ struct ActView: View {
             } else if showQuestionnaire {
                 ActQuestionnaireContent(
                     isLoading: wrapper.state?.isLoading == true,
-                    onSubmit: { a, b, c, d, e, steroid, er in
-                        wrapper.submitTest(
-                            activityImpairment: a, shortnessOfBreath: b, nighttimeSymptoms: c,
-                            rescueMedicationUse: d, selfRatedControl: e,
-                            oralSteroidCourse4w: steroid, emergencyVisit4w: er
-                        )
+                    onSubmit: { answers, steroid, er in
+                        wrapper.submitTest(answers: answers, oralSteroidCourse4w: steroid, emergencyVisit4w: er)
                     }
                 )
             } else if wrapper.state?.isLoading == true && wrapper.state?.latestResult == nil {
@@ -112,7 +108,11 @@ struct ActView: View {
             Button("Agora não", role: .cancel) {}
         } message: {
             let days = wrapper.state?.latestResult.map { actDaysSince($0) } ?? 0
-            Text("O ACT avalia as últimas 4 semanas, e seu último teste foi \(daysAgoText(days)). Refazer agora repete boa parte do mesmo período. O ideal é refazer a cada 4 semanas, mas você pode refazer antes se algo mudou (por exemplo, depois de uma crise ou de uma troca de remédio).")
+            Text(
+                "O ACT avalia as últimas 4 semanas, e seu último teste foi \(daysAgoText(days)). "
+                    + "Refazer agora repete boa parte do mesmo período. O ideal é refazer a cada 4 semanas, "
+                    + "mas você pode refazer antes se algo mudou (por exemplo, depois de uma crise ou de uma troca de remédio)."
+            )
         }
         .navigationTitle("Teste de Controle da Asma")
         .navigationBarTitleDisplayMode(.inline)
@@ -178,7 +178,8 @@ private struct ActEntryContent: View {
 
 private struct ActQuestionnaireContent: View {
     let isLoading: Bool
-    let onSubmit: (Int32, Int32, Int32, Int32, Int32, Bool, Bool) -> Void
+    /// Respostas P1–P5, crise grave por corticoide oral, crise grave por pronto-socorro/internação.
+    let onSubmit: ([Int32], Bool, Bool) -> Void
     @State private var answers: [Int?] = [nil, nil, nil, nil, nil]
     @State private var severeAnswers: [Bool?] = [nil, nil]
 
@@ -209,7 +210,7 @@ private struct ActQuestionnaireContent: View {
                     guard values.count == 5,
                           let steroid = severeAnswers[0],
                           let er = severeAnswers[1] else { return }
-                    onSubmit(Int32(values[0]), Int32(values[1]), Int32(values[2]), Int32(values[3]), Int32(values[4]), steroid, er)
+                    onSubmit(values.map { Int32($0) }, steroid, er)
                 } label: {
                     if isLoading {
                         ProgressView()
@@ -311,7 +312,10 @@ private struct ActResultContent: View {
                 Text(levelMessage(result.level)).font(.subheadline)
 
                 if result.hadSevereExacerbation {
-                    Text("Você relatou uma crise grave nas últimas 4 semanas (corticoide em comprimido, pronto-socorro ou internação). Leve essa informação ao seu médico: uma crise grave aumenta o risco de novas crises, mesmo quando os sintomas melhoram.")
+                    Text(
+                        "Você relatou uma crise grave nas últimas 4 semanas (corticoide em comprimido, pronto-socorro ou internação). "
+                            + "Leve essa informação ao seu médico: uma crise grave aumenta o risco de novas crises, mesmo quando os sintomas melhoram."
+                    )
                         .font(.subheadline)
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
