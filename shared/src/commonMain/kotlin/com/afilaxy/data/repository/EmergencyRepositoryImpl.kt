@@ -367,14 +367,14 @@ class EmergencyRepositoryImpl(
         return list.mapNotNull { item ->
             val h = item as? Map<*, *> ?: return@mapNotNull null
             val id = h["id"] as? String ?: return@mapNotNull null
-            val lat = (h["latitude"] as? Number)?.toDouble() ?: return@mapNotNull null
-            val lon = (h["longitude"] as? Number)?.toDouble() ?: return@mapNotNull null
+            // A função não devolve mais a posição do helper (minimização LGPD); a UI só usa
+            // nome e distância. latitude/longitude ficam como opcionais.
             Helper(
                 id = id,
                 name = h["name"] as? String ?: "Helper",
                 email = "",
-                latitude = lat,
-                longitude = lon,
+                latitude = (h["latitude"] as? Number)?.toDouble() ?: 0.0,
+                longitude = (h["longitude"] as? Number)?.toDouble() ?: 0.0,
                 isActive = true,
                 lastUpdate = 0L,
                 distance = (h["distance"] as? Number)?.toDouble() ?: 0.0

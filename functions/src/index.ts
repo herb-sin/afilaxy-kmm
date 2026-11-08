@@ -272,6 +272,16 @@ export const checkExpiredSubscriptions = onSchedule(
 // FUNÇÕES EXISTENTES (EMERGÊNCIAS)
 // ============================================
 
+// Limite de criação de emergências por usuário (ver onEmergencyCreated).
+const EMERGENCY_MAX_PER_DAY = 10;
+const EMERGENCY_MIN_INTERVAL_MS = 30_000;
+
+// Primeiro nome, sem espaços extras e com tamanho limitado (o nome vem do cliente).
+function firstName(name: unknown, fallback: string): string {
+    const first = typeof name === 'string' ? name.trim().split(/\s+/)[0] : '';
+    return first ? first.slice(0, 30) : fallback;
+}
+
 /**
  * Trigger quando uma emergência é criada
  * Envia notificação apenas para helpers próximos (250m)
@@ -290,6 +300,28 @@ export const onEmergencyCreated = onDocumentCreated(
             // Validar coordenadas da emergência
             if (!emergency.latitude || !emergency.longitude) {
                 console.error('Emergência sem coordenadas válidas');
+                return;
+            }
+
+            // Limite de envios: emergency_requests é gravado direto pelo app, então o limite
+            // fica aqui. Generoso para não barrar crise real (cancelar e pedir de novo é comum),
+            // mas impede que um script dispare pushes em série para a vizinhança.
+            let overLimit = false;
+            try {
+                await enforceRateLimit(emergency.requesterId, 'emergencyCreate',
+                    EMERGENCY_MAX_PER_DAY, EMERGENCY_MIN_INTERVAL_MS);
+            } catch (e) {
+                // Só suprime quando o limite foi de fato atingido. Falha transitória do
+                // Firestore não pode impedir o aviso de uma crise real.
+                if (e instanceof HttpsError && e.code === 'resource-exhausted') {
+                    overLimit = true;
+                } else {
+                    console.error('Falha ao checar limite de emergências — notificando assim mesmo:', e);
+                }
+            }
+            if (overLimit) {
+                console.warn(`Limite de emergências atingido por ${emergency.requesterId} — sem notificação para ${emergencyId}`);
+                await snap.ref.update({ notificationSuppressed: true }).catch(() => {});
                 return;
             }
 
@@ -378,19 +410,22 @@ export const onEmergencyCreated = onDocumentCreated(
             console.log(`✅ Notificando ${tokens.length} helper(s) dentro de ${radiusInKm}km`);
 
             // notification + data: o SO entrega a notificação imediatamente (sem depender do app)
-            // e os extras do data chegam no intent quando o usuário clica
+            // e os extras do data chegam no intent quando o usuário clica.
+            // Minimização (LGPD): o push vai a desconhecidos e aparece na tela bloqueada, então
+            // leva só o primeiro nome e nenhuma coordenada — a localização exata só é lida em
+            // emergency_requests depois do aceite, quando o helper vira participante.
+            const requesterFirstName = firstName(emergency.requesterName, '');
+            const pushBody = `${requesterFirstName || 'Alguém'} precisa de ajuda!`;
             const message = {
                 notification: {
                     title: 'Nova Emergência de Asma',
-                    body: `${emergency.requesterName || 'Alguém'} precisa de ajuda!`,
+                    body: pushBody,
                 },
                 data: {
                     type: 'emergency_request',
                     emergencyId: emergencyId,
-                    requesterName: emergency.requesterName || '',
+                    requesterName: requesterFirstName,
                     openEmergencyResponse: 'true',
-                    latitude: String(emergency.latitude || ''),
-                    longitude: String(emergency.longitude || ''),
                 },
                 android: {
                     priority: 'high' as const,
@@ -407,7 +442,7 @@ export const onEmergencyCreated = onDocumentCreated(
                         aps: {
                             alert: {
                                 title: 'Nova Emergência de Asma',
-                                body: `${emergency.requesterName || 'Alguém'} precisa de ajuda!`,
+                                body: pushBody,
                             },
                             sound: 'default',
                             // sem contentAvailable — notificação visível tem prioridade máxima no APNs
@@ -1009,6 +1044,7 @@ async function enforceRateLimit(
     uid: string,
     action: string,
     maxPerWindow: number = RATE_LIMIT_MAX_PER_WINDOW,
+    minIntervalMs: number = RATE_LIMIT_MIN_INTERVAL_MS,
 ): Promise<void> {
     const ref = getFirestore().collection('rate_limits').doc(`${action}_${uid}`);
     const now = Date.now();
@@ -1019,7 +1055,7 @@ async function enforceRateLimit(
         let windowStart: number = data?.windowStart ?? 0;
         let count: number = data?.count ?? 0;
 
-        if (now - lastCallAt < RATE_LIMIT_MIN_INTERVAL_MS) {
+        if (now - lastCallAt < minIntervalMs) {
             throw new HttpsError('resource-exhausted', 'Muitas chamadas em sequência. Aguarde alguns segundos.');
         }
 
@@ -1084,7 +1120,7 @@ export const getNearbyHelpers = onCall(async (request) => {
 
     const snapshots = await Promise.all(boundPromises);
     const seen = new Set<string>();
-    const helpers: any[] = [];
+    const found: { name: string; distance: number }[] = [];
 
     for (const snap of snapshots) {
         for (const doc of snap.docs) {
@@ -1099,17 +1135,25 @@ export const getNearbyHelpers = onCall(async (request) => {
             const dist = geofireCommon.distanceBetween(helperLoc, center);
             if (dist > radiusKm) continue;
 
-            helpers.push({
-                id: doc.id,
-                name: data.name ?? 'Helper',
-                latitude: data.latitude,
-                longitude: data.longitude,
-                distance: dist,
-            });
+            found.push({ name: firstName(data.name, 'Helper'), distance: dist });
         }
     }
 
-    return { helpers: helpers.sort((a, b) => a.distance - b.distance) };
+    // Minimização (LGPD): a UI só mostra primeiro nome e distância. Nunca devolve o uid nem
+    // a posição do helper — com elas, varrer coordenadas arbitrárias montaria um mapa de
+    // quem está ativo. id é opaco; latitude/longitude são as do PRÓPRIO caller, só para
+    // compatibilidade com versões do app que ainda exigem esses campos ao interpretar a resposta.
+    const helpers = found
+        .sort((a, b) => a.distance - b.distance)
+        .map((h, i) => ({
+            id: `h${i + 1}`,
+            name: h.name,
+            latitude: lat,
+            longitude: lon,
+            distance: Math.round(h.distance * 10) / 10, // 0,1 km, a precisão exibida
+        }));
+
+    return { helpers };
 });
 
 /**
