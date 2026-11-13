@@ -36,7 +36,8 @@ object LegalDisclaimer {
     const val COMMUNITY_DISCLAIMER = """
         🤝 SOBRE O AFILAXY
 
-        O Afilaxy é uma ferramenta de apoio comunitário e diário de bem-estar pessoal.
+        O Afilaxy é uma ferramenta de apoio comunitário e diário de bem-estar pessoal,
+        destinada a maiores de 18 anos.
 
         • Não somos profissionais de saúde
         • Não prestamos serviços médicos

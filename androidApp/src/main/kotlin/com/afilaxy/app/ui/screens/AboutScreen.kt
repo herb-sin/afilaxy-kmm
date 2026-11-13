@@ -112,7 +112,7 @@ fun AboutScreen(navController: NavController) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                 ) {
                     Text(
-                        "O Afilaxy não substitui atendimento médico. Em uma crise grave, ligue 192 (SAMU).",
+                        "O Afilaxy é destinado a maiores de 18 anos e não substitui atendimento médico. Em uma crise grave, ligue 192 (SAMU).",
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,

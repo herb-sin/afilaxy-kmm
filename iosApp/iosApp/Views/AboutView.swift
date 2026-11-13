@@ -60,7 +60,7 @@ struct AboutView: View {
                 .cornerRadius(10)
                 .padding(.horizontal)
 
-                Text("O Afilaxy não substitui atendimento médico. Em uma crise grave, ligue 192 (SAMU).")
+                Text("O Afilaxy é destinado a maiores de 18 anos e não substitui atendimento médico. Em uma crise grave, ligue 192 (SAMU).")
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .padding()
