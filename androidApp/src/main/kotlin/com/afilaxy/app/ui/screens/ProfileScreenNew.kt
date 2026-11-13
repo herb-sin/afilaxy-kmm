@@ -81,6 +81,7 @@ fun ProfileScreenNew(
     var editSevereCount         by remember { mutableStateOf(0) }
     var editSevereTouched       by remember { mutableStateOf(false) }
     var editEverIcu             by remember { mutableStateOf(false) }
+    var editBirthYear           by remember { mutableStateOf("") } // só dígitos; "" = não informado
 
     // Preenche campos quando o perfil chega pela primeira vez
     LaunchedEffect(profile) {
@@ -105,6 +106,7 @@ fun ProfileScreenNew(
             editSevereCount         = profile.healthData?.severeExacerbations12m ?: 0
             editSevereTouched       = false
             editEverIcu             = profile.healthData?.everIcuOrIntubated ?: false
+            editBirthYear           = profile.healthData?.birthYear?.takeIf { it > 0 }?.toString() ?: ""
         }
     }
 
@@ -311,6 +313,7 @@ fun ProfileScreenNew(
                 severeUpdatedAt = profile?.healthData?.severeExacerbationsUpdatedAt ?: 0L,
                 severeTouched = editSevereTouched,
                 everIcu = editEverIcu,      onEverIcuChange = { editEverIcu = it },
+                birthYear = editBirthYear,  onBirthYearChange = { editBirthYear = it },
                 isSaving = state.isSaving,
                 onSave = {
                     val current = profile ?: return@EditProfileSheetContent
@@ -341,7 +344,8 @@ fun ProfileScreenNew(
                                 everIcuOrIntubated = editEverIcu,
                                 hasWheelchair = editHasWheelchair,
                                 hasLowVision  = editHasLowVision,
-                                hasSpecialCondition = editHasSpecialCondition
+                                hasSpecialCondition = editHasSpecialCondition,
+                                birthYear = editBirthYear.toIntOrNull() ?: 0
                             ),
                             emergencyContact = EmergencyContact(
                                 name         = editEmergName,
@@ -534,17 +538,23 @@ private fun EditProfileSheetContent(
     severeUpdatedAt: Long,
     severeTouched: Boolean,
     everIcu: Boolean,             onEverIcuChange: (Boolean) -> Unit,
+    birthYear: String,            onBirthYearChange: (String) -> Unit,
     isSaving: Boolean,
     onSave: () -> Unit
 ) {
     var nameError by remember { mutableStateOf(false) }
+    var birthYearError by remember { mutableStateOf(false) }
+    val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
 
     val onPhoneDigits: (String) -> Unit = { raw -> onPhoneChange(raw.filter { it.isDigit() }.take(11)) }
     val onEmergPhoneDigits: (String) -> Unit = { raw -> onEmergPhoneChange(raw.filter { it.isDigit() }.take(11)) }
 
     val validateAndSave: () -> Unit = {
         nameError = name.trim().isBlank()
-        if (!nameError) onSave()
+        // Opcional: vazio é aceito; preenchido precisa ser um ano possível.
+        birthYearError = birthYear.isNotEmpty() &&
+            !com.afilaxy.domain.model.isValidBirthYear(birthYear.toIntOrNull() ?: 0, currentYear)
+        if (!nameError && !birthYearError) onSave()
     }
 
     LazyColumn(
@@ -580,6 +590,32 @@ private fun EditProfileSheetContent(
                     keyboardType = KeyboardType.Phone,
                     visualTransformation = BrPhoneVisualTransformation
                 )
+                ProfileTextField(
+                    label = "Ano de nascimento (opcional)",
+                    value = birthYear,
+                    onValueChange = { raw ->
+                        onBirthYearChange(raw.filter { it.isDigit() }.take(4)); birthYearError = false
+                    },
+                    keyboardType = KeyboardType.Number,
+                    isError = birthYearError,
+                    errorMessage = if (birthYearError) "Informe um ano entre 1900 e $currentYear" else null
+                )
+                Text(
+                    "Aparece no seu relatório de saúde, para o médico saber sua idade.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                // Só o ano é conhecido: diferença ≤ 17 garante menos de 18 anos. Avisa, não bloqueia.
+                val year = birthYear.toIntOrNull()
+                if (year != null && com.afilaxy.domain.model.isValidBirthYear(year, currentYear) &&
+                    currentYear - year < 18
+                ) {
+                    Text(
+                        "O Afilaxy é destinado, por enquanto, a maiores de 18 anos.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
         // Seção 2b: Comorbidades (autodeclaradas, sem verificação clínica — alimenta o motor de risco)

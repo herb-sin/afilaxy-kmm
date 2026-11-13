@@ -37,6 +37,8 @@ struct RegisterView: View {
                     else { Text("Criar Conta").frame(maxWidth: .infinity) }
                 }
                 .disabled(!isFormValid || state?.isLoading == true)
+            } footer: {
+                Text("O Afilaxy é destinado, por enquanto, a maiores de 18 anos.")
             }
         }
         .navigationTitle("Criar Conta")

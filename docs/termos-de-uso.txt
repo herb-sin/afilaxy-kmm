@@ -1,5 +1,5 @@
 TERMOS GERAIS E CONDIÇÕES DE USO — AFILAXY
-Última atualização: julho de 2026
+Última atualização: novembro de 2026
 
 Este instrumento contém os termos gerais e condições de uso da plataforma AFILAXY.
 O serviço é prestado por Herbert Jung Sin, inscrito no CPF/MF sob o nº 360.537.008-00,
@@ -234,14 +234,12 @@ dos contextos descritos nesta cláusula.
 DOS MENORES DE IDADE
 ================================================================================
 
-Cláusula 22ª. A plataforma AFILAXY é destinada a maiores de 18 (dezoito) anos.
-Reconhecendo que a asma afeta também crianças e adolescentes, Usuários entre 13
-(treze) e 17 (dezessete) anos poderão utilizar a plataforma mediante consentimento
-expresso de responsável legal, que assumirá solidariamente as obrigações
-decorrentes destes Termos.
+Cláusula 22ª. A plataforma AFILAXY é destinada exclusivamente a maiores de 18
+(dezoito) anos. Ao se cadastrar, o Usuário declara ter 18 (dezoito) anos ou mais.
 
-Parágrafo único. É vedado o cadastro de menores de 13 (treze) anos. A AFILAXY não
-coleta intencionalmente dados de crianças abaixo dessa faixa etária.
+Parágrafo único. É vedado o cadastro de menores de 18 (dezoito) anos. A AFILAXY não
+coleta intencionalmente dados de menores de idade e, se tomar conhecimento de
+cadastro nessa condição, procederá à exclusão da conta e dos dados correspondentes.
 
 ================================================================================
 DO SIGILO DAS INFORMAÇÕES

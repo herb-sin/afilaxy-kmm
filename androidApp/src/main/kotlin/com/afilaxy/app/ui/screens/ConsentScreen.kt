@@ -23,6 +23,9 @@ import org.koin.compose.koinInject
 fun ConsentScreen(onConsentGiven: () -> Unit) {
     val prefs: PreferencesRepository = koinInject()
     var analyticsEnabled by remember { mutableStateOf(true) }
+    // Declaração de maioridade (Termos de Uso, cláusula 22). Esta tela aparece para toda
+    // conta nova, inclusive as criadas com Google/Apple, que não passam pelo cadastro.
+    var adultConfirmed by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -98,15 +101,46 @@ fun ConsentScreen(onConsentGiven: () -> Unit) {
             badge = null
         )
 
+        Spacer(Modifier.height(12.dp))
+
+        // ── Declaração de maioridade (obrigatória) ───────────────────────────
+        Surface(
+            onClick = { adultConfirmed = !adultConfirmed },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(checked = adultConfirmed, onCheckedChange = { adultConfirmed = it })
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Declaro ter 18 anos ou mais",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Por enquanto, o Afilaxy é destinado apenas a maiores de 18 anos.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(36.dp))
 
         // ── Botão principal ──────────────────────────────────────────────────
         Button(
             onClick = {
+                prefs.putBoolean("age_18_confirmed", true)
                 prefs.putBoolean("consent_shown", true)
                 prefs.putBoolean("analytics_consent", analyticsEnabled)
                 onConsentGiven()
             },
+            enabled = adultConfirmed,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),

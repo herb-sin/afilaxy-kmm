@@ -119,6 +119,7 @@ struct HealthProfileData {
     let everIcuOrIntubated: Bool
     let emergencyContactName: String
     let emergencyContactPhone: String
+    let birthYear: Int // 0 = não informado
 
     init(doc: DocumentSnapshot?) {
         allergiesText = (doc?["healthData.allergies"] as? [String]) ?? []
@@ -140,6 +141,7 @@ struct HealthProfileData {
         everIcuOrIntubated = doc?["healthData.everIcuOrIntubated"] as? Bool ?? false
         emergencyContactName = doc?["emergencyContact.name"] as? String ?? ""
         emergencyContactPhone = doc?["emergencyContact.phone"] as? String ?? ""
+        birthYear = (doc?["healthData.birthYear"] as? NSNumber)?.intValue ?? 0
     }
 }
 

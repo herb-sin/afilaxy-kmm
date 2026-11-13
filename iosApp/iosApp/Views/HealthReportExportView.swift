@@ -156,7 +156,12 @@ struct HealthReportExportView: View {
         do {
             // Janela de 4 semanas (28 dias): é o período dos critérios de controle da GINA.
             let now = Date()
-            let cutoffMs = Int64(now.timeIntervalSince1970 * 1000) - Int64(ReportWindow.days) * ReportWindow.dayMs
+            // Em dias de calendário: de 00:00 de 27 dias atrás até agora (hoje incluso), para que
+            // o período, as semanas S1–S4 e os dados do PDF usem as mesmas datas.
+            let cal = Calendar.current
+            let windowStart = cal.date(byAdding: .day, value: -(ReportWindow.days - 1),
+                                       to: cal.startOfDay(for: now)) ?? now
+            let cutoffMs = Int64(windowStart.timeIntervalSince1970 * 1000)
 
             let checkInDocs = try await Firestore.firestore()
                 .collection("checkins").document(uid)
@@ -334,7 +339,7 @@ enum WellbeingPDFGenerator {
     // MARK: Info Box
 
     private static func drawInfoBox(report: WellbeingReportData, cursor: PDFCursor) {
-        let h: CGFloat = 78
+        let h: CGFloat = 96
         cursor.breakIfNeeded(h + 20)
         let y = cursor.y
         fillRect(CGRect(x: margin, y: y, width: contentW, height: h),
@@ -347,7 +352,7 @@ enum WellbeingPDFGenerator {
              font: .boldSystemFont(ofSize: 12), color: .black)
         draw("PERÍODO", at: CGPoint(x: lx, y: y + 46),
              font: .systemFont(ofSize: 8, weight: .medium), color: .gray)
-        draw(periodString(), at: CGPoint(x: lx, y: y + 58),
+        draw(periodString(report), at: CGPoint(x: lx, y: y + 58),
              font: .systemFont(ofSize: 10), color: .darkGray)
 
         let rx = pageW - margin - 205
@@ -357,6 +362,10 @@ enum WellbeingPDFGenerator {
              font: .boldSystemFont(ofSize: 11), color: .black)
         draw("Sem revisão clínica prévia", at: CGPoint(x: rx, y: y + 40),
              font: .systemFont(ofSize: 10), color: .darkGray)
+        draw("ANO DE NASCIMENTO", at: CGPoint(x: rx, y: y + 60),
+             font: .systemFont(ofSize: 8, weight: .medium), color: .gray)
+        draw(birthYearText(report), at: CGPoint(x: rx, y: y + 72),
+             font: .boldSystemFont(ofSize: 11), color: .black)
 
         cursor.y = y + h + 20
     }
@@ -486,10 +495,12 @@ enum WellbeingPDFGenerator {
         let recentSevereText: String
         if !recentSevere.isEmpty {
             recentSevereText = "Sim — " + recentSevere.joined(separator: "; ")
-        } else if recentAct == nil {
-            recentSevereText = "Nenhuma registrada (sem ACT no período)"
+        } else if let act = recentAct {
+            recentSevereText = act.oralSteroidCourse4w == nil && act.emergencyVisit4w == nil
+                ? "Não perguntado no ACT de \(dateFormatted(msDate(act.timestamp)))"
+                : "Não relatada"
         } else {
-            recentSevereText = "Não relatada"
+            recentSevereText = "Nenhuma registrada (sem ACT no período)"
         }
         rows.append(("Crise grave (4 semanas)", recentSevereText))
 
@@ -554,11 +565,14 @@ enum WellbeingPDFGenerator {
         if cursor.y > footerY - 10 { cursor.newPage() }
         fillRect(CGRect(x: margin, y: footerY, width: contentW, height: 0.5),
                  color: .lightGray)
-        let text = "Este relatório foi gerado automaticamente pelo aplicativo Afilaxy com base nas respostas fornecidas pelo próprio usuário. Não substitui avaliação clínica presencial. Gerado em \(dateFormatted(report.generatedAt))."
+        let text = "Este relatório foi gerado automaticamente pelo aplicativo Afilaxy com base nas respostas "
+            + "fornecidas pelo próprio usuário no período de \(periodString(report)) (check-ins e pedidos de ajuda; "
+            + "o ACT inclui testes anteriores ao período). Não substitui avaliação clínica presencial. "
+            + "Gerado em \(dateFormatted(report.generatedAt))."
         let style = NSMutableParagraphStyle()
         style.lineBreakMode = .byWordWrapping
         (text as NSString).draw(
-            in: CGRect(x: margin, y: footerY + 6, width: contentW, height: 36),
+            in: CGRect(x: margin, y: footerY + 6, width: contentW, height: 42),
             withAttributes: [.font: UIFont.systemFont(ofSize: 8),
                              .foregroundColor: UIColor.gray,
                              .paragraphStyle: style]
@@ -704,13 +718,16 @@ enum WellbeingPDFGenerator {
         Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
     }
 
-    private static func periodString() -> String {
-        let cal = Calendar.current
-        let end = Date()
-        let start = cal.date(byAdding: .day, value: -(ReportWindow.days - 1), to: end) ?? end
-        let f = DateFormatter()
-        f.dateFormat = "dd/MM/yyyy"
-        f.locale = Locale(identifier: "pt_BR")
-        return "\(f.string(from: start)) – \(f.string(from: end))"
+    /// Ano de nascimento com a idade aproximada (só o ano é coletado: pode variar 1 ano).
+    private static func birthYearText(_ report: WellbeingReportData) -> String {
+        let year = report.healthProfile.birthYear
+        guard year > 0 else { return "Não informado" }
+        let currentYear = Calendar.current.component(.year, from: report.generatedAt)
+        return "\(year) (cerca de \(currentYear - year) anos)"
+    }
+
+    /// Período dos dados: do início da janela (00:00) até a data de geração.
+    private static func periodString(_ report: WellbeingReportData) -> String {
+        "\(dateFormatted(msDate(report.windowStartMs))) a \(dateFormatted(report.generatedAt))"
     }
 }

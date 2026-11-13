@@ -40,6 +40,7 @@ class ProfileRepositoryImpl(
             val hasWheelchair: Boolean = doc.get("healthData.hasWheelchair") ?: false
             val hasLowVision: Boolean = doc.get("healthData.hasLowVision") ?: false
             val hasSpecialCondition: Boolean = doc.get("healthData.hasSpecialCondition") ?: false
+            val birthYear: Int = try { doc.get<Long?>("healthData.birthYear")?.toInt() } catch (e: Exception) { null } ?: 0
 
             val contactName: String? = doc.get("emergencyContact.name")
             val contactPhone: String? = doc.get("emergencyContact.phone")
@@ -50,7 +51,7 @@ class ProfileRepositoryImpl(
                 hasGerd || hasSleepApnea || hasRhinitis || hasObesity ||
                 hasFoodAllergy || hasNsaidAllergy || hasInhalantAllergy ||
                 severeExacerbations12m > 0 || severeExacerbationsUpdatedAt > 0L || everIcuOrIntubated ||
-                hasWheelchair || hasLowVision || hasSpecialCondition
+                hasWheelchair || hasLowVision || hasSpecialCondition || birthYear > 0
             val hasContact = contactName != null || contactPhone != null
 
             Result.success(UserProfile(
@@ -67,7 +68,8 @@ class ProfileRepositoryImpl(
                     severeExacerbationsUpdatedAt = severeExacerbationsUpdatedAt,
                     everIcuOrIntubated = everIcuOrIntubated,
                     hasWheelchair = hasWheelchair, hasLowVision = hasLowVision,
-                    hasSpecialCondition = hasSpecialCondition
+                    hasSpecialCondition = hasSpecialCondition,
+                    birthYear = birthYear
                 ) else null,
                 emergencyContact = if (hasContact) EmergencyContact(
                     name = contactName ?: "",
@@ -100,7 +102,8 @@ class ProfileRepositoryImpl(
                     "everIcuOrIntubated" to it.everIcuOrIntubated,
                     "hasWheelchair" to it.hasWheelchair,
                     "hasLowVision" to it.hasLowVision,
-                    "hasSpecialCondition" to it.hasSpecialCondition
+                    "hasSpecialCondition" to it.hasSpecialCondition,
+                    "birthYear" to it.birthYear
                 )
             } ?: emptyMap()
 
@@ -163,7 +166,8 @@ class ProfileRepositoryImpl(
                     "everIcuOrIntubated" to healthData.everIcuOrIntubated,
                     "hasWheelchair" to healthData.hasWheelchair,
                     "hasLowVision" to healthData.hasLowVision,
-                    "hasSpecialCondition" to healthData.hasSpecialCondition
+                    "hasSpecialCondition" to healthData.hasSpecialCondition,
+                    "birthYear" to healthData.birthYear
                 )
             )
             firestore.collection("users").document(userId).set(data, merge = true)

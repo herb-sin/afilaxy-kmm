@@ -3,6 +3,9 @@ import SwiftUI
 struct ConsentView: View {
     var onConsentGiven: () -> Void
     @AppStorage("analytics_consent") private var analyticsConsent = true
+    // Declaração de maioridade (Termos de Uso, cláusula 22). Esta tela aparece para toda
+    // conta nova, inclusive as criadas com Google/Apple, que não passam pelo cadastro.
+    @State private var adultConfirmed = false
 
     var body: some View {
         ScrollView {
@@ -56,9 +59,34 @@ struct ConsentView: View {
                     AnalyticsManager.applyConsent()
                 }
 
+                // ── Declaração de maioridade (obrigatória) ────────────────────
+                Button { adultConfirmed.toggle() } label: {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: adultConfirmed ? "checkmark.square.fill" : "square")
+                            .foregroundColor(.accentColor)
+                            .font(.title3)
+                            .frame(width: 30)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Declaro ter 18 anos ou mais")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("Por enquanto, o Afilaxy é destinado apenas a maiores de 18 anos.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(16)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Color(.systemGray6)))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(adultConfirmed ? .isSelected : [])
+
                 // ── Ação ──────────────────────────────────────────────────────
                 VStack(spacing: 12) {
                     Button {
+                        UserDefaults.standard.set(true, forKey: "age_18_confirmed")
                         UserDefaults.standard.set(true, forKey: "consent_shown")
                         onConsentGiven()
                     } label: {
@@ -66,10 +94,11 @@ struct ConsentView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.accentColor)
+                            .background(Color.accentColor.opacity(adultConfirmed ? 1 : 0.4))
                             .foregroundColor(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                    .disabled(!adultConfirmed)
 
                     Text("Você pode alterar suas preferências a qualquer momento em Configurações > Privacidade.")
                         .font(.caption)

@@ -29,6 +29,7 @@ struct ProfileView: View {
     @State private var severeTouched = false
     @State private var severeUpdatedAt: Int64 = 0
     @State private var everIcu = false
+    @State private var birthYear = "" // só dígitos; "" = não informado
     @State private var showPhotoComingSoon = false
 
     var body: some View {
@@ -129,6 +130,7 @@ struct ProfileView: View {
                 hasSpecialCondition: $hasSpecialCondition,
                 severeCount: $severeCount, severeTouched: $severeTouched,
                 severeUpdatedAt: severeUpdatedAt, everIcu: $everIcu,
+                birthYear: $birthYear,
                 onSave: saveProfile
             )
         }
@@ -258,6 +260,8 @@ struct ProfileView: View {
         severeTouched = false
         severeUpdatedAt = profile.healthData?.severeExacerbationsUpdatedAt ?? 0
         everIcu = profile.healthData?.everIcuOrIntubated ?? false
+        let year = Int(profile.healthData?.birthYear ?? 0)
+        birthYear = year > 0 ? String(year) : ""
     }
 
     private func saveProfile() {
@@ -294,7 +298,8 @@ struct ProfileView: View {
                     severeExacerbationsUpdatedAt: severeTouched ? nowMs() : (profile.healthData?.severeExacerbationsUpdatedAt ?? 0),
                     everIcuOrIntubated: everIcu,
                     hasWheelchair: hasWheelchair, hasLowVision: hasLowVision,
-                    hasSpecialCondition: hasSpecialCondition
+                    hasSpecialCondition: hasSpecialCondition,
+                    birthYear: Int32(Int(birthYear) ?? 0)
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
@@ -319,7 +324,8 @@ struct ProfileView: View {
                     severeExacerbationsUpdatedAt: severeTouched ? nowMs() : 0,
                     everIcuOrIntubated: everIcu,
                     hasWheelchair: hasWheelchair, hasLowVision: hasLowVision,
-                    hasSpecialCondition: hasSpecialCondition
+                    hasSpecialCondition: hasSpecialCondition,
+                    birthYear: Int32(Int(birthYear) ?? 0)
                 ),
                 emergencyContact: EmergencyContact(
                     name: emergencyName, phone: emergencyPhone, relationship: emergencyRelationship
@@ -421,7 +427,29 @@ struct EditProfileSheet: View {
     @Binding var severeTouched: Bool
     let severeUpdatedAt: Int64
     @Binding var everIcu: Bool
+    @Binding var birthYear: String
     let onSave: () -> Void
+
+    private var currentYear: Int { Calendar.current.component(.year, from: Date()) }
+
+    /// Opcional: vazio é aceito; preenchido precisa ser um ano possível (regra no shared).
+    private var birthYearInvalid: Bool {
+        guard !birthYear.isEmpty else { return false }
+        return !UserProfileKt.isValidBirthYear(year: Int32(Int(birthYear) ?? 0), currentYear: Int32(currentYear))
+    }
+
+    /// Só o ano é conhecido: diferença ≤ 17 garante menos de 18 anos. Avisa, não bloqueia.
+    private var isMinor: Bool {
+        guard let year = Int(birthYear), !birthYearInvalid else { return false }
+        return currentYear - year < 18
+    }
+
+    /// Mantém só dígitos, no máximo 4.
+    private var birthYearBinding: Binding<String> {
+        Binding(get: { birthYear }, set: { newValue in
+            birthYear = String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(4))
+        })
+    }
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -449,6 +477,21 @@ struct EditProfileSheet: View {
                     EditProfileSection(icon: "person.fill", title: "Informações Pessoais") {
                         FloatingLabelField(label: "Nome completo", text: $name)
                         FloatingLabelField(label: "Telefone", text: $phone, keyboardType: .phonePad)
+                        FloatingLabelField(label: "Ano de nascimento (opcional)", text: birthYearBinding,
+                                           keyboardType: .numberPad)
+                        if birthYearInvalid {
+                            Text("Informe um ano entre 1900 e \(String(currentYear))")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                        }
+                        Text("Aparece no seu relatório de saúde, para o médico saber sua idade.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        if isMinor {
+                            Text("O Afilaxy é destinado, por enquanto, a maiores de 18 anos.")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                        }
                     }
 
                     EditProfileSection(icon: "cross.case.fill", title: "Comorbidades (opcional)") {
@@ -536,10 +579,11 @@ struct EditProfileSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color.afiPrimary)
+                        .background(Color.afiPrimary.opacity(birthYearInvalid ? 0.4 : 1))
                         .foregroundColor(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                    .disabled(birthYearInvalid)
                     .padding(.top, 4)
                 }
                 .padding(16)

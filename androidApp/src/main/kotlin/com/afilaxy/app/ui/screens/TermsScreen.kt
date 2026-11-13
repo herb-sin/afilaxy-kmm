@@ -41,7 +41,7 @@ fun TermsScreen(navController: NavController) {
             
             item {
                 Text(
-                    "Última atualização: Janeiro de 2024",
+                    "Última atualização: Novembro de 2026",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -98,7 +98,14 @@ fun TermsScreen(navController: NavController) {
             
             item {
                 TermSection(
-                    title = "8. Contato",
+                    title = "8. Idade mínima",
+                    content = "O Afilaxy é destinado, por enquanto, apenas a maiores de 18 anos. É vedado o cadastro de menores de idade."
+                )
+            }
+
+            item {
+                TermSection(
+                    title = "9. Contato",
                     content = "Para dúvidas sobre estes termos, entre em contato através do app ou email: suporte@afilaxy.com"
                 )
             }

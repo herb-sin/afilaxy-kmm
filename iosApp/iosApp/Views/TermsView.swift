@@ -10,7 +10,7 @@ struct TermsView: View {
                         .font(.title)
                         .fontWeight(.bold)
                     
-                    Text("Última atualização: Janeiro de 2024")
+                    Text("Última atualização: Novembro de 2026")
                         .font(.caption)
                         .foregroundColor(.gray)
                     
@@ -37,6 +37,11 @@ struct TermsView: View {
                     TermSection(
                         title: "5. Privacidade",
                         content: "Seus dados são tratados conforme nossa Política de Privacidade."
+                    )
+
+                    TermSection(
+                        title: "6. Idade mínima",
+                        content: "O Afilaxy é destinado, por enquanto, apenas a maiores de 18 anos. É vedado o cadastro de menores de idade."
                     )
                 }
                 .padding()

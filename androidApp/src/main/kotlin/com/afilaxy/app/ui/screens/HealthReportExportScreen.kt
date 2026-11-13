@@ -198,7 +198,14 @@ private suspend fun generateAndShare(context: Context): Boolean {
     val patientName = FirebaseAuth.getInstance().currentUser?.displayName ?: "Usuário"
     // Janela de 4 semanas (28 dias): é o período dos critérios de controle da GINA.
     val nowMs = System.currentTimeMillis()
-    val cutoffMs = nowMs - REPORT_DAYS * DAY_MS
+    // Em dias de calendário: de 00:00 de 27 dias atrás até agora (hoje incluso), para que
+    // o período, as semanas S1–S4 e os dados do PDF usem as mesmas datas.
+    val cutoffMs = Calendar.getInstance().apply {
+        timeInMillis = nowMs
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        add(Calendar.DAY_OF_YEAR, -(REPORT_DAYS - 1))
+    }.timeInMillis
 
     val checkInDocs = try {
         FirebaseFirestore.getInstance()
@@ -297,7 +304,8 @@ private suspend fun generateAndShare(context: Context): Boolean {
         severeExacerbationsUpdatedAt = userDoc?.getLong("healthData.severeExacerbationsUpdatedAt") ?: 0L,
         everIcuOrIntubated = userDoc?.getBoolean("healthData.everIcuOrIntubated") ?: false,
         emergencyContactName = userDoc?.getString("emergencyContact.name") ?: "",
-        emergencyContactPhone = userDoc?.getString("emergencyContact.phone") ?: ""
+        emergencyContactPhone = userDoc?.getString("emergencyContact.phone") ?: "",
+        birthYear = userDoc?.getLong("healthData.birthYear")?.toInt() ?: 0
     )
 
     val report = WellbeingReportAndroid(
@@ -504,7 +512,8 @@ private data class HealthProfileAndroid(
     val severeExacerbationsUpdatedAt: Long,
     val everIcuOrIntubated: Boolean,
     val emergencyContactName: String,
-    val emergencyContactPhone: String
+    val emergencyContactPhone: String,
+    val birthYear: Int // 0 = não informado
 )
 
 private data class WellbeingReportAndroid(
@@ -632,7 +641,7 @@ private object WellbeingPDFAndroid {
     // MARK: Info Box
 
     private fun infoBox(cursor: Cursor, r: WellbeingReportAndroid) {
-        val h = 78f
+        val h = 96f
         cursor.breakIfNeeded(h + 20f)
         val c = cursor.canvas
         val y = cursor.y
@@ -643,7 +652,7 @@ private object WellbeingPDFAndroid {
         c.drawText(r.patientName, lx, y + 22f + ascent(tp(12f, android.graphics.Color.BLACK, bold = true)),
             tp(12f, android.graphics.Color.BLACK, bold = true))
         c.drawText("PERÍODO", lx, y + 46f + ascent(lp()), lp())
-        c.drawText(periodStr(), lx, y + 58f + ascent(tp(10f, android.graphics.Color.DKGRAY)),
+        c.drawText(periodStr(r), lx, y + 58f + ascent(tp(10f, android.graphics.Color.DKGRAY)),
             tp(10f, android.graphics.Color.DKGRAY))
 
         val rx = PAGE_W - MARGIN - 205f
@@ -652,6 +661,9 @@ private object WellbeingPDFAndroid {
             tp(11f, android.graphics.Color.BLACK, bold = true))
         c.drawText("Sem revisão clínica prévia", rx, y + 40f + ascent(tp(10f, android.graphics.Color.DKGRAY)),
             tp(10f, android.graphics.Color.DKGRAY))
+        c.drawText("ANO DE NASCIMENTO", rx, y + 60f + ascent(lp()), lp())
+        c.drawText(birthYearText(r), rx, y + 72f + ascent(tp(11f, android.graphics.Color.BLACK, bold = true)),
+            tp(11f, android.graphics.Color.BLACK, bold = true))
 
         cursor.y = y + h + 20f
     }
@@ -763,6 +775,8 @@ private object WellbeingPDFAndroid {
         rows += "Crise grave (4 semanas)" to when {
             recentSevere.isNotEmpty() -> "Sim — " + recentSevere.joinToString("; ")
             recentAct == null -> "Nenhuma registrada (sem ACT no período)"
+            recentAct.oralSteroidCourse4w == null && recentAct.emergencyVisit4w == null ->
+                "Não perguntado no ACT de ${dateFmt(Date(recentAct.timestamp))}"
             else -> "Não relatada"
         }
 
@@ -833,7 +847,10 @@ private object WellbeingPDFAndroid {
         if (cursor.y > fy - 10f) cursor.newPage()
         val c = cursor.canvas
         c.drawRect(RectF(MARGIN, fy, MARGIN + CONTENT_W, fy + 0.5f), fill(android.graphics.Color.LTGRAY))
-        val text = "Este relatório foi gerado automaticamente pelo aplicativo Afilaxy com base nas respostas fornecidas pelo próprio usuário. Não substitui avaliação clínica presencial. Gerado em ${dateFmt(r.generatedAt)}."
+        val text = "Este relatório foi gerado automaticamente pelo aplicativo Afilaxy com base nas respostas " +
+            "fornecidas pelo próprio usuário no período de ${periodStr(r)} (check-ins e pedidos de ajuda; " +
+            "o ACT inclui testes anteriores ao período). Não substitui avaliação clínica presencial. " +
+            "Gerado em ${dateFmt(r.generatedAt)}."
         val textPaint = TextPaint().apply { color = android.graphics.Color.GRAY; textSize = 8f; isAntiAlias = true }
         val sl = StaticLayout.Builder.obtain(text, 0, text.length, textPaint, CONTENT_W.toInt()).build()
         c.save(); c.translate(MARGIN, fy + 6f); sl.draw(c); c.restore()
@@ -958,9 +975,15 @@ private object WellbeingPDFAndroid {
 
     private fun dateTimeFmt(d: Date) = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR")).format(d)
 
-    private fun periodStr(): String {
-        val fmt = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
-        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -(REPORT_DAYS - 1)) }
-        return "${fmt.format(cal.time)} – ${fmt.format(Date())}"
+    /** Ano de nascimento com a idade aproximada (só o ano é coletado: pode variar 1 ano). */
+    private fun birthYearText(r: WellbeingReportAndroid): String {
+        val year = r.healthProfile.birthYear
+        if (year <= 0) return "Não informado"
+        val currentYear = Calendar.getInstance().apply { time = r.generatedAt }.get(Calendar.YEAR)
+        return "$year (cerca de ${currentYear - year} anos)"
     }
+
+    /** Período dos dados: do início da janela (00:00) até a data de geração. */
+    private fun periodStr(r: WellbeingReportAndroid): String =
+        "${dateFmt(Date(r.windowStartMs))} a ${dateFmt(r.generatedAt)}"
 }

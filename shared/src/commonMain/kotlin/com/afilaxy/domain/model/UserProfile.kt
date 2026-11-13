@@ -45,8 +45,18 @@ data class UserHealthData(
     // diferente das comorbidades acima: suporte/acessibilidade, não controle de asma).
     val hasWheelchair: Boolean = false,
     val hasLowVision: Boolean = false,
-    val hasSpecialCondition: Boolean = false
+    val hasSpecialCondition: Boolean = false,
+    // Ano de nascimento do paciente — vai para o relatório do médico (idade aproximada).
+    // Só o ano, não a data completa (minimização de dados, LGPD). 0 = não informado.
+    // Fica por último porque o Swift chama este construtor com todos os argumentos, em ordem.
+    val birthYear: Int = 0
 )
+
+/** Menor ano de nascimento aceito no perfil. */
+const val MIN_BIRTH_YEAR = 1900
+
+/** Ano de nascimento válido: entre [MIN_BIRTH_YEAR] e o ano atual. */
+fun isValidBirthYear(year: Int, currentYear: Int): Boolean = year in MIN_BIRTH_YEAR..currentYear
 
 @Serializable
 data class EmergencyContact(
