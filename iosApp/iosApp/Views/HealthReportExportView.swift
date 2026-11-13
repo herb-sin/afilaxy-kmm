@@ -55,7 +55,7 @@ struct HealthReportExportView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Relatório completo")
                             .font(.headline)
-                        Text("Gere um PDF com seus check-ins e pedidos de ajuda dos últimos 30 dias, "
+                        Text("Gere um PDF com seus check-ins e pedidos de ajuda das últimas 4 semanas, "
                              + "seus Testes de Controle da Asma e seu Perfil Médico — pronto para compartilhar "
                              + "com quem você quiser, sem precisar informar um profissional específico.")
                             .font(.subheadline)
@@ -70,16 +70,15 @@ struct HealthReportExportView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         Image(systemName: "doc.text.fill").foregroundColor(.afiPrimary)
-                        Text("Conteúdo do Relatório (30 dias)").font(.headline)
+                        Text("Conteúdo do Relatório (4 semanas)").font(.headline)
                     }
                     ForEach([
-                        "Resumo executivo, adesão e uso de bombinha de resgate",
+                        "Controle de sintomas pelos critérios da GINA",
                         "Teste de Controle da Asma (último resultado e histórico)",
-                        "Qualidade do sono (check-in matinal)",
-                        "Bem-estar e energia matinal",
-                        "Avaliação de bem-estar noturno",
-                        "Pedidos de ajuda com data, hora e condições ambientais",
-                        "Perfil Médico (comorbidades, alergias, crises graves, acessibilidade)"
+                        "Crises, pedidos de ajuda e fatores de risco",
+                        "Adesão ao monitoramento e uso de bombinha de resgate",
+                        "Check-ins matinal e noturno",
+                        "Perfil Médico (alergias, medicamentos, acessibilidade)"
                     ], id: \.self) { item in
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark")
@@ -120,7 +119,7 @@ struct HealthReportExportView: View {
             Spacer()
             ProgressView().scaleEffect(1.5)
             Text("Gerando relatório...").font(.headline)
-            Text("Coletando seus dados dos últimos 30 dias.")
+            Text("Coletando seus dados das últimas 4 semanas.")
                 .font(.subheadline).foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Spacer()
@@ -155,7 +154,9 @@ struct HealthReportExportView: View {
             return
         }
         do {
-            let cutoffMs = Int64(Date().timeIntervalSince1970 * 1000) - 30 * 24 * 3_600_000
+            // Janela de 4 semanas (28 dias): é o período dos critérios de controle da GINA.
+            let now = Date()
+            let cutoffMs = Int64(now.timeIntervalSince1970 * 1000) - Int64(ReportWindow.days) * ReportWindow.dayMs
 
             let checkInDocs = try await Firestore.firestore()
                 .collection("checkins").document(uid)
@@ -167,10 +168,10 @@ struct HealthReportExportView: View {
                 .collection("user_stats").document(uid).getDocument()
             let userDoc = try? await Firestore.firestore()
                 .collection("users").document(uid).getDocument()
-            let emergencyCount = emergency30d(statsDoc: statsDoc)
+            let emergencyCount = emergencyCountInWindow(statsDoc: statsDoc)
             let patientName = Auth.auth().currentUser?.displayName ?? "Usuário"
 
-            // ACT: histórico completo (não só 30 dias) — o teste é mensal, então a janela do
+            // ACT: histórico completo (não só as 4 semanas) — o teste é mensal, então a janela do
             // relatório mostraria no máximo um resultado e esconderia a tendência.
             let actDocs = try? await Firestore.firestore()
                 .collection("act").document(uid)
@@ -196,9 +197,11 @@ struct HealthReportExportView: View {
                 patientName: patientName,
                 healthProfile: HealthProfileData(doc: userDoc),
                 checkIns: checkInDocs.documents.map { WellbeingCheckIn(doc: $0) },
-                emergencyCount30d: emergencyCount,
+                emergencyCount: emergencyCount,
                 emergencies: emergencies,
-                actResults: Array(actResults)
+                actResults: Array(actResults),
+                windowStartMs: cutoffMs,
+                generatedAt: now
             )
 
             guard let pdfData = WellbeingPDFGenerator.generate(report: report),
@@ -214,7 +217,7 @@ struct HealthReportExportView: View {
         }
     }
 
-    private func emergency30d(statsDoc: DocumentSnapshot?) -> Int {
+    private func emergencyCountInWindow(statsDoc: DocumentSnapshot?) -> Int {
         guard let data = statsDoc?.data(),
               let daily = data["dailyCount"] as? [String: Any] else {
             return (statsDoc?.data()?["totalEmergencies"] as? NSNumber)?.intValue ?? 0
@@ -225,7 +228,7 @@ struct HealthReportExportView: View {
         fmt.dateFormat = "yyyy-MM-dd"
         fmt.timeZone = TimeZone(identifier: "UTC")
         fmt.locale = Locale(identifier: "en_US_POSIX")
-        return (0..<30).reduce(0) { sum, offset in
+        return (0..<ReportWindow.days).reduce(0) { sum, offset in
             let d = cal.date(byAdding: .day, value: -offset, to: Date()) ?? Date()
             return sum + ((daily[fmt.string(from: d)] as? NSNumber)?.intValue ?? 0)
         }
@@ -240,14 +243,26 @@ struct HealthReportExportView: View {
 
 // MARK: - Report Data Models
 
+/// Janela do relatório: 4 semanas, o período dos critérios de controle da GINA.
+enum ReportWindow {
+    static let days = 28
+    static let weeks = 4
+    static let dayMs: Int64 = 86_400_000
+    static let weekMs: Int64 = 7 * dayMs
+    static let possibleCheckIns = 56 // 2 check-ins por dia × 28 dias
+}
+
 struct WellbeingReportData {
     let patientName: String
     let healthProfile: HealthProfileData
     let checkIns: [WellbeingCheckIn]
-    let emergencyCount30d: Int
+    let emergencyCount: Int
     let emergencies: [EmergencyEventData]
     let actResults: [ActResultData]
-    let generatedAt: Date = Date()
+    let windowStartMs: Int64
+    let generatedAt: Date
+
+    var gina: GinaControl { GinaControl(checkIns: checkIns, windowStartMs: windowStartMs) }
 }
 
 struct ActResultData {
@@ -365,32 +380,121 @@ struct HealthProfileData {
     }
 }
 
+/// Respostas de um check-in. nil = pergunta não respondida (ou inexistente na época) —
+/// não é "Não": check-ins antigos não tinham algumas perguntas e não podem virar sintoma.
 struct WellbeingCheckIn {
     let type: String
+    let timestamp: Int64
     let rescueInhalerUses: Int?
-    let nighttimeAwakening: Bool
-    let morningMoodGood: Bool
-    let morningEnergyGood: Bool
-    let selfCareGood: Bool
-    let daytimeBreathingEase: Bool
-    let activityAsPlanned: Bool
+    let nighttimeAwakening: Bool? // true = "sono tranquilo, sem interrupções"
+    let morningMoodGood: Bool?
+    let morningEnergyGood: Bool?
+    let selfCareGood: Bool?
+    let daytimeBreathingEase: Bool?
+    let activityAsPlanned: Bool?
 
     init(doc: QueryDocumentSnapshot) {
         type = doc["type"] as? String ?? ""
+        timestamp = (doc["timestamp"] as? NSNumber)?.int64Value ?? 0
         rescueInhalerUses = (doc["rescueInhalerUses"] as? NSNumber)?.intValue
-        nighttimeAwakening = doc["nighttimeAwakening"] as? Bool ?? false
-        morningMoodGood = doc["morningMoodGood"] as? Bool ?? false
-        morningEnergyGood = doc["morningEnergyGood"] as? Bool ?? false
-        selfCareGood = doc["selfCareGood"] as? Bool ?? false
-        daytimeBreathingEase = doc["daytimeBreathingEase"] as? Bool ?? false
-        activityAsPlanned = doc["activityAsPlanned"] as? Bool ?? false
+        nighttimeAwakening = doc["nighttimeAwakening"] as? Bool
+        morningMoodGood = doc["morningMoodGood"] as? Bool
+        morningEnergyGood = doc["morningEnergyGood"] as? Bool
+        selfCareGood = doc["selfCareGood"] as? Bool
+        daytimeBreathingEase = doc["daytimeBreathingEase"] as? Bool
+        activityAsPlanned = doc["activityAsPlanned"] as? Bool
     }
 
+    var isMorning: Bool { type == "MORNING" }
+    var isEvening: Bool { type == "EVENING" }
+
+    /// Crítico só quando as três respostas do período foram explicitamente "Não".
     var isCritical: Bool {
-        type == "MORNING"
-            ? !nighttimeAwakening && !morningMoodGood && !morningEnergyGood
-            : !selfCareGood && !daytimeBreathingEase && !activityAsPlanned
+        isMorning
+            ? nighttimeAwakening == false && morningMoodGood == false && morningEnergyGood == false
+            : selfCareGood == false && daytimeBreathingEase == false && activityAsPlanned == false
     }
+}
+
+// MARK: - Controle de sintomas — critérios da GINA (4 semanas)
+// O app não diagnostica nem classifica: mostra cada critério com as contagens semanais e
+// quantos estão presentes. A escala da GINA vai como referência e a interpretação fica com
+// o profissional. Mesma regra do Android (HealthReportExportScreen.kt).
+
+enum GinaStatus: String {
+    case present = "Presente", absent = "Ausente", noData = "Sem dados"
+}
+
+struct GinaCriterion {
+    let label: String
+    /// Ocorrências por semana, S1 (mais antiga) → S4 (mais recente); nil = sem resposta na semana.
+    let weekly: [Int?]
+    /// Presente quando alguma semana tem mais que `threshold` ocorrências.
+    let threshold: Int
+
+    var status: GinaStatus {
+        if weekly.allSatisfy({ $0 == nil }) { return .noData }
+        return weekly.contains { ($0 ?? 0) > threshold } ? .present : .absent
+    }
+
+    var valueText: String {
+        let weeks = weekly.map { v in v.map { String($0) } ?? "—" }.joined(separator: " · ")
+        return "\(status.rawValue) — por semana: \(weeks)"
+    }
+}
+
+struct GinaWeek {
+    let startMs: Int64
+    let morningCount: Int
+    let eveningCount: Int
+}
+
+struct GinaControl {
+    let weeks: [GinaWeek]
+    let criteria: [GinaCriterion]
+
+    init(checkIns: [WellbeingCheckIn], windowStartMs: Int64) {
+        func weekOf(_ c: WellbeingCheckIn) -> Int {
+            let w = Int((c.timestamp - windowStartMs) / ReportWindow.weekMs)
+            return min(max(w, 0), ReportWindow.weeks - 1)
+        }
+        func weekly(_ source: [WellbeingCheckIn], _ value: (WellbeingCheckIn) -> Int?) -> [Int?] {
+            var sums = [Int?](repeating: nil, count: ReportWindow.weeks)
+            for c in source {
+                guard let v = value(c) else { continue }
+                let w = weekOf(c)
+                sums[w] = (sums[w] ?? 0) + v
+            }
+            return sums
+        }
+        func occurred(_ answer: Bool?, when occursWhen: Bool) -> Int? {
+            answer.map { $0 == occursWhen ? 1 : 0 }
+        }
+
+        let morning = checkIns.filter { $0.isMorning }
+        let evening = checkIns.filter { $0.isEvening }
+
+        weeks = (0..<ReportWindow.weeks).map { w in
+            GinaWeek(
+                startMs: windowStartMs + Int64(w) * ReportWindow.weekMs,
+                morningCount: morning.filter { weekOf($0) == w }.count,
+                eveningCount: evening.filter { weekOf($0) == w }.count
+            )
+        }
+        criteria = [
+            GinaCriterion(label: "Sintomas diurnos >2x/sem.",
+                          weekly: weekly(evening) { occurred($0.daytimeBreathingEase, when: false) }, threshold: 2),
+            GinaCriterion(label: "Despertar noturno",
+                          weekly: weekly(morning) { occurred($0.nighttimeAwakening, when: false) }, threshold: 0),
+            GinaCriterion(label: "Resgate >2x/sem.",
+                          weekly: weekly(evening) { $0.rescueInhalerUses }, threshold: 2),
+            GinaCriterion(label: "Limitação de atividades",
+                          weekly: weekly(evening) { occurred($0.activityAsPlanned, when: false) }, threshold: 0)
+        ]
+    }
+
+    var presentCount: Int { criteria.filter { $0.status == .present }.count }
+    var noDataCount: Int { criteria.filter { $0.status == .noData }.count }
 }
 
 // MARK: - PDF Generator
@@ -448,13 +552,16 @@ enum WellbeingPDFGenerator {
         )
         return renderer.pdfData { ctx in
             let cursor = PDFCursor(context: ctx, margin: margin, bottomLimit: bottomLimit)
+            // Ordem pensada para o médico: o que decide a consulta (GINA, ACT, crises e
+            // fatores de risco) vem primeiro; os detalhes do monitoramento depois.
             drawHeader(report: report, cursor: cursor)
             drawInfoBox(report: report, cursor: cursor)
-            drawSummary(report: report, cursor: cursor)
+            drawGinaSection(report: report, cursor: cursor)
             drawActSection(report: report, cursor: cursor)
+            drawRiskSection(report: report, cursor: cursor)
+            drawAdherenceSection(report: report, cursor: cursor)
             drawMorningSection(report: report, cursor: cursor)
             drawEveningSection(report: report, cursor: cursor)
-            drawCriticalSection(report: report, cursor: cursor)
             drawHealthProfileSection(report: report, cursor: cursor)
             drawFooter(report: report, cursor: cursor)
         }
@@ -512,22 +619,47 @@ enum WellbeingPDFGenerator {
 
     // MARK: Sections
 
-    private static func drawSummary(report: WellbeingReportData, cursor: PDFCursor) {
+    private static func drawGinaSection(report: WellbeingReportData, cursor: PDFCursor) {
+        let g = report.gina
+        drawSectionHeader("1. CONTROLE DE SINTOMAS — CRITÉRIOS GINA (4 SEMANAS)", cursor: cursor, color: primaryColor)
+        var present = "\(g.presentCount) de 4"
+        if g.noDataCount > 0 { present += " (\(g.noDataCount) sem dados)" }
+        let wf = DateFormatter()
+        wf.dateFormat = "dd/MM"
+        wf.locale = Locale(identifier: "pt_BR")
+        let weeksText = g.weeks.enumerated().map { i, w in
+            "S\(i + 1) \(wf.string(from: msDate(w.startMs)))–\(wf.string(from: msDate(w.startMs + ReportWindow.weekMs - ReportWindow.dayMs)))"
+        }.joined(separator: " · ")
+        let coverageText = g.weeks.enumerated().map { i, w in
+            "S\(i + 1): \(w.morningCount) manhãs, \(w.eveningCount) noites"
+        }.joined(separator: " · ")
+
+        var rows: [(String, String)] = [("Critérios presentes", present)]
+        for c in g.criteria { rows.append((c.label, c.valueText)) }
+        rows.append(("Semanas", weeksText))
+        rows.append(("Check-ins por semana", coverageText))
+        rows.append(("Regra", "Sintomas diurnos e resgate: presente se mais de 2 ocorrências em alguma semana. Despertar e limitação: presente se ocorreu ao menos uma vez. — = semana sem resposta."))
+        rows.append(("Fontes", "Sintomas diurnos: \"Respirei com facilidade ao longo do dia?\" = Não. Despertar: \"Meu sono foi tranquilo, sem interrupções?\" = Não. Resgate: nº de usos informado no check-in noturno. Limitação: \"Consegui fazer tudo que tinha planejado?\" = Não."))
+        rows.append(("Limitações", "Perguntas de bem-estar, não específicas de asma: despertar e limitação podem ter outras causas. O uso de resgate antes de exercício não é separado. Dias sem check-in não entram nas contagens."))
+        rows.append(("Referência GINA", "0 critérios: bem controlada; 1–2: parcialmente controlada; 3–4: não controlada. A interpretação cabe ao profissional de saúde."))
+        drawPlainRows(rows, cursor: cursor)
+    }
+
+    private static func drawAdherenceSection(report: WellbeingReportData, cursor: PDFCursor) {
         let total = report.checkIns.count
-        let possible = 60
-        let adherence = possible > 0 ? Int(Double(total) / Double(possible) * 100) : 0
+        let possible = ReportWindow.possibleCheckIns
+        let adherence = Int(Double(total) / Double(possible) * 100)
         let critical = report.checkIns.filter { $0.isCritical }.count
         let rescueAnswers = report.checkIns.compactMap { $0.rescueInhalerUses }
         let rescueValue = rescueAnswers.isEmpty
             ? "Não informado"
             : "\(rescueAnswers.reduce(0, +)) vez(es) em \(rescueAnswers.count) dia(s) informado(s)"
-        drawSectionHeader("1. RESUMO EXECUTIVO", cursor: cursor, color: primaryColor)
+        drawSectionHeader("4. ADESÃO AO MONITORAMENTO", cursor: cursor, color: primaryColor)
         drawPlainRows([
-            ("Check-ins realizados (30 dias)", "\(total) de \(possible) possíveis"),
+            ("Check-ins realizados", "\(total) de \(possible) possíveis"),
             ("Taxa de adesão ao monitoramento", "\(adherence)%"),
             ("Uso de bombinha de resgate", rescueValue),
-            ("Pedidos de ajuda emergencial", "\(report.emergencyCount30d) ocorrência(s)"),
-            ("Dias com bem-estar crítico registrado", "\(critical) ocorrência(s)")
+            ("Dias com bem-estar mínimo registrado", "\(critical) ocorrência(s)")
         ], cursor: cursor)
     }
 
@@ -560,48 +692,81 @@ enum WellbeingPDFGenerator {
     }
 
     private static func drawMorningSection(report: WellbeingReportData, cursor: PDFCursor) {
-        let morning = report.checkIns.filter { $0.type == "MORNING" }
-        drawSectionHeader("3. CHECK-IN MATINAL", cursor: cursor, color: morningColor)
+        let morning = report.checkIns.filter { $0.isMorning }
+        drawSectionHeader("5. CHECK-IN MATINAL — % DE RESPOSTAS \"SIM\"", cursor: cursor, color: morningColor)
         drawBarRows([
             ("Registros de manhã: \(morning.count)", nil),
-            ("\"Meu sono foi tranquilo, sem interrupções\"", pct(morning, \.nighttimeAwakening)),
-            ("\"Me sinto bem esta manhã\"",   pct(morning, \.morningMoodGood)),
-            ("\"Estou com boa energia\"",     pct(morning, \.morningEnergyGood))
+            answeredRow("\"Meu sono foi tranquilo, sem interrupções\"", morning, \.nighttimeAwakening),
+            answeredRow("\"Me sinto bem esta manhã\"", morning, \.morningMoodGood),
+            answeredRow("\"Estou com boa energia\"", morning, \.morningEnergyGood)
         ], cursor: cursor, barColor: morningColor)
     }
 
     private static func drawEveningSection(report: WellbeingReportData, cursor: PDFCursor) {
-        let evening = report.checkIns.filter { $0.type == "EVENING" }
-        drawSectionHeader("4. CHECK-IN NOTURNO", cursor: cursor, color: eveningColor)
+        let evening = report.checkIns.filter { $0.isEvening }
+        drawSectionHeader("6. CHECK-IN NOTURNO — % DE RESPOSTAS \"SIM\"", cursor: cursor, color: eveningColor)
         drawBarRows([
             ("Registros noturnos: \(evening.count)", nil),
-            ("\"Me cuidei bem hoje\"",        pct(evening, \.selfCareGood)),
-            ("\"Respirei com facilidade ao longo do dia\"", pct(evening, \.daytimeBreathingEase)),
-            ("\"Consegui fazer tudo que tinha planejado\"",  pct(evening, \.activityAsPlanned))
+            answeredRow("\"Me cuidei bem hoje\"", evening, \.selfCareGood),
+            answeredRow("\"Respirei com facilidade ao longo do dia\"", evening, \.daytimeBreathingEase),
+            answeredRow("\"Consegui fazer tudo que tinha planejado\"", evening, \.activityAsPlanned)
         ], cursor: cursor, barColor: eveningColor)
     }
 
-    private static func drawCriticalSection(report: WellbeingReportData, cursor: PDFCursor) {
-        let critical = report.checkIns.filter { $0.isCritical }.count
-        drawSectionHeader("5. EVENTOS CRÍTICOS", cursor: cursor, color: criticalColor)
-        var rows: [(String, String)] = [
-            ("Pedidos de ajuda emergencial (período)", "\(report.emergencyCount30d)"),
-            ("Dias com bem-estar mínimo registrado",   "\(critical)")
-        ]
+    private static func drawRiskSection(report: WellbeingReportData, cursor: PDFCursor) {
+        let p = report.healthProfile
+        drawSectionHeader("3. CRISES E FATORES DE RISCO", cursor: cursor, color: criticalColor)
+
+        var rows: [(String, String)] = [("Pedidos de ajuda (4 semanas)", "\(report.emergencyCount)")]
         for event in report.emergencies {
             rows.append((dateTimeFormatted(msDate(event.timestamp)), event.detail))
         }
+
+        let recentAct: ActResultData? = {
+            guard let first = report.actResults.first, first.timestamp >= report.windowStartMs else { return nil }
+            return first
+        }()
+        var recentSevere: [String] = []
+        if let act = recentAct, act.hadSevereExacerbation {
+            recentSevere.append("relatada no ACT de \(dateFormatted(msDate(act.timestamp)))")
+        }
+        for event in report.emergencies where event.emergencyVisitAfter == true {
+            recentSevere.append("pronto-socorro/UPA ou internação após pedido de ajuda em \(dateFormatted(msDate(event.timestamp)))")
+        }
+        let recentSevereText: String
+        if !recentSevere.isEmpty {
+            recentSevereText = "Sim — " + recentSevere.joined(separator: "; ")
+        } else if recentAct == nil {
+            recentSevereText = "Nenhuma registrada (sem ACT no período)"
+        } else {
+            recentSevereText = "Não relatada"
+        }
+        rows.append(("Crise grave (4 semanas)", recentSevereText))
+
+        let severeHistory: String
+        if p.severeExacerbationsUpdatedAt <= 0 {
+            severeHistory = "Não informado"
+        } else if p.severeExacerbations12m == 0 {
+            severeHistory = "Nenhuma (informado em \(dateFormatted(msDate(p.severeExacerbationsUpdatedAt))))"
+        } else {
+            severeHistory = "\(p.severeExacerbations12m) nos 12 meses anteriores a \(dateFormatted(msDate(p.severeExacerbationsUpdatedAt)))"
+        }
+        rows.append(("Crises graves em 12 meses", severeHistory))
+        rows.append(("UTI ou intubação (alguma vez)", p.everIcuOrIntubated ? "Sim" : "Não informado"))
+
+        var comorbidities: [String] = []
+        if p.hasObesity { comorbidities.append("Obesidade") }
+        if p.hasRhinitis { comorbidities.append("Rinite alérgica") }
+        if p.hasGerd { comorbidities.append("Refluxo / DRGE") }
+        if p.hasFoodAllergy { comorbidities.append("Alergia alimentar") }
+        if p.hasSleepApnea { comorbidities.append("Apneia do sono") }
+        rows.append(("Comorbidades relatadas", comorbidities.isEmpty ? "Nenhuma" : comorbidities.joined(separator: ", ")))
+        rows.append(("Não coletado pelo app", "Tabagismo ou exposição à fumaça, adesão ao tratamento de manutenção, técnica inalatória, gestação e função pulmonar."))
         drawPlainRows(rows, cursor: cursor)
     }
 
     private static func drawHealthProfileSection(report: WellbeingReportData, cursor: PDFCursor) {
         let p = report.healthProfile
-        var comorbidities: [String] = []
-        if p.hasGerd { comorbidities.append("Refluxo / DRGE") }
-        if p.hasSleepApnea { comorbidities.append("Apneia do sono") }
-        if p.hasRhinitis { comorbidities.append("Rinite alérgica") }
-        if p.hasObesity { comorbidities.append("Obesidade") }
-
         var specificAllergies: [String] = []
         if p.hasFoodAllergy { specificAllergies.append("Alimentar") }
         if p.hasNsaidAllergy { specificAllergies.append("AINEs/aspirina") }
@@ -621,24 +786,13 @@ enum WellbeingPDFGenerator {
             emergencyContact = "Não informado"
         }
 
-        let severeHistory: String
-        if p.severeExacerbationsUpdatedAt <= 0 {
-            severeHistory = "Não informado"
-        } else if p.severeExacerbations12m == 0 {
-            severeHistory = "Nenhuma (informado em \(dateFormatted(msDate(p.severeExacerbationsUpdatedAt))))"
-        } else {
-            severeHistory = "\(p.severeExacerbations12m) nos 12 meses anteriores a \(dateFormatted(msDate(p.severeExacerbationsUpdatedAt)))"
-        }
-
-        drawSectionHeader("6. PERFIL MÉDICO", cursor: cursor, color: primaryColor)
+        // Comorbidades, crises graves e UTI ficam na seção 3 (fatores de risco).
+        drawSectionHeader("7. PERFIL MÉDICO", cursor: cursor, color: primaryColor)
         drawPlainRows([
             ("Alergias conhecidas", p.allergiesText.isEmpty ? "Nenhuma relatada" : p.allergiesText.joined(separator: ", ")),
             ("Medicamentos em uso", p.medications.isEmpty ? "Nenhum relatado" : p.medications.joined(separator: ", ")),
             ("Condições relatadas", p.conditions.isEmpty ? "Nenhuma" : p.conditions.joined(separator: ", ")),
-            ("Comorbidades", comorbidities.isEmpty ? "Nenhuma" : comorbidities.joined(separator: ", ")),
             ("Alergias específicas", specificAllergies.isEmpty ? "Nenhuma" : specificAllergies.joined(separator: ", ")),
-            ("Crises graves (autodeclarado)", severeHistory),
-            ("UTI ou intubação (alguma vez)", p.everIcuOrIntubated ? "Sim" : "Não informado"),
             ("Acessibilidade", accessibility.isEmpty ? "Nenhuma" : accessibility.joined(separator: ", ")),
             ("Detalhes complementares", p.notes.isEmpty ? "Nenhum" : p.notes),
             ("Contato de emergência", emergencyContact)
@@ -764,9 +918,14 @@ enum WellbeingPDFGenerator {
         UIBezierPath(roundedRect: rect, cornerRadius: radius).fill()
     }
 
-    private static func pct(_ items: [WellbeingCheckIn], _ kp: KeyPath<WellbeingCheckIn, Bool>) -> Double? {
-        guard !items.isEmpty else { return nil }
-        return Double(items.filter { $0[keyPath: kp] }.count) / Double(items.count) * 100
+    /// Linha de barra com o % de "Sim" calculado só sobre quem respondeu a pergunta.
+    /// O nº de respostas vai no rótulo; sem nenhuma resposta, a barra não é desenhada.
+    private static func answeredRow(_ label: String, _ items: [WellbeingCheckIn],
+                                    _ kp: KeyPath<WellbeingCheckIn, Bool?>) -> (String, Double?) {
+        let answers = items.compactMap { $0[keyPath: kp] }
+        guard !answers.isEmpty else { return ("\(label) (sem respostas)", nil) }
+        return ("\(label) (\(answers.count) resp.)",
+                Double(answers.filter { $0 }.count) / Double(answers.count) * 100)
     }
 
     private static func yesNo(_ value: Bool?) -> String {
@@ -798,7 +957,7 @@ enum WellbeingPDFGenerator {
     private static func periodString() -> String {
         let cal = Calendar.current
         let end = Date()
-        let start = cal.date(byAdding: .day, value: -29, to: end) ?? end
+        let start = cal.date(byAdding: .day, value: -(ReportWindow.days - 1), to: end) ?? end
         let f = DateFormatter()
         f.dateFormat = "dd/MM/yyyy"
         f.locale = Locale(identifier: "pt_BR")

@@ -2,7 +2,6 @@ package com.afilaxy.app.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -109,9 +108,12 @@ private fun MorningCheckInContent(
     onHealthPermissionGranted: () -> Unit,
     onSubmit: (morningMoodGood: Boolean, morningEnergyGood: Boolean, nighttimeAwakening: Boolean) -> Unit
 ) {
-    var morningMoodGood by remember { mutableStateOf(true) }    // "Me sinto bem esta manhã"
-    var morningEnergyGood by remember { mutableStateOf(true) }  // "Estou com boa energia"
-    var nighttimeAwakening by remember { mutableStateOf(true) }  // "Meu sono foi tranquilo, sem interrupções?"
+    // Sem resposta pré-marcada (null): só vale o que o usuário escolher. Antes as respostas
+    // começavam em "Sim" e um toque direto em "Confirmar" gravava um dia bom.
+    var morningMoodGood by remember { mutableStateOf<Boolean?>(null) }    // "Me sinto bem esta manhã"
+    var morningEnergyGood by remember { mutableStateOf<Boolean?>(null) }  // "Estou com boa energia"
+    var nighttimeAwakening by remember { mutableStateOf<Boolean?>(null) } // "Meu sono foi tranquilo, sem interrupções?"
+    val canSubmit = morningMoodGood != null && morningEnergyGood != null && nighttimeAwakening != null
 
     Box(
         modifier = Modifier
@@ -173,25 +175,25 @@ private fun MorningCheckInContent(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    CheckInItem(
+                    YesNoItem(
                         label = "Me sinto bem esta manhã",
-                        checked = morningMoodGood,
-                        onToggle = { morningMoodGood = it },
-                        activeColor = Color.White
+                        value = morningMoodGood,
+                        onChange = { morningMoodGood = it },
+                        selectedTextColor = MORNING_ACCENT
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    CheckInItem(
+                    YesNoItem(
                         label = "Estou com boa energia",
-                        checked = morningEnergyGood,
-                        onToggle = { morningEnergyGood = it },
-                        activeColor = Color.White
+                        value = morningEnergyGood,
+                        onChange = { morningEnergyGood = it },
+                        selectedTextColor = MORNING_ACCENT
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    CheckInItem(
+                    YesNoItem(
                         label = "Meu sono foi tranquilo, sem interrupções",
-                        checked = nighttimeAwakening,
-                        onToggle = { nighttimeAwakening = it },
-                        activeColor = Color.White
+                        value = nighttimeAwakening,
+                        onChange = { nighttimeAwakening = it },
+                        selectedTextColor = MORNING_ACCENT
                     )
                 }
             }
@@ -199,16 +201,32 @@ private fun MorningCheckInContent(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { onSubmit(morningMoodGood, morningEnergyGood, nighttimeAwakening) },
+                onClick = {
+                    val mood = morningMoodGood ?: return@Button
+                    val energy = morningEnergyGood ?: return@Button
+                    val sleep = nighttimeAwakening ?: return@Button
+                    onSubmit(mood, energy, sleep)
+                },
+                enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White, contentColor = Color(0xFFE65100)
+                    containerColor = Color.White, contentColor = MORNING_ACCENT,
+                    disabledContainerColor = Color.White.copy(alpha = 0.3f),
+                    disabledContentColor = Color.White.copy(alpha = 0.6f)
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Confirmar", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+
+            if (!canSubmit) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Responda todas as perguntas para confirmar.",
+                    color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, textAlign = TextAlign.Center
+                )
             }
 
             Spacer(Modifier.height(12.dp))
@@ -234,12 +252,15 @@ private fun EveningCheckInContent(
         daytimeBreathingEase: Boolean, activityAsPlanned: Boolean
     ) -> Unit
 ) {
-    var selfCareGood by remember { mutableStateOf(true) }          // "Me cuidei bem hoje"
-    var rescueInhalerUses by remember { mutableStateOf(0) }
-    var daytimeBreathingEase by remember { mutableStateOf(true) }  // "Respirei com facilidade ao longo do dia?"
-    var activityAsPlanned by remember { mutableStateOf(true) }     // "Consegui fazer tudo que tinha planejado hoje?"
+    // Sem resposta pré-marcada (null), inclusive na bombinha: antes o padrão era "Sim" e
+    // 0 usos, e um toque direto em "Confirmar" gravava um dia bom sem uso de resgate.
+    var selfCareGood by remember { mutableStateOf<Boolean?>(null) }         // "Me cuidei bem hoje"
+    var rescueInhalerUses by remember { mutableStateOf<Int?>(null) }
+    var daytimeBreathingEase by remember { mutableStateOf<Boolean?>(null) } // "Respirei com facilidade ao longo do dia?"
+    var activityAsPlanned by remember { mutableStateOf<Boolean?>(null) }    // "Consegui fazer tudo que tinha planejado hoje?"
 
-    val canSubmit = true
+    val canSubmit = selfCareGood != null && rescueInhalerUses != null &&
+        daytimeBreathingEase != null && activityAsPlanned != null
 
     Box(
         modifier = Modifier
@@ -282,22 +303,22 @@ private fun EveningCheckInContent(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    CheckInItem(
+                    YesNoItem(
                         label = "Me cuidei bem hoje",
-                        checked = selfCareGood, onToggle = { selfCareGood = it },
-                        activeColor = Color(0xFF81C784)
+                        value = selfCareGood, onChange = { selfCareGood = it },
+                        selectedTextColor = EVENING_ACCENT
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    CheckInItem(
+                    YesNoItem(
                         label = "Respirei com facilidade ao longo do dia",
-                        checked = daytimeBreathingEase, onToggle = { daytimeBreathingEase = it },
-                        activeColor = Color.White
+                        value = daytimeBreathingEase, onChange = { daytimeBreathingEase = it },
+                        selectedTextColor = EVENING_ACCENT
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    CheckInItem(
+                    YesNoItem(
                         label = "Consegui fazer tudo que tinha planejado hoje",
-                        checked = activityAsPlanned, onToggle = { activityAsPlanned = it },
-                        activeColor = Color.White
+                        value = activityAsPlanned, onChange = { activityAsPlanned = it },
+                        selectedTextColor = EVENING_ACCENT
                     )
                 }
             }
@@ -313,10 +334,11 @@ private fun EveningCheckInContent(
 
             Button(
                 onClick = {
-                    onSubmit(
-                        selfCareGood, rescueInhalerUses,
-                        daytimeBreathingEase, activityAsPlanned
-                    )
+                    val selfCare = selfCareGood ?: return@Button
+                    val rescue = rescueInhalerUses ?: return@Button
+                    val breathing = daytimeBreathingEase ?: return@Button
+                    val activity = activityAsPlanned ?: return@Button
+                    onSubmit(selfCare, rescue, breathing, activity)
                 },
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
@@ -328,8 +350,16 @@ private fun EveningCheckInContent(
             ) {
                 Text(
                     "Confirmar",
-                    color = if (canSubmit) Color(0xFF1A237E) else Color.White.copy(alpha = 0.5f),
+                    color = if (canSubmit) EVENING_ACCENT else Color.White.copy(alpha = 0.5f),
                     fontWeight = FontWeight.Bold, fontSize = 16.sp
+                )
+            }
+
+            if (!canSubmit) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Responda todas as perguntas para confirmar.",
+                    color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, textAlign = TextAlign.Center
                 )
             }
 
@@ -348,7 +378,7 @@ private fun EveningCheckInContent(
 
 @Composable
 private fun RescueInhalerUsesCard(
-    value: Int,
+    value: Int?, // null = ainda não respondido
     onChange: (Int) -> Unit
 ) {
     Card(
@@ -391,7 +421,7 @@ private fun RescueInhalerUsesCard(
                         ) {
                             Text(
                                 label,
-                                color = if (selected) Color(0xFF1A237E) else Color.White,
+                                color = if (selected) EVENING_ACCENT else Color.White,
                                 fontWeight = FontWeight.Bold, fontSize = 15.sp
                             )
                         }
@@ -492,40 +522,46 @@ private fun HealthDataChip(emoji: String, label: String, textColor: Color = Colo
 private fun HealthConnectPermissionButton(onGranted: () -> Unit) {
 }
 
-// ── Componente de item com checkbox ──────────────────────────────────────────
+// ── Pergunta Sim/Não sem resposta pré-marcada ────────────────────────────────
+
+private val MORNING_ACCENT = Color(0xFFE65100)
+private val EVENING_ACCENT = Color(0xFF1A237E)
 
 @Composable
-private fun CheckInItem(
+private fun YesNoItem(
     label: String,
-    checked: Boolean,
-    onToggle: (Boolean) -> Unit,
-    activeColor: Color = Color.White
+    value: Boolean?, // null = ainda não respondido
+    onChange: (Boolean) -> Unit,
+    selectedTextColor: Color
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle(!checked) }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = if (checked) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(Modifier.width(12.dp))
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onToggle,
-            colors = CheckboxDefaults.colors(
-                checkedColor = activeColor,
-                uncheckedColor = Color.White.copy(alpha = 0.5f),
-                checkmarkColor = if (activeColor == Color.White) Color(0xFFE65100) else Color.Black
-            )
-        )
+        Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(true to "Sim", false to "Não").forEach { (option, text) ->
+                val selected = value == option
+                Surface(
+                    onClick = { onChange(option) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selected) Color.White else Color.White.copy(alpha = 0.12f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = if (selected) 0.dp else 1.dp,
+                        color = Color.White.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Box(modifier = Modifier.padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text,
+                            color = if (selected) selectedTextColor else Color.White,
+                            fontWeight = FontWeight.Bold, fontSize = 15.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

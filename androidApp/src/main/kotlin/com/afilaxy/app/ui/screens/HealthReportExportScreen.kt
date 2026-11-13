@@ -116,7 +116,7 @@ private fun IdleContent(onGenerate: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Relatório completo", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Text(
-                        "Gere um PDF com seus check-ins e pedidos de ajuda dos últimos 30 dias, seus Testes de Controle da Asma e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.",
+                        "Gere um PDF com seus check-ins e pedidos de ajuda das últimas 4 semanas, seus Testes de Controle da Asma e seu Perfil Médico — pronto para compartilhar com quem você quiser, sem precisar informar um profissional específico.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -130,17 +130,16 @@ private fun IdleContent(onGenerate: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Conteúdo do Relatório (30 dias)",
+                    Text("Conteúdo do Relatório (4 semanas)",
                         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
                 listOf(
-                    "Resumo executivo, adesão e uso de bombinha de resgate",
+                    "Controle de sintomas pelos critérios da GINA",
                     "Teste de Controle da Asma (último resultado e histórico)",
-                    "Qualidade do sono (check-in matinal)",
-                    "Bem-estar e energia matinal",
-                    "Avaliação de bem-estar noturno",
-                    "Pedidos de ajuda com data, hora e condições ambientais",
-                    "Perfil Médico (comorbidades, alergias, crises graves, acessibilidade)"
+                    "Crises, pedidos de ajuda e fatores de risco",
+                    "Adesão ao monitoramento e uso de bombinha de resgate",
+                    "Check-ins matinal e noturno",
+                    "Perfil Médico (alergias, medicamentos, acessibilidade)"
                 ).forEach { item ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -170,7 +169,7 @@ private fun GeneratingContent() {
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CircularProgressIndicator()
             Text("Gerando relatório...", style = MaterialTheme.typography.titleMedium)
-            Text("Coletando seus dados dos últimos 30 dias.",
+            Text("Coletando seus dados das últimas 4 semanas.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -197,7 +196,9 @@ private fun FailedContent(message: String, onRetry: () -> Unit) {
 private suspend fun generateAndShare(context: Context): Boolean {
     val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return false
     val patientName = FirebaseAuth.getInstance().currentUser?.displayName ?: "Usuário"
-    val cutoffMs = System.currentTimeMillis() - 30L * 24 * 3_600_000
+    // Janela de 4 semanas (28 dias): é o período dos critérios de controle da GINA.
+    val nowMs = System.currentTimeMillis()
+    val cutoffMs = nowMs - REPORT_DAYS * DAY_MS
 
     val checkInDocs = try {
         FirebaseFirestore.getInstance()
@@ -215,7 +216,7 @@ private suspend fun generateAndShare(context: Context): Boolean {
         FirebaseFirestore.getInstance().collection("users").document(uid).get().await()
     } catch (e: Exception) { null }
 
-    // ACT: histórico completo (não só 30 dias) — o teste é mensal, então a janela do
+    // ACT: histórico completo (não só as 4 semanas) — o teste é mensal, então a janela do
     // relatório mostraria no máximo um resultado e esconderia a tendência.
     val actResults = try {
         FirebaseFirestore.getInstance()
@@ -258,16 +259,19 @@ private suspend fun generateAndShare(context: Context): Boolean {
             .sortedByDescending { it.timestamp }
     } catch (e: Exception) { emptyList() }
 
+    // Pergunta sem resposta fica null — não é "Não". Check-ins antigos não tinham
+    // algumas perguntas e não podem ser contados como sintoma.
     val checkIns = checkInDocs.documents.map { doc ->
         WellbeingCheckInAndroid(
             type                 = doc.getString("type") ?: "",
+            timestamp            = doc.getLong("timestamp") ?: 0L,
             rescueInhalerUses    = doc.getLong("rescueInhalerUses")?.toInt(),
-            nighttimeAwakening   = doc.getBoolean("nighttimeAwakening") ?: false,
-            morningMoodGood      = doc.getBoolean("morningMoodGood") ?: false,
-            morningEnergyGood    = doc.getBoolean("morningEnergyGood") ?: false,
-            selfCareGood         = doc.getBoolean("selfCareGood") ?: false,
-            daytimeBreathingEase = doc.getBoolean("daytimeBreathingEase") ?: false,
-            activityAsPlanned    = doc.getBoolean("activityAsPlanned") ?: false
+            nighttimeAwakening   = doc.getBoolean("nighttimeAwakening"),
+            morningMoodGood      = doc.getBoolean("morningMoodGood"),
+            morningEnergyGood    = doc.getBoolean("morningEnergyGood"),
+            selfCareGood         = doc.getBoolean("selfCareGood"),
+            daytimeBreathingEase = doc.getBoolean("daytimeBreathingEase"),
+            activityAsPlanned    = doc.getBoolean("activityAsPlanned")
         )
     }
 
@@ -300,10 +304,11 @@ private suspend fun generateAndShare(context: Context): Boolean {
         patientName       = patientName,
         healthProfile     = healthProfile,
         checkIns          = checkIns,
-        emergencyCount30d = emergency30d(statsDoc),
+        emergencyCount    = emergencyCountInWindow(statsDoc),
         emergencies       = emergencies,
         actResults        = actResults,
-        generatedAt       = Date()
+        windowStartMs     = cutoffMs,
+        generatedAt       = Date(nowMs)
     )
 
     // PdfDocument + FileOutputStream rodam em IO: a geração do PDF é pesada e
@@ -322,13 +327,13 @@ private suspend fun generateAndShare(context: Context): Boolean {
     return true
 }
 
-private fun emergency30d(statsDoc: DocumentSnapshot?): Int {
+private fun emergencyCountInWindow(statsDoc: DocumentSnapshot?): Int {
     val daily = statsDoc?.get("dailyCount") as? Map<*, *>
         ?: return statsDoc?.getLong("totalEmergencies")?.toInt() ?: 0
     val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
     val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
     var sum = 0
-    repeat(30) {
+    repeat(REPORT_DAYS) {
         sum += (daily[fmt.format(cal.time)] as? Long)?.toInt() ?: 0
         cal.add(Calendar.DAY_OF_YEAR, -1)
     }
@@ -336,6 +341,12 @@ private fun emergency30d(statsDoc: DocumentSnapshot?): Int {
 }
 
 // ── Data Models ───────────────────────────────────────────────────────────────
+
+private const val DAY_MS = 86_400_000L
+private const val WEEK_MS = 7 * DAY_MS
+private const val REPORT_DAYS = 28
+private const val REPORT_WEEKS = 4
+private const val POSSIBLE_CHECKINS = 56 // 2 check-ins por dia × 28 dias
 
 /** Campos do ACT na ordem das perguntas P1–P5 (ver AsthmaControlTestResult). */
 private val ACT_ANSWER_FIELDS = listOf(
@@ -374,21 +385,104 @@ private data class EmergencyEventAndroid(
     val emergencyVisitAfter: Boolean?
 )
 
+/** Respostas de um check-in. null = pergunta não respondida (ou inexistente na época). */
 private data class WellbeingCheckInAndroid(
     val type: String,
+    val timestamp: Long,
     val rescueInhalerUses: Int?,
-    val nighttimeAwakening: Boolean,
-    val morningMoodGood: Boolean,
-    val morningEnergyGood: Boolean,
-    val selfCareGood: Boolean,
-    val daytimeBreathingEase: Boolean,
-    val activityAsPlanned: Boolean
+    val nighttimeAwakening: Boolean?, // true = "sono tranquilo, sem interrupções"
+    val morningMoodGood: Boolean?,
+    val morningEnergyGood: Boolean?,
+    val selfCareGood: Boolean?,
+    val daytimeBreathingEase: Boolean?,
+    val activityAsPlanned: Boolean?
 ) {
-    fun isCritical(): Boolean = if (type == "MORNING") {
-        !nighttimeAwakening && !morningMoodGood && !morningEnergyGood
+    val isMorning: Boolean get() = type == "MORNING"
+    val isEvening: Boolean get() = type == "EVENING"
+
+    /** Crítico só quando as três respostas do período foram explicitamente "Não". */
+    fun isCritical(): Boolean = if (isMorning) {
+        nighttimeAwakening == false && morningMoodGood == false && morningEnergyGood == false
     } else {
-        !selfCareGood && !daytimeBreathingEase && !activityAsPlanned
+        selfCareGood == false && daytimeBreathingEase == false && activityAsPlanned == false
     }
+}
+
+// ── Controle de sintomas — critérios da GINA (4 semanas) ─────────────────────
+// O app não diagnostica nem classifica: mostra cada critério com as contagens
+// semanais e quantos estão presentes. A escala da GINA vai como referência e a
+// interpretação fica com o profissional.
+
+private enum class GinaStatus(val label: String) {
+    PRESENT("Presente"), ABSENT("Ausente"), NO_DATA("Sem dados")
+}
+
+private class GinaCriterion(
+    val label: String,
+    /** Ocorrências por semana, S1 (mais antiga) → S4 (mais recente); null = sem resposta na semana. */
+    val weekly: List<Int?>,
+    /** Presente quando alguma semana tem mais que [threshold] ocorrências. */
+    threshold: Int
+) {
+    val status: GinaStatus = when {
+        weekly.all { it == null } -> GinaStatus.NO_DATA
+        weekly.any { it != null && it > threshold } -> GinaStatus.PRESENT
+        else -> GinaStatus.ABSENT
+    }
+
+    fun valueText(): String {
+        val weeks = weekly.joinToString(" · ") { it?.toString() ?: "—" }
+        return "${status.label} — por semana: $weeks"
+    }
+}
+
+private class GinaWeek(val startMs: Long, val morningCount: Int, val eveningCount: Int)
+
+private class GinaControl(checkIns: List<WellbeingCheckInAndroid>, windowStartMs: Long) {
+    val weeks: List<GinaWeek>
+    val criteria: List<GinaCriterion>
+
+    init {
+        fun weekOf(c: WellbeingCheckInAndroid): Int =
+            ((c.timestamp - windowStartMs) / WEEK_MS).toInt().coerceIn(0, REPORT_WEEKS - 1)
+
+        fun weekly(source: List<WellbeingCheckInAndroid>, value: (WellbeingCheckInAndroid) -> Int?): List<Int?> {
+            val sums = arrayOfNulls<Int>(REPORT_WEEKS)
+            source.forEach { c ->
+                val v = value(c) ?: return@forEach
+                val w = weekOf(c)
+                sums[w] = (sums[w] ?: 0) + v
+            }
+            return sums.toList()
+        }
+
+        fun occurred(answer: Boolean?, occursWhen: Boolean): Int? = answer?.let { if (it == occursWhen) 1 else 0 }
+
+        val morning = checkIns.filter { it.isMorning }
+        val evening = checkIns.filter { it.isEvening }
+
+        weeks = (0 until REPORT_WEEKS).map { w ->
+            GinaWeek(
+                startMs = windowStartMs + w * WEEK_MS,
+                morningCount = morning.count { weekOf(it) == w },
+                eveningCount = evening.count { weekOf(it) == w }
+            )
+        }
+
+        criteria = listOf(
+            GinaCriterion("Sintomas diurnos >2x/sem.",
+                weekly(evening) { occurred(it.daytimeBreathingEase, occursWhen = false) }, threshold = 2),
+            GinaCriterion("Despertar noturno",
+                weekly(morning) { occurred(it.nighttimeAwakening, occursWhen = false) }, threshold = 0),
+            GinaCriterion("Resgate >2x/sem.",
+                weekly(evening) { it.rescueInhalerUses }, threshold = 2),
+            GinaCriterion("Limitação de atividades",
+                weekly(evening) { occurred(it.activityAsPlanned, occursWhen = false) }, threshold = 0)
+        )
+    }
+
+    val presentCount: Int get() = criteria.count { it.status == GinaStatus.PRESENT }
+    val noDataCount: Int get() = criteria.count { it.status == GinaStatus.NO_DATA }
 }
 
 private data class HealthProfileAndroid(
@@ -417,11 +511,14 @@ private data class WellbeingReportAndroid(
     val patientName: String,
     val healthProfile: HealthProfileAndroid,
     val checkIns: List<WellbeingCheckInAndroid>,
-    val emergencyCount30d: Int,
+    val emergencyCount: Int,
     val emergencies: List<EmergencyEventAndroid>,
     val actResults: List<ActResultAndroid>,
+    val windowStartMs: Long,
     val generatedAt: Date
-)
+) {
+    val gina = GinaControl(checkIns, windowStartMs)
+}
 
 // ── PDF Generator ─────────────────────────────────────────────────────────────
 
@@ -484,13 +581,16 @@ private object WellbeingPDFAndroid {
             MARGIN + 20f
         }
 
+        // Ordem pensada para o médico: o que decide a consulta (GINA, ACT, crises e
+        // fatores de risco) vem primeiro; os detalhes do monitoramento depois.
         header(cursor, report)
         infoBox(cursor, report)
-        summary(cursor, report)
+        ginaSection(cursor, report)
         actSection(cursor, report)
+        riskSection(cursor, report)
+        adherenceSection(cursor, report)
         morningSection(cursor, report)
         eveningSection(cursor, report)
-        criticalSection(cursor, report)
         healthProfileSection(cursor, report)
         footer(cursor, report)
         cursor.finish()
@@ -558,20 +658,45 @@ private object WellbeingPDFAndroid {
 
     // MARK: Sections
 
-    private fun summary(cursor: Cursor, r: WellbeingReportAndroid) {
+    private fun ginaSection(cursor: Cursor, r: WellbeingReportAndroid) {
+        val g = r.gina
+        sectionHeader(cursor, "1. CONTROLE DE SINTOMAS — CRITÉRIOS GINA (4 SEMANAS)", PRIMARY)
+        val present = buildString {
+            append("${g.presentCount} de 4")
+            if (g.noDataCount > 0) append(" (${g.noDataCount} sem dados)")
+        }
+        val weekFmt = SimpleDateFormat("dd/MM", Locale("pt", "BR"))
+        val weeksText = g.weeks.mapIndexed { i, w ->
+            "S${i + 1} ${weekFmt.format(Date(w.startMs))}–${weekFmt.format(Date(w.startMs + WEEK_MS - DAY_MS))}"
+        }.joinToString(" · ")
+        val coverageText = g.weeks.mapIndexed { i, w ->
+            "S${i + 1}: ${w.morningCount} manhãs, ${w.eveningCount} noites"
+        }.joinToString(" · ")
+
+        val rows = mutableListOf("Critérios presentes" to present)
+        g.criteria.forEach { rows += it.label to it.valueText() }
+        rows += "Semanas" to weeksText
+        rows += "Check-ins por semana" to coverageText
+        rows += "Regra" to "Sintomas diurnos e resgate: presente se mais de 2 ocorrências em alguma semana. Despertar e limitação: presente se ocorreu ao menos uma vez. — = semana sem resposta."
+        rows += "Fontes" to "Sintomas diurnos: \"Respirei com facilidade ao longo do dia?\" = Não. Despertar: \"Meu sono foi tranquilo, sem interrupções?\" = Não. Resgate: nº de usos informado no check-in noturno. Limitação: \"Consegui fazer tudo que tinha planejado?\" = Não."
+        rows += "Limitações" to "Perguntas de bem-estar, não específicas de asma: despertar e limitação podem ter outras causas. O uso de resgate antes de exercício não é separado. Dias sem check-in não entram nas contagens."
+        rows += "Referência GINA" to "0 critérios: bem controlada; 1–2: parcialmente controlada; 3–4: não controlada. A interpretação cabe ao profissional de saúde."
+        plainRows(cursor, rows)
+    }
+
+    private fun adherenceSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val total = r.checkIns.size
-        val adherence = total * 100 / 60
+        val adherence = total * 100 / POSSIBLE_CHECKINS
         val critical = r.checkIns.count { it.isCritical() }
         val rescueAnswers = r.checkIns.mapNotNull { it.rescueInhalerUses }
         val rescueValue = if (rescueAnswers.isEmpty()) "Não informado"
             else "${rescueAnswers.sum()} vez(es) em ${rescueAnswers.size} dia(s) informado(s)"
-        sectionHeader(cursor, "1. RESUMO EXECUTIVO", PRIMARY)
+        sectionHeader(cursor, "4. ADESÃO AO MONITORAMENTO", PRIMARY)
         plainRows(cursor, listOf(
-            "Check-ins realizados (30 dias)"        to "$total de 60 possíveis",
+            "Check-ins realizados"                  to "$total de $POSSIBLE_CHECKINS possíveis",
             "Taxa de adesão ao monitoramento"       to "$adherence%",
             "Uso de bombinha de resgate"            to rescueValue,
-            "Pedidos de ajuda emergencial"          to "${r.emergencyCount30d} ocorrência(s)",
-            "Dias com bem-estar crítico registrado" to "$critical ocorrência(s)"
+            "Dias com bem-estar mínimo registrado"  to "$critical ocorrência(s)"
         ))
     }
 
@@ -600,35 +725,64 @@ private object WellbeingPDFAndroid {
     }
 
     private fun morningSection(cursor: Cursor, r: WellbeingReportAndroid) {
-        val m = r.checkIns.filter { it.type == "MORNING" }
-        sectionHeader(cursor, "3. CHECK-IN MATINAL", MORNING)
+        val m = r.checkIns.filter { it.isMorning }
+        sectionHeader(cursor, "5. CHECK-IN MATINAL — % DE RESPOSTAS \"SIM\"", MORNING)
         barRows(cursor, listOf(
-            "Registros de manhã: ${m.size}"  to null,
-            "\"Meu sono foi tranquilo, sem interrupções\"" to pct(m) { it.nighttimeAwakening },
-            "\"Me sinto bem esta manhã\""    to pct(m) { it.morningMoodGood },
-            "\"Estou com boa energia\""      to pct(m) { it.morningEnergyGood }
+            "Registros de manhã: ${m.size}" to null,
+            answeredRow("\"Meu sono foi tranquilo, sem interrupções\"", m) { it.nighttimeAwakening },
+            answeredRow("\"Me sinto bem esta manhã\"", m) { it.morningMoodGood },
+            answeredRow("\"Estou com boa energia\"", m) { it.morningEnergyGood }
         ), MORNING)
     }
 
     private fun eveningSection(cursor: Cursor, r: WellbeingReportAndroid) {
-        val e = r.checkIns.filter { it.type == "EVENING" }
-        sectionHeader(cursor, "4. CHECK-IN NOTURNO", EVENING)
+        val e = r.checkIns.filter { it.isEvening }
+        sectionHeader(cursor, "6. CHECK-IN NOTURNO — % DE RESPOSTAS \"SIM\"", EVENING)
         barRows(cursor, listOf(
-            "Registros noturnos: ${e.size}"    to null,
-            "\"Me cuidei bem hoje\""          to pct(e) { it.selfCareGood },
-            "\"Respirei com facilidade ao longo do dia\"" to pct(e) { it.daytimeBreathingEase },
-            "\"Consegui fazer tudo que tinha planejado\""  to pct(e) { it.activityAsPlanned }
+            "Registros noturnos: ${e.size}" to null,
+            answeredRow("\"Me cuidei bem hoje\"", e) { it.selfCareGood },
+            answeredRow("\"Respirei com facilidade ao longo do dia\"", e) { it.daytimeBreathingEase },
+            answeredRow("\"Consegui fazer tudo que tinha planejado\"", e) { it.activityAsPlanned }
         ), EVENING)
     }
 
-    private fun criticalSection(cursor: Cursor, r: WellbeingReportAndroid) {
-        val critical = r.checkIns.count { it.isCritical() }
-        sectionHeader(cursor, "5. EVENTOS CRÍTICOS", CRITICAL)
-        val rows = mutableListOf(
-            "Pedidos de ajuda emergencial (período)" to "${r.emergencyCount30d}",
-            "Dias com bem-estar mínimo registrado"   to "$critical"
-        )
+    private fun riskSection(cursor: Cursor, r: WellbeingReportAndroid) {
+        val p = r.healthProfile
+        sectionHeader(cursor, "3. CRISES E FATORES DE RISCO", CRITICAL)
+
+        val rows = mutableListOf("Pedidos de ajuda (4 semanas)" to "${r.emergencyCount}")
         r.emergencies.forEach { e -> rows += dateTimeFmt(Date(e.timestamp)) to emergencyDetail(e) }
+
+        val recentAct = r.actResults.firstOrNull()?.takeIf { it.timestamp >= r.windowStartMs }
+        val recentSevere = buildList {
+            recentAct?.takeIf { it.hadSevereExacerbation }?.let { add("relatada no ACT de ${dateFmt(Date(it.timestamp))}") }
+            r.emergencies.filter { it.emergencyVisitAfter == true }.forEach {
+                add("pronto-socorro/UPA ou internação após pedido de ajuda em ${dateFmt(Date(it.timestamp))}")
+            }
+        }
+        rows += "Crise grave (4 semanas)" to when {
+            recentSevere.isNotEmpty() -> "Sim — " + recentSevere.joinToString("; ")
+            recentAct == null -> "Nenhuma registrada (sem ACT no período)"
+            else -> "Não relatada"
+        }
+
+        val severeHistory = when {
+            p.severeExacerbationsUpdatedAt <= 0L -> "Não informado"
+            p.severeExacerbations12m == 0 -> "Nenhuma (informado em ${dateFmt(Date(p.severeExacerbationsUpdatedAt))})"
+            else -> "${p.severeExacerbations12m} nos 12 meses anteriores a ${dateFmt(Date(p.severeExacerbationsUpdatedAt))}"
+        }
+        rows += "Crises graves em 12 meses" to severeHistory
+        rows += "UTI ou intubação (alguma vez)" to if (p.everIcuOrIntubated) "Sim" else "Não informado"
+
+        val comorbidities = buildList {
+            if (p.hasObesity) add("Obesidade")
+            if (p.hasRhinitis) add("Rinite alérgica")
+            if (p.hasGerd) add("Refluxo / DRGE")
+            if (p.hasFoodAllergy) add("Alergia alimentar")
+            if (p.hasSleepApnea) add("Apneia do sono")
+        }
+        rows += "Comorbidades relatadas" to comorbidities.joinToString(", ").ifEmpty { "Nenhuma" }
+        rows += "Não coletado pelo app" to "Tabagismo ou exposição à fumaça, adesão ao tratamento de manutenção, técnica inalatória, gestação e função pulmonar."
         plainRows(cursor, rows)
     }
 
@@ -646,12 +800,6 @@ private object WellbeingPDFAndroid {
 
     private fun healthProfileSection(cursor: Cursor, r: WellbeingReportAndroid) {
         val p = r.healthProfile
-        val comorbidities = buildList {
-            if (p.hasGerd) add("Refluxo / DRGE")
-            if (p.hasSleepApnea) add("Apneia do sono")
-            if (p.hasRhinitis) add("Rinite alérgica")
-            if (p.hasObesity) add("Obesidade")
-        }
         val specificAllergies = buildList {
             if (p.hasFoodAllergy) add("Alimentar")
             if (p.hasNsaidAllergy) add("AINEs/aspirina")
@@ -667,21 +815,13 @@ private object WellbeingPDFAndroid {
             else p.emergencyContactName
         } else "Não informado"
 
-        val severeHistory = when {
-            p.severeExacerbationsUpdatedAt <= 0L -> "Não informado"
-            p.severeExacerbations12m == 0 -> "Nenhuma (informado em ${dateFmt(Date(p.severeExacerbationsUpdatedAt))})"
-            else -> "${p.severeExacerbations12m} nos 12 meses anteriores a ${dateFmt(Date(p.severeExacerbationsUpdatedAt))}"
-        }
-
-        sectionHeader(cursor, "6. PERFIL MÉDICO", PRIMARY)
+        // Comorbidades, crises graves e UTI ficam na seção 3 (fatores de risco).
+        sectionHeader(cursor, "7. PERFIL MÉDICO", PRIMARY)
         plainRows(cursor, listOf(
             "Alergias conhecidas"    to p.allergiesText.joinToString(", ").ifEmpty { "Nenhuma relatada" },
             "Medicamentos em uso"    to p.medications.joinToString(", ").ifEmpty { "Nenhum relatado" },
             "Condições relatadas"    to p.conditions.joinToString(", ").ifEmpty { "Nenhuma" },
-            "Comorbidades"           to comorbidities.joinToString(", ").ifEmpty { "Nenhuma" },
             "Alergias específicas"   to specificAllergies.joinToString(", ").ifEmpty { "Nenhuma" },
-            "Crises graves (autodeclarado)" to severeHistory,
-            "UTI ou intubação (alguma vez)" to if (p.everIcuOrIntubated) "Sim" else "Não informado",
             "Acessibilidade"         to accessibility.joinToString(", ").ifEmpty { "Nenhuma" },
             "Detalhes complementares" to p.notes.ifEmpty { "Nenhum" },
             "Contato de emergência"  to emergencyContact
@@ -794,9 +934,18 @@ private object WellbeingPDFAndroid {
 
     private fun ascent(paint: Paint) = -paint.fontMetrics.ascent
 
-    private fun pct(items: List<WellbeingCheckInAndroid>, sel: (WellbeingCheckInAndroid) -> Boolean): Double? {
-        if (items.isEmpty()) return null
-        return items.count { sel(it) }.toDouble() / items.size * 100
+    /**
+     * Linha de barra com o % de "Sim" calculado só sobre quem respondeu a pergunta.
+     * O nº de respostas vai no rótulo; sem nenhuma resposta, a barra não é desenhada.
+     */
+    private fun answeredRow(
+        label: String,
+        items: List<WellbeingCheckInAndroid>,
+        sel: (WellbeingCheckInAndroid) -> Boolean?
+    ): Pair<String, Double?> {
+        val answers = items.mapNotNull(sel)
+        if (answers.isEmpty()) return "$label (sem respostas)" to null
+        return "$label (${answers.size} resp.)" to answers.count { it }.toDouble() / answers.size * 100
     }
 
     private fun yesNo(value: Boolean?) = when (value) {
@@ -811,7 +960,7 @@ private object WellbeingPDFAndroid {
 
     private fun periodStr(): String {
         val fmt = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
-        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -29) }
+        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -(REPORT_DAYS - 1)) }
         return "${fmt.format(cal.time)} – ${fmt.format(Date())}"
     }
 }

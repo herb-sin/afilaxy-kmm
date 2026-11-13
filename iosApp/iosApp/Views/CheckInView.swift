@@ -74,17 +74,19 @@ struct CheckInView: View {
                 temperature: temperature != nil ? KotlinFloat(value: temperature!) : nil,
                 humidity: humidity != nil ? KotlinFloat(value: humidity!) : nil
             )
-            if let answer = quickAnswer,
+            // Só "está tudo bem" (true) grava direto; false abre o formulário normal
+            // para o usuário relatar o dia — igual ao Android.
+            if quickAnswer == true,
                wrapper.state?.isLoading != true,
                wrapper.state?.alreadyDoneToday != true,
                wrapper.state?.isSubmitted != true {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     if type == .morning {
-                        wrapper.submitMorning(morningMoodGood: answer, morningEnergyGood: answer, nighttimeAwakening: answer)
+                        wrapper.submitMorning(morningMoodGood: true, morningEnergyGood: true, nighttimeAwakening: true)
                     } else {
                         wrapper.submitEvening(EveningCheckInAnswers(
-                            selfCareGood: answer, rescueInhalerUses: 0,
-                            daytimeBreathingEase: answer, activityAsPlanned: answer
+                            selfCareGood: true, rescueInhalerUses: 0,
+                            daytimeBreathingEase: true, activityAsPlanned: true
                         ))
                     }
                 }
@@ -100,9 +102,16 @@ private struct MorningCheckInContent: View {
     let riskScore: Int32?
     let onSubmit: (Bool, Bool, Bool) -> Void
 
-    @State private var morningMoodGood = true    // "Me sinto bem esta manhã"
-    @State private var morningEnergyGood = true  // "Estou com boa energia"
-    @State private var nighttimeAwakening = true  // "Meu sono foi tranquilo, sem interrupções?"
+    // Sem resposta pré-marcada (nil): só vale o que o usuário escolher. Antes as respostas
+    // começavam em "Sim" e um toque direto em "Confirmar" gravava um dia bom.
+    @State private var morningMoodGood: Bool? = nil    // "Me sinto bem esta manhã"
+    @State private var morningEnergyGood: Bool? = nil  // "Estou com boa energia"
+    @State private var nighttimeAwakening: Bool? = nil // "Meu sono foi tranquilo, sem interrupções?"
+
+    private var canSubmit: Bool {
+        morningMoodGood != nil && morningEnergyGood != nil && nighttimeAwakening != nil
+    }
+    private static let accent = Color(red: 0.9, green: 0.32, blue: 0)
 
     var body: some View {
         ZStack {
@@ -147,11 +156,11 @@ private struct MorningCheckInContent: View {
                     Spacer().frame(height: 20)
 
                     VStack(spacing: 0) {
-                        CheckInToggleRow(label: "Me sinto bem esta manhã", isOn: $morningMoodGood)
+                        YesNoRow(label: "Me sinto bem esta manhã", value: $morningMoodGood, accent: Self.accent)
                         Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Estou com boa energia", isOn: $morningEnergyGood)
+                        YesNoRow(label: "Estou com boa energia", value: $morningEnergyGood, accent: Self.accent)
                         Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Meu sono foi tranquilo, sem interrupções", isOn: $nighttimeAwakening)
+                        YesNoRow(label: "Meu sono foi tranquilo, sem interrupções", value: $nighttimeAwakening, accent: Self.accent)
                     }
                     .padding(16)
                     .background(Color.white.opacity(0.15))
@@ -159,7 +168,11 @@ private struct MorningCheckInContent: View {
 
                     Spacer().frame(height: 24)
 
-                    Button(action: { onSubmit(morningMoodGood, morningEnergyGood, nighttimeAwakening) }) {
+                    Button(action: {
+                        guard let mood = morningMoodGood, let energy = morningEnergyGood,
+                              let sleep = nighttimeAwakening else { return }
+                        onSubmit(mood, energy, sleep)
+                    }) {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                             Text("Confirmar")
@@ -167,9 +180,18 @@ private struct MorningCheckInContent: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(Color.white)
-                        .foregroundColor(Color(red: 0.9, green: 0.32, blue: 0))
+                        .background(Color.white.opacity(canSubmit ? 1 : 0.3))
+                        .foregroundColor(canSubmit ? Self.accent : .white.opacity(0.6))
                         .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                    .disabled(!canSubmit)
+
+                    if !canSubmit {
+                        Text("Responda todas as perguntas para confirmar.")
+                            .foregroundColor(.white.opacity(0.8))
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 8)
                     }
 
                     Text("Sua resposta ajuda a entender seu padrão de risco.")
@@ -191,10 +213,18 @@ private struct MorningCheckInContent: View {
 private struct EveningCheckInContent: View {
     let onSubmit: (Bool, Int, Bool, Bool) -> Void
 
-    @State private var selfCareGood = true          // "Me cuidei bem hoje"
-    @State private var rescueInhalerUses = 0
-    @State private var daytimeBreathingEase = true  // "Respirei com facilidade ao longo do dia?"
-    @State private var activityAsPlanned = true     // "Consegui fazer tudo que tinha planejado hoje?"
+    // Sem resposta pré-marcada (nil), inclusive na bombinha: antes o padrão era "Sim" e
+    // 0 usos, e um toque direto em "Confirmar" gravava um dia bom sem uso de resgate.
+    @State private var selfCareGood: Bool? = nil         // "Me cuidei bem hoje"
+    @State private var rescueInhalerUses: Int? = nil
+    @State private var daytimeBreathingEase: Bool? = nil // "Respirei com facilidade ao longo do dia?"
+    @State private var activityAsPlanned: Bool? = nil    // "Consegui fazer tudo que tinha planejado hoje?"
+
+    private var canSubmit: Bool {
+        selfCareGood != nil && rescueInhalerUses != nil &&
+            daytimeBreathingEase != nil && activityAsPlanned != nil
+    }
+    private static let accent = Color(red: 0.1, green: 0.14, blue: 0.49)
 
     var body: some View {
         ZStack {
@@ -226,11 +256,11 @@ private struct EveningCheckInContent: View {
                     Spacer().frame(height: 20)
 
                     VStack(spacing: 0) {
-                        CheckInToggleRow(label: "Me cuidei bem hoje", isOn: $selfCareGood)
+                        YesNoRow(label: "Me cuidei bem hoje", value: $selfCareGood, accent: Self.accent)
                         Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Respirei com facilidade ao longo do dia", isOn: $daytimeBreathingEase)
+                        YesNoRow(label: "Respirei com facilidade ao longo do dia", value: $daytimeBreathingEase, accent: Self.accent)
                         Divider().background(Color.white.opacity(0.2))
-                        CheckInToggleRow(label: "Consegui fazer tudo que tinha planejado hoje", isOn: $activityAsPlanned)
+                        YesNoRow(label: "Consegui fazer tudo que tinha planejado hoje", value: $activityAsPlanned, accent: Self.accent)
                     }
                     .padding(16)
                     .background(Color.white.opacity(0.12))
@@ -243,15 +273,26 @@ private struct EveningCheckInContent: View {
                     Spacer().frame(height: 24)
 
                     Button(action: {
-                        onSubmit(selfCareGood, rescueInhalerUses, daytimeBreathingEase, activityAsPlanned)
+                        guard let selfCare = selfCareGood, let rescue = rescueInhalerUses,
+                              let breathing = daytimeBreathingEase, let activity = activityAsPlanned else { return }
+                        onSubmit(selfCare, rescue, breathing, activity)
                     }) {
                         Text("Confirmar")
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
-                            .background(Color.white)
-                            .foregroundColor(Color(red: 0.1, green: 0.14, blue: 0.49))
+                            .background(Color.white.opacity(canSubmit ? 1 : 0.3))
+                            .foregroundColor(canSubmit ? Self.accent : .white.opacity(0.6))
                             .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                    .disabled(!canSubmit)
+
+                    if !canSubmit {
+                        Text("Responda todas as perguntas para confirmar.")
+                            .foregroundColor(.white.opacity(0.8))
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 8)
                     }
 
                     Text("Seus dados ajudam a melhorar seu cuidado.")
@@ -319,26 +360,43 @@ private struct CriticalWellbeingCardView: View {
     }
 }
 
-// MARK: - Shared toggle row
+// MARK: - Pergunta Sim/Não sem resposta pré-marcada
 
-private struct CheckInToggleRow: View {
+private struct YesNoRow: View {
     let label: String
-    @Binding var isOn: Bool
+    @Binding var value: Bool? // nil = ainda não respondido
+    let accent: Color
 
     var body: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 8) {
             Text(label)
                 .foregroundColor(.white)
-                .font(.subheadline)
-                .fontWeight(isOn ? .semibold : .regular)
+                .font(.subheadline.weight(.medium))
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-                .tint(.white)
+            HStack(spacing: 8) {
+                option(true, "Sim")
+                option(false, "Não")
+            }
         }
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
-        .onTapGesture { isOn.toggle() }
+        .padding(.vertical, 8)
+    }
+
+    private func option(_ answer: Bool, _ text: String) -> some View {
+        let selected = value == answer
+        return Button(action: { value = answer }) {
+            Text(text)
+                .fontWeight(.bold)
+                .foregroundColor(selected ? accent : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(selected ? Color.white : Color.white.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.3), lineWidth: selected ? 0 : 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -347,7 +405,7 @@ private struct CheckInToggleRow: View {
 // da GINA de uso de resgate >2x/semana.
 
 private struct RescueInhalerUsesCard: View {
-    @Binding var value: Int
+    @Binding var value: Int? // nil = ainda não respondido
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

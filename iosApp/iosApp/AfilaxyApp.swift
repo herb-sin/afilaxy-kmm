@@ -109,13 +109,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             let checkInType = userInfo["checkInType"] as? String ?? "MORNING"
             let action = response.actionIdentifier
 
-            // Determine quick answer from notification action buttons
+            // Resposta rápida pelos botões da notificação — mesma regra do Android:
+            // true = "está tudo bem" (grava o check-in positivo direto);
+            // false = abre o formulário para o usuário relatar o dia.
+            // Antes, no noturno, "Dia difícil" gravava um dia bom e "Bem" um dia ruim.
             var quickAnswer: Bool? = nil
             switch action {
-            case "CHECKIN_YES":       quickAnswer = true   // morning: has inhaler
-            case "CHECKIN_NO":        quickAnswer = false  // morning: no inhaler
-            case "CHECKIN_NO_CRISIS": quickAnswer = false  // evening: no crisis
-            case "CHECKIN_HAD_CRISIS": quickAnswer = true  // evening: had crisis
+            case "CHECKIN_YES":        quickAnswer = true   // manhã: "✅ Sim"
+            case "CHECKIN_NO":         quickAnswer = false  // manhã: "❌ Não"
+            case "CHECKIN_NO_CRISIS":  quickAnswer = true   // noite: "✅ Bem"
+            case "CHECKIN_HAD_CRISIS": quickAnswer = false  // noite: "⚠️ Dia difícil"
             default: break
             }
 

@@ -63,12 +63,12 @@ class CheckInNotificationScheduler {
     private func registerCategories() {
         let yesAction = UNNotificationAction(
             identifier: "CHECKIN_YES",
-            title: "✅ Sim",
+            title: "✅ Bem",
             options: [.foreground]
         )
         let noAction = UNNotificationAction(
             identifier: "CHECKIN_NO",
-            title: "❌ Não",
+            title: "❌ Não muito bem",
             options: [.foreground]
         )
 
