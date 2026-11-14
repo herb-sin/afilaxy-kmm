@@ -26,6 +26,7 @@ object AppRoutes {
     const val DELETE_ACCOUNT = "delete_account"
     const val ACT_TEST = "act_test"
     const val ACT_HISTORY = "act_history"
+    const val INHALER_GUIDE = "inhaler_guide"
 
     const val NAVIGATION = "navigation/{lat}/{lng}/{name}"
 

@@ -47,6 +47,7 @@ fun ProfileScreenNew(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToAct: () -> Unit = {},
+    onNavigateToInhalerGuide: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToExportData: () -> Unit = {},
     onNavigateToDeleteAccount: () -> Unit = {},
@@ -264,6 +265,7 @@ fun ProfileScreenNew(
                 onNavigateToHistory = onNavigateToHistory,
                 onNavigateToHelp = onNavigateToHelp,
                 onNavigateToAct = onNavigateToAct,
+                onNavigateToInhalerGuide = onNavigateToInhalerGuide,
                 onEditProfile = { showEditSheet = true }
             )
         }
@@ -407,6 +409,7 @@ private fun AgendaDeSaudeCard(
     onNavigateToHistory: () -> Unit,
     onNavigateToHelp: () -> Unit,
     onNavigateToAct: () -> Unit,
+    onNavigateToInhalerGuide: () -> Unit,
     onEditProfile: () -> Unit
 ) {
     Card(
@@ -456,6 +459,13 @@ private fun AgendaDeSaudeCard(
                 Icons.Default.Checklist,
                 Modifier.fillMaxWidth(),
                 onClick = onNavigateToAct
+            )
+            ProfileInfoCard(
+                "Como usar sua bombinha",
+                "Guia de dispositivos inalatórios (LEDAR/UFAL)",
+                Icons.Default.Air,
+                Modifier.fillMaxWidth(),
+                onClick = onNavigateToInhalerGuide
             )
             HorizontalDivider()
             // Ocorrências Recentes

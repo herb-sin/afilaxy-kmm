@@ -433,6 +433,7 @@ fun NavGraph(
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onNavigateToAct = { navController.navigate(AppRoutes.ACT_TEST) },
+                    onNavigateToInhalerGuide = { navController.navigate(AppRoutes.INHALER_GUIDE) },
                     onNavigateToPrivacy = { navController.navigate(AppRoutes.PRIVACY) },
                     onNavigateToExportData = { navController.navigate(AppRoutes.EXPORT_DATA) },
                     onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) }
@@ -574,6 +575,10 @@ fun NavGraph(
 
         composable(AppRoutes.ACT_HISTORY) {
             ActHistoryScreen(navController = navController)
+        }
+
+        composable(AppRoutes.INHALER_GUIDE) {
+            InhalerGuideScreen(navController = navController)
         }
 
 
