@@ -202,9 +202,6 @@ struct ProfileView: View {
                     NavigationLink(value: AppRoute.actTest) {
                         InfoGridItem(title: "Teste de Controle da Asma (ACT)", value: "Avalie as últimas 4 semanas", icon: "checklist", accentColor: .afiPrimary)
                     }.buttonStyle(.plain)
-                    NavigationLink(destination: InhalerGuideView()) {
-                        InfoGridItem(title: "Como usar sua bombinha", value: "Guia de dispositivos inalatórios (LEDAR/UFAL)", icon: "lungs.fill", accentColor: .afiPrimary)
-                    }.buttonStyle(.plain)
                 }
 
                 Divider()

@@ -341,6 +341,7 @@ fun NavGraph(
                     onNavigateToPharmacyMap = { navController.navigate(AppRoutes.MAP_PHARMACY) },
                     onNavigateToHealthReport = { navController.navigate(AppRoutes.HEALTH_REPORT) },
                     onNavigateToAct = { navController.navigate(AppRoutes.ACT_TEST) },
+                    onNavigateToInhalerGuide = { navController.navigate(AppRoutes.INHALER_GUIDE) },
                     onLogout = {
                         scope.launch {
                             // Cancela observers/emergência ANTES do signOut — evita listener do
@@ -433,7 +434,6 @@ fun NavGraph(
                     onNavigateToHistory = { navController.navigate(AppRoutes.HISTORY) },
                     onNavigateToHelp = { navController.navigate(AppRoutes.HELP) },
                     onNavigateToAct = { navController.navigate(AppRoutes.ACT_TEST) },
-                    onNavigateToInhalerGuide = { navController.navigate(AppRoutes.INHALER_GUIDE) },
                     onNavigateToPrivacy = { navController.navigate(AppRoutes.PRIVACY) },
                     onNavigateToExportData = { navController.navigate(AppRoutes.EXPORT_DATA) },
                     onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) }

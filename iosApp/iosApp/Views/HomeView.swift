@@ -584,6 +584,9 @@ extension HomeView {
                         navigationPath.append(AppRoute.actTest)
                     }
 
+                    SupportLinkRow(title: "Como usar sua bombinha", subtitle: "Guia de dispositivos inalatórios (LEDAR/UFAL)",
+                                   icon: "lungs.fill", color: Color(hex: "#0288D1")) { navigationPath.append(AppRoute.inhalerGuide) }
+
                     SupportLinkRow(
                         title: "Farmácias 24h",
                         subtitle: "Encontre medicamentos",

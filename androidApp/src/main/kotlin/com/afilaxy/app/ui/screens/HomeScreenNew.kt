@@ -71,6 +71,7 @@ fun HomeScreenNew(
     onNavigateToPharmacyMap: () -> Unit = {},
     onNavigateToHealthReport: () -> Unit = {},
     onNavigateToAct: () -> Unit = {},
+    onNavigateToInhalerGuide: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: EmergencyViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel(),
@@ -340,7 +341,7 @@ fun HomeScreenNew(
             }
         }
 
-        // Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Meu Controle, Farmácias 24h, Autocuidado, Comunidade
+        // Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Meu Controle, Guia de bombinha, Farmácias 24h, Autocuidado, Comunidade
         item {
             HomeSupportLinksSection(
                 onNavigateToHelp = onNavigateToHelp,
@@ -348,7 +349,8 @@ fun HomeScreenNew(
                 onNavigateToHealthReport = onNavigateToHealthReport,
                 onNavigateToAutocuidado = onNavigateToAutocuidado,
                 latestAct = actState.latestResult,
-                onNavigateToAct = onNavigateToAct
+                onNavigateToAct = onNavigateToAct,
+                onNavigateToInhalerGuide = onNavigateToInhalerGuide
             )
         }
     }
@@ -895,7 +897,7 @@ private fun openWhatsAppGroup(context: android.content.Context) {
 }
 
 // ---------------------------------------------------------------------------
-// Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Meu Controle, Farmácias 24h, Autocuidado, Comunidade
+// Suporte Rápido — SAMU 192, Protocolo de Crise, Relatório de Saúde, Meu Controle, Guia de bombinha, Farmácias 24h, Autocuidado, Comunidade
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -905,7 +907,8 @@ private fun HomeSupportLinksSection(
     onNavigateToHealthReport: () -> Unit,
     onNavigateToAutocuidado: () -> Unit,
     latestAct: com.afilaxy.domain.model.AsthmaControlTestResult?,
-    onNavigateToAct: () -> Unit
+    onNavigateToAct: () -> Unit,
+    onNavigateToInhalerGuide: () -> Unit
 ) {
     val context = LocalContext.current
     Card(
@@ -958,6 +961,15 @@ private fun HomeSupportLinksSection(
                 icon = Icons.Default.Assessment,
                 color = Color(0xFF5E35B1),
                 onClick = onNavigateToAct
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            // Guia do LEDAR/UFAL: só link + crédito de autoria (ver InhalerGuideScreen.kt)
+            HomeSupportLinkRow(
+                title = "Como usar sua bombinha",
+                subtitle = "Guia de dispositivos inalatórios (LEDAR/UFAL)",
+                icon = Icons.Default.Air,
+                color = Color(0xFF0288D1),
+                onClick = onNavigateToInhalerGuide
             )
             Spacer(modifier = Modifier.height(8.dp))
             HomeSupportLinkRow(
