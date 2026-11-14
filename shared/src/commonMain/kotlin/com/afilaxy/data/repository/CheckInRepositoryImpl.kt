@@ -4,6 +4,7 @@ import com.afilaxy.domain.model.CheckInResponse
 import com.afilaxy.domain.model.CheckInType
 import com.afilaxy.domain.model.getCurrentTimeMillis
 import com.afilaxy.domain.repository.CheckInRepository
+import com.afilaxy.util.platformName
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import kotlinx.datetime.Clock
@@ -17,12 +18,16 @@ class CheckInRepositoryImpl(
 
     companion object {
         /**
-         * Versão do formulário gravada em cada check-in. A versão 2 é o formulário com
-         * perguntas que começam sem resposta e botões rápidos da notificação corrigidos
-         * no iOS. Os check-ins sem este campo vêm de versões anteriores do app e estão
-         * enviesados para "bem": a pesquisa (scripts/export_ml_dataset.py) os descarta.
+         * Versão do formulário gravada em cada check-in; suba sempre que uma mudança no app
+         * alterar o significado ou a coleta das respostas. A pesquisa
+         * (scripts/export_ml_dataset.py, MIN_CHECKIN_FORM_VERSION) descarta as anteriores.
+         *  - sem campo: respostas pré-marcadas e botões rápidos do iOS invertidos
+         *    (enviesadas para "bem");
+         *  - 2: perguntas sem resposta pré-marcada e botões rápidos corrigidos, mas o
+         *    Android ainda só lembrava o check-in matinal em dias de risco >= 45;
+         *  - 3: lembrete matinal todo dia nas duas plataformas.
          */
-        const val CHECKIN_FORM_VERSION = 2
+        const val CHECKIN_FORM_VERSION = 3
     }
 
     override suspend fun saveCheckIn(response: CheckInResponse): Result<Unit> {
@@ -51,7 +56,8 @@ class CheckInRepositoryImpl(
                 "hourOfDay" to response.hourOfDay,
                 "dayOfWeek" to response.dayOfWeek,
                 "monthOfYear" to response.monthOfYear,
-                "formVersion" to CHECKIN_FORM_VERSION
+                "formVersion" to CHECKIN_FORM_VERSION,
+                "platform" to platformName()
             )
 
             firestore.collection("checkins")

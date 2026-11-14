@@ -11,14 +11,8 @@ import androidx.work.*
 import com.afilaxy.app.MainActivity
 import com.afilaxy.app.util.canPostNotifications
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import kotlinx.coroutines.tasks.await
-import java.text.SimpleDateFormat
 import java.util.concurrent.TimeUnit
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 // ── Canais de notificação ──────────────────────────────────────────────────────
 
@@ -41,8 +35,10 @@ fun createCheckInNotificationChannel(context: Context) {
 // ── Worker Matinal (7:30 AM) ───────────────────────────────────────────────────
 
 /**
- * Dispara notificação matinal em dias de risco moderado ou alto
- * perguntando se o usuário está com sua bombinha de resgate.
+ * Dispara a notificação matinal de check-in todo dia às 07:30, igual ao iOS
+ * (CheckInNotificationScheduler.swift). Não filtra pelo índice de risco: um filtro
+ * fazia a resposta matinal depender do próprio risco (mais lembretes em dias de risco
+ * alto), o que enviesa os dados de pesquisa.
  *
  * Usa OneTimeWorkRequest reagendável para garantir hora exata (07:30).
  * Re-enfileira automaticamente ao completar.
@@ -55,18 +51,13 @@ class MorningCheckInWorker(
     companion object {
         const val WORK_NAME = "morning_checkin_worker"
         const val KEY_INHALER_NAME = "inhaler_name"
-        const val KEY_RISK_SCORE = "risk_score"
-        const val MIN_RISK_SCORE_FOR_NOTIFICATION = 45  // score mínimo para notificar (risco moderado+)
         private const val PENDING_INTENT_MORNING_MAIN = 1001
         private const val PENDING_INTENT_MORNING_YES  = 1002
         private const val PENDING_INTENT_MORNING_NO   = 1003
 
-        fun scheduleNext(context: Context, inhalerName: String? = null, riskScore: Int = 0) {
+        fun scheduleNext(context: Context, inhalerName: String? = null) {
             val delay = minutesUntil(hour = 7, minute = 30)
-            val data = workDataOf(
-                KEY_INHALER_NAME to (inhalerName ?: ""),
-                KEY_RISK_SCORE to riskScore
-            )
+            val data = workDataOf(KEY_INHALER_NAME to (inhalerName ?: ""))
             val request = OneTimeWorkRequestBuilder<MorningCheckInWorker>()
                 .setInitialDelay(delay, TimeUnit.MINUTES)
                 .setInputData(data)
@@ -83,12 +74,9 @@ class MorningCheckInWorker(
         }
 
         /** Agenda com KEEP — usado na inicialização do app para não resetar worker já agendado. */
-        fun scheduleNextKeep(context: Context, inhalerName: String? = null, riskScore: Int = 0) {
+        fun scheduleNextKeep(context: Context, inhalerName: String? = null) {
             val delay = minutesUntil(hour = 7, minute = 30)
-            val data = workDataOf(
-                KEY_INHALER_NAME to (inhalerName ?: ""),
-                KEY_RISK_SCORE to riskScore
-            )
+            val data = workDataOf(KEY_INHALER_NAME to (inhalerName ?: ""))
             val request = OneTimeWorkRequestBuilder<MorningCheckInWorker>()
                 .setInitialDelay(delay, TimeUnit.MINUTES)
                 .setInputData(data)
@@ -105,22 +93,8 @@ class MorningCheckInWorker(
     override suspend fun doWork(): Result {
         val inhalerName = inputData.getString(KEY_INHALER_NAME)?.takeIf { it.isNotBlank() }
 
-        // Gate de score REAL: o inputData(KEY_RISK_SCORE) era sempre 0 (nenhum
-        // chamador passa score), então a condição abaixo nunca era satisfeita e a
-        // notificação nunca disparava. Consulta o snapshot do Firestore antes.
-        val uid = FirebaseAuth.getInstance().currentUser?.uid
-        val riskScore = uid?.let { fetchLatestRiskScore(it) }
-
-        val shouldNotify = when {
-            // Deslogado: não notifica (mas re-agenda sempre, ao final).
-            uid == null -> false
-            // Score desconhecido (sem snapshot OU falha de rede): NOTIFICA mesmo
-            // assim — fail-open. O lembrete é benigno e perder o check-in diário
-            // piora o dado do produto; nenhum conteúdo sensível é exposto.
-            riskScore == null -> true
-            // Score conhecido: só em risco moderado ou superior (>= 45).
-            else -> riskScore >= MIN_RISK_SCORE_FOR_NOTIFICATION
-        }
+        // Só não notifica quem saiu da conta (o worker re-agenda sempre, ao final).
+        val shouldNotify = FirebaseAuth.getInstance().currentUser != null
         if (shouldNotify) {
             showMorningNotification(inhalerName)
         }
@@ -128,35 +102,6 @@ class MorningCheckInWorker(
         // Re-agenda para o próximo dia (incondicional)
         scheduleNext(context)
         return Result.success()
-    }
-
-    /**
-     * Lê o score de risco real em `risk_scores/{uid}/snapshots/{yyyy-MM-dd}`.
-     * Se o snapshot de hoje não existir, busca o último disponível (orderBy "date").
-     * Retorna null quando não há snapshot ou quando a leitura falha (rede),
-     * sinalizando "desconhecido" para o fail-open do [doWork].
-     * SimpleDateFormat em vez de java.time.LocalDate: minSdk 24 (LocalDate é API 26).
-     */
-    private suspend fun fetchLatestRiskScore(uid: String): Int? {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val snapshots = FirebaseFirestore.getInstance()
-            .collection("risk_scores").document(uid).collection("snapshots")
-        return try {
-            val todayDoc = snapshots.document(today).get().await()
-            (todayDoc.get("score") as? Number)?.toInt()
-                ?: snapshots
-                    .orderBy("date", Query.Direction.DESCENDING)
-                    .limit(1)
-                    .get().await().documents.firstOrNull()
-                    ?.let { (it.get("score") as? Number)?.toInt() }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            // Cancelamento do worker NÃO é falha de rede: propagar para que o
-            // coroutine encerre e o fail-open (notificação) não dispare após o
-            // cancelamento.
-            throw e
-        } catch (e: Exception) {
-            null
-        }
     }
 
     private fun showMorningNotification(inhalerName: String?) {
@@ -199,9 +144,6 @@ class MorningCheckInWorker(
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("☀️ Check-in Matinal")
             .setContentText("Como está seu bem-estar esta manhã?")
-            .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("A qualidade do ar hoje está baixa. Como você está se sentindo?")
-            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .addAction(android.R.drawable.ic_menu_send, "✅ Bem", yesPending)

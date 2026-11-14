@@ -6,7 +6,7 @@ import shared
 /// usando UNCalendarNotificationTrigger com repeats=true.
 ///
 /// Diferença vs. Android WorkManager:
-/// - Android: OneTimeWorkRequest reagendável, executa código (filtra por riskScore ≥ 45)
+/// - Android: OneTimeWorkRequest reagendável; notifica todo dia, como aqui (sem filtro por risco)
 /// - iOS: UNNotification puramente declarativa, sempre exibida (filtragem via Service Extension futura)
 class CheckInNotificationScheduler {
     static let shared = CheckInNotificationScheduler()

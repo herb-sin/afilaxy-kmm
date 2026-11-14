@@ -15,9 +15,10 @@ Regras aplicadas (não desligue sem rever a base legal — LGPD art. 11, I):
     nem a localização exata: dos pedidos de ajuda sai só a região (grade de
     0,01°, cerca de 1 km).
   - Só dados a partir de --since (padrão 13/11/2026, 00:00 de Brasília). Check-ins
-    sem "formVersion" vêm de versões antigas do app, com respostas pré-marcadas e
-    botões rápidos invertidos no iOS (enviesadas para "bem"), e são descartados,
-    mesmo depois dessa data, para quem ainda não atualizou o app.
+    com "formVersion" abaixo de MIN_CHECKIN_FORM_VERSION vêm de versões antigas do
+    app (respostas pré-marcadas, botões rápidos invertidos no iOS, lembrete matinal
+    filtrado por risco no Android) e são descartados, mesmo depois dessa data, para
+    quem ainda não atualizou o app.
 
 Pré-requisitos:
     pip install firebase-admin
@@ -70,7 +71,9 @@ DEFAULT_SINCE = "2026-11-13"
 ACCEPTED_CONSENT_VERSIONS = {"2026-11"}
 
 # Versão mínima do formulário de check-in (CheckInRepositoryImpl.CHECKIN_FORM_VERSION).
-MIN_CHECKIN_FORM_VERSION = 2
+# 2 ainda tinha, no Android, o lembrete matinal só em dias de risco >= 45 (resposta da
+# manhã dependente do risco); 3 lembra todo dia nas duas plataformas.
+MIN_CHECKIN_FORM_VERSION = 3
 
 # Grade da região dos pedidos de ajuda: 0,01° ≈ 1,1 km (norte–sul) × ~1,0 km (leste–oeste
 # nas latitudes do Brasil).
@@ -90,7 +93,7 @@ CHECKIN_FIELDS = [
     "participant", "date", "type", "hourOfDay", "dayOfWeek", "monthOfYear",
     "morningMoodGood", "morningEnergyGood", "selfCareGood", "rescueInhalerUses",
     "nighttimeAwakening", "daytimeBreathingEase", "activityAsPlanned",
-    "riskScore", "aqi", "temperature", "humidity", "formVersion",
+    "riskScore", "aqi", "temperature", "humidity", "formVersion", "platform",
 ]
 
 ACT_FIELDS = [
