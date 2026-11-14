@@ -15,6 +15,16 @@ class CheckInRepositoryImpl(
     private val auth: FirebaseAuth
 ) : CheckInRepository {
 
+    companion object {
+        /**
+         * Versão do formulário gravada em cada check-in. A versão 2 é o formulário com
+         * perguntas que começam sem resposta e botões rápidos da notificação corrigidos
+         * no iOS. Os check-ins sem este campo vêm de versões anteriores do app e estão
+         * enviesados para "bem": a pesquisa (scripts/export_ml_dataset.py) os descarta.
+         */
+        const val CHECKIN_FORM_VERSION = 2
+    }
+
     override suspend fun saveCheckIn(response: CheckInResponse): Result<Unit> {
         return try {
             val userId = auth.currentUser?.uid
@@ -40,7 +50,8 @@ class CheckInRepositoryImpl(
                 "humidity" to response.humidity,
                 "hourOfDay" to response.hourOfDay,
                 "dayOfWeek" to response.dayOfWeek,
-                "monthOfYear" to response.monthOfYear
+                "monthOfYear" to response.monthOfYear,
+                "formVersion" to CHECKIN_FORM_VERSION
             )
 
             firestore.collection("checkins")

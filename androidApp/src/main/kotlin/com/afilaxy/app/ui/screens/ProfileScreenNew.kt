@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.afilaxy.app.ui.components.ResearchConsentSwitchRow
 import com.afilaxy.app.ui.theme.ThemeState
 import com.afilaxy.domain.model.EmergencyContact
 import com.afilaxy.domain.model.EmergencyHistory
@@ -897,6 +898,7 @@ private fun PrivacyAndAccountCard(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             PrivacyActionRow(Icons.Default.Lock, "Política de Privacidade", onClick = onNavigateToPrivacy)
+            ResearchConsentSwitchRow()
             PrivacyActionRow(Icons.Default.Share, "Exportar meus dados", onClick = onNavigateToExportData)
             PrivacyActionRow(
                 Icons.Default.Delete, "Excluir minha conta",

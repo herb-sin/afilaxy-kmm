@@ -111,4 +111,5 @@ web-dist-secure/
 
 # Datasets de ML — dados de saúde pseudonimizados, não commitar
 scripts/*.csv
+scripts/ml_export_*/
 usuarios.csv

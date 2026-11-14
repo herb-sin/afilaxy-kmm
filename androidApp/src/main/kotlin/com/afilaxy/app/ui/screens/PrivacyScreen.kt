@@ -58,7 +58,7 @@ fun PrivacyScreen(navController: NavController) {
             item {
                 PrivacySection(
                     title = "2. Uso das Informações",
-                    content = "Usamos seus dados para:\n• Conectar você com helpers próximos\n• Enviar notificações de emergências\n• Melhorar o serviço e a experiência\n• Garantir segurança da plataforma\n• Pesquisas de saúde pública e modelos preditivos (apenas com consentimento analítico)"
+                    content = "Usamos seus dados para:\n• Conectar você com helpers próximos\n• Enviar notificações de emergências\n• Melhorar o serviço e a experiência\n• Garantir segurança da plataforma\n• Pesquisas de saúde pública e modelos preditivos (apenas com consentimento de pesquisa)"
                 )
             }
             
@@ -130,7 +130,7 @@ fun PrivacyScreen(navController: NavController) {
             item {
                 PrivacySection(
                     title = "11. Analytics & Machine Learning",
-                    content = "Com seu consentimento opcional, utilizamos dados de:\n• Gravidade de crises (leve / moderada / grave)\n• Avaliações pós-atendimento (1–5 ⭐)\n• NPS (Net Promoter Score)\n• Acionamento do SAMU durante chats\n\nEsses dados são usados exclusivamente para:\n• Melhoria contínua do serviço\n• Pesquisas de saúde pública\n• Modelos preditivos de risco (dados anonimizados)\n\nVocê pode revogar esse consentimento a qualquer momento em Configurações > Privacidade."
+                    content = "Analytics: métricas de uso do app (telas abertas, falhas), sem dados de saúde.\n\nPesquisa (consentimento específico, opcional e desligado por padrão): check-ins, testes de controle da asma (ACT), índices de risco, pedidos de ajuda, ano de nascimento e perfil de saúde, identificados só por um código, sem nome, e-mail, mensagens ou localização exata. Usados em pesquisas sobre asma e no desenvolvimento de modelos de previsão de crises.\n\nVocê pode revogar o consentimento de pesquisa a qualquer momento em Perfil > Privacidade e conta."
                 )
             }
 

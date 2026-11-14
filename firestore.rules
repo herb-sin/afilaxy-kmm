@@ -23,7 +23,9 @@ service cloud.firestore {
         && isValidString(request.resource.data.email, 5, 100);
       allow update: if isOwner(userId)
         && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
-        && (!('isHealthProfessional' in request.resource.data) || request.resource.data.isHealthProfessional == resource.data.isHealthProfessional);
+        && (!('isHealthProfessional' in request.resource.data) || request.resource.data.isHealthProfessional == resource.data.isHealthProfessional)
+        // Consentimento de pesquisa (opt-in, revogável): o script de exportação filtra por este campo
+        && (!('researchConsent' in request.resource.data) || request.resource.data.researchConsent is bool);
       // Account deletion must go through a Cloud Function (cascade cleanup of emergencies, FCM tokens etc.)
       allow delete: if false;
     }

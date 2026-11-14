@@ -8,6 +8,11 @@ struct SettingsView: View {
     @State private var showLogoutAlert = false
     @State private var showExportData = false
     @State private var showDeleteAccount = false
+    // Consentimento de pesquisa (opt-in, revogável) — ver Helpers/ResearchConsent.swift
+    @State private var researchConsent = false
+    @State private var researchLoaded = false
+    @State private var savingResearch = false
+    @State private var showResearchError = false
 
     var body: some View {
         ScrollView {
@@ -49,6 +54,27 @@ struct SettingsView: View {
                     }
                 }
                 
+                // Privacy Section
+                SettingsSectionCard(title: "Privacidade", icon: "hand.raised.fill") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        SettingsToggleRow(
+                            title: ResearchConsent.title,
+                            subtitle: "Seus dados, identificados só por um código, em pesquisas sobre asma",
+                            icon: "flask.fill",
+                            isOn: Binding(
+                                get: { researchConsent },
+                                set: { updateResearchConsent($0) }
+                            )
+                        )
+                        .disabled(!researchLoaded || savingResearch)
+
+                        Text(ResearchConsent.summary)
+                            .font(.caption)
+                            .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 // Support Section
                 SettingsSectionCard(title: "Suporte", icon: "questionmark.circle.fill") {
                     VStack(spacing: 8) {
@@ -116,6 +142,15 @@ struct SettingsView: View {
         }
         .navigationTitle("Configurações")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            researchConsent = await ResearchConsent.load() ?? false
+            researchLoaded = true
+        }
+        .alert("Não foi possível salvar", isPresented: $showResearchError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Verifique a conexão e tente de novo.")
+        }
         .alert("Sair", isPresented: $showLogoutAlert) {
             Button("Cancelar", role: .cancel) {}
             Button("Sair", role: .destructive) {
@@ -132,6 +167,21 @@ struct SettingsView: View {
         }
     }
     
+    private func updateResearchConsent(_ granted: Bool) {
+        researchConsent = granted
+        savingResearch = true
+        Task {
+            let saved = await ResearchConsent.save(granted)
+            await MainActor.run {
+                if !saved {
+                    researchConsent = !granted
+                    showResearchError = true
+                }
+                savingResearch = false
+            }
+        }
+    }
+
     private func performLogout() {
         let state = container.emergency.state
         if state?.hasActiveEmergency == true, let eid = state?.emergencyId as? String {

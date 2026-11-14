@@ -6,6 +6,10 @@ struct ConsentView: View {
     // Declaração de maioridade (Termos de Uso, cláusula 22). Esta tela aparece para toda
     // conta nova, inclusive as criadas com Google/Apple, que não passam pelo cadastro.
     @State private var adultConfirmed = false
+    // Pesquisa: opt-in, sempre começa desmarcado. Se o usuário já respondeu em outro
+    // aparelho, a tela mostra o valor gravado.
+    @State private var researchEnabled = false
+    @State private var storedResearch: Bool?
 
     var body: some View {
         ScrollView {
@@ -48,7 +52,7 @@ struct ConsentView: View {
                     icon: "chart.bar.fill",
                     iconColor: Color(.systemBlue),
                     title: "Analytics & Melhoria",
-                    description: "Gravidade de crises, avaliações pós-atendimento e NPS. Nos ajuda a melhorar o serviço e realizar pesquisas de saúde pública.",
+                    description: "Métricas de uso do app (telas abertas, falhas), sem dados de saúde. Nos ajudam a melhorar o serviço.",
                     isEnabled: $analyticsConsent,
                     isToggleable: true,
                     badge: nil
@@ -58,6 +62,17 @@ struct ConsentView: View {
                 .onChange(of: analyticsConsent) { _ in
                     AnalyticsManager.applyConsent()
                 }
+
+                // ── Pesquisa (opcional, começa desmarcado) ────────────────────
+                ConsentBlock(
+                    icon: "flask.fill",
+                    iconColor: Color(.systemPurple),
+                    title: ResearchConsent.title,
+                    description: ResearchConsent.summary,
+                    isEnabled: $researchEnabled,
+                    isToggleable: true,
+                    badge: nil
+                )
 
                 // ── Declaração de maioridade (obrigatória) ────────────────────
                 Button { adultConfirmed.toggle() } label: {
@@ -88,6 +103,7 @@ struct ConsentView: View {
                     Button {
                         UserDefaults.standard.set(true, forKey: "age_18_confirmed")
                         UserDefaults.standard.set(true, forKey: "consent_shown")
+                        ResearchConsent.saveFromOnboarding(researchEnabled, stored: storedResearch)
                         onConsentGiven()
                     } label: {
                         Text("Continuar")
@@ -100,7 +116,7 @@ struct ConsentView: View {
                     }
                     .disabled(!adultConfirmed)
 
-                    Text("Você pode alterar suas preferências a qualquer momento em Configurações > Privacidade.")
+                    Text("Você pode revogar o consentimento de pesquisa a qualquer momento em Perfil > Configurações e privacidade.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -108,6 +124,10 @@ struct ConsentView: View {
                 .padding(.bottom, 40)
             }
             .padding(.horizontal, 24)
+        }
+        .task {
+            storedResearch = await ResearchConsent.load()
+            if let stored = storedResearch { researchEnabled = stored }
         }
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.afilaxy.app.ui.components.ResearchConsent
 import com.afilaxy.domain.repository.PreferencesRepository
 import org.koin.compose.koinInject
 
@@ -26,6 +27,14 @@ fun ConsentScreen(onConsentGiven: () -> Unit) {
     // Declaração de maioridade (Termos de Uso, cláusula 22). Esta tela aparece para toda
     // conta nova, inclusive as criadas com Google/Apple, que não passam pelo cadastro.
     var adultConfirmed by remember { mutableStateOf(false) }
+    // Pesquisa: opt-in, sempre começa desmarcado. Se o usuário já respondeu em outro
+    // aparelho, a tela mostra o valor gravado.
+    var researchEnabled by remember { mutableStateOf(false) }
+    var storedResearch by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        storedResearch = ResearchConsent.load()
+        storedResearch?.let { researchEnabled = it }
+    }
 
     Column(
         modifier = Modifier
@@ -92,12 +101,24 @@ fun ConsentScreen(onConsentGiven: () -> Unit) {
         ConsentBlock(
             icon = Icons.Default.Star,
             title = "Analytics & Melhoria",
-            description = "Gravidade de crises, avaliações pós-atendimento e " +
-                "NPS. Nos ajuda a melhorar o serviço e realizar pesquisas " +
-                "de saúde pública. Pode ser desativado nas Configurações.",
+            description = "Métricas de uso do app (telas abertas, falhas), sem dados " +
+                "de saúde. Nos ajudam a melhorar o serviço.",
             toggleEnabled = true,
             checked = analyticsEnabled,
             onCheckedChange = { analyticsEnabled = it },
+            badge = null
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // ── Bloco Pesquisa (opcional, começa desmarcado) ─────────────────────
+        ConsentBlock(
+            icon = Icons.Default.Science,
+            title = ResearchConsent.TITLE,
+            description = ResearchConsent.DESCRIPTION,
+            toggleEnabled = true,
+            checked = researchEnabled,
+            onCheckedChange = { researchEnabled = it },
             badge = null
         )
 
@@ -138,6 +159,7 @@ fun ConsentScreen(onConsentGiven: () -> Unit) {
                 prefs.putBoolean("age_18_confirmed", true)
                 prefs.putBoolean("consent_shown", true)
                 prefs.putBoolean("analytics_consent", analyticsEnabled)
+                ResearchConsent.saveFromOnboarding(researchEnabled, storedResearch)
                 onConsentGiven()
             },
             enabled = adultConfirmed,
@@ -156,8 +178,8 @@ fun ConsentScreen(onConsentGiven: () -> Unit) {
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Você pode alterar suas preferências de privacidade " +
-                "a qualquer momento em Configurações > Privacidade.",
+            text = "Você pode revogar o consentimento de pesquisa a qualquer " +
+                "momento em Perfil > Privacidade e conta.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
