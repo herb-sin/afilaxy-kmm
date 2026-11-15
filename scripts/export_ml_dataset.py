@@ -6,6 +6,8 @@ Regras aplicadas (não desligue sem rever a base legal — LGPD art. 11, I):
   - Só entram usuários com consentimento de pesquisa ativo, numa versão de texto
     aceita (ACCEPTED_CONSENT_VERSIONS). Quem revogou não entra nas próximas
     exportações. Exportações já feitas e modelos já treinados não mudam sozinhos.
+  - Quem não tem mais conta de login fica de fora, mesmo que ainda haja dados no
+    Firestore (conta excluída pelo console; ver find_orphan_data.py).
   - Os dados de quem não consentiu nem chegam a ser lidos.
   - O userId vira um código (HMAC-SHA256 com salt secreto). Isso é pseudonimização,
     não anonimização: o CSV continua sendo dado pessoal de saúde. Guarde-o com o
@@ -53,7 +55,7 @@ from zoneinfo import ZoneInfo
 
 try:
     import firebase_admin
-    from firebase_admin import credentials, firestore
+    from firebase_admin import auth, credentials, firestore
 except ImportError:
     print("Erro: instale firebase-admin com:  pip install firebase-admin")
     sys.exit(1)
@@ -68,11 +70,18 @@ DEFAULT_SINCE = "2026-11-13"
 # Versões do texto de consentimento que cobrem os dados exportados abaixo. Se o texto
 # do app mudar de sentido (nova versão em ResearchConsent.kt / ResearchConsent.swift),
 # só acrescente a nova versão aqui depois de conferir que ela cobre estes dados.
-ACCEPTED_CONSENT_VERSIONS = {"2026-11"}
+# 2026-11b só acrescentou o porquê de participar e a garantia de que recusar não muda o
+# acesso: mesmos dados, mesma finalidade.
+ACCEPTED_CONSENT_VERSIONS = {"2026-11", "2026-11b"}
 
 # Versão mínima do formulário de check-in (CheckInRepositoryImpl.CHECKIN_FORM_VERSION).
 # 2 ainda tinha, no Android, o lembrete matinal só em dias de risco >= 45 (resposta da
 # manhã dependente do risco); 3 lembra todo dia nas duas plataformas.
+# A versão 3 continua aceita, mas nela a tela matinal mostrava, antes das perguntas, um aviso
+# "⚠️ Qualidade do ar baixa hoje" sempre que riskScore >= 45, o que pode ter puxado as
+# respostas para pior. Como o aviso dependia só do riskScore (exportado em cada check-in),
+# dá para controlar na análise: morning com formVersion == 3 e riskScore >= 45 viu o aviso.
+# A versão 4 tirou o aviso.
 MIN_CHECKIN_FORM_VERSION = 3
 
 # Grade da região dos pedidos de ajuda: 0,01° ≈ 1,1 km (norte–sul) × ~1,0 km (leste–oeste
@@ -170,6 +179,19 @@ def consenting_users(db):
         else:
             other_version += 1
     return accepted, other_version
+
+
+def drop_deleted_accounts(users):
+    """Tira quem não tem mais conta de login. Uma conta excluída pelo console do
+    Firebase (e não pelo app, que chama a função deleteAccount) deixa os dados no
+    Firestore sem dono; eles não podem entrar na pesquisa."""
+    uids = [uid for uid, _ in users]
+    existing = set()
+    for i in range(0, len(uids), 100):  # get_users aceita até 100 por chamada
+        result = auth.get_users([auth.UidIdentifier(uid) for uid in uids[i:i + 100]])
+        existing.update(u.uid for u in result.users)
+    kept = [(uid, data) for uid, data in users if uid in existing]
+    return kept, len(users) - len(kept)
 
 
 def participant_row(pid, user):
@@ -274,8 +296,10 @@ def main():
     db = firestore.client()
 
     users, other_version = consenting_users(db)
+    users, without_account = drop_deleted_accounts(users)
     print(f"Participantes com consentimento de pesquisa: {len(users)}"
-          + (f" (+{other_version} numa versão de texto não aceita, ignorados)" if other_version else ""))
+          + (f" (+{other_version} numa versão de texto não aceita, ignorados)" if other_version else "")
+          + (f" (+{without_account} sem conta de login, ignorados)" if without_account else ""))
 
     counts = {"checkins_legacy_skipped": 0}
     participants, checkins, acts, risks, emergencies = [], [], [], [], []
@@ -298,7 +322,8 @@ def main():
         f"Exportação Afilaxy para pesquisa — {datetime.now(TZ):%d/%m/%Y %H:%M} (Brasília)",
         f"Dados a partir de: {since_dt:%d/%m/%Y}",
         f"Versões de consentimento aceitas: {', '.join(sorted(ACCEPTED_CONSENT_VERSIONS))}",
-        f"Participantes: {len(participants)}",
+        f"Participantes: {len(participants)} (ignorados por não terem mais conta de login: "
+        f"{without_account})",
         f"Check-ins: {len(checkins)} (descartados por versão antiga do formulário: "
         f"{counts['checkins_legacy_skipped']})",
         f"ACT: {len(acts)}",
