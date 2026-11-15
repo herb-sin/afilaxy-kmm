@@ -27,15 +27,26 @@ object ResearchConsent {
     const val FIELD_AT = "researchConsentAt"
     const val FIELD_VERSION = "researchConsentVersion"
 
-    /** Muda quando o texto abaixo mudar de sentido: o consentimento antigo não cobre o novo texto. */
-    const val VERSION = "2026-11"
+    /**
+     * Muda sempre que o texto abaixo mudar, para saber qual texto cada pessoa aceitou; se
+     * mudar de sentido, o consentimento antigo não cobre o novo. Acrescente a nova versão em
+     * ACCEPTED_CONSENT_VERSIONS (scripts/export_ml_dataset.py).
+     *  - 2026-11: texto inicial;
+     *  - 2026-11b: mesmos dados e finalidade, com o porquê de participar e a garantia de que
+     *    recusar não muda o acesso ao app.
+     */
+    const val VERSION = "2026-11b"
 
     const val TITLE = "Pesquisa científica (opcional)"
-    const val DESCRIPTION = "Autorizo o uso, em pesquisas sobre asma e no desenvolvimento de " +
-        "modelos de previsão de crises, dos meus check-ins, testes de controle da asma (ACT), " +
-        "índices de risco, pedidos de ajuda, ano de nascimento e perfil de saúde. Os dados saem " +
-        "identificados só por um código, sem nome, e-mail, mensagens ou localização exata (no " +
-        "máximo a região, num raio de cerca de 1 km). É opcional, e você pode revogar quando quiser."
+    const val DESCRIPTION = "Ao ativar esta opção, você ajuda o Afilaxy a tornar a previsão de " +
+        "risco de crise mais precisa, desenvolvendo e aprimorando modelos de aprendizado de " +
+        "máquina que buscam antecipar crises. As melhorias chegam a todos, inclusive você. Os " +
+        "dados saem identificados só por um código, sem nome, e-mail, mensagens ou localização " +
+        "exata (no máximo a região, num raio de cerca de 1 km).\n\n" +
+        "Autorizo o uso, em pesquisas sobre asma e no desenvolvimento de modelos de previsão de " +
+        "crises, dos meus check-ins, testes de controle da asma (ACT), índices de risco, pedidos " +
+        "de ajuda, ano de nascimento e perfil de saúde.\n\n" +
+        "Participar ou não não muda nada no seu acesso ao app, e você pode revogar quando quiser."
 
     private fun userDoc() = FirebaseAuth.getInstance().currentUser?.uid?.let {
         FirebaseFirestore.getInstance().collection("users").document(it)

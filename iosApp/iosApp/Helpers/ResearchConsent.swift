@@ -11,15 +11,21 @@ enum ResearchConsent {
     static let fieldAt = "researchConsentAt"
     static let fieldVersion = "researchConsentVersion"
 
-    /// Muda quando o texto abaixo mudar de sentido: o consentimento antigo não cobre o novo texto.
-    static let version = "2026-11"
+    /// Muda sempre que o texto abaixo mudar, para saber qual texto cada pessoa aceitou; se
+    /// mudar de sentido, o consentimento antigo não cobre o novo. Histórico das versões em
+    /// ResearchConsent.kt; acrescente a nova em ACCEPTED_CONSENT_VERSIONS (export_ml_dataset.py).
+    static let version = "2026-11b"
 
     static let title = "Pesquisa científica (opcional)"
-    static let summary = "Autorizo o uso, em pesquisas sobre asma e no desenvolvimento de "
-        + "modelos de previsão de crises, dos meus check-ins, testes de controle da asma (ACT), "
-        + "índices de risco, pedidos de ajuda, ano de nascimento e perfil de saúde. Os dados saem "
-        + "identificados só por um código, sem nome, e-mail, mensagens ou localização exata (no "
-        + "máximo a região, num raio de cerca de 1 km). É opcional, e você pode revogar quando quiser."
+    static let summary = "Ao ativar esta opção, você ajuda o Afilaxy a tornar a previsão de "
+        + "risco de crise mais precisa, desenvolvendo e aprimorando modelos de aprendizado de "
+        + "máquina que buscam antecipar crises. As melhorias chegam a todos, inclusive você. Os "
+        + "dados saem identificados só por um código, sem nome, e-mail, mensagens ou localização "
+        + "exata (no máximo a região, num raio de cerca de 1 km).\n\n"
+        + "Autorizo o uso, em pesquisas sobre asma e no desenvolvimento de modelos de previsão de "
+        + "crises, dos meus check-ins, testes de controle da asma (ACT), índices de risco, pedidos "
+        + "de ajuda, ano de nascimento e perfil de saúde.\n\n"
+        + "Participar ou não não muda nada no seu acesso ao app, e você pode revogar quando quiser."
 
     private static var userDoc: DocumentReference? {
         guard let uid = Auth.auth().currentUser?.uid else { return nil }

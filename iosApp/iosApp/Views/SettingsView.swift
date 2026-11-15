@@ -59,7 +59,6 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         SettingsToggleRow(
                             title: ResearchConsent.title,
-                            subtitle: "Seus dados, identificados só por um código, em pesquisas sobre asma",
                             icon: "flask.fill",
                             isOn: Binding(
                                 get: { researchConsent },
@@ -280,7 +279,7 @@ struct SettingsSectionCard<Content: View>: View {
 
 struct SettingsToggleRow: View {
     let title: String
-    let subtitle: String
+    var subtitle: String? = nil
     let icon: String
     @Binding var isOn: Bool
     
@@ -295,14 +294,19 @@ struct SettingsToggleRow: View {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(AfilaxyColors.onSurface.opacity(0.6))
+                }
             }
-            
+
             Spacer()
-            
+
+            // labelsHidden: um Toggle com rótulo vazio ainda ocupa toda a largura livre e
+            // espreme o texto ao lado numa coluna estreita.
             Toggle("", isOn: $isOn)
+                .labelsHidden()
                 .toggleStyle(SwitchToggleStyle(tint: AfilaxyColors.primary))
         }
         .padding(.vertical, 4)
