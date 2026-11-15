@@ -73,7 +73,6 @@ fun CheckInScreen(
             )
             state.alreadyDoneToday || state.isSubmitted -> CheckInDone(type, onDone)
             type == CheckInType.MORNING -> MorningCheckInContent(
-                riskScore = state.riskScore,
                 healthSnapshot = state.healthSnapshot,
                 healthAvailable = state.healthAvailable,
                 healthPermissionsGranted = state.healthPermissionsGranted,
@@ -101,7 +100,6 @@ fun CheckInScreen(
 
 @Composable
 private fun MorningCheckInContent(
-    riskScore: Int?,
     healthSnapshot: HealthSnapshot?,
     healthAvailable: Boolean,
     healthPermissionsGranted: Boolean,
@@ -142,21 +140,8 @@ private fun MorningCheckInContent(
                 fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
             )
 
-            if (riskScore != null && riskScore >= 45) {
-                Spacer(Modifier.height(12.dp))
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.2f)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        "⚠️ Qualidade do ar baixa hoje: $riskScore/100",
-                        color = Color.White,
-                        modifier = Modifier.padding(12.dp, 8.dp),
-                        fontSize = 13.sp
-                    )
-                }
-            }
-
+            // Sem aviso de risco antes das perguntas: ele induzia a resposta (e mostrava o
+            // índice de risco como se fosse qualidade do ar). Ver CHECKIN_FORM_VERSION.
             Spacer(Modifier.height(16.dp))
 
             HealthCard(

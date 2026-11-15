@@ -49,7 +49,6 @@ struct CheckInView: View {
                 CheckInDoneView(type: type, onDone: onDone)
             } else if type == .morning {
                 MorningCheckInContent(
-                    riskScore: wrapper.state?.riskScore?.int32Value,
                     onSubmit: { mood, energy, awakening in
                         wrapper.submitMorning(morningMoodGood: mood, morningEnergyGood: energy, nighttimeAwakening: awakening)
                     }
@@ -99,7 +98,6 @@ struct CheckInView: View {
 // MARK: - Morning Check-in
 
 private struct MorningCheckInContent: View {
-    let riskScore: Int32?
     let onSubmit: (Bool, Bool, Bool) -> Void
 
     // Sem resposta pré-marcada (nil): só vale o que o usuário escolher. Antes as respostas
@@ -140,19 +138,8 @@ private struct MorningCheckInContent: View {
                         .multilineTextAlignment(.center)
                         .padding(.top, 4)
 
-                    if let score = riskScore, score >= 45 {
-                        HStack {
-                            Text("⚠️ Qualidade do ar baixa hoje: \(score)/100")
-                                .foregroundColor(.white)
-                                .font(.caption)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .padding(.top, 12)
-                    }
-
+                    // Sem aviso de risco antes das perguntas: ele induzia a resposta (e mostrava
+                    // o índice de risco como se fosse qualidade do ar). Ver CHECKIN_FORM_VERSION.
                     Spacer().frame(height: 20)
 
                     VStack(spacing: 0) {

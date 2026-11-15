@@ -25,9 +25,12 @@ class CheckInRepositoryImpl(
          *    (enviesadas para "bem");
          *  - 2: perguntas sem resposta pré-marcada e botões rápidos corrigidos, mas o
          *    Android ainda só lembrava o check-in matinal em dias de risco >= 45;
-         *  - 3: lembrete matinal todo dia nas duas plataformas.
+         *  - 3: lembrete matinal todo dia nas duas plataformas, mas a tela matinal ainda
+         *    mostrava, antes das perguntas, "⚠️ Qualidade do ar baixa hoje: N/100" quando
+         *    riskScore >= 45 (N era o índice de risco, não a qualidade do ar);
+         *  - 4: tela matinal sem esse aviso.
          */
-        const val CHECKIN_FORM_VERSION = 3
+        const val CHECKIN_FORM_VERSION = 4
     }
 
     override suspend fun saveCheckIn(response: CheckInResponse): Result<Unit> {
