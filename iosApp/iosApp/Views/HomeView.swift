@@ -275,7 +275,8 @@ struct HomeView: View {
         let hour = Calendar.current.component(.hour, from: Date())
         let today = todayKey
 
-        if hour < 14 && morningDoneDate != today {
+        // Manhã a partir das 5h: de madrugada a resposta ocuparia o check-in do dia (ver HomeScreenNew.kt)
+        if (5..<14).contains(hour) && morningDoneDate != today {
             // Matinal: pergunta sobre bombinha (oculta se já respondido hoje)
             Button {
                 navigationPath.append(AppRoute.checkIn("MORNING"))

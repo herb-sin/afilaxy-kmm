@@ -202,7 +202,10 @@ fun HomeScreenNew(
     val checkInMorningDone = prefsRepo.getBoolean("checkin_morning_done_$today", false)
     val checkInEveningDone = prefsRepo.getBoolean("checkin_evening_done_$today", false)
     val checkInType: String? = if (onNavigateToCheckIn != null) {
-        if (checkInHour < 14 && !checkInMorningDone) "MORNING"
+        // Manhã começa às 5h: antes disso (madrugada) a pessoa ainda não dormiu, e a resposta
+        // ocuparia o check-in do dia, bloqueando o de verdade depois do lembrete das 07:30.
+        // Mesma janela do iOS (HomeView.swift).
+        if (checkInHour in 5 until 14 && !checkInMorningDone) "MORNING"
         else if (checkInHour >= 18 && !checkInEveningDone) "EVENING"
         else null
     } else null
