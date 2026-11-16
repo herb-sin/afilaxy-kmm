@@ -1521,10 +1521,15 @@ export const deleteAccount = onCall(async (request) => {
         await db.recursiveDelete(db.collection(collection).doc(uid));
     }
 
-    // 5. Arquivos (fotos de perfil).
+    // 5. Arquivos (fotos de perfil). O Storage pode não estar ativado no projeto (os apps
+    // não enviam arquivos hoje): sem bucket não há o que apagar, e o deleteFiles daria 404
+    // e impediria o passo 6.
     const bucket = getStorage().bucket();
-    for (const prefix of OWNED_STORAGE_PREFIXES(uid)) {
-        await bucket.deleteFiles({ prefix });
+    const [bucketExists] = await bucket.exists();
+    if (bucketExists) {
+        for (const prefix of OWNED_STORAGE_PREFIXES(uid)) {
+            await bucket.deleteFiles({ prefix });
+        }
     }
 
     // 6. Por último, a conta de login — antes disso o usuário ainda pode tentar de novo.
