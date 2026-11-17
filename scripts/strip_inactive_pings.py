@@ -9,7 +9,8 @@ guardam quem pediu ajuda, onde (~111 m) e quando.
 
 Pré-requisitos:
     pip install firebase-admin
-    Credencial do Admin SDK em scripts/firebase-adminsdk.json (fora do Git).
+    Credencial: scripts/firebase-adminsdk.json (fora do Git) ou, sem ela, o login do
+    Google do terminal — no Cloud Shell funciona direto, sem criar chave.
 
 Como usar (na raiz do repositório):
     python3 scripts/strip_inactive_pings.py           # só conta
@@ -17,6 +18,7 @@ Como usar (na raiz do repositório):
 """
 
 import argparse
+import os
 import sys
 
 try:
@@ -27,6 +29,7 @@ except ImportError:
     sys.exit(1)
 
 CREDENTIALS_PATH = "scripts/firebase-adminsdk.json"
+PROJECT_ID = "afilaxy-app"
 CLEARED_FIELDS = ("requesterId", "helperId", "latitude", "longitude", "timestamp")
 BATCH_LIMIT = 400
 
@@ -36,7 +39,13 @@ def main():
     parser.add_argument("--apply", action="store_true", help="limpa (pede confirmação antes)")
     args = parser.parse_args()
 
-    firebase_admin.initialize_app(credentials.Certificate(CREDENTIALS_PATH))
+    # Sem o arquivo de chave, usa o login do Google do terminal (Application Default
+    # Credentials) — no Cloud Shell já vem pronto e dispensa criar chave de conta de serviço.
+    if os.path.exists(CREDENTIALS_PATH):
+        cred = credentials.Certificate(CREDENTIALS_PATH)
+    else:
+        cred = credentials.ApplicationDefault()
+    firebase_admin.initialize_app(cred, {"projectId": PROJECT_ID})
     db = firestore.client()
 
     total = active = 0
