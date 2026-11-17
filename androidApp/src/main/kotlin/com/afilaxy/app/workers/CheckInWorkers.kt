@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.afilaxy.app.MainActivity
+import com.afilaxy.app.util.QuickActionToken
 import com.afilaxy.app.util.canPostNotifications
 import com.google.firebase.auth.FirebaseAuth
 import java.util.concurrent.TimeUnit
@@ -124,6 +125,7 @@ class MorningCheckInWorker(
         val yesIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("open_screen", "morning_checkin_yes")
+            putExtra(QuickActionToken.EXTRA, QuickActionToken.get(context))
         }
         val yesPending = PendingIntent.getActivity(
             context, PENDING_INTENT_MORNING_YES, yesIntent,
@@ -227,6 +229,7 @@ class EveningCheckInWorker(
         val yesIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("open_screen", "evening_checkin_yes")
+            putExtra(QuickActionToken.EXTRA, QuickActionToken.get(context))
         }
         val yesPending = PendingIntent.getActivity(
             context, PENDING_INTENT_EVENING_YES, yesIntent,

@@ -36,17 +36,31 @@ export const createCheckoutSession = onCall(async (request) => {
         throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
-    const { priceId, metadata } = request.data;
+    const { priceId, metadata } = request.data ?? {};
 
     if (!priceId || !metadata) {
         throw new HttpsError('invalid-argument', 'Missing required fields');
     }
 
+    // O preço é definido no servidor: aceitar qualquer priceId do cliente deixaria assinar o
+    // plano PARTNER com outro preço da conta Stripe (de teste, antigo ou mais barato).
+    // Configurar STRIPE_PARTNER_PRICE_ID junto com STRIPE_SECRET_KEY; sem ele, nada é vendido.
+    const partnerPriceId = process.env.STRIPE_PARTNER_PRICE_ID;
+    if (!partnerPriceId || priceId !== partnerPriceId) {
+        throw new HttpsError('invalid-argument', 'Plano inválido');
+    }
+
     // Use the verified Firebase Auth token email — never trust client-supplied email.
     // A client could supply any address to associate the subscription with a different identity.
     const verifiedEmail = request.auth!.token.email;
-    if (!verifiedEmail) {
+    if (!verifiedEmail || request.auth!.token.email_verified !== true) {
         throw new HttpsError('failed-precondition', 'Email verification required');
+    }
+
+    const profileName = requireText(metadata.name, 'nome', 2, 100);
+    const crm = String(metadata.crm ?? '').replace(/\D/g, '').slice(0, 10);
+    if (crm.length < 4) {
+        throw new HttpsError('invalid-argument', 'Campo inválido: CRM');
     }
 
     try {
@@ -59,9 +73,9 @@ export const createCheckoutSession = onCall(async (request) => {
         // 1. Atualizar campos de perfil (sempre): name, email, crm
         await profRef.set(
             {
-                name: metadata.name,
+                name: profileName,
                 email: verifiedEmail,
-                crm: metadata.crm,
+                crm: crm,
                 specialty: 'PNEUMOLOGIST',
                 updatedAt: FieldValue.serverTimestamp(),
             },
@@ -83,7 +97,7 @@ export const createCheckoutSession = onCall(async (request) => {
             payment_method_types: ['card'],
             mode: 'subscription',
             customer_email: verifiedEmail,
-            line_items: [{ price: priceId, quantity: 1 }],
+            line_items: [{ price: partnerPriceId, quantity: 1 }],
             metadata: { professionalId: professionalId },
             success_url: `https://afilaxy.com/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `https://afilaxy.com/cancel`,
@@ -275,6 +289,8 @@ export const checkExpiredSubscriptions = onSchedule(
 // Limite de criação de emergências por usuário (ver onEmergencyCreated).
 const EMERGENCY_MAX_PER_DAY = 10;
 const EMERGENCY_MIN_INTERVAL_MS = 30_000;
+// Teto da expiração automática (o app usa 3 min — EMERGENCY_TIMEOUT_MS).
+const EMERGENCY_MAX_EXPIRY_SEC = 15 * 60;
 
 // Primeiro nome, sem espaços extras e com tamanho limitado (o nome vem do cliente).
 function firstName(name: unknown, fallback: string): string {
@@ -329,7 +345,8 @@ export const onEmergencyCreated = onDocumentCreated(
             const radiusInKm = 0.25; // 250m — helper a pé chega em ~3 minutos
             const radiusInM = radiusInKm * 1000;
 
-            console.log(`Buscando helpers dentro de ${radiusInKm}km de [${center[0]}, ${center[1]}]`);
+            // Sem coordenadas nos logs: são de quem está em crise (LGPD).
+            console.log(`Buscando helpers dentro de ${radiusInKm}km para ${emergencyId}`);
 
             // Usar geohash bounds para query eficiente — só busca helpers na área correta
             const bounds = geofireCommon.geohashQueryBounds(center, radiusInM);
@@ -361,8 +378,6 @@ export const onEmergencyCreated = onDocumentCreated(
 
                     const helperLocation: [number, number] = [helper.latitude, helper.longitude];
                     const distanceInKm = geofireCommon.distanceBetween(helperLocation, center);
-
-                    console.log(`Helper ${doc.id}: ${distanceInKm.toFixed(2)}km`);
 
                     // Exclui o próprio requester — um dispositivo nunca deve receber
                     // sua própria emergência, mesmo que estivesse registrado como helper.
@@ -460,7 +475,8 @@ export const onEmergencyCreated = onDocumentCreated(
             if (response.failureCount > 0) {
                 response.responses.forEach((resp, idx) => {
                     if (!resp.success) {
-                        console.error(`Erro ao enviar para token ${tokens[idx]}: ${resp.error}`);
+                        // Só o índice: o token é um identificador do aparelho.
+                        console.error(`Erro ao enviar para o token #${idx}: ${resp.error}`);
                     }
                 });
             }
@@ -617,14 +633,19 @@ export const onChatMessage = onDocumentCreated(
                 return;
             }
 
+            // Nome do remetente vem do perfil dele, não do senderName gravado pelo cliente
+            // (texto livre: daria para assinar como "Suporte Afilaxy" no título do push).
+            const senderDoc = await getFirestore().collection('users').doc(message.senderId).get();
+            const senderName = firstName(senderDoc.data()?.name, '');
+
             const notificationMessage = {
                 data: {
                     type: 'chat',
                     emergencyId: emergencyId,
                     openChat: 'true',
-                    senderName: message.senderName || '',
+                    senderName: senderName,
                     message: message.message || '',
-                    title: message.senderName || 'Nova mensagem',
+                    title: senderName || 'Nova mensagem',
                     body: message.message || '',
                 },
                 android: { priority: 'high' as const },
@@ -633,7 +654,7 @@ export const onChatMessage = onDocumentCreated(
                     payload: {
                         aps: {
                             alert: {
-                                title: message.senderName || 'Nova mensagem',
+                                title: senderName || 'Nova mensagem',
                                 body: message.message || '',
                             },
                             sound: 'default',
@@ -680,7 +701,7 @@ export const onUserLocationUpdate = onDocumentUpdated(
 
                 // Atualizar documento com novo geohash
                 await change.after.ref.update({ geohash: hash });
-                console.log(`Geohash atualizado: ${hash}`);
+                console.log(`Geohash atualizado para ${event.params.userId}`);
             } catch (error) {
                 console.error('Erro ao atualizar geohash:', error);
             }
@@ -779,7 +800,11 @@ export const scheduleEmergencyExpiry = onDocumentCreated(
         // Só é usado se o documento (recém-criado) ainda não tiver expiresAt por algum motivo;
         // no fluxo normal o valor real já vem do client.
         const expiresAt: number = data.expiresAt || (Date.now() + 180000);
-        const delaySec = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+        // expiresAt vem do aparelho: limitado a 15 min para que um valor errado (relógio
+        // adiantado ou cliente adulterado) não deixe a emergência ativa para sempre — o
+        // Cloud Tasks recusa atrasos acima de 30 dias e aí nada a expiraria.
+        const delaySec = Math.min(EMERGENCY_MAX_EXPIRY_SEC,
+            Math.max(0, Math.round((expiresAt - Date.now()) / 1000)));
 
         console.log(`Agendando expiração de ${emergencyId} em ${delaySec}s via Cloud Task`);
 
@@ -1186,6 +1211,29 @@ export const onEmergencyRequestWrite = onDocumentWritten(
 
         const after = change.after.data()!;
 
+        // Encerrada: qualquer autenticado lê emergency_pings, então o ping não pode virar um
+        // histórico de quem teve crise, onde e quando. Fica só o que as telas abertas ainda
+        // leem depois do fim (active/status para fechar, expiresAt do countdown); os demais
+        // campos ficam null (e não ausentes) porque o aceite no Android lê helperId antes de
+        // checar active.
+        if (after.active !== true) {
+            try {
+                await pingRef.set({
+                    active: false,
+                    status: after.status ?? 'cancelled',
+                    requesterId: null,
+                    helperId: null,
+                    latitude: null,
+                    longitude: null,
+                    timestamp: null,
+                    expiresAt: after.expiresAt ?? null,
+                });
+            } catch (error) {
+                console.error(`Erro ao encerrar emergency_pings/${emergencyId}:`, error);
+            }
+            return;
+        }
+
         if (after.latitude == null || after.longitude == null) {
             console.error(`emergency_requests/${emergencyId} sem coordenadas válidas — ping não espelhado`);
             return;
@@ -1198,7 +1246,7 @@ export const onEmergencyRequestWrite = onDocumentWritten(
 
         try {
             await pingRef.set({
-                active: after.active === true,
+                active: true,
                 status: after.status ?? 'waiting',
                 requesterId: after.requesterId ?? null,
                 helperId: after.helperId ?? null,
@@ -1242,7 +1290,7 @@ export const onHelperWrite = onDocumentWritten(
         try {
             const hash = geofireCommon.geohashForLocation([after.latitude, after.longitude]);
             await change.after.ref.update({ geohash: hash });
-            console.log(`✅ Geohash do helper ${event.params.helperId} atualizado: ${hash}`);
+            console.log(`✅ Geohash do helper ${event.params.helperId} atualizado`);
         } catch (error) {
             console.error('Erro ao atualizar geohash do helper:', error);
         }
@@ -1297,9 +1345,13 @@ export const submitLead = onCall(
 
         // Limite por IP sem guardar o IP: HMAC com um segredo do servidor, então o
         // valor em 'rate_limits' não pode ser revertido para o IP real (LGPD).
-        // Atrás do balanceador do Google, o IP do visitante é o primeiro de X-Forwarded-For.
+        // IP do visitante = o ÚLTIMO de X-Forwarded-For, que é o que o Cloud Run acrescenta.
+        // Os anteriores vêm do próprio cliente e podem ser inventados (um por envio, e o
+        // limite nunca seria atingido). Vale porque o site chama a função direto, sem passar
+        // pelo Firebase Hosting — por lá o último seria o proxy do CDN.
         const forwarded = request.rawRequest.headers['x-forwarded-for'];
-        const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim()
+        const forwardedList = Array.isArray(forwarded) ? forwarded.join(',') : (forwarded ?? '');
+        const ip = forwardedList.split(',').map((s) => s.trim()).filter(Boolean).pop()
             || request.rawRequest.ip
             || 'desconhecido';
         const ipKey = createHmac('sha256', gmailAppPassword.value()).update(ip).digest('hex').slice(0, 32);

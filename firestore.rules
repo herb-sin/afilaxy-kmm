@@ -14,13 +14,27 @@ service cloud.firestore {
     function isValidString(value, minLen, maxLen) {
       return value is string && value.size() >= minLen && value.size() <= maxLen;
     }
+
+    // Emergência encerrada não volta a ficar ativa (reativar contaria de novo nas
+    // estatísticas e reapareceria para os helpers). Os apps só gravam active=false.
+    function activeOnlyTurnsOff() {
+      return !('active' in request.resource.data.diff(resource.data).affectedKeys())
+        || request.resource.data.active == false;
+    }
+
+    function emergency(emergencyId) {
+      return get(/databases/$(database)/documents/emergency_requests/$(emergencyId)).data;
+    }
     
     // Users collection
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId)
         && isValidString(request.resource.data.name, 2, 100)
-        && isValidString(request.resource.data.email, 5, 100);
+        && isValidString(request.resource.data.email, 5, 100)
+        // Papéis só via Admin SDK — os apps nunca gravam estes campos
+        && !('role' in request.resource.data)
+        && (!('isHealthProfessional' in request.resource.data) || request.resource.data.isHealthProfessional == false);
       allow update: if isOwner(userId)
         && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
         && (!('isHealthProfessional' in request.resource.data) || request.resource.data.isHealthProfessional == resource.data.isHealthProfessional)
@@ -54,11 +68,18 @@ service cloud.firestore {
       allow get: if isAuthenticated()
         && (request.auth.uid == resource.data.requesterId
             || request.auth.uid == resource.data.helperId);
+      // Lista fechada: os mesmos 9 campos que o app grava desde mai/2026
+      // (EmergencyRepositoryImpl.createEmergency). helperId, matchedAt etc. só no aceite.
+      // expiresAt não é limitado aqui (relógio do aparelho pode estar errado e um pedido de
+      // ajuda nunca deve ser recusado por isso): scheduleEmergencyExpiry limita no servidor.
       allow create: if isAuthenticated()
+        && request.resource.data.keys().hasOnly(['requesterId', 'requesterName', 'location',
+             'latitude', 'longitude', 'status', 'active', 'timestamp', 'expiresAt'])
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.latitude is number
         && request.resource.data.longitude is number
-        && request.resource.data.active == true;
+        && request.resource.data.active == true
+        && request.resource.data.status == 'waiting';
       allow update: if isAuthenticated()
         && (
           // Requester: cancel (active+status), severity, samuCalled/At, resolvedAt,
@@ -69,11 +90,13 @@ service cloud.firestore {
                  .hasOnly(['status', 'active', 'severity', 'samuCalled', 'samuCalledAt', 'resolvedAt',
                            'envTemperature', 'envHumidity', 'envAqi', 'envPm25', 'envCapturedAt',
                            'emergencyVisitAfter', 'emergencyVisitAnsweredAt'])
-            && (!('emergencyVisitAfter' in request.resource.data) || request.resource.data.emergencyVisitAfter is bool))
+            && (!('emergencyVisitAfter' in request.resource.data) || request.resource.data.emergencyVisitAfter is bool)
+            && activeOnlyTurnsOff())
           // Helper atribuído: encerrar (status+active+resolvedAt)
           || (request.auth.uid == resource.data.helperId
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['status', 'active', 'resolvedAt']))
+                 .hasOnly(['status', 'active', 'resolvedAt'])
+            && activeOnlyTurnsOff())
           // Helper a aceitar: status waiting → matched, campos restritos.
           // Quem pediu ajuda nunca pode aceitar o próprio pedido (o iOS aceitava).
           || (resource.data.status == 'waiting'
@@ -102,7 +125,8 @@ service cloud.firestore {
     // e plano, validade e verificação só mudam via Admin SDK (webhook do Stripe, cron de
     // expiração, scripts administrativos).
     match /health_professionals/{professionalId} {
-      allow read: if isAuthenticated();
+      // Só o dono: nenhum app nem o site lista profissionais, e o documento tem e-mail e CRM.
+      allow read: if isOwner(professionalId);
       allow create: if false;
       // O dono pode editar apenas campos de perfil de contato — lista permitida (nunca lista de bloqueio).
       allow update: if isAuthenticated() && isOwner(professionalId)
@@ -136,11 +160,8 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && (resource.data.userId == request.auth.uid
             || resource.data.reviewedId == request.auth.uid);
-      allow create: if isAuthenticated()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.rating >= 1
-        && request.resource.data.rating <= 5;
-      allow update: if isOwner(resource.data.userId);
+      // Nenhum app grava em ratings (as avaliações de atendimento vão para reviews).
+      allow create, update: if false;
       allow delete: if isOwner(resource.data.userId);
     }
     
@@ -253,10 +274,16 @@ service cloud.firestore {
 
     // Reviews de emergência
     match /reviews/{reviewId} {
+      // Só as duas pontas de uma mesma emergência se avaliam (quem pediu ↔ quem atendeu).
       allow create: if isAuthenticated()
         && request.resource.data.reviewerId == request.auth.uid
         && request.resource.data.rating >= 1
-        && request.resource.data.rating <= 5;
+        && request.resource.data.rating <= 5
+        && request.resource.data.emergencyId is string
+        && ((emergency(request.resource.data.emergencyId).requesterId == request.auth.uid
+              && emergency(request.resource.data.emergencyId).helperId == request.resource.data.reviewedId)
+            || (emergency(request.resource.data.emergencyId).helperId == request.auth.uid
+              && emergency(request.resource.data.emergencyId).requesterId == request.resource.data.reviewedId));
       allow read: if isAuthenticated()
         && (resource.data.reviewerId == request.auth.uid
             || resource.data.reviewedId == request.auth.uid);

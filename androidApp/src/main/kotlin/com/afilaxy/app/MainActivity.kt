@@ -22,6 +22,7 @@ import com.afilaxy.app.navigation.AppRoutes
 import com.afilaxy.app.navigation.NavGraph
 import com.afilaxy.app.ui.theme.AflixyTheme
 import com.afilaxy.app.ui.theme.ThemeState
+import com.afilaxy.app.util.QuickActionToken
 import com.afilaxy.app.util.canPostNotifications
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.afilaxy.presentation.emergency.EmergencyViewModel
@@ -179,7 +180,10 @@ class MainActivity : ComponentActivity() {
             emergencyId != null && openEmergencyResponse -> "emergency_response/$emergencyId"
             emergencyId != null && openEmergencyRequest  -> "emergency_request/$emergencyId"
             // "open_screen" vem das notificações de check-in (morning/evening + _yes/_no)
-            else -> openScreenDestination(intent.getStringExtra("open_screen"))
+            else -> openScreenDestination(
+                intent.getStringExtra("open_screen"),
+                fromOwnNotification = QuickActionToken.matches(this, intent.getStringExtra(QuickActionToken.EXTRA))
+            )
         }
     }
 
@@ -188,13 +192,15 @@ class MainActivity : ComponentActivity() {
      * `_yes`/`_no` abrem a mesma tela com quickAnswer (auto-submit positivo em
      * `_yes`; `_no` abre o formulário normal para o usuário relatar o dia).
      * Precedência sempre com os casos de emergência (tratados antes).
+     * O envio automático do `_yes` só vale com o código da própria notificação
+     * (QuickActionToken); vindo de outro app, abre o formulário normal.
      */
-    private fun openScreenDestination(openScreen: String?): String? = when (openScreen) {
+    private fun openScreenDestination(openScreen: String?, fromOwnNotification: Boolean): String? = when (openScreen) {
         "morning_checkin"     -> AppRoutes.checkIn("MORNING")
-        "morning_checkin_yes" -> AppRoutes.checkIn("MORNING", quick = true)
+        "morning_checkin_yes" -> if (fromOwnNotification) AppRoutes.checkIn("MORNING", quick = true) else AppRoutes.checkIn("MORNING")
         "morning_checkin_no"  -> AppRoutes.checkIn("MORNING", quick = false)
         "evening_checkin"     -> AppRoutes.checkIn("EVENING")
-        "evening_checkin_yes" -> AppRoutes.checkIn("EVENING", quick = true)
+        "evening_checkin_yes" -> if (fromOwnNotification) AppRoutes.checkIn("EVENING", quick = true) else AppRoutes.checkIn("EVENING")
         "evening_checkin_no"  -> AppRoutes.checkIn("EVENING", quick = false)
         else -> null
     }
