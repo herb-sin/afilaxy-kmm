@@ -168,6 +168,8 @@ private fun friendlyDeleteError(e: Throwable): String {
         msg.contains("assinatura", ignoreCase = true) -> msg
         msg.contains("network", ignoreCase = true) || msg.contains("UNAVAILABLE") ->
             "Sem conexão com o servidor. Verifique sua internet e tente novamente."
-        else -> "Não foi possível excluir a conta agora. Nada foi perdido. Tente novamente."
+        // Não dá para prometer "nada foi perdido": se a função parou no meio, parte dos dados já
+        // saiu. A exclusão é retomável — tentar de novo conclui o que faltou.
+        else -> "A exclusão não foi concluída. Parte dos seus dados pode já ter sido apagada; tente novamente para terminar."
     }
 }

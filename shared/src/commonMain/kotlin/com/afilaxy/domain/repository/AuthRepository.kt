@@ -8,6 +8,11 @@ interface AuthRepository {
     suspend fun register(email: String, password: String, name: String): Result<User>
     suspend fun logout()
     /**
+     * Encerra a sessão só neste aparelho, sem escrever no perfil. Usado quando outro aparelho
+     * fez login: o sessionId e o fcmToken do perfil já são dele, e o logout() os apagaria.
+     */
+    suspend fun signOutLocally()
+    /**
      * Exclui a conta e todos os dados do usuário (Cloud Function deleteAccount) e encerra a
      * sessão local. Irreversível. Em caso de falha nada é perdido e a sessão continua ativa.
      */

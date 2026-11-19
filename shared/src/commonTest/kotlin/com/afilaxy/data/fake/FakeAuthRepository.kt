@@ -49,6 +49,10 @@ class FakeAuthRepository(
         currentUser = null
     }
 
+    override suspend fun signOutLocally() {
+        currentUser = null
+    }
+
     var deleteAccountResult: Result<Unit> = Result.success(Unit)
     var deleteAccountCalls = 0
         private set

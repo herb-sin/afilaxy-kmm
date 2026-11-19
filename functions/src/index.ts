@@ -1513,7 +1513,16 @@ async function commitInBatches(
     }
 }
 
-export const deleteAccount = onCall(async (request) => {
+// Executa fn em lotes de `size` em paralelo (sem disparar centenas de chamadas de uma vez).
+async function inChunks<T>(items: T[], size: number, fn: (item: T) => Promise<unknown>): Promise<void> {
+    for (let i = 0; i < items.length; i += size) {
+        await Promise.all(items.slice(i, i + size).map(fn));
+    }
+}
+
+// Limite de 9 min (o padrão de 60 s não bastava: uma conta com 335 pedidos estourou o tempo
+// duas vezes antes de concluir em nov/2026). Os apps esperam um pouco mais que isso.
+export const deleteAccount = onCall({ timeoutSeconds: 540, memory: '512MiB' }, async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Autenticação necessária');
     }
@@ -1531,18 +1540,16 @@ export const deleteAccount = onCall(async (request) => {
 
     // 1. Emergências em que o usuário pediu ajuda: pedido + chat inteiro.
     const asRequester = await emergencies.where('requesterId', '==', uid).get();
-    for (const doc of asRequester.docs) {
-        await db.recursiveDelete(db.collection('emergency_chats').doc(doc.id));
-        markDelete(doc.ref);
-    }
+    await inChunks(asRequester.docs, 20, (doc) =>
+        db.recursiveDelete(db.collection('emergency_chats').doc(doc.id)));
+    asRequester.docs.forEach((doc) => markDelete(doc.ref));
 
     // 2. Emergências em que o usuário atendeu: anonimiza e apaga só as mensagens dele.
     //    Pula as que ele mesmo pediu (o iOS antigo deixava aceitar o próprio pedido) —
     //    essas já saem inteiras no passo 1.
     const asHelper = await emergencies.where('helperId', '==', uid).get();
-    let anonymized = 0;
-    for (const doc of asHelper.docs) {
-        if (doc.data().requesterId === uid) continue;
+    const helped = asHelper.docs.filter((doc) => doc.data().requesterId !== uid);
+    for (const doc of helped) {
         const update: Record<string, any> = {
             helperId: FieldValue.delete(),
             helperName: 'Conta excluída',
@@ -1552,12 +1559,13 @@ export const deleteAccount = onCall(async (request) => {
             update.status = 'cancelled';
         }
         updates.push([doc.ref, update]);
-        anonymized++;
-
+    }
+    const anonymized = helped.length;
+    await inChunks(helped, 20, async (doc) => {
         const ownMessages = await db.collection('emergency_chats').doc(doc.id)
             .collection('messages').where('senderId', '==', uid).get();
         ownMessages.docs.forEach((m) => markDelete(m.ref));
-    }
+    });
 
     // 3. Documentos ligados ao usuário por campo.
     for (const [collection, field] of OWNED_BY_FIELD) {

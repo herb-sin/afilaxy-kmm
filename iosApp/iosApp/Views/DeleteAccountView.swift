@@ -127,7 +127,7 @@ struct DeleteAccountView: View {
             errorMessage = message
             return
         } catch {
-            errorMessage = "Não foi possível excluir a conta agora. Nada foi perdido. Tente novamente."
+            errorMessage = Self.incompleteMessage
             return
         }
 
@@ -141,13 +141,19 @@ struct DeleteAccountView: View {
 
     private enum DeleteAccountError: Error { case server(String) }
 
+    // Não dá para prometer "nada foi perdido": se a função parou no meio, parte dos dados já
+    // saiu. A exclusão é retomável — tentar de novo conclui o que faltou.
+    private static let incompleteMessage =
+        "A exclusão não foi concluída. Parte dos seus dados pode já ter sido apagada; tente novamente para terminar."
+
     private func callDeleteAccountFunction(user: FirebaseAuth.User) async throws {
         let token = try await user.getIDToken()
         guard let projectId = FirebaseApp.app()?.options.projectID,
               let url = URL(string: "https://us-central1-\(projectId).cloudfunctions.net/deleteAccount")
         else { throw DeleteAccountError.server("Erro de configuração do Firebase.") }
 
-        var req = URLRequest(url: url, timeoutInterval: 90)
+        // Um pouco mais que o limite da função (540 s), para não desistir antes dela terminar.
+        var req = URLRequest(url: url, timeoutInterval: 600)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -162,7 +168,7 @@ struct DeleteAccountView: View {
            let msg = err["message"] as? String, msg.localizedCaseInsensitiveContains("assinatura") {
             throw DeleteAccountError.server(msg)
         }
-        throw DeleteAccountError.server("Não foi possível excluir a conta agora. Nada foi perdido. Tente novamente.")
+        throw DeleteAccountError.server(Self.incompleteMessage)
     }
 }
 

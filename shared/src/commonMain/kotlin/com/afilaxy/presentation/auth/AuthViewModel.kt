@@ -91,7 +91,10 @@ class AuthViewModel(
             try {
                 authRepository.observeSessionInvalidation().collect { invalidated ->
                     if (invalidated) {
-                        authRepository.logout()
+                        // Só local: o sessionId e o fcmToken do perfil já são do aparelho que
+                        // acabou de entrar. logout() os apagava — o aparelho novo parava de
+                        // receber pushes e, com o sessionId vazio, os demais nunca saíam.
+                        authRepository.signOutLocally()
                         _state.update {
                             it.copy(user = null, isAuthenticated = false, isSessionInvalidated = true)
                         }

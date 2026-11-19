@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlin.time.Duration.Companion.minutes
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -140,13 +141,24 @@ class AuthRepositoryImpl(
             Logger.e("AuthRepository", "Falha ao fazer logout: ${e.message}", e)
         }
     }
-    
+
+    override suspend fun signOutLocally() {
+        preferences.putString(PREF_SESSION_ID, "")
+        try {
+            auth.signOut()
+        } catch (e: Exception) {
+            Logger.e("AuthRepository", "Falha ao encerrar a sessão local: ${e.message}", e)
+        }
+    }
+
     override suspend fun deleteAccount(): Result<Unit> {
         return try {
             // A função apaga os dados e a conta no servidor. Depois disso o users/{uid} não
             // existe mais, então não passa pelo logout() (que tentaria atualizar esse doc):
             // só limpa a sessão local.
-            functions.httpsCallable("deleteAccount").invoke()
+            // Espera um pouco mais que o limite da função (9 min): o padrão do SDK (~70 s)
+            // desistia antes de contas com centenas de pedidos de ajuda terminarem.
+            functions.httpsCallable("deleteAccount", timeout = 10.minutes).invoke()
             preferences.putString(PREF_SESSION_ID, "")
             try {
                 auth.signOut()
